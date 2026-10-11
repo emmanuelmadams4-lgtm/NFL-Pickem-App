@@ -1,0 +1,143 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+import { ApiError, type Api } from "@nflpi/shared";
+import type { QueryClient } from "@tanstack/react-query";
+import { safeGet, safeSet } from "@/lib/fmt";
+
+/* ---------- connectivity ---------- */
+
+function subscribeOnline(cb: () => void) {
+  window.addEventListener("online", cb);
+  window.addEventListener("offline", cb);
+  return () => {
+    window.removeEventListener("online", cb);
+    window.removeEventListener("offline", cb);
+  };
+}
+
+export function useOnline(): boolean {
+  return useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true,
+  );
+}
+
+/** Timestamp of the last API response that really came from the network (not the service worker cache). */
+const SYNC_KEY = "nflpi_last_sync";
+export function markNetworkSync() {
+  safeSet(SYNC_KEY, String(Date.now()));
+}
+export function lastNetworkSync(): number | null {
+  const v = Number(safeGet(SYNC_KEY));
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+
+/** fetch wrapper: remembers when the app last heard from the server, ignoring responses the service worker replayed. */
+export const trackedFetch: typeof fetch = async (input, init) => {
+  const res = await fetch(input, init);
+  if (res.ok && !res.headers.get("x-sw-cache")) markNetworkSync();
+  return res;
+};
+
+export function isNetworkError(e: unknown): boolean {
+  return !(e instanceof ApiError) && (e instanceof TypeError || (e instanceof Error && /network|fetch|load failed/i.test(e.message)));
+}
+
+/* ---------- offline pick queue ---------- */
+
+const QUEUE_KEY = "nflpi_pick_queue";
+type Queue = Record<string, string | null>;
+
+let snapshot: Queue | null = null;
+const listeners = new Set<() => void>();
+
+function readQueue(): Queue {
+  if (snapshot) return snapshot;
+  try {
+    snapshot = JSON.parse(safeGet(QUEUE_KEY) ?? "{}") as Queue;
+  } catch {
+    snapshot = {};
+  }
+  return snapshot;
+}
+
+function writeQueue(q: Queue) {
+  snapshot = q;
+  safeSet(QUEUE_KEY, JSON.stringify(q));
+  listeners.forEach((l) => l());
+}
+
+export function queuePick(gameId: string, team: string | null) {
+  writeQueue({ ...readQueue(), [gameId]: team });
+}
+
+function unqueue(gameId: string) {
+  const next = { ...readQueue() };
+  delete next[gameId];
+  writeQueue(next);
+}
+
+export function pendingCount(): number {
+  return Object.keys(readQueue()).length;
+}
+
+const EMPTY: Queue = {};
+export function usePendingPicks(): Queue {
+  return useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    readQueue,
+    () => EMPTY,
+  );
+}
+
+/** Pick to show: a queued (not yet synced) choice wins over what the server last said. */
+export function effectivePick(pending: Queue, gameId: string, serverPick: string | null): { pick: string | null; waiting: boolean } {
+  return gameId in pending ? { pick: pending[gameId], waiting: true } : { pick: serverPick, waiting: false };
+}
+
+/**
+ * Send queued picks. 409 (kicked off) and 422 are dropped and reported as locked/invalid;
+ * a network error stops the flush and keeps the rest queued.
+ */
+let flushing = false;
+export async function flushPicks(api: Api, qc: QueryClient, notify: (message: string, tone: "good" | "warn" | "bad") => void): Promise<void> {
+  if (flushing) return;
+  const entries = Object.entries(readQueue());
+  if (entries.length === 0) return;
+  flushing = true;
+  let synced = 0;
+  let locked = 0;
+  try {
+    for (const [gameId, team] of entries) {
+      try {
+        if (team) await api.setPick(gameId, team);
+        else await api.clearPick(gameId);
+        unqueue(gameId);
+        synced++;
+      } catch (e) {
+        if (e instanceof ApiError && (e.status === 409 || e.status === 422 || e.status === 404)) {
+          unqueue(gameId);
+          locked++;
+        } else if (isNetworkError(e)) {
+          break;
+        } else {
+          throw e;
+        }
+      }
+    }
+  } finally {
+    flushing = false;
+    if (synced + locked > 0) {
+      qc.invalidateQueries({ queryKey: ["week"] });
+      qc.invalidateQueries({ queryKey: ["game"] });
+      qc.invalidateQueries({ queryKey: ["performance"] });
+    }
+    if (locked > 0) notify(`${locked} offline ${locked === 1 ? "pick was" : "picks were"} not saved: locked at kickoff.`, "warn");
+    else if (synced > 0) notify(`${synced} offline ${synced === 1 ? "pick" : "picks"} synced.`, "good");
+  }
+}

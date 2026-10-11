@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Dark is the default (dark-first); light applies when the system asks for it.
+ * Radius scale (one rule): cards 12px, controls 8px, chips 6px, bars fully round.
+ * Spacing runs on a 4px grid.
+ */
+:root {
+  color-scheme: dark;
+  --bg: #0b0f14;
+  --surface: #11161d;
+  --elevated: #171e27;
+  --border: #232c38;
+  --text: #e6edf3;
+  --text-2: #9aa7b4;
+  --muted: #6b7785;
+  --accent: #3b82f6;
+  --accent-solid: #2563eb; /* solid button fill: white text clears 4.5:1 */
+  --good: #3fb950;
+  --warn: #d29922;
+  --bad: #f85149;
+
+  /* chart series, validated for the dark surface; entity colors stay fixed across charts */
+  --series-me: #3987e5;
+  --series-model: #d95926;
+  --series-market: #199e70;
+  --series-stats: #9085e9;
+  --series-elo: #d55181;
+  --series-home: #6b7785;
+
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --elevated: #f0f3f6;
+    --border: #d8dee4;
+    --text: #1f2328;
+    --text-2: #57606a;
+    --muted: #6e7781;
+    --accent: #0969da;
+    --accent-solid: #0969da;
+    --good: #1a7f37;
+    --warn: #9a6700;
+    --bad: #cf222e;
+
+    --series-me: #2a78d6;
+    --series-model: #eb6834;
+    --series-market: #1baf7a;
+    --series-stats: #6250d6;
+    --series-elo: #e87ba4;
+    --series-home: #8c959f;
+
+    --shadow-pop: 0 8px 24px rgb(31 35 40 / 0.16);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-solid: var(--accent-solid);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+
+  --font-sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --radius-card: 12px;
+  --radius-ctl: 8px;
+  --radius-chip: 6px;
+
+}
+
+:root {
+  /* text-safe tertiary ink: muted nudged toward text-2 so small labels clear 4.5:1 */
+  --subtle: color-mix(in srgb, var(--muted) 70%, var(--text-2));
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--border);
+  }
+  html {
+    background: var(--bg);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  button,
+  select,
+  input,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button:not(:disabled),
+  [role="button"] {
+    cursor: pointer;
+  }
+  button,
+  a,
+  select,
+  summary {
+    touch-action: manipulation;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+}
+
+/* Large standalone figures read better with proportional digits. */
+.num-display {
+  font-variant-numeric: proportional-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Team color accent: a dark team color on a dark surface disappears, so each team gets
+   a light-theme and a dark-theme pick (see lib/team.ts). */
+.team-accent {
+  background: var(--tc-dark);
+}
+@media (prefers-color-scheme: light) {
+  .team-accent {
+    background: var(--tc-light);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--elevated) 0%, color-mix(in srgb, var(--elevated) 60%, var(--border)) 50%, var(--elevated) 100%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .spin {
+    animation: spin 0.9s linear infinite;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Recharts: recede the chrome. */
+.recharts-cartesian-grid line {
+  stroke: var(--border);
+}
+.recharts-text {
+  fill: var(--text-2);
+}
+
+/* Monogram ring follows the same dark/light team color pick as .team-accent */
+@media (prefers-color-scheme: light) {
+  .light-ring {
+    border-color: var(--tc-light) !important;
+  }
+}
+
+/* Horizontally scrolling chip rows without a visible scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Sticky offset under the top bar: compact app bar below lg, desktop bar at lg and up. */
+:root {
+  --header-h: calc(52px + env(safe-area-inset-top));
+}
+@media (min-width: 1024px) {
+  :root {
+    --header-h: 57px;
+  }
+}

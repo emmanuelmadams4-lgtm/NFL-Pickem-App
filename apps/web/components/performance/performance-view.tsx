@@ -1,0 +1,189 @@
+"use client";
+
+import Link from "next/link";
+import type { Performance, Tally } from "@nflpi/shared";
+import { usePerformance, useMeta } from "@/lib/queries";
+import { useSelection } from "@/lib/selection";
+import { Card, EmptyState, ErrorState, Section, Skeleton, cx } from "@/components/ui";
+import { SeasonPicker } from "@/components/pickers";
+import { WeeklyBars } from "@/components/charts/weekly-bars";
+import { CalibrationChart } from "@/components/charts/calibration";
+import { pctOr } from "@/lib/fmt";
+
+function TallyTile({ label, tally, color, empty, note }: { label: string; tally: Tally; color: string; empty?: React.ReactNode; note?: string }) {
+  const has = tally.total > 0;
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2">
+        <span aria-hidden className="h-2.5 w-2.5 rounded-[3px]" style={{ background: color }} />
+        <p className="text-sm font-medium text-text">{label}</p>
+      </div>
+      {has ? (
+        <>
+          <p className="num-display mt-3 text-[34px] leading-9 font-semibold text-text">{pctOr(tally.accuracy, 1)}</p>
+          <p className="mt-1 text-xs text-text-2">
+            95% CI {pctOr(tally.ci_low, 1)} to {pctOr(tally.ci_high, 1)}
+          </p>
+          <p className="mt-0.5 text-xs text-text-2">
+            {tally.correct} of {tally.total} correct
+          </p>
+          {note && <p className="mt-1 text-[11px] text-subtle">{note}</p>}
+        </>
+      ) : (
+        <div className="mt-3">
+          <p className="num-display text-[34px] leading-9 font-semibold text-subtle">-</p>
+          <p className="mt-1 text-xs text-text-2">{empty ?? "No graded games yet"}</p>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function WeeklyTable({ perf }: { perf: Performance }) {
+  const rows = perf.weeks;
+  const cell = (c: number, t: number) => (
+    <td className="py-2 pr-2 text-right align-top">
+      {t > 0 ? (
+        <>
+          <span className="text-text">{Math.round((c / t) * 100)}%</span>
+          <span className="block text-[11px] text-subtle">
+            {c}/{t}
+          </span>
+        </>
+      ) : (
+        <span className="text-subtle">-</span>
+      )}
+    </td>
+  );
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="border-b border-border text-[11px] text-subtle">
+          <th scope="col" className="py-1.5 pr-2 text-left font-medium">Week</th>
+          <th scope="col" className="hidden py-1.5 pr-2 text-right font-medium sm:table-cell">Final games</th>
+          <th scope="col" className="py-1.5 pr-2 text-right font-medium">Me</th>
+          <th scope="col" className="py-1.5 pr-2 text-right font-medium">Model</th>
+          <th scope="col" className="py-1.5 pr-2 text-right font-medium">Market</th>
+          <th scope="col" className="py-1.5 text-right font-medium">Home team</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-border">
+        {rows.map((w) => (
+          <tr key={w.week}>
+            <th scope="row" className="py-2 pr-2 text-left align-top font-medium text-text">{w.week}</th>
+            <td className="hidden py-2 pr-2 text-right align-top text-text-2 sm:table-cell">{w.games_final}</td>
+            {cell(w.my_correct, w.my_total)}
+            {cell(w.model_correct, w.model_total)}
+            {cell(w.market_correct, w.market_total)}
+            <td className="py-2 text-right align-top">
+              {w.home_total > 0 ? (
+                <>
+                  <span className="text-text">{Math.round((w.home_correct / w.home_total) * 100)}%</span>
+                  <span className="block text-[11px] text-subtle">
+                    {w.home_correct}/{w.home_total}
+                  </span>
+                </>
+              ) : (
+                <span className="text-subtle">-</span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function Skeletons() {
+  return (
+    <div aria-busy="true" aria-label="Loading performance" className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-[136px] rounded-card" />
+        ))}
+      </div>
+      <Skeleton className="h-80 rounded-card" />
+      <Skeleton className="h-96 rounded-card" />
+    </div>
+  );
+}
+
+export function PerformanceView() {
+  const { season } = useSelection();
+  const meta = useMeta().data;
+  const q = usePerformance(season);
+  const perf = q.data;
+  const leader = perf?.league_leader_accuracy ?? meta?.league_leader_accuracy ?? null;
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Performance</h1>
+          <p className="mt-0.5 text-sm text-text-2">{season} season. Finished games only.</p>
+        </div>
+        <SeasonPicker className="inline-flex lg:hidden" />
+      </div>
+
+      {q.isPending && <Skeletons />}
+      {q.isError && !perf && <ErrorState title="Could not load performance" error={q.error} onRetry={() => q.refetch()} />}
+
+      {perf && (
+        <>
+          {perf.model.total === 0 && perf.me.total === 0 ? (
+            <EmptyState title={`No finished games for ${season} yet`} hint="Accuracy appears here once games are final." />
+          ) : (
+            <>
+              <section aria-label="Accuracy summary" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <TallyTile
+                  label="Me"
+                  tally={perf.me}
+                  color="var(--series-me)"
+                  empty={
+                    <>
+                      Make picks on the <Link href="/" className="text-accent underline underline-offset-2">Week board</Link> to track your accuracy.
+                    </>
+                  }
+                />
+                <TallyTile label="Model" tally={perf.model} color="var(--series-model)" />
+                <TallyTile label="Market" tally={perf.market} color="var(--series-market)" note="Favorite by the betting line" />
+                <TallyTile label="Home team" tally={perf.home} color="var(--series-home)" note="Always pick the home team" />
+              </section>
+              <p className="text-xs text-subtle">
+                Model: {perf.model_live_games} live, {perf.model_backfill_games} backfilled games. Backfilled predictions were computed after the fact using only data available before kickoff. Intervals are 95% confidence; small samples are wide on purpose.
+              </p>
+
+              <Section id="weekly" title="Weekly accuracy" note="Share of finished games called correctly each week.">
+                {perf.weeks.length === 0 ? (
+                  <p className="text-sm text-text-2">No finished weeks yet.</p>
+                ) : (
+                  <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                    <WeeklyBars weeks={perf.weeks} leader={leader} />
+                    <WeeklyTable perf={perf} />
+                  </div>
+                )}
+                {perf.me.total === 0 && <p className="mt-4 text-xs text-subtle">Your bars appear once you have graded picks.</p>}
+              </Section>
+
+              <Section id="calibration" title="Calibration" note="When the model says 70%, do those teams win about 70% of the time?">
+                <CalibrationChart buckets={perf.calibration} color="var(--series-model)" name="Model" leader={null} />
+                {leader !== null && (
+                  <p className="mt-3 text-xs text-text-2">
+                    League leader reference: <span className={cx("font-medium text-text")}>{pctOr(leader, 1)}</span> season accuracy (shown as a line on the weekly chart).
+                  </p>
+                )}
+              </Section>
+            </>
+          )}
+          <Link href="/backtest/" className="flex items-center justify-between gap-4 rounded-card border border-border bg-surface p-4 hover:border-muted">
+            <span>
+              <span className="block text-sm font-semibold text-text">Backtest</span>
+              <span className="block text-xs text-text-2">How the model, the market and simpler baselines did over past seasons.</span>
+            </span>
+            <span aria-hidden className="text-lg text-text-2">&rsaquo;</span>
+          </Link>
+        </>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@nflpi/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nflpi/shared": "*",
+    "@tanstack/react-query": "^5.104.2",
+    "next": "16.4.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "recharts": "^3.10.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24",
+    "@types/react": "~19.2.2",
+    "@types/react-dom": "~19.2.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.3"
+  }
+}
