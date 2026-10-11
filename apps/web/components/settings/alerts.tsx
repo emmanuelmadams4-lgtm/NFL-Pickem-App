@@ -68,7 +68,8 @@ export function AlertsSection({ meta }: { meta: Meta }) {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        setError("Notifications are blocked for this app. Allow them in your device settings, then try again.");
+        // "denied" shows its own standing note below; a dismissed prompt just needs a hint.
+        if (permission === "default") setError("Permission was not granted, so alerts stay off.");
         return;
       }
       const reg = await navigator.serviceWorker.ready;

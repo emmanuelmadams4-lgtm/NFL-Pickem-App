@@ -105,7 +105,7 @@ export function InstallHint() {
       </div>
       <Button
         size="sm"
-        variant="ghost"
+        variant="secondary"
         onClick={() => {
           safeSet(INSTALL_KEY, "1");
           setShow(false);
