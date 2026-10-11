@@ -21,7 +21,8 @@ from nflpi.api import views
 from nflpi.config import get_settings
 from nflpi.db import get_session, session_factory
 from nflpi.ingestion.service import freshness
-from nflpi.models import AppSetting, BacktestRun, Game, PushDevice, UserPick
+from nflpi.models import AppSetting, BacktestRun, Game, PushSubscription, UserPick
+from nflpi.notify import push
 from nflpi.predictions import engine
 
 log = logging.getLogger(__name__)
@@ -72,7 +73,9 @@ def meta(session: DB) -> s.MetaOut:
         model_name=mv.name if mv else None,
         model_trained_through=mv.trained_through_season if mv else None,
         ai_providers=providers.available(),
-        push_devices=session.scalar(select(func.count()).select_from(PushDevice)) or 0,
+        push_public_key=get_settings().vapid_public_key if push.configured() else None,
+        push_subscriptions=session.scalar(select(func.count()).select_from(PushSubscription)) or 0,
+        reminder_minutes=views.get_setting(session, "reminder_minutes"),
         league_leader_accuracy=views.get_setting(session, "league_leader_accuracy"),
         server_time=datetime.now(UTC),
     )
@@ -200,20 +203,31 @@ def ask(game_id: str, body: s.AskIn, session: DB) -> s.AskOut:
         raise HTTPException(503, str(exc)) from exc
 
 
-@api.post("/devices", status_code=204)
-def register_device(body: s.DeviceIn, session: DB) -> Response:
-    dev = session.get(PushDevice, body.token) or PushDevice(token=body.token)
-    dev.platform, dev.last_seen = body.platform, datetime.now(UTC)
-    session.add(dev)
+@api.post("/push/subscribe", status_code=204)
+def push_subscribe(body: s.PushSubscriptionIn, session: DB) -> Response:
+    sub = session.scalars(select(PushSubscription).where(PushSubscription.endpoint == body.endpoint)).first()
+    sub = sub or PushSubscription(endpoint=body.endpoint)
+    sub.p256dh, sub.auth, sub.last_seen = body.keys.p256dh, body.keys.auth, datetime.now(UTC)
+    session.add(sub)
     session.commit()
+    return Response(status_code=204)
+
+
+@api.delete("/push/subscribe", status_code=204)
+def push_unsubscribe(endpoint: str, session: DB) -> Response:
+    sub = session.scalars(select(PushSubscription).where(PushSubscription.endpoint == endpoint)).first()
+    if sub:
+        session.delete(sub)
+        session.commit()
     return Response(status_code=204)
 
 
 @api.put("/settings", response_model=s.MetaOut)
 def update_settings(body: s.SettingsIn, session: DB) -> s.MetaOut:
-    row = session.get(AppSetting, "league_leader_accuracy") or AppSetting(key="league_leader_accuracy")
-    row.value = {"v": body.league_leader_accuracy}
-    session.add(row)
+    for key in body.model_fields_set:
+        row = session.get(AppSetting, key) or AppSetting(key=key)
+        row.value = {"v": getattr(body, key)}
+        session.add(row)
     session.commit()
     return meta(session)
 

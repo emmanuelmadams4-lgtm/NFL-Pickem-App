@@ -5,6 +5,7 @@ python -m nflpi.jobs ingest         # schedules, lines, teams, injuries, weather
 python -m nflpi.jobs train          # fit on seasons before the current one
 python -m nflpi.jobs predict        # refresh current + next week
 python -m nflpi.jobs loop           # worker: refresh on a game-aware schedule
+python -m nflpi.jobs vapid          # print a new Web Push key pair for .env
 """
 
 import argparse
@@ -66,6 +67,7 @@ def cycle(session) -> None:
         train(session)
         log.info("backfilled %s games", engine.backfill_season(session, season))
     log.info("prediction alerts sent: %s", predict(session))
+    log.info("kickoff reminders sent: %s", push.send_kickoff_reminders(session, datetime.now(UTC)))
 
 
 def loop() -> None:
@@ -85,11 +87,15 @@ def loop() -> None:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["bootstrap", "ingest", "train", "predict", "backfill", "loop"])
+    parser.add_argument("command", choices=["bootstrap", "ingest", "train", "predict", "backfill", "loop", "vapid"])
     parser.add_argument("--no-weather", action="store_true")
     args = parser.parse_args()
     if args.command == "loop":
         return loop()
+    if args.command == "vapid":
+        public, private = push.generate_vapid_keys()
+        print(f"VAPID_PUBLIC_KEY={public}\nVAPID_PRIVATE_KEY={private}")
+        return None
     with session_factory()() as session:
         if args.command == "bootstrap":
             return cycle(session)

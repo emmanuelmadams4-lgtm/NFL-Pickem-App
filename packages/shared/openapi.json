@@ -634,10 +634,10 @@
     }
    }
   },
-  "/api/devices": {
+  "/api/push/subscribe": {
    "post": {
-    "summary": "Register Device",
-    "operationId": "register_device_api_devices_post",
+    "summary": "Push Subscribe",
+    "operationId": "push_subscribe_api_push_subscribe_post",
     "parameters": [
      {
       "name": "authorization",
@@ -661,11 +661,57 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/DeviceIn"
+        "$ref": "#/components/schemas/PushSubscriptionIn"
        }
       }
      }
     },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Push Unsubscribe",
+    "operationId": "push_unsubscribe_api_push_subscribe_delete",
+    "parameters": [
+     {
+      "name": "endpoint",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Endpoint"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
     "responses": {
      "204": {
       "description": "Successful Response"
@@ -1191,31 +1237,6 @@
      "last_error"
     ],
     "title": "DatasetFreshness"
-   },
-   "DeviceIn": {
-    "properties": {
-     "token": {
-      "type": "string",
-      "maxLength": 255,
-      "minLength": 10,
-      "title": "Token"
-     },
-     "platform": {
-      "type": "string",
-      "enum": [
-       "ios",
-       "android",
-       "web"
-      ],
-      "title": "Platform"
-     }
-    },
-    "type": "object",
-    "required": [
-     "token",
-     "platform"
-    ],
-    "title": "DeviceIn"
    },
    "Factor": {
     "properties": {
@@ -2178,9 +2199,32 @@
       "type": "object",
       "title": "Ai Providers"
      },
-     "push_devices": {
+     "push_public_key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Push Public Key",
+      "description": "VAPID public key for PushManager.subscribe; null = push off"
+     },
+     "push_subscriptions": {
       "type": "integer",
-      "title": "Push Devices"
+      "title": "Push Subscriptions"
+     },
+     "reminder_minutes": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reminder Minutes"
      },
      "league_leader_accuracy": {
       "anyOf": [
@@ -2208,7 +2252,9 @@
      "model_name",
      "model_trained_through",
      "ai_providers",
-     "push_devices",
+     "push_public_key",
+     "push_subscriptions",
+     "reminder_minutes",
      "league_leader_accuracy",
      "server_time"
     ],
@@ -2460,6 +2506,49 @@
     ],
     "title": "PredictionOut"
    },
+   "PushKeys": {
+    "properties": {
+     "p256dh": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 10,
+      "title": "P256Dh"
+     },
+     "auth": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 8,
+      "title": "Auth"
+     }
+    },
+    "type": "object",
+    "required": [
+     "p256dh",
+     "auth"
+    ],
+    "title": "PushKeys"
+   },
+   "PushSubscriptionIn": {
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "maxLength": 2048,
+      "minLength": 10,
+      "pattern": "^https://",
+      "title": "Endpoint"
+     },
+     "keys": {
+      "$ref": "#/components/schemas/PushKeys"
+     }
+    },
+    "type": "object",
+    "required": [
+     "endpoint",
+     "keys"
+    ],
+    "title": "PushSubscriptionIn",
+    "description": "Exactly what the browser's PushSubscription.toJSON() returns."
+   },
    "SettingsIn": {
     "properties": {
      "league_leader_accuracy": {
@@ -2474,6 +2563,20 @@
        }
       ],
       "title": "League Leader Accuracy"
+     },
+     "reminder_minutes": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 1440.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reminder Minutes",
+      "description": "0 turns reminders off"
      }
     },
     "type": "object",

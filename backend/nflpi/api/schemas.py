@@ -303,13 +303,21 @@ class AskOut(BaseModel):
     created_at: datetime
 
 
-class DeviceIn(BaseModel):
-    token: str = Field(min_length=10, max_length=255)
-    platform: Literal["ios", "android", "web"]
+class PushKeys(BaseModel):
+    p256dh: str = Field(min_length=10, max_length=255)
+    auth: str = Field(min_length=8, max_length=255)
+
+
+class PushSubscriptionIn(BaseModel):
+    """Exactly what the browser's PushSubscription.toJSON() returns."""
+
+    endpoint: str = Field(min_length=10, max_length=2048, pattern=r"^https://")
+    keys: PushKeys
 
 
 class SettingsIn(BaseModel):
     league_leader_accuracy: float | None = Field(default=None, ge=0, le=1)
+    reminder_minutes: int | None = Field(default=None, ge=0, le=1440, description="0 turns reminders off")
 
 
 class MetaOut(BaseModel):
@@ -320,7 +328,9 @@ class MetaOut(BaseModel):
     model_name: str | None
     model_trained_through: int | None
     ai_providers: dict[str, bool]
-    push_devices: int
+    push_public_key: str | None = Field(description="VAPID public key for PushManager.subscribe; null = push off")
+    push_subscriptions: int
+    reminder_minutes: int | None
     league_leader_accuracy: float | None
     server_time: datetime
 

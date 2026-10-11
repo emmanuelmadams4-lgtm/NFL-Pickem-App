@@ -195,7 +195,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/devices": {
+    "/api/push/subscribe": {
         parameters: {
             query?: never;
             header?: never;
@@ -204,9 +204,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register Device */
-        post: operations["register_device_api_devices_post"];
-        delete?: never;
+        /** Push Subscribe */
+        post: operations["push_subscribe_api_push_subscribe_post"];
+        /** Push Unsubscribe */
+        delete: operations["push_unsubscribe_api_push_subscribe_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -393,16 +394,6 @@ export interface components {
             stale: boolean;
             /** Last Error */
             last_error: string | null;
-        };
-        /** DeviceIn */
-        DeviceIn: {
-            /** Token */
-            token: string;
-            /**
-             * Platform
-             * @enum {string}
-             */
-            platform: "ios" | "android" | "web";
         };
         /** Factor */
         Factor: {
@@ -691,8 +682,15 @@ export interface components {
             ai_providers: {
                 [key: string]: boolean;
             };
-            /** Push Devices */
-            push_devices: number;
+            /**
+             * Push Public Key
+             * @description VAPID public key for PushManager.subscribe; null = push off
+             */
+            push_public_key: string | null;
+            /** Push Subscriptions */
+            push_subscriptions: number;
+            /** Reminder Minutes */
+            reminder_minutes: number | null;
             /** League Leader Accuracy */
             league_leader_accuracy: number | null;
             /**
@@ -784,10 +782,31 @@ export interface components {
                 [key: string]: string | null;
             };
         };
+        /** PushKeys */
+        PushKeys: {
+            /** P256Dh */
+            p256dh: string;
+            /** Auth */
+            auth: string;
+        };
+        /**
+         * PushSubscriptionIn
+         * @description Exactly what the browser's PushSubscription.toJSON() returns.
+         */
+        PushSubscriptionIn: {
+            /** Endpoint */
+            endpoint: string;
+            keys: components["schemas"]["PushKeys"];
+        };
         /** SettingsIn */
         SettingsIn: {
             /** League Leader Accuracy */
             league_leader_accuracy?: number | null;
+            /**
+             * Reminder Minutes
+             * @description 0 turns reminders off
+             */
+            reminder_minutes?: number | null;
         };
         /** Tally */
         Tally: {
@@ -1356,7 +1375,7 @@ export interface operations {
             };
         };
     };
-    register_device_api_devices_post: {
+    push_subscribe_api_push_subscribe_post: {
         parameters: {
             query?: never;
             header?: {
@@ -1367,9 +1386,40 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DeviceIn"];
+                "application/json": components["schemas"]["PushSubscriptionIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    push_unsubscribe_api_push_subscribe_delete: {
+        parameters: {
+            query: {
+                endpoint: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             204: {

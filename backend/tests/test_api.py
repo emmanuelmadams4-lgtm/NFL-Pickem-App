@@ -1,10 +1,11 @@
 import json
+from datetime import timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from nflpi.ai import research
 from nflpi.api import schemas as s
-from nflpi.models import AIReport, Game, Notification, PushDevice
+from nflpi.models import AIReport, Game, PushSubscription
 from nflpi.notify import push
 from nflpi.predictions.engine import ChangeEvent
 from tests.conftest import CURRENT
@@ -98,14 +99,32 @@ def test_ai_without_keys_returns_clear_error(loaded, client):
     assert r.status_code == 503 and "OPENROUTER_API_KEY" in r.json()["detail"]
 
 
-def test_push_alerts_are_deduplicated(loaded, monkeypatch):
+def test_push_subscribe_alerts_and_reminders_are_deduplicated(loaded, client, monkeypatch):
     sent = []
-    monkeypatch.setattr(push, "_send", lambda session, title, body, data: sent.append(title) or 1)
-    loaded.add(PushDevice(token="ExponentPushToken[abc]", platform="ios"))
-    loaded.commit()
+    monkeypatch.setattr(push, "_send", lambda session, title, body, url: sent.append((title, url)) or 1)
+    sub = {"endpoint": "https://web.push.apple.com/abc123", "keys": {"p256dh": "B" * 87, "auth": "a" * 22}}
+    assert client.post("/api/push/subscribe", json=sub).status_code == 204
+    assert client.post("/api/push/subscribe", json=sub).status_code == 204  # idempotent
+    assert loaded.scalar(select(func.count()).select_from(PushSubscription)) == 1
+
     gid = loaded.scalars(select(Game.game_id).where(Game.season == CURRENT, Game.week == 4)).first()
     ev = ChangeEvent(gid, 0.6, 0.4, "BUF", "MIA", "QB out")
     assert push.alert_prediction_changes(loaded, [ev]) == 1
     assert push.alert_prediction_changes(loaded, [ev]) == 0
-    assert len(sent) == 1 and sent[0].startswith("Pick flipped")
-    assert len(loaded.scalars(select(Notification)).all()) == 1
+    assert sent[0][0].startswith("Pick flipped") and sent[0][1] == f"/game/?id={gid}"
+
+    # Kickoff reminders: off by default, then one per unpicked game inside the window.
+    game = loaded.get(Game, gid)
+    assert push.send_kickoff_reminders(loaded, game.kickoff_utc - timedelta(minutes=30)) == 0
+    assert client.put("/api/settings", json={"reminder_minutes": 60}).json()["reminder_minutes"] == 60
+    soon = game.kickoff_utc - timedelta(minutes=30)
+    n = push.send_kickoff_reminders(loaded, soon)
+    assert n >= 1 and push.send_kickoff_reminders(loaded, soon) == 0
+    assert any(t.startswith("No pick yet") for t, _ in sent)
+    assert client.request("DELETE", "/api/push/subscribe", params={"endpoint": sub["endpoint"]}).status_code == 204
+    assert loaded.scalar(select(func.count()).select_from(PushSubscription)) == 0
+
+
+def test_vapid_keys_have_web_push_shape():
+    public, private = push.generate_vapid_keys()
+    assert len(public) == 87 and len(private) == 43  # 65-byte point, 32-byte scalar, base64url

@@ -203,10 +203,14 @@ class BacktestRun(Base):
     results: Mapped[dict] = mapped_column(JSON)
 
 
-class PushDevice(Base):
-    __tablename__ = "push_devices"
-    token: Mapped[str] = mapped_column(String(255), primary_key=True)
-    platform: Mapped[str] = mapped_column(String(10))
+class PushSubscription(Base):
+    """A browser/PWA Web Push subscription (iPhone Home Screen app, desktop browser)."""
+
+    __tablename__ = "push_subscriptions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    endpoint: Mapped[str] = mapped_column(Text, unique=True)
+    p256dh: Mapped[str] = mapped_column(String(255))
+    auth: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

@@ -1,7 +1,9 @@
 # NFL Pick'em Intelligence: Architecture and Roadmap
 
 Private, single-user decision support for weekly Yahoo Pick'em picks.
-One backend, one database, one prediction engine. Two clients: a desktop web app and an iOS/Android app.
+One backend, one database, one prediction engine. One client: a web app that is also the iPhone app (installable PWA).
+
+> **Decision 2026-10-11 (owner):** iPhone gets a PWA, not a native app. No Expo, no App Store/TestFlight, no Android build. Revisit only if a needed feature can't work in a Home Screen web app.
 
 ---
 
@@ -29,23 +31,21 @@ What this means:
 ## 1. Final technology architecture
 
 ```
-                 ┌──────────────┐        ┌──────────────┐
-                 │  Web (Next)  │        │ Mobile (Expo)│
-                 │  desktop     │        │ iOS/Android  │
-                 └──────┬───────┘        └──────┬───────┘
-                        │  same typed client     │
-                        │  (@nflpi/shared)       │
-                        └──────────┬─────────────┘
-                                   │ HTTPS + bearer token
-                     ┌─────────────▼──────────────┐
-                     │  FastAPI  (backend/nflpi)  │
-                     │  api · ingestion ·         │
-                     │  predictions · analytics · │
-                     │  ai · notify · jobs        │
-                     └──┬──────────┬──────────┬───┘
-                        │          │          │
-                 PostgreSQL   nflverse,   Claude API, OpenRouter (Jev),
-                              Open-Meteo  Expo Push service
+        ┌──────────────────────────────────────────┐
+        │  Web app (Next.js static export)          │
+        │  desktop browser  +  iPhone Home Screen   │
+        │  PWA: service worker, offline cache, push │
+        └──────────────────┬───────────────────────┘
+                           │ HTTPS + bearer token (same origin)
+             ┌─────────────▼──────────────┐
+             │  FastAPI  (backend/nflpi)  │
+             │  api · ingestion ·         │
+             │  predictions · analytics · │
+             │  ai · notify · jobs        │
+             └──┬──────────┬──────────┬───┘
+                │          │          │
+         PostgreSQL   nflverse,   Claude API, OpenRouter (Jev),
+                      Open-Meteo  Web Push (Apple/Google/Mozilla push services)
 ```
 
 | Layer | Choice | Why |
@@ -55,10 +55,10 @@ What this means:
 | Models | pandas, NumPy, scikit-learn | Elo + logistic regression first. Gradient boosting only if the backtest proves it helps |
 | Jobs | One `worker` process with a simple schedule loop | No Celery, no Redis. Refresh gets faster as kickoff gets closer |
 | Web | Next.js (static export), React, Tailwind, TanStack Query, Recharts | Built into static files and served by FastAPI, so production is one app container |
-| Mobile | React Native, Expo SDK 57, expo-router, TanStack Query + persisted cache | Native feel, one codebase for iOS and Android, offline cache |
-| Shared | `packages/shared`: TS types generated from FastAPI's OpenAPI, one fetch client, shared formatters | Web and mobile can't drift from the backend |
+| iPhone | The same web app as a PWA: manifest, service worker, persisted query cache, Web Push | Installs from Safari; no App Store, no developer account, nothing expires |
+| Shared | `packages/shared`: TS types generated from FastAPI's OpenAPI, one fetch client, shared formatters | The client can't drift from the backend |
 | AI | Provider interface: Anthropic SDK (Claude) and OpenRouter (Jev) | Keys live only on the server |
-| Push | Expo Push service called from the backend | No Firebase/APNs code to maintain |
+| Push | Standard Web Push (VAPID) from the backend via `pywebpush` | Works on iPhone 16.4+ Home Screen apps and desktop browsers; no Apple account |
 | Deploy | Docker Compose: `db`, `app`, `worker` | Runs on a home computer or one small server |
 
 Changes from the suggested layout, on purpose:
@@ -123,7 +123,7 @@ ai_reports(id PK, game_id FK, prediction_id FK, provider, model,
 ingestion_runs(id PK, source, dataset, started_at, finished_at,
       status, rows, error)
 backtest_runs(id PK, created_at, config JSON, results JSON)
-push_devices(token PK, platform, created_at, last_seen)
+push_subscriptions(id PK, endpoint UNIQUE, p256dh, auth, created_at, last_seen)
 notifications(id PK, kind, game_id, dedupe_key UNIQUE, sent_at, payload JSON)
 ```
 
@@ -209,47 +209,35 @@ Flow per matchup (on demand, when you press "Generate"): load stats, injuries, m
 | `/game?id=` | Matchup: overview, factors, injuries, schedule/rest, weather, market, AI report, ask a question, prediction history |
 | `/performance` | Weekly and season accuracy, you vs model vs market vs home, calibration chart |
 | `/backtest` | Model comparison across seasons with intervals |
-| `/settings` | Access token, CSV import/export, data freshness |
+| `/settings` | Access token, alerts + kickoff reminders, save week for offline, CSV import/export, data freshness |
 
-**Mobile (tabs)**
+**iPhone (same pages, phone layout)**: bottom tabs Week / Results / Settings, cards with big one-tap pick buttons, matchup sections stacked, offline banner, install hint, Alerts + kickoff reminder settings.
 
-| Tab | Screens |
-|---|---|
-| Picks | Week board (cards), pull to refresh, one-tap pick, offline banner |
-| Matchup (pushed) | Same sections as web, plus Ask Claude / Ask Jev |
-| Results | Weekly and season accuracy, history |
-| Settings | Server URL, token, notifications, download week for offline, last refresh |
-
-## 9. Phased plan (desktop + mobile)
+## 9. Phased plan
 
 | Phase | Scope | Done when |
 |---|---|---|
-| 1. Architecture and research | This document, provider check, deploy research | Written and reviewed |
+| 1. Architecture and research | This document, provider check, install research | Written and reviewed |
 | 2. Foundation | Monorepo, FastAPI, Postgres, Alembic, token auth, health, tests, Compose | `pytest` green, `/api/health` up on Postgres |
 | 3. Data pipeline | nflverse schedules, lines, teams, injuries; Open-Meteo weather; run log and staleness | Real 2026 data loaded, reruns are safe |
 | 4. Prediction engine | Elo, logistic, baselines, backtest, calibration, snapshots, change tracking, upset flags | Backtest report with intervals, predictions for the current week |
 | 5. AI | Claude + OpenRouter providers, validated reports, Q&A | Report validates in tests; live call works once keys are set |
 | 6. Web dashboard | Week board, matchup, picks, history | Click-through works against real data |
 | 7. Performance | Results, accuracy, calibration, CSV | Numbers match a hand check |
-| 8. Mobile M1 | Expo app: picks board, matchup, one-tap picks, results, offline cache | Runs in Expo Go and on device; typecheck green |
-| 9. Mobile M2 | Push: server alerts (flip, big move, QB status), local deadline reminders | Push arrives on a dev build |
-| 10. Mobile M3 | AI assistant screen, "download week", polish | Ask works; airplane mode shows saved data with refresh time |
-| 11. Hardening | Tests, backups, failure drills, docs | Fresh-clone setup works from README |
-
-Mobile phases run after the API they need exists. Nothing in mobile changes backend behavior; it only adds endpoints (`/api/devices`, `/api/games/{id}/ask`).
+| 8. iPhone PWA | Phone layouts, manifest + icons, service worker, offline cache + offline picks, install hint | Opens offline from cache; installs from Safari |
+| 9. Alerts | Web Push (flips, big moves, QB status) + server-sent "no pick yet" reminders | Subscription stored; alerts deduped; arrives on a Home Screen app |
+| 10. Hardening | Tests, backups, failure drills, docs | Fresh-clone setup works from README |
 
 ## 10. Costs (monthly, estimates)
 
 | Item | Cost |
 |---|---|
 | nflverse, Open-Meteo | $0 |
-| Hosting: your own computer + Tailscale (private network to your phone) | $0 |
+| Hosting: your own computer + Tailscale (private network + HTTPS to your phone) | $0 |
 | Or: one small cloud server | about $5 to $12 |
 | Claude API (Sonnet 5.5, $2/$10 per million tokens): about 16 reports a week at roughly 1 to 2 cents each, plus questions | about $1 to $5 a month; daily cap in config |
 | OpenRouter (Jev second opinion) | depends on Jev pricing; capped in config |
-| Apple Developer Program (needed for push and long-lived installs) | $99 per year |
-| Android sideload | $0 |
-| Expo push service, EAS free plan | $0 |
+| iPhone install (PWA) and Web Push | $0 |
 
 ## 11. Risks and open items
 
@@ -260,7 +248,8 @@ Mobile phases run after the API they need exists. Nothing in mobile changes back
 | Projected QB is wrong | Bad pick | Uncertainty flag, injury report shown, alert on QB status change |
 | Yahoo has no Pick'em API | Manual entry | One-tap picks in app + CSV import/export |
 | Jev's own endpoint is unknown here | Second opinion may not work | Uses OpenRouter chat API; swap model id in config |
-| Phone must reach the server | App can't load new data away from home | Tailscale (private) or a small server with token auth; offline cache always works |
+| Phone must reach the server over HTTPS | No new data away from home; no install/alerts without HTTPS | Tailscale Serve gives private HTTPS; offline cache always works |
+| iOS limits on web apps | Alerts only after Add to Home Screen, iOS 16.4+ | Install hint in the app; documented in IPHONE_PWA.md |
 | No API keys in this build environment | AI and push not live-tested here | Fake providers in tests; live check is a 2-minute step after keys are set |
 
 ## 12. Smallest real MVP
@@ -268,7 +257,7 @@ Mobile phases run after the API they need exists. Nothing in mobile changes back
 1. Load real nflverse schedules, results and lines.
 2. Elo + logistic model with a walk-forward backtest against the market.
 3. Predictions for the current week with factors and uncertainty.
-4. Week board and matchup page on web and phone.
+4. Week board and matchup page on desktop and iPhone (same web app).
 5. One-tap picks and accuracy tracking.
 
 AI reports, push and weather come right after, on the same backbone.
@@ -279,6 +268,6 @@ AI reports, push and weather come right after, on the same backbone.
 
 Yahoo's Fantasy Sports API covers fantasy football, baseball, basketball and hockey leagues. Pick'em games are not in its documented resources, so no reading of league picks or standings is possible through it. No scraping. The app supports manual one-tap picks and CSV import/export. Revisit if Yahoo documents Pick'em access.
 
-## 14. Mobile delivery (personal use)
+## 14. iPhone install
 
-See [MOBILE_DEPLOYMENT.md](MOBILE_DEPLOYMENT.md).
+See [IPHONE_PWA.md](IPHONE_PWA.md).

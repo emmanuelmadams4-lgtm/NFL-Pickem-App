@@ -23,6 +23,8 @@ export type MatchupReport = S["MatchupReport"];
 export type AskAnswer = S["AskOut"];
 export type Pick = S["PickOut"];
 export type ImportResult = S["ImportResult"];
+export type PushSubscriptionIn = S["PushSubscriptionIn"];
+export type SettingsIn = S["SettingsIn"];
 export type Provider = "claude" | "jev";
 
 export class ApiError extends Error {
@@ -89,10 +91,13 @@ export function createClient(config: ClientConfig) {
       call<AIReport>(`/games/${gameId}/report?provider=${provider}`, { method: "POST" }),
     ask: (gameId: string, question: string, provider: Provider = "claude") =>
       call<AskAnswer>(`/games/${gameId}/ask`, { method: "POST", body: JSON.stringify({ question, provider }) }),
-    registerDevice: (token: string, platform: "ios" | "android" | "web") =>
-      call<void>("/devices", { method: "POST", body: JSON.stringify({ token, platform }) }),
-    updateSettings: (leagueLeaderAccuracy: number | null) =>
-      call<Meta>("/settings", { method: "PUT", body: JSON.stringify({ league_leader_accuracy: leagueLeaderAccuracy }) }),
+    /** Pass `PushSubscription.toJSON()` from the browser. */
+    pushSubscribe: (subscription: PushSubscriptionIn) =>
+      call<void>("/push/subscribe", { method: "POST", body: JSON.stringify(subscription) }),
+    pushUnsubscribe: (endpoint: string) =>
+      call<void>(`/push/subscribe?endpoint=${encodeURIComponent(endpoint)}`, { method: "DELETE" }),
+    /** Only the fields you pass are changed. reminder_minutes: 0 = off. */
+    updateSettings: (settings: SettingsIn) => call<Meta>("/settings", { method: "PUT", body: JSON.stringify(settings) }),
     refresh: () => call<{ started: boolean; reason?: string }>("/refresh", { method: "POST" }),
     freshness: () => call<Freshness[]>("/freshness"),
   };

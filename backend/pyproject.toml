@@ -16,6 +16,7 @@ dependencies = [
   "scikit-learn>=1.9",
   "httpx>=0.28",
   "anthropic>=1.13",
+  "pywebpush>=2.5",
 ]
 
 [dependency-groups]
