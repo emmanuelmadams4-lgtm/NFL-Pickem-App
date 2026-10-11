@@ -82,27 +82,28 @@ footer { color: var(--muted); font-size: 13px; }
   <div class="headline">
     <div class="big">0<small> / 8 steps landed</small></div>
     <div class="now">
-      <p><b>Finished:</b> plan, structure review, real-data backend (local, unpushed).</p>
-      <p><b>Next:</b> step 1 of 8, a safe backend plus CI, then push and open a draft PR.</p>
+      <p><b>Finished:</b> plan, two independent reviews (30 findings, all assigned), real-data backend (local, unpushed).</p>
+      <p><b>Next:</b> step 1 of 8, a safe backend plus CI, then push and open a draft PR. Goal: a usable app on your phone before Thursday's week 6 opener.</p>
     </div>
   </div>
 
   <div class="field" role="list" aria-label="Roadmap steps">
     <div class="yd next" role="listitem"><span class="n">1</span><span class="t">Safe backend + CI</span></div>
-    <div class="yd" role="listitem"><span class="n">2</span><span class="t">Layering + speed</span></div>
-    <div class="yd" role="listitem"><span class="n">3</span><span class="t">Desktop web</span></div>
-    <div class="yd" role="listitem"><span class="n">4</span><span class="t">iPhone PWA</span></div>
+    <div class="yd" role="listitem"><span class="n">2</span><span class="t">Desktop web</span></div>
+    <div class="yd" role="listitem"><span class="n">3</span><span class="t">Deploy + first iPhone install</span></div>
+    <div class="yd" role="listitem"><span class="n">4</span><span class="t">iPhone PWA polish</span></div>
     <div class="yd" role="listitem"><span class="n">5</span><span class="t">Alerts</span></div>
-    <div class="yd" role="listitem"><span class="n">6</span><span class="t">Deploy</span></div>
-    <div class="yd" role="listitem"><span class="n">7</span><span class="t">Go-live</span></div>
+    <div class="yd" role="listitem"><span class="n">6</span><span class="t">Go-live</span></div>
+    <div class="yd" role="listitem"><span class="n">7</span><span class="t">Cleanup + data timing</span></div>
     <div class="yd opt" role="listitem"><span class="n">8</span><span class="t">Model upgrade (optional)</span></div>
   </div>
 
   <div class="waiting">
     <h3>Waiting on you</h3>
     <ul>
-      <li><b>2–3 iPhone screenshots from the ESPN app:</b> the NFL scores list and one game's Matchup Predictor. They are the design bar for steps 3 and 4.</li>
-      <li>Later, at step 7: API keys, your server, and your iPhone for the live checks.</li>
+      <li><b>2–3 iPhone screenshots from the ESPN app:</b> the NFL scores list and one game's Matchup Predictor. They are the design bar for steps 2 and 4.</li>
+      <li>At step 3: install the app on your iPhone once and tell me what you see.</li>
+      <li>At step 6: API keys, your server, and your iPhone for the live checks.</li>
     </ul>
   </div>
 
@@ -112,14 +113,14 @@ footer { color: var(--muted); font-size: 13px; }
       <table>
         <thead><tr><th>#</th><th>Step</th><th>Proof it must pass</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td class="num">1</td><td>Safe backend + CI + first landing<span class="sub">Docker fix, refresh lock, model versions insert-only, CSV pick lock, reliable reminders</span></td><td>All tests, migrations on an empty DB, cold start to live picks, CI green on the PR</td><td><span class="pill next">Next</span></td></tr>
-          <tr><td class="num">2</td><td>Backend layering + fast Week board<span class="sub">No import cycles; honest backtest labels</span></td><td>Same tests, query-count check, backtest numbers unchanged</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">3</td><td>Desktop web app<span class="sub">Built, not yet reviewed</span></td><td>Browser flow tests, typecheck, build, 0 serious accessibility issues, side by side with ESPN</td><td><span class="pill wait">Needs screenshots</span></td></tr>
-          <tr><td class="num">4</td><td>iPhone PWA<span class="sub">Install, offline, offline picks</span></td><td>Opens offline with saved data, queued pick syncs, side by side with ESPN</td><td><span class="pill wait">Needs screenshots</span></td></tr>
-          <tr><td class="num">5</td><td>Alerts end to end<span class="sub">Flips, QB news, "no pick yet"</span></td><td>Signed push delivered to a test push service; the notification opens the game</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">6</td><td>Deploy and operate<span class="sub">Docker, Tailscale HTTPS, backups</span></td><td>Clean clone to a running app; a backup restores</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">7</td><td>Go-live on your server and iPhone</td><td>Smoke script all PASS: live AI report, push, weather</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">8</td><td>Model upgrade (optional)<span class="sub">Play-by-play efficiency ratings</span></td><td>Must beat the current model in the 2012–2025 test, or it doesn't ship</td><td><span class="pill todo">Optional</span></td></tr>
+          <tr><td class="num">1</td><td>Safe backend + CI + first landing<span class="sub">Docker fix, refresh lock, picks locked after kickoff, reminders that can't get lost, worker heartbeat, no guessed kickoff times</span></td><td>All tests (incl. daylight-saving and London kickoffs), migrations on an empty DB, cold start to live picks, CI green on the PR</td><td><span class="pill next">Next</span></td></tr>
+          <tr><td class="num">2</td><td>Desktop web app<span class="sub">Built, not yet reviewed; honest Results headline</span></td><td>Browser flow tests with a fixed test clock, typecheck, build, 0 serious accessibility issues, side by side with ESPN</td><td><span class="pill wait">Needs screenshots</span></td></tr>
+          <tr><td class="num">3</td><td>Deploy + your first iPhone install<span class="sub">Docker, Tailscale HTTPS, backups off the machine</span></td><td>Clean clone to a running app; real HTTPS path checked; a backup restores with matching counts</td><td><span class="pill todo">To do</span></td></tr>
+          <tr><td class="num">4</td><td>iPhone PWA polish<span class="sub">Offline, "can't reach server", app updates</span></td><td>Opens offline with saved data; buttons lock at kickoff offline; new version activates</td><td><span class="pill wait">Needs screenshots</span></td></tr>
+          <tr><td class="num">5</td><td>Alerts end to end<span class="sub">Flips, QB news, "no pick yet", test-alert button</span></td><td>Signed push delivered to a test push service; the notification opens the game</td><td><span class="pill todo">To do</span></td></tr>
+          <tr><td class="num">6</td><td>Go-live on your server and iPhone</td><td>Smoke script all PASS: live AI report, Jev answer, test alert, weather</td><td><span class="pill todo">To do</span></td></tr>
+          <tr><td class="num">7</td><td>Cleanup + data timing<span class="sub">Faster Week board; how fresh lines and QB news really are</span></td><td>Same tests, query count, backtest numbers unchanged, week-6 timing report</td><td><span class="pill todo">To do</span></td></tr>
+          <tr><td class="num">8</td><td>Model upgrade (optional)<span class="sub">Play-by-play efficiency ratings</span></td><td>Must beat the current model on 2022–2025 after tuning on 2012–2021, or it doesn't ship</td><td><span class="pill todo">Optional</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -134,11 +135,11 @@ footer { color: var(--muted); font-size: 13px; }
       <p class="note">3,649 games, walk-forward. The blend ties the market; stats alone are 2.1 points worse.</p>
     </div>
     <div class="card">
-      <h3>Structure review</h3>
-      <div class="stat"><span>Blocker</span><span>1</span></div>
-      <div class="stat"><span>Should fix</span><span>11</span></div>
-      <div class="stat"><span>Nice to have</span><span>6</span></div>
-      <p class="note">Verdict: sound and right-sized. Every finding is assigned to a step.</p>
+      <h3>Independent reviews</h3>
+      <div class="stat"><span>Structure findings</span><span>18</span></div>
+      <div class="stat"><span>Blindspot findings</span><span>12</span></div>
+      <div class="stat"><span>Blockers</span><span>1</span></div>
+      <p class="note">Verdict: structure is sound and right-sized. Every finding is assigned to a step.</p>
     </div>
     <div class="card">
       <h3>Build setup here</h3>
@@ -149,5 +150,5 @@ footer { color: var(--muted); font-size: 13px; }
     </div>
   </div>
 
-  <footer>Updated 2026-10-11 · Plan stage · Branch claude/nfl-pickem-intelligence (local, not pushed)</footer>
+  <footer>Updated 2026-10-11 · Plan complete · Branch claude/nfl-pickem-intelligence (local, not pushed)</footer>
 </div>
