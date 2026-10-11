@@ -13,7 +13,26 @@ import { Button, Card } from "@/components/ui";
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
-    const register = () => navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+    const register = () =>
+      navigator.serviceWorker
+        .register("/sw.js", { scope: "/" })
+        .then(() => navigator.serviceWorker.ready)
+        .then((reg) => {
+          // Hand the worker everything this page already loaded so a first-run offline reload works.
+          const urls = performance
+            .getEntriesByType("resource")
+            .map((e) => e.name)
+            .filter((u) => {
+              try {
+                const x = new URL(u);
+                return x.origin === location.origin && (x.pathname.startsWith("/_next/static/") || x.pathname.startsWith("/icons/"));
+              } catch {
+                return false;
+              }
+            });
+          reg.active?.postMessage({ type: "CACHE_URLS", urls });
+        })
+        .catch(() => {});
     if (document.readyState === "complete") register();
     else window.addEventListener("load", register, { once: true });
   }, []);

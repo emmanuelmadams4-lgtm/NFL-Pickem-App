@@ -37,7 +37,7 @@ export function SeasonLines({ rows }: { rows: SeasonRow[] }) {
             {keys.map((k) => (
               <Line
                 key={k}
-                type="monotone"
+                type="linear"
                 dataKey={k}
                 name={MODEL_STYLE[k].label}
                 stroke={MODEL_STYLE[k].color}

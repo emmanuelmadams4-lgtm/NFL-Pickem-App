@@ -1,14 +1,11 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createClient, type Api } from "@nflpi/shared";
 import { trackedFetch } from "@/lib/sync";
 
 export const TOKEN_KEY = "nflpi_token";
 export const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
-/** undefined = still reading localStorage, null = signed out, string = token */
-type TokenState = string | null | undefined;
 
 interface Session {
   token: string | null;
@@ -30,33 +27,54 @@ function readToken(): string | null {
   }
 }
 
+/**
+ * The token lives in an external store so the server render and the hydration render agree
+ * (both see "not ready"), and the real value arrives right after hydration without a mismatch.
+ */
+let memoryToken: string | null = null;
+let memoryTouched = false; // true once signIn/signOut ran, so a blocked localStorage still works for the session
+const tokenListeners = new Set<() => void>();
+const notifyToken = () => tokenListeners.forEach((l) => l());
+
+function tokenSnapshot(): string | null {
+  return memoryTouched ? memoryToken : readToken();
+}
+function subscribeToken(cb: () => void) {
+  tokenListeners.add(cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    tokenListeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+
 export function SessionProvider({ children, onSignOut }: { children: ReactNode; onSignOut?: () => void }) {
-  const [token, setToken] = useState<TokenState>(undefined);
+  const token = useSyncExternalStore<string | null | undefined>(subscribeToken, tokenSnapshot, () => undefined);
   const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    setToken(readToken());
-  }, []);
-
   const signIn = useCallback((t: string) => {
+    memoryToken = t;
+    memoryTouched = true;
     try {
       localStorage.setItem(TOKEN_KEY, t);
     } catch {
       /* private mode: the session simply won't persist */
     }
     setNotice(null);
-    setToken(t);
+    notifyToken();
   }, []);
 
   const signOut = useCallback(
     (message?: string) => {
+      memoryToken = null;
+      memoryTouched = true;
       try {
         localStorage.removeItem(TOKEN_KEY);
       } catch {
         /* ignore */
       }
       setNotice(message ?? null);
-      setToken(null);
+      notifyToken();
       onSignOut?.();
     },
     [onSignOut],

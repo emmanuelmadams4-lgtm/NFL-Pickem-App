@@ -55,9 +55,7 @@ export function Providers({ children }: { children: ReactNode }) {
         >
           <ServiceWorkerRegister />
           <AuthFailureBridge handler={onUnauthorized} />
-          <Suspense fallback={<FullScreenLoading />}>
-            <Gate>{children}</Gate>
-          </Suspense>
+          <Gate>{children}</Gate>
         </SessionProvider>
       </ToastProvider>
     </QueryClientProvider>
@@ -114,7 +112,14 @@ function MetaGate({ children }: { children: ReactNode }) {
       </main>
     );
   }
-  return <AppShell>{children}</AppShell>;
+  // Everything below the gate renders only on the client, after sign-in, so useSearchParams never runs during prerender.
+  // The Suspense boundary is still required for static export and is deliberately below the gate: a boundary above it
+  // would hydrate lazily, after the session state changed, and trigger a hydration mismatch.
+  return (
+    <Suspense fallback={<FullScreenLoading />}>
+      <AppShell>{children}</AppShell>
+    </Suspense>
+  );
 }
 
 function FullScreenLoading() {

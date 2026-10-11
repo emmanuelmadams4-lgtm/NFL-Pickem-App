@@ -129,15 +129,15 @@ export function WeekBoard() {
             <EmptyState title={`No games scheduled for Week ${week}`} hint={`There are no ${season} games in this week. Pick another week or season above.`} />
           ) : (
             <section aria-label="Games">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 lg:mb-2">
-                <SelectField label="Sort by" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+              <div className="mb-3 grid gap-2 lg:mb-2 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-3">
+                <SelectField label="Sort by" grow className="flex lg:inline-flex" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
                   {SORTS.map((s) => (
                     <option key={s.key} value={s.key}>
                       {s.label}
                     </option>
                   ))}
                 </SelectField>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 lg:gap-3">
                   <Segmented
                     label="Games shown"
                     value={scope}
@@ -156,9 +156,10 @@ export function WeekBoard() {
                       onlyAttention ? "border-warn/50 bg-warn/12 text-warn" : "border-border bg-elevated text-text-2 hover:border-muted hover:text-text",
                     )}
                   >
-                    Needs attention only ({data.summary.attention})
+                    <span className="lg:hidden">Attention ({data.summary.attention})</span>
+                    <span className="hidden lg:inline">Needs attention only ({data.summary.attention})</span>
                   </button>
-                  <span className="text-xs text-subtle" aria-live="polite">
+                  <span className="hidden text-xs text-subtle lg:inline" aria-live="polite">
                     {games.length} of {data.games.length} games
                   </span>
                 </div>

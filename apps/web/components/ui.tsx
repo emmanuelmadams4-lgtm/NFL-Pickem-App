@@ -197,17 +197,18 @@ export function SelectField({
   labelClassName,
   children,
   hideLabel,
+  grow,
   ...rest
-}: SelectHTMLAttributes<HTMLSelectElement> & { label: string; hideLabel?: boolean; labelClassName?: string }) {
+}: SelectHTMLAttributes<HTMLSelectElement> & { label: string; hideLabel?: boolean; labelClassName?: string; grow?: boolean }) {
   const id = useId();
   return (
     <span className={className ?? "inline-flex"}>
-      <label htmlFor={id} className="inline-flex items-center gap-2 text-xs text-text-2">
+      <label htmlFor={id} className={cx("inline-flex items-center gap-2 text-xs text-text-2", grow && "w-full")}>
         <span className={hideLabel ? "sr-only" : labelClassName}>{label}</span>
         <select
           id={id}
           {...rest}
-          className="h-10 rounded-ctl border border-border bg-elevated px-2 text-base text-text hover:border-muted lg:h-8 lg:text-sm"
+          className={cx("h-10 rounded-ctl border border-border bg-elevated px-2 text-base text-text hover:border-muted lg:h-8 lg:text-sm", grow && "min-w-0 flex-1")}
         >
           {children}
         </select>

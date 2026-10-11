@@ -15,24 +15,32 @@ const API = `nflpi-api-${VERSION}`;
 const IMAGES = `nflpi-img-${VERSION}`;
 const CURRENT = [STATIC, PAGES, API, IMAGES];
 
-const PRECACHE = [
-  "/",
-  "/performance/",
-  "/backtest/",
-  "/settings/",
-  "/game/",
-  "/manifest.webmanifest",
-  "/icons/icon.svg",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-];
+// Pages whose HTML (and the /_next/static assets it names) are fetched at install so the app opens offline on first run.
+const PRECACHE_PAGES = ["/", "/performance/", "/backtest/", "/settings/", "/game/"];
+const PRECACHE_FILES = ["/manifest.webmanifest", "/icons/icon.svg", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(PAGES);
+      const pages = await caches.open(PAGES);
+      const statics = await caches.open(STATIC);
+      const assets = new Set(PRECACHE_FILES.filter((f) => f.startsWith("/icons/")));
       // Best effort: one missing page must not block installing the worker.
-      await Promise.all(PRECACHE.map((url) => cache.add(url).catch(() => undefined)));
+      await Promise.all(
+        PRECACHE_PAGES.map(async (url) => {
+          try {
+            const res = await fetch(url, { cache: "reload" });
+            if (!res.ok) return;
+            await pages.put(url, res.clone());
+            const html = await res.text();
+            for (const m of html.matchAll(/\/_next\/static\/[^"'\\\s<>)]+/g)) assets.add(m[0]);
+          } catch {
+            /* offline during install: the runtime handlers will fill the cache later */
+          }
+        }),
+      );
+      await pages.add("/manifest.webmanifest").catch(() => undefined);
+      await Promise.all([...assets].map((a) => statics.add(a).catch(() => undefined)));
       await self.skipWaiting();
     })(),
   );
@@ -49,7 +57,21 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data === "SKIP_WAITING") self.skipWaiting();
+  const data = event.data;
+  if (data === "SKIP_WAITING") self.skipWaiting();
+  // Assets the page loaded before this worker took control would otherwise never be cached.
+  if (data && data.type === "CACHE_URLS" && Array.isArray(data.urls)) {
+    event.waitUntil(
+      (async () => {
+        const cache = await caches.open(STATIC);
+        await Promise.all(
+          data.urls
+            .filter((u) => typeof u === "string" && new URL(u, self.location.origin).origin === self.location.origin)
+            .map((u) => cache.match(u).then((hit) => hit || cache.add(u)).catch(() => undefined)),
+        );
+      })(),
+    );
+  }
 });
 
 async function trim(cacheName, max) {
