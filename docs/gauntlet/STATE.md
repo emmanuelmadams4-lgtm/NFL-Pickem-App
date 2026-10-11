@@ -8,8 +8,9 @@
 * **Overall step:** PLAN complete → next **step 1 of 8 — Safe backend + CI + first landing**.
 * **Phase:** PLAN done 2026-10-11. Next session: `DIRECT_COORDINATOR / ONE_SHOT`, step 1.
 * **Done:** backend (data pipeline, model, backtest, API, AI layer, Web Push) committed locally, unreviewed; plan; structure review (18 findings); blindspot review (12 findings); progress page.
-* **In flight (not a gauntlet step yet):** a pre-gauntlet Sonnet builder is still finishing `apps/web` (desktop + PWA). Its output is committed as `WIP:` snapshots and is input to steps 2 and 4, where it gets a frozen gate and a fresh critic. Nothing it produced counts as verified.
-* **Repo:** `/home/user/NFL-Pickem-App`, branch `claude/nfl-pickem-intelligence`, base `origin/main` = `83a9ae4`. Nothing pushed yet.
+* **Pre-gauntlet web build:** finished. Coordinator re-ran `tsc` + `next build` (pass) and inspected screens; findings C1–C5 in PLAN.md. It is input to steps 2 and 4, where it gets a frozen gate and a fresh critic. Not verified until then.
+* **Container restart (2026-10-11):** code and commits survived; the dev API server and the local Docker daemon/Postgres container were lost. Step 1 restarts them (`dockerd &`, then `docker compose up -d db` or a fresh `postgres:17-alpine` container, `alembic upgrade head`, `jobs bootstrap`).
+* **Repo:** `/home/user/NFL-Pickem-App`, branch `claude/nfl-pickem-intelligence`, base `origin/main` = `83a9ae4`. Pushed 2026-10-11 after a container restart (durability, owner-approved). **Draft PR #1**: https://github.com/emmanuelmadams4-lgtm/NFL-Pickem-App/pull/1 (watched by this session). No CI yet (step 1 adds it).
 * **Provider ledger:** `CODEX_AVAILABLE: no (not installed)` → `IMPLEMENTATION_PROVIDER: CLAUDE (limit hit)`. `CODEX_POLICY: CODEX_FIRST` (falls through to Claude). Jev: unavailable (no `jev.sh`, no `OPENROUTER_API_KEY`). `CLIMBS: none`. Fable / gpt-6-astra: never without the owner's yes in chat.
 * **Progress page:** https://claude.ai/artifact/6U5zCcvZijcXVMuH6Hbnvd, source `docs/gauntlet/progress.html`. Republish in place only.
 * **Review reports:** `~/.claude/plans/nfl-pickem-intelligence-reviews/` (ephemeral) and summaries in `docs/gauntlet/STRUCTURE_REVIEW.md`, PLAN.md § Blindspot review.
@@ -47,8 +48,9 @@ OVERALL STEP: step 1 of 8 — Safe backend + CI + first landing (T3)
 GOAL: the backend is safe to rely on this season, and CI proves it on every push.
 SCOPE + FROZEN GATE: docs/gauntlet/PLAN.md, roadmap row 1 (findings S1–S6, S8–S10, S13, S15, S16, S18,
   B1, B2, B7, B8-QB-flag; details in docs/gauntlet/STRUCTURE_REVIEW.md and PLAN.md § Blindspot review).
-BASELINE: branch claude/nfl-pickem-intelligence; backend tests 23/23 green at dbad5f9; Postgres via
-  `docker start nflpi-db` (or `docker compose up -d db`); `cd backend && uv run pytest`.
+BASELINE: branch claude/nfl-pickem-intelligence (draft PR #1); backend tests 23/23 green at dbad5f9.
+  Docker daemon is down after a container restart: start `dockerd`, then a postgres:17-alpine
+  container `nflpi-db` (user/pass/db nflpi, port 5432); `cd backend && uv run pytest`.
 CHECKPOINTS: PLANNING → SPECIFICATION (freeze criteria, first failing test) → IMPLEMENTATION (one
   red→green slice at a time, minimum diff) → CLEANUP (scope-locked refactor of touched code) →
   VERIFICATION (fresh Opus subagent critic re-runs the gate on the committed HEAD) → LANDING (push
