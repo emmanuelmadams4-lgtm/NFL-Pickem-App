@@ -28,6 +28,15 @@ session is editing them); the next PLANNING checkpoint must do it.
 | D15 | Build order: labels + points + copy sheet first, on the desktop site. Then phone install, change alerts, tiebreaker scores, weather, AI reports. No promise for Thursday. | two-way | - |
 | D16 | AI report runs only when he taps "explain this game". No automatic calls. Daily cap stays. | two-way | - |
 | D17 | Accent stays blue. Phone screens borrow the soft glow at the top from reference 07. | two-way | - |
+| D18 | Owner goal, his words: "I want the model to get better over time by choosing the winners more often." The model's share of winners picked is a tracked number, and model improvement is ongoing work, not optional. | two-way | - |
+
+How D18 is met without breaking the validation rules in `CLAUDE.md` (coordinator's reading):
+
+* Team ratings already move after every game. That keeps the model current; it does not raise its ceiling.
+* The ceiling rises only by a better model: a challenger (new input or method) is tested walk-forward on past seasons and replaces the current one only if it wins with a 95% interval that excludes zero. Roadmap step 8 (play-by-play efficiency ratings) is the first challenger and is no longer "optional". Next candidates: a fresher line source, a starting-QB adjustment.
+* The Results screen shows the live model's winners-correct by week and season beside the market's, so "getting better" is a measured line, not a claim.
+* Bar: the market picks about 66.6%, the league leader about 69%. No promise of a number.
+* His picks still never train the model (D7).
 
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
