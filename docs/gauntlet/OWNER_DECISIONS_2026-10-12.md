@@ -29,6 +29,13 @@ session is editing them); the next PLANNING checkpoint must do it.
 | D16 | AI report runs only when he taps "explain this game". No automatic calls. Daily cap stays. | two-way | - |
 | D17 | Accent stays blue. Phone screens borrow the soft glow at the top from reference 07. | two-way | - |
 | D18 | Owner goal, his words: "I want the model to get better over time by choosing the winners more often." The model's share of winners picked is a tracked number, and model improvement is ongoing work, not optional. | two-way | - |
+| D19 | Owner, his words: "I would like a 1 hour reminder right before kickoff. On Thursday and on Sunday." Replaces the "cut the reminder" half of D6. One alert one hour before the first kickoff on Thursday and one hour before the first kickoff on Sunday, sent whether or not he has picked, opening the week's sheet. | two-way | he asks for Monday, Saturday or per-game reminders |
+
+D19 notes (coordinator's reading): today's code reminds per game and only for games with no pick
+(`notify/push.py`, `send_kickoff_reminders`). D11 makes every game have a pick, so that rule would
+never fire; D19 needs a per-day reminder instead. "First kickoff on Sunday" includes a 9:30 AM ET
+London game when there is one. OPEN (owner): Monday night, Saturday games late in the season, and
+whether Sunday should also remind before the 1:00 PM ET slate when there is a London game.
 
 How D18 is met without breaking the validation rules in `CLAUDE.md` (coordinator's reading):
 
