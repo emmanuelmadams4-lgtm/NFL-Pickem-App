@@ -14,6 +14,12 @@ from nflpi.models import AppSetting, Game, PickPoint, Prediction, SheetEntry, Us
 
 log = logging.getLogger(__name__)
 TIE_BAND = 0.01
+TIE_CRITERIA = [
+    "The inputs conflict or key information is missing.",
+    "The inputs lean toward the pick but have a clear weakness.",
+    "The stats and line favor the pick with no major missing information.",
+    "The stats and line strongly favor the pick with stable starting quarterbacks.",
+]
 
 
 class Ranked(NamedTuple):
@@ -24,6 +30,49 @@ class Ranked(NamedTuple):
 class Evidence(NamedTuple):
     score: float
     confidence: float
+
+
+def _chance(p: Prediction, g: Game, team: str) -> float:
+    return p.home_win_prob if team == g.home_team else 1 - p.home_win_prob
+
+
+def week_size(session: Session, season: int, week: int) -> int:
+    games = session.scalars(select(Game).where(Game.season == season, Game.week == week))
+    return sum(g.status != "postponed" for g in games)
+
+
+def _game_row(g: Game, entry: SheetEntry | None, prediction: Prediction | None,
+              pick: UserPick | None, history: set[str]) -> dict:
+    if entry:
+        return dict(label=entry.label, label_hit_rate=LABEL_HIT_RATE.get(entry.label), app_pick=entry.app_pick,
+                    app_points=entry.app_points, my_pick=entry.my_pick, my_points=entry.my_points,
+                    pick_by=entry.pick_by, points_by=entry.points_by)
+    app_pick = prediction.pick if prediction else None
+    app_prob = _chance(prediction, g, app_pick) if prediction else None
+    label = pick_label(app_prob) if app_prob is not None else None
+    return dict(label=label, label_hit_rate=LABEL_HIT_RATE.get(label) if label else None,
+                app_pick=app_pick, app_points=None,
+                my_pick=pick.picked_team if pick else (None if g.game_id in history else app_pick),
+                my_points=None, pick_by=("csv" if pick.source == "csv" else "user") if pick else "app",
+                points_by="app")
+
+
+def _jev_request(games: list[Game], preds: dict[str, Prediction], ranked: list[Ranked]) -> tuple[str, dict]:
+    by_id = {g.game_id: g for g in games}
+    state = []
+    for item in ranked:
+        g, p = by_id[item.game_id], preds[item.game_id]
+        stats = p.features.get("stats_only_prob")
+        agree = ((stats >= 0.5) == (p.market_home_prob >= 0.5)
+                 if stats is not None and p.market_home_prob is not None else None)
+        qb_change = bool(p.features.get("home_qb_change") or p.features.get("away_qb_change"))
+        state.append(f"{g.game_id}: {g.away_team} at {g.home_team}; pick {p.pick}; chance {item.prob:.0%}; "
+                     f"stats and line agree {agree}; starting QB change {qb_change}; "
+                     f"uncertainty {p.uncertainty}: {', '.join(p.uncertainty_reasons)}")
+    questions = {item.game_id: {"type": "score", "instructions":
+                 f"How strong is the evidence in the state for the pick in game `{item.game_id}`?",
+                 "criteria": TIE_CRITERIA} for item in ranked}
+    return "\n".join(state), questions
 
 
 def order(games: list[Ranked], evidence: dict[str, Evidence]) -> list[str]:
@@ -74,31 +123,15 @@ def compute_week(
     points = {p.game_id: p for p in session.scalars(select(PickPoint).where(PickPoint.game_id.in_(ids)))}
     evidence = _evidence(session, season, week, preds)
     n = sum(g.status != "postponed" for g in games)
-    rows: dict[str, dict] = {}
     history = {g.game_id for g in games if g.game_id not in entries and g.game_id not in writing and is_locked(g, now)}
-    for g in games:
-        gid = g.game_id
-        e, p, mine = entries.get(gid), preds.get(gid), picks.get(gid)
-        if e:
-            rows[gid] = dict(label=e.label, label_hit_rate=LABEL_HIT_RATE.get(e.label), app_pick=e.app_pick,
-                             app_points=e.app_points, my_pick=e.my_pick, my_points=e.my_points,
-                             pick_by=e.pick_by, points_by=e.points_by)
-            continue
-        app_pick = p.pick if p else None
-        app_prob = (p.home_win_prob if p.pick == g.home_team else 1 - p.home_win_prob) if p else None
-        rows[gid] = dict(label=pick_label(app_prob) if app_prob is not None else None,
-                         label_hit_rate=LABEL_HIT_RATE[pick_label(app_prob)] if app_prob is not None else None,
-                         app_pick=app_pick, app_points=None,
-                         my_pick=mine.picked_team if mine else (None if gid in history else app_pick),
-                         my_points=None, pick_by=("csv" if mine.source == "csv" else "user") if mine else "app",
-                         points_by="app")
+    rows = {g.game_id: _game_row(g, entries.get(g.game_id), preds.get(g.game_id), picks.get(g.game_id), history)
+            for g in games}
     available_app = set(range(1, n + 1)) - {e.app_points for e in entries.values() if e.app_points is not None}
     available_my = set(range(1, n + 1)) - {e.my_points for e in entries.values() if e.my_points is not None}
     eligible = [g for g in games if g.status != "postponed" and g.game_id not in entries
                 and g.game_id not in history and g.game_id in preds]
-    for gid, number in zip(order([Ranked(g.game_id, preds[g.game_id].home_win_prob
-                                           if preds[g.game_id].pick == g.home_team
-                                           else 1 - preds[g.game_id].home_win_prob) for g in eligible], evidence),
+    for gid, number in zip(order([Ranked(g.game_id, _chance(preds[g.game_id], g, preds[g.game_id].pick))
+                                  for g in eligible], evidence),
                            sorted(available_app, reverse=True), strict=False):
         rows[gid]["app_points"] = number
     for g in eligible:
@@ -109,8 +142,7 @@ def compute_week(
             rows[gid]["points_by"] = "user"
             available_my.remove(number)
     remaining = [g for g in eligible if rows[g.game_id]["my_points"] is None]
-    ranked = [Ranked(g.game_id, preds[g.game_id].home_win_prob if rows[g.game_id]["my_pick"] == g.home_team
-                     else 1 - preds[g.game_id].home_win_prob) for g in remaining]
+    ranked = [Ranked(g.game_id, _chance(preds[g.game_id], g, rows[g.game_id]["my_pick"])) for g in remaining]
     for gid, number in zip(order(ranked, evidence), sorted(available_my, reverse=True), strict=False):
         rows[gid]["my_points"] = number
     for gid, row in rows.items():
@@ -146,7 +178,7 @@ def finalize(session: Session, now: datetime) -> int:
         existing_pick = session.get(UserPick, g.game_id)
         pick_by = row["pick_by"] if existing_pick else "auto"
         values = {k: row[k] for k in ("app_pick", "app_points", "my_pick", "my_points", "label", "points_by")}
-        app_prob = prediction.home_win_prob if prediction.pick == g.home_team else 1 - prediction.home_win_prob
+        app_prob = _chance(prediction, g, prediction.pick)
         values.update(game_id=g.game_id, app_prob=app_prob, pick_by=pick_by, locked_at=now)
         result = session.execute(insert(SheetEntry).values(**values).on_conflict_do_nothing(index_elements=["game_id"]))
         if result.rowcount:
@@ -167,8 +199,8 @@ def refresh_tiebreaks(session: Session, season: int, week: int) -> None:
     games = session.scalars(select(Game).where(Game.season == season, Game.week == week)).all()
     games = [g for g in games if g.status != "postponed" and not is_locked(g, now_utc())]
     preds = recommendations(session, games)
-    ranked = sorted([Ranked(g.game_id, preds[g.game_id].home_win_prob if preds[g.game_id].pick == g.home_team
-                            else 1 - preds[g.game_id].home_win_prob) for g in games if g.game_id in preds],
+    ranked = sorted([Ranked(g.game_id, _chance(preds[g.game_id], g, preds[g.game_id].pick))
+                     for g in games if g.game_id in preds],
                     key=lambda r: (-r.prob, r.game_id))
     if not any(a.prob - b.prob < TIE_BAND for a, b in zip(ranked, ranked[1:], strict=False)):
         return
@@ -177,29 +209,10 @@ def refresh_tiebreaks(session: Session, season: int, week: int) -> None:
     cached = dict(setting.value) if setting else {}
     if all(cached.get(gid, {}).get("hash") == p.inputs_hash for gid, p in preds.items()):
         return
-    state = []
-    by_id = {g.game_id: g for g in games}
-    for item in ranked:
-        g, p = by_id[item.game_id], preds[item.game_id]
-        stats = p.features.get("stats_only_prob")
-        agree = (
-            (stats >= 0.5) == (p.market_home_prob >= 0.5)
-            if stats is not None and p.market_home_prob is not None else None
-        )
-        qb_change = bool(p.features.get("home_qb_change") or p.features.get("away_qb_change"))
-        state.append(f"{g.game_id}: {g.away_team} at {g.home_team}; pick {p.pick}; chance {item.prob:.0%}; "
-                     f"stats and line agree {agree}; starting QB change {qb_change}; "
-                     f"uncertainty {p.uncertainty}: {', '.join(p.uncertainty_reasons)}")
-    criteria = ["The inputs conflict or key information is missing.",
-                "The inputs lean toward the pick but have a clear weakness.",
-                "The stats and line favor the pick with no major missing information.",
-                "The stats and line strongly favor the pick with stable starting quarterbacks."]
-    questions = {item.game_id: {"type": "score", "instructions":
-                 f"How strong is the evidence in the state for the pick in game `{item.game_id}`?",
-                 "criteria": criteria} for item in ranked}
+    state, questions = _jev_request(games, preds, ranked)
     try:
         research._reserve_call(session)
-        answers = jev.decide("\n".join(state), questions)
+        answers = jev.decide(state, questions)
         for gid, answer in answers.items():
             if gid in preds:
                 cached[gid] = {"hash": preds[gid].inputs_hash, "score": answer["score"],

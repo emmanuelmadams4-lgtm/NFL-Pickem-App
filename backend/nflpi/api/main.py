@@ -147,8 +147,7 @@ def set_points(game_id: str, body: s.PointsIn, session: DB) -> s.WeekOut:
     rows = sheet.compute_week(session, g.season, g.week, datetime.now(UTC))
     if rows[game_id]["my_points"] is None:
         raise HTTPException(422, "Game has no points to set")
-    if not 1 <= body.points <= sum(x.status != "postponed" for x in session.scalars(
-        select(Game).where(Game.season == g.season, Game.week == g.week))):
+    if not 1 <= body.points <= sheet.week_size(session, g.season, g.week):
         raise HTTPException(422, "Points outside the week range")
     other_id = next((gid for gid, row in rows.items() if gid != game_id and row["my_points"] == body.points), None)
     if other_id and views.is_locked(session.get(Game, other_id), datetime.now(UTC)):

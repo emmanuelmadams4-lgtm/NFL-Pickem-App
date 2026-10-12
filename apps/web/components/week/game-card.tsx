@@ -126,10 +126,12 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
             <ProbBar value={prob} fromRight={p.pick === game.home.abbr} label={`${p.pick} win probability`} />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               {game.sheet.label && game.sheet.label in labelWords && (
-                <p className="text-label text-text-2">
-                  <span data-testid="pick-label">{labelWords[game.sheet.label as keyof typeof labelWords]}</span>{" "}
-                  {game.sheet.label_hit_rate !== null && <span>won {pct(game.sheet.label_hit_rate)} of the time, 2012-2025</span>}
-                </p>
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <Chip><span data-testid="pick-label">{labelWords[game.sheet.label as keyof typeof labelWords]}</span></Chip>
+                  {game.sheet.label_hit_rate !== null && (
+                    <span className="text-label text-text-2">Won {pct(game.sheet.label_hit_rate)} of the time, 2012–2025</span>
+                  )}
+                </span>
               )}
               <span className="flex items-center gap-1.5 text-label text-subtle">
                 Uncertainty <UncertaintyChip prediction={p} />
