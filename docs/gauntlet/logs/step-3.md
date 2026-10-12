@@ -41,3 +41,16 @@ design.md § 0 written first (frozen tokens, type, layout, icon, logo rules).
 | K | E1–E14, W1–W5 stay green; axe 0 serious/critical both themes; design critic PASS vs reference 06 (393×852 and 1440×900) |
 
 Red run (before any production change): pytest R5 failed (`KeyError: 'model_pick_kind'`), R4 season guard green (code already right; guard only). Playwright: 17 step-2 checks green; all 10 new checks red (no `game-card`, `win-split`, tab bar, tokens, icons, R1–R3, R6 cards).
+
+## 3. IMPLEMENTATION
+`IMPLEMENTATION_PROVIDER: CLAUDE (limit hit: Codex not installed)` · `JEV: unavailable` · `CLIMBS: none` · `/ponytail` rules in both work orders.
+
+| WO | Scope | Rung | Commit | Proof rerun by the coordinator |
+|---|---|---|---|---|
+| F | R5 CSV `model_pick_kind` | sonnet, try 1 | `31ae11e` | pytest 57 passed · ruff clean |
+| G | D39 tokens and Barlow Condensed titles, D40 cards/VS/split tiles/section pills/floating tab bar, D41 icons, dark-variant team logos, R1–R4, R6 | opus, try 1 | `f8a531e` | pytest 57 · ruff · gen:api no drift · typecheck 0 · grep empty · `npm run e2e` **27 passed** |
+
+Reviews: WO-F diff read (one column, same prediction as `model_pick`). WO-G: 35 files (+657/-476), all `apps/web`, the lockfile and design docs. Recorded test-setup change: `playwright.config.ts` now sets `serviceWorkers: "block"` (Playwright's documented behavior: `page.route` cannot see requests a controlling service worker handles; R1 and E9b rewrite API responses). Accepted: no spec tests the worker; step 6 (iPhone PWA) adds the service-worker checks in a project without the block. Shared-index note: WO-F's commit also carries WO-G's staged `icon.svg` deletion; end state correct. Coordinator screenshots (393×852, 1440×900, dark): the structure matches reference 06. 21st.dev: not used (tab bar hand-built; the 2 daily code retrievals were already spent).
+
+## 4. CLEANUP
+No separate edits: both work orders landed minimal diffs, and the coordinator's read found nothing to simplify without a behavior change (design.md's older sections are superseded by § 0 by design; rewriting them is docs work for step 4's PLANNING). Recorded as `no change needed`.
