@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { kickoffTime, marketFavorite, pickProb, pct, strengthLabel, type GameSummary, type Team } from "@nflpi/shared";
+import { marketFavorite, pickProb, pct, strengthLabel, type GameSummary, type Team } from "@nflpi/shared";
 import { Chip, Mark, Tip, cx } from "@/components/ui";
 import { TeamBar, TeamLogo } from "@/components/team";
 import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-bits";
 import { PickButtons } from "@/components/pick-buttons";
-import { shortDay } from "@/lib/fmt";
+import { useLocked } from "@/lib/clock";
+import { kickoffClock, shortDay } from "@/lib/fmt";
 
 export const ROW_GRID =
   "lg:grid-cols-[76px_minmax(176px,224px)_minmax(196px,1fr)_88px_96px_minmax(160px,1.2fr)_148px_104px]";
@@ -53,6 +54,7 @@ function statusTone(status: string): "bad" | "warn" | "warn-soft" {
 export function GameRow({ game }: { game: GameSummary }) {
   const p = game.prediction;
   const fav = marketFavorite(game);
+  const locked = useLocked(game);
   const started = game.status !== "scheduled";
   const final = game.status === "final";
   const pickTeam: Team | null = p ? (p.pick === game.home.abbr ? game.home : game.away) : null;
@@ -64,7 +66,7 @@ export function GameRow({ game }: { game: GameSummary }) {
   return (
     <li className={cx("relative grid grid-cols-2 items-center gap-x-4 gap-y-3 rounded-card border border-border bg-surface p-4 transition-colors hover:bg-elevated/60 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-4 lg:py-3", ROW_GRID)}>
       <Cell className="col-span-2 flex items-baseline gap-2 lg:col-span-1 lg:block">
-        <p className="text-sm font-medium text-text">{kickoffTime(game.kickoff_utc)}</p>
+        <p className="text-sm font-medium text-text">{kickoffClock(game)}</p>
         <p className="text-xs text-subtle">{shortDay(game.kickoff_utc)}</p>
         {game.status === "in_progress" && <Chip className="ml-auto lg:mt-1 lg:ml-0">Live</Chip>}
         {final && <p className="ml-auto text-xs text-text-2 lg:mt-0.5 lg:ml-0">Final</p>}
@@ -160,7 +162,7 @@ export function GameRow({ game }: { game: GameSummary }) {
         ) : game.status === "in_progress" ? (
           <p className="text-xs text-text-2">In progress</p>
         ) : (
-          <p className="text-xs text-subtle">{game.locked ? "Locked" : "Open until kickoff"}</p>
+          <p className="text-xs text-subtle">{locked ? "Locked" : "Open until kickoff"}</p>
         )}
       </Cell>
     </li>

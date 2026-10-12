@@ -1,13 +1,14 @@
 "use client";
 
 import type { GameSummary } from "@nflpi/shared";
+import { useLocked } from "@/lib/clock";
 import { useSetPick } from "@/lib/queries";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { TeamLogo } from "@/components/team";
 import { Check } from "@/components/icons";
 import { cx } from "@/components/ui";
 
-type PickGame = Pick<GameSummary, "game_id" | "season" | "week" | "away" | "home" | "my_pick" | "locked">;
+type PickGame = Pick<GameSummary, "game_id" | "season" | "week" | "away" | "home" | "my_pick" | "locked" | "kickoff_utc" | "time_tbd" | "status">;
 
 /**
  * One-tap pick. Away on the left, home on the right (matches "away @ home").
@@ -15,6 +16,7 @@ type PickGame = Pick<GameSummary, "game_id" | "season" | "week" | "away" | "home
  */
 export function PickButtons({ game, size = "sm", className }: { game: PickGame; size?: "sm" | "lg"; className?: string }) {
   const mutation = useSetPick();
+  const locked = useLocked(game);
   const pending = usePendingPicks();
   const { pick, waiting } = effectivePick(pending, game.game_id, game.my_pick);
   const teams = [game.away, game.home];
@@ -24,15 +26,15 @@ export function PickButtons({ game, size = "sm", className }: { game: PickGame; 
     <div role="group" aria-label={`Your pick: ${game.away.abbr} at ${game.home.abbr}`} className="flex gap-2 lg:gap-1.5">
       {teams.map((t) => {
         const selected = pick === t.abbr;
-        const label = selected ? `${t.name} picked. ${game.locked ? "Locked at kickoff." : "Tap to clear."}` : game.locked ? `Pick ${t.name} (locked at kickoff)` : `Pick ${t.name}`;
+        const label = selected ? `${t.name} picked. ${locked ? "Locked at kickoff." : "Tap to clear."}` : locked ? `Pick ${t.name} (locked at kickoff)` : `Pick ${t.name}`;
         return (
           <button
             key={t.abbr}
             type="button"
             aria-pressed={selected}
             aria-label={label}
-            title={game.locked ? "Locked at kickoff" : selected ? "Tap again to clear" : `Pick ${t.name}`}
-            disabled={game.locked}
+            title={locked ? "Locked at kickoff" : selected ? "Tap again to clear" : `Pick ${t.name}`}
+            disabled={locked}
             onClick={() => mutation.mutate({ gameId: game.game_id, season: game.season, week: game.week, team: selected ? null : t.abbr })}
             className={cx(
               "relative z-10 inline-flex items-center justify-center gap-1.5 rounded-ctl border font-semibold transition-[transform,background-color,border-color,opacity] active:translate-y-px",
@@ -40,9 +42,9 @@ export function PickButtons({ game, size = "sm", className }: { game: PickGame; 
               selected
                 ? "border-transparent bg-accent-solid text-white"
                 : "border-border-strong bg-elevated text-text hover:border-accent",
-              game.locked && "cursor-not-allowed active:translate-y-0",
-              game.locked && !selected && "opacity-55 hover:border-border-strong",
-              game.locked && selected && "opacity-80",
+              locked && "cursor-not-allowed active:translate-y-0",
+              locked && !selected && "opacity-55 hover:border-border-strong",
+              locked && selected && "opacity-80",
             )}
           >
             {size === "lg" && <TeamLogo team={t} size={22} className={selected ? "rounded-full bg-white/90 p-0.5" : undefined} />}

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Week } from "@nflpi/shared";
+import { isLocked, useNow } from "@/lib/clock";
 import { pctOr } from "@/lib/fmt";
 
 /**
@@ -10,7 +11,8 @@ import { pctOr } from "@/lib/fmt";
  */
 export function KpiStrip({ week }: { week: Week }) {
   const s = week.summary;
-  const open = week.games.filter((g) => !g.locked && !g.my_pick).length;
+  const now = useNow();
+  const open = week.games.filter((g) => !isLocked(g, now) && !g.my_pick).length;
   const hasLeader = s.league_leader_accuracy !== null && s.league_leader_accuracy !== undefined;
 
   const cells = [

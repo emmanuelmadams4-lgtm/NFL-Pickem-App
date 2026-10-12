@@ -1,4 +1,4 @@
-import { pct } from "@nflpi/shared";
+import { kickoffLabel, kickoffTime, pct } from "@nflpi/shared";
 
 /** pct() from shared, with a plain hyphen for missing values. */
 export function pctOr(p: number | null | undefined, digits = 0, empty = "-"): string {
@@ -22,6 +22,19 @@ export function pts(diff: number, digits = 1): string {
 
 export function dateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+type Kickoff = { kickoff_utc: string; time_tbd: boolean };
+
+/** Clock time of kickoff. The API stores midnight when the schedule has no time yet; that is shown as missing. */
+export function kickoffClock(g: Kickoff): string {
+  return g.time_tbd ? "Time TBD" : kickoffTime(g.kickoff_utc);
+}
+
+/** Day, date and clock time of kickoff, or the day and date with "Time TBD". */
+export function kickoffWhen(g: Kickoff): string {
+  if (!g.time_tbd) return kickoffLabel(g.kickoff_utc);
+  return `${new Date(g.kickoff_utc).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}, Time TBD`;
 }
 
 export function shortDay(iso: string): string {

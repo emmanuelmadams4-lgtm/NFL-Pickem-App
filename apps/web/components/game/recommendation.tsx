@@ -5,6 +5,7 @@ import { Bezel, Chip, Mark } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
 import { PickButtons } from "@/components/pick-buttons";
 import { BackfillChip, UncertaintyChip } from "@/components/prediction-bits";
+import { useLocked } from "@/lib/clock";
 import { pctOr } from "@/lib/fmt";
 
 function Divider() {
@@ -23,6 +24,7 @@ function Figure({ label, value, emphasis, hint }: { label: string; value: string
 
 export function Recommendation({ game }: { game: GameDetail }) {
   const p: Prediction | null = game.prediction;
+  const locked = useLocked(game);
   const pickTeam: Team | null = p ? (p.pick === game.home.abbr ? game.home : game.away) : null;
   const pickIsHome = p ? p.pick === game.home.abbr : false;
   const forPick = (home: number | null) => (home === null ? null : pickIsHome ? home : 1 - home);
@@ -115,9 +117,9 @@ export function Recommendation({ game }: { game: GameDetail }) {
       <div>
         <p className="mb-2 text-xs font-medium text-text">Your pick</p>
         <PickButtons game={game} size="lg" />
-        {game.locked && game.status === "scheduled" && <p className="mt-2 text-xs text-text-2">Locked at kickoff.</p>}
-        {game.locked && game.status !== "final" && game.status !== "scheduled" && <p className="mt-2 text-xs text-text-2">Locked. The game has started.</p>}
-        {!game.locked && !game.my_pick && <p className="mt-2 text-xs text-subtle">Tap a team to pick. Tap again to clear.</p>}
+        {locked && game.status === "scheduled" && <p className="mt-2 text-xs text-text-2">Locked at kickoff.</p>}
+        {locked && game.status !== "final" && game.status !== "scheduled" && <p className="mt-2 text-xs text-text-2">Locked. The game has started.</p>}
+        {!locked && !game.my_pick && <p className="mt-2 text-xs text-subtle">Tap a team to pick. Tap again to clear.</p>}
         {game.status === "final" && (
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
             {game.my_pick ? <Mark correct={game.my_pick_correct} who="Your pick" /> : <span className="text-xs text-subtle">You made no pick.</span>}

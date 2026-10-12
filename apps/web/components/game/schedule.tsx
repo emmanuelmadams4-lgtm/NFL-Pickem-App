@@ -1,8 +1,8 @@
 "use client";
 
-import { ago, kickoffLabel, type GameDetail } from "@nflpi/shared";
+import { ago, type GameDetail } from "@nflpi/shared";
 import { Section } from "@/components/ui";
-import { isIndoor } from "@/lib/fmt";
+import { isIndoor, kickoffWhen } from "@/lib/fmt";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -42,7 +42,7 @@ export function Schedule({ game }: { game: GameDetail }) {
   return (
     <Section id="conditions" title="Schedule and conditions">
       <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Fact label="Kickoff (your local time)">{kickoffLabel(game.kickoff_utc)}</Fact>
+        <Fact label="Kickoff (your local time)">{kickoffWhen(game)}</Fact>
         <Fact label="Day">{game.weekday}</Fact>
         <Fact label="Venue">
           {game.stadium ?? "To be confirmed"}

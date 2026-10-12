@@ -4,45 +4,66 @@ import Link from "next/link";
 import type { Performance, Tally } from "@nflpi/shared";
 import { usePerformance, useMeta } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
-import { Card, EmptyState, ErrorState, Section, Skeleton, cx } from "@/components/ui";
+import { EmptyState, ErrorState, Section, Skeleton, cx } from "@/components/ui";
 import { SeasonPicker } from "@/components/pickers";
 import { ChevronRight } from "@/components/icons";
 import { WeeklyBars } from "@/components/charts/weekly-bars";
 import { CalibrationChart } from "@/components/charts/calibration";
 import { pctOr } from "@/lib/fmt";
 
-function TallyTile({ label, tally, color, empty, note }: { label: string; tally: Tally; color: string; empty?: React.ReactNode; note?: string }) {
+/** One cell of the accuracy strip. Cells are divided by hairlines, not boxed (design.md § 7). */
+function TallyCell({ testId, label, tally, color, empty, note }: { testId: string; label: string; tally: Tally; color: string; empty?: React.ReactNode; note?: string }) {
   const has = tally.total > 0;
   return (
-    <Card className="p-4">
-      <div className="flex items-center gap-2">
+    <div data-testid={testId} className="min-w-0 py-3 first:pt-0 last:pb-0 md:px-6 md:py-0 md:first:pl-0 md:last:pr-0">
+      <p className="flex items-center gap-2 text-sm font-medium text-text">
         <span aria-hidden className="h-2.5 w-2.5 rounded-[3px]" style={{ background: color }} />
-        <p className="text-sm font-medium text-text">{label}</p>
-      </div>
+        {label}
+      </p>
       {has ? (
         <>
-          <p className="num-display mt-3 text-[34px] leading-9 font-semibold text-text">{pctOr(tally.accuracy, 1)}</p>
-          <p className="mt-1 text-xs text-text-2">
+          <p className="num-display mt-2 text-stat text-text">{pctOr(tally.accuracy, 1)}</p>
+          <p className="mt-1 text-label text-text-2">
             95% CI {pctOr(tally.ci_low, 1)} to {pctOr(tally.ci_high, 1)}
           </p>
-          <p className="mt-0.5 text-xs text-text-2">
+          <p className="text-label text-text-2">
             {tally.correct} of {tally.total} correct
           </p>
-          {note && <p className="mt-1 text-[11px] text-subtle">{note}</p>}
+          {note && <p className="mt-1 text-label text-subtle">{note}</p>}
         </>
       ) : (
-        <div className="mt-3">
-          <p className="num-display text-[34px] leading-9 font-semibold text-subtle">-</p>
-          <p className="mt-1 text-xs text-text-2">{empty ?? "No graded games yet"}</p>
-        </div>
+        <>
+          <p className="num-display mt-2 text-stat text-subtle">-</p>
+          <p className="mt-1 text-label text-text-2">{empty ?? "No graded games yet"}</p>
+        </>
       )}
-    </Card>
+    </div>
+  );
+}
+
+/** Backfilled predictions were computed after kickoff, so they sit apart from the live headline (PRODUCT.md). */
+function BackfillRecord({ tally }: { tally: Tally }) {
+  return (
+    <div data-testid="tally-model-backfill" className="mt-4 border-t border-border pt-4">
+      <p className="flex items-center gap-2 text-sm font-medium text-text">
+        <span aria-hidden className="h-2.5 w-2.5 rounded-[3px] border-2" style={{ borderColor: "var(--series-model)" }} />
+        Model, backfilled
+      </p>
+      {tally.total > 0 ? (
+        <p className="mt-1 text-sm text-text-2">
+          <span className="num-display font-semibold text-text">{pctOr(tally.accuracy, 1)}</span>, 95% CI {pctOr(tally.ci_low, 1)} to {pctOr(tally.ci_high, 1)}, {tally.correct} of {tally.total} correct
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-text-2">No backfilled games this season</p>
+      )}
+      <p className="mt-1 text-label text-subtle">Computed after kickoff from pre-game inputs. Not part of the live record above.</p>
+    </div>
   );
 }
 
 function WeeklyTable({ perf }: { perf: Performance }) {
   const rows = perf.weeks;
-  const cell = (c: number, t: number) => (
+  const cell = (c: number, t: number, note?: string) => (
     <td className="py-2 pr-2 text-right align-top">
       {t > 0 ? (
         <>
@@ -50,6 +71,7 @@ function WeeklyTable({ perf }: { perf: Performance }) {
           <span className="block text-[11px] text-subtle">
             {c}/{t}
           </span>
+          {note && <span className="block text-[11px] text-subtle">{note}</span>}
         </>
       ) : (
         <span className="text-subtle">-</span>
@@ -74,7 +96,7 @@ function WeeklyTable({ perf }: { perf: Performance }) {
             <th scope="row" className="py-2 pr-2 text-left align-top font-medium text-text">{w.week}</th>
             <td className="hidden py-2 pr-2 text-right align-top text-text-2 sm:table-cell">{w.games_final}</td>
             {cell(w.my_correct, w.my_total)}
-            {cell(w.model_correct, w.model_total)}
+            {cell(w.model_correct, w.model_total, w.model_backfill_total > 0 ? `incl. ${w.model_backfill_total} backfilled` : undefined)}
             {cell(w.market_correct, w.market_total)}
             <td className="py-2 text-right align-top">
               {w.home_total > 0 ? (
@@ -98,11 +120,7 @@ function WeeklyTable({ perf }: { perf: Performance }) {
 function Skeletons() {
   return (
     <div aria-busy="true" aria-label="Loading performance" className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-[136px] rounded-card" />
-        ))}
-      </div>
+      <Skeleton className="h-28 rounded-card" />
       <Skeleton className="h-80 rounded-card" />
       <Skeleton className="h-96 rounded-card" />
     </div>
@@ -131,28 +149,30 @@ export function PerformanceView() {
 
       {perf && (
         <>
-          {perf.model.total === 0 && perf.me.total === 0 ? (
+          {perf.model.total === 0 && perf.model_backfill.total === 0 && perf.me.total === 0 ? (
             <EmptyState title={`No finished games for ${season} yet`} hint="Accuracy appears here once games are final." />
           ) : (
             <>
-              <section aria-label="Accuracy summary" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                <TallyTile
-                  label="Me"
-                  tally={perf.me}
-                  color="var(--series-me)"
-                  empty={
-                    <>
-                      Make picks on the <Link href="/" className="text-accent underline underline-offset-2">Week board</Link> to track your accuracy.
-                    </>
-                  }
-                />
-                <TallyTile label="Model" tally={perf.model} color="var(--series-model)" />
-                <TallyTile label="Market" tally={perf.market} color="var(--series-market)" note="Favorite by the betting line" />
-                <TallyTile label="Home team" tally={perf.home} color="var(--series-home)" note="Always pick the home team" />
+              <section aria-label="Accuracy summary">
+                <div className="divide-y divide-border md:grid md:grid-cols-4 md:divide-x md:divide-y-0">
+                  <TallyCell
+                    testId="tally-me"
+                    label="Me"
+                    tally={perf.me}
+                    color="var(--series-me)"
+                    empty={
+                      <>
+                        Make picks on the <Link href="/" className="text-accent underline underline-offset-2">Week board</Link> to track your accuracy.
+                      </>
+                    }
+                  />
+                  <TallyCell testId="tally-model-live" label="Model, live picks" tally={perf.model} color="var(--series-model)" empty="No graded live picks yet" />
+                  <TallyCell testId="tally-market" label="Market" tally={perf.market} color="var(--series-market)" note="Favorite by the betting line" />
+                  <TallyCell testId="tally-home" label="Home team" tally={perf.home} color="var(--series-home)" note="Always pick the home team" />
+                </div>
+                <BackfillRecord tally={perf.model_backfill} />
+                <p className="mt-3 text-label text-subtle">Intervals are 95% confidence; small samples are wide on purpose.</p>
               </section>
-              <p className="text-xs text-subtle">
-                Model: {perf.model_live_games} live, {perf.model_backfill_games} backfilled games. Backfilled predictions were computed after the fact using only data available before kickoff. Intervals are 95% confidence; small samples are wide on purpose.
-              </p>
 
               <Section id="weekly" title="Weekly accuracy" note="Share of finished games called correctly each week.">
                 {perf.weeks.length === 0 ? (

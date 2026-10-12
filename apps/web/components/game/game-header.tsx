@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { kickoffLabel, type GameDetail, type Team } from "@nflpi/shared";
+import type { GameDetail, Team } from "@nflpi/shared";
 import { Chip } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
 import { ChevronLeft } from "@/components/icons";
 import { teamAccent } from "@/lib/team";
 import { cx } from "@/components/ui";
-import { isIndoor } from "@/lib/fmt";
+import { useLocked } from "@/lib/clock";
+import { isIndoor, kickoffWhen } from "@/lib/fmt";
 
 function cap(s: string | null | undefined): string {
   if (!s) return "";
@@ -36,6 +37,7 @@ function TeamBlock({ team, record, split, side, score, winner }: { team: Team; r
 }
 
 export function GameHeader({ game }: { game: GameDetail }) {
+  const locked = useLocked(game);
   const started = game.status !== "scheduled";
   const final = game.status === "final";
   const awayWon = final && (game.away_score ?? 0) > (game.home_score ?? 0);
@@ -54,7 +56,7 @@ export function GameHeader({ game }: { game: GameDetail }) {
           {game.game_type !== "REG" && <Chip>{game.game_type}</Chip>}
           {game.status === "in_progress" && <Chip>Live</Chip>}
           {final && <Chip>Final</Chip>}
-          {game.status === "scheduled" && <Chip tone={game.locked ? "warn-soft" : "neutral"}>{game.locked ? "Locked" : "Scheduled"}</Chip>}
+          {game.status === "scheduled" && <Chip tone={locked ? "warn-soft" : "neutral"}>{locked ? "Locked" : "Scheduled"}</Chip>}
         </div>
       </div>
 
@@ -64,7 +66,7 @@ export function GameHeader({ game }: { game: GameDetail }) {
       <div className="grid items-center gap-x-8 gap-y-5 lg:grid-cols-[1fr_auto_1fr]">
         <TeamBlock team={game.away} record={game.away_record} split={`Road ${game.away_form.away_record}`} side="away" score={started ? game.away_score : null} winner={awayWon} />
         <div className="text-center">
-          <p className="text-sm font-medium text-text">{kickoffLabel(game.kickoff_utc)}</p>
+          <p className="text-sm font-medium text-text">{kickoffWhen(game)}</p>
           <p className="mt-0.5 text-xs text-text-2">{game.stadium ?? "Venue to be confirmed"}</p>
           <p className="mt-0.5 text-xs text-subtle">
             {[game.roof ? (isIndoor(game.roof) ? `${cap(game.roof)} roof` : cap(game.roof)) : null, game.surface ? `${cap(game.surface)} surface` : null].filter(Boolean).join(", ") || "Roof and surface unknown"}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SORTS, ago, kickoffDay, needsAttention, sortGames, type SortKey, type GameSummary } from "@nflpi/shared";
 import { useWeek } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
+import { isLocked, useNow } from "@/lib/clock";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { EmptyState, ErrorState, SelectField, Segmented, Skeleton, cx } from "@/components/ui";
 import { describeStale, feedsModel, staleList } from "@/components/freshness";
@@ -66,12 +67,13 @@ export function WeekBoard() {
   };
 
   const data = q.data;
+  const now = useNow();
   const games = useMemo(() => {
     if (!data) return [];
-    let base = scope === "open" ? data.games.filter((g) => g.status === "scheduled" && !g.locked) : data.games;
+    let base = scope === "open" ? data.games.filter((g) => g.status === "scheduled" && !isLocked(g, now)) : data.games;
     if (onlyAttention) base = base.filter(needsAttention);
     return sortGames(base, sort);
-  }, [data, sort, onlyAttention, scope]);
+  }, [data, sort, onlyAttention, scope, now]);
 
   const groups = useMemo(() => {
     if (sort !== "kickoff") return [{ day: "", games }];
