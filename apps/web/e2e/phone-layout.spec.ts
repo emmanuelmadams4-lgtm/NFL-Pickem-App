@@ -152,3 +152,10 @@ test("L10 section tabs, scrolled to the end: the last tab is clear of the fade",
   });
   expect(gap, "space between the last tab and the row's right edge").toBeGreaterThanOrEqual(40);
 });
+
+test("L11 true captions: with nothing graded yet, the Model cell says so and does not say there are no live picks", async ({ page }) => {
+  await openWeek(page);
+  const caption = await page.getByTestId("kpi-model").evaluate((n) => (n as HTMLElement).innerText);
+  expect(caption, "the cards below each show a live model pick").not.toMatch(/no live picks(?! graded)/i);
+  expect(caption).toMatch(/graded/i);
+});

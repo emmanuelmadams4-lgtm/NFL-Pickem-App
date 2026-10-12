@@ -235,6 +235,89 @@ test("P12 a queued pick the server refuses with an error: he is told, the pick s
   expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
 });
 
+/** Hold the first save of one game's pick for `ms`, then let it through. `seen` resolves when that save starts. */
+async function holdFirstSave(context: BrowserContext, gameId: string, ms: number) {
+  let started: () => void = () => undefined;
+  const seen = new Promise<void>((r) => (started = r));
+  let held = false;
+  await context.route(`**/api/picks/${gameId}`, async (route) => {
+    if (held || route.request().method() !== "PUT") return route.continue();
+    held = true;
+    started();
+    await new Promise((r) => setTimeout(r, ms));
+    await route.continue().catch(() => undefined);
+  });
+  return { seen }; // wrapped: an async function would otherwise wait for it here
+}
+
+test("P13 a pick queued while an older one is being sent is kept and sent after it", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const g = open[0];
+  const serverPick = async () => (await board(request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+  await page.addInitScript(([id, team]) => localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team })), [g.game_id, g.away.abbr]);
+  const { seen: sending } = await holdFirstSave(context, g.game_id, 2_000);
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await sending; // the queued away pick is on its way
+  try {
+    await context.setOffline(true);
+    await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click(); // offline: queued
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue"))).toContain(g.home.abbr);
+    await context.setOffline(false);
+    await expect.poll(serverPick, { message: "the older pick lands first", timeout: 6_000 }).toBe(g.away.abbr);
+    expect(await page.evaluate((id) => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}")[id], g.game_id), "the newer pick is still queued").toBe(g.home.abbr);
+    await expect.poll(serverPick, { message: "then the newer pick is sent", timeout: 25_000 }).toBe(g.home.abbr);
+    await expect(pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` })).toHaveAttribute("aria-pressed", "true");
+  } finally {
+    await context.setOffline(false);
+    await context.unrouteAll({ behavior: "ignoreErrors" });
+    await page.waitForTimeout(2_500); // let a held save finish before the pick is cleared
+    expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
+test("P14 a tap while an older queued pick is being sent: the tap wins on the server", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const g = open[0];
+  const serverPick = async () => (await board(request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+  await page.addInitScript(([id, team]) => localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team })), [g.game_id, g.away.abbr]);
+  const { seen: sending } = await holdFirstSave(context, g.game_id, 2_000);
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await sending;
+  try {
+    await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click(); // online: sent directly
+    await page.waitForTimeout(4_000); // both saves have landed, in whatever order the app allowed
+    expect(await serverPick(), "the older queued pick must not land after the tap").toBe(g.home.abbr);
+    await expect(page.getByText("Waiting to sync")).toHaveCount(0);
+  } finally {
+    await context.unrouteAll({ behavior: "ignoreErrors" });
+    expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
+test("P15 one queued pick the server keeps refusing does not hold back the others", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  expect(open.length, "needs two open games").toBeGreaterThanOrEqual(2);
+  const [bad, good] = open;
+  const serverPick = async (id: string) => (await board(request)).games.find((x) => x.game_id === id)!.my_pick;
+  await page.addInitScript((q) => localStorage.setItem("nflpi_pick_queue", JSON.stringify(q)), { [bad.game_id]: bad.home.abbr, [good.game_id]: good.home.abbr });
+  await context.route(`**/api/picks/${bad.game_id}`, (route) => route.fulfill({ status: 500, contentType: "application/json", body: '{"detail":"boom"}' }));
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    await expect.poll(() => serverPick(good.game_id), { message: "the other pick is saved", timeout: 8_000 }).toBe(good.home.abbr);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}")), "only the refused pick is still queued").toEqual({ [bad.game_id]: bad.home.abbr });
+  } finally {
+    await context.unrouteAll({ behavior: "ignoreErrors" });
+  }
+  await expect.poll(() => serverPick(bad.game_id), { timeout: 25_000 }).toBe(bad.home.abbr);
+  for (const g of [bad, good]) expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+});
+
 test("P5 kickoff passes while offline: the pick buttons lock from the saved kickoff time", async ({ page, request }) => {
   const { meta, open } = await board(request);
   const g = open[0];
