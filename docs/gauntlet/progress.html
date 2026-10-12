@@ -83,10 +83,11 @@ footer { color: var(--muted); font-size: 13px; }
   </header>
 
   <div class="headline">
-    <div class="big">5<small> / 14 steps landed</small></div>
+    <div class="big">6<small> / 14 steps landed</small></div>
     <div class="now">
-      <p><b>Finished:</b> step 5, running at home, is merged into main (PR #3): backups you can restore, a safe restore, a token change, a clean-copy test, and the Windows PC runbook. Step 4, the pick sheet, merged just before it (PR #2).</p>
-      <p><b>Next:</b> step 6, the iPhone app: works offline, says so when it cannot reach the server, and keeps your picks until it can send them. Before that, your two checks on step 5: set up the Windows PC and tell me what you see.</p>
+      <p><b>Just landed:</b> step 12, trends, is merged into main (PR #4). The AI's evidence pack now carries records with their sample size: head to head, quarterback and coach against a club, weekday, and site. A record shows from 4 games up, as you asked. Checked against real results back to 2002: 12 of 12 hand counts match.</p>
+      <p><b>Before that:</b> step 5, running at home, is merged into main (PR #3): backups you can restore, a safe restore, a token change, a clean-copy test, and the Windows PC runbook. Step 4, the pick sheet, merged just before it (PR #2).</p>
+      <p><b>Next:</b> step 6, the iPhone app, is being built now: works offline, says so when it cannot reach the server, and keeps your picks until it can send them. Then step 7, alerts. Still yours: set up the Windows PC and tell me what you see.</p>
     </div>
   </div>
 
@@ -102,7 +103,7 @@ footer { color: var(--muted); font-size: 13px; }
     <div class="yd" role="listitem"><span class="n">9</span><span class="t">Tiebreaker scores</span></div>
     <div class="yd" role="listitem"><span class="n">10</span><span class="t">Passkey sign-in</span></div>
     <div class="yd" role="listitem"><span class="n">11</span><span class="t">Go-live: AI + keys</span></div>
-    <div class="yd" role="listitem"><span class="n">12</span><span class="t">Trends</span></div>
+    <div class="yd done" role="listitem"><span class="n">12</span><span class="t">Trends</span></div>
     <div class="yd" role="listitem"><span class="n">13</span><span class="t">Backend cleanup</span></div>
     <div class="yd" role="listitem"><span class="n">14</span><span class="t">Model gets better</span></div>
   </div>
@@ -134,7 +135,7 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td class="num">9</td><td>Tiebreaker scores<span class="sub">Predicted score for the two Yahoo tiebreak games</span></td><td>Beats the line-implied score on 2022–2025 or it doesn't ship</td><td><span class="pill todo">To do</span></td></tr>
           <tr><td class="num">10</td><td>Passkey sign-in<span class="sub">Face ID sign-in; token stays as backup</span></td><td>Security review + browser test</td><td><span class="pill todo">To do</span></td></tr>
           <tr><td class="num">11</td><td>Go-live: AI and keys<span class="sub">You add keys and install on your iPhone</span></td><td>Smoke script all PASS on your server</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">12</td><td>Trends<span class="sub">Team, QB, coach, venue records with sample size</span></td><td>Hand-checked counts; never moves the pick unless it wins</td><td><span class="pill todo">To do</span></td></tr>
+          <tr><td class="num">12</td><td>Trends<span class="sub">Team, QB, coach, venue records with sample size</span></td><td>115 server tests pass; 12 of 12 hand counts match real results; security review and a fresh reviewer passed it. Play-caller records are wired but the table is still empty</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">13</td><td>Backend cleanup + data timing<span class="sub">Faster Week board; how fresh lines and QB news are</span></td><td>Same tests and backtest numbers; timing report</td><td><span class="pill todo">To do</span></td></tr>
           <tr><td class="num">14</td><td>The model gets better (required)<span class="sub">Weekly refit, play-by-play ratings, one idea at a time</span></td><td>Must beat the current model walk-forward or it doesn't ship</td><td><span class="pill todo">To do</span></td></tr>
         </tbody>
@@ -162,11 +163,11 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="stat"><span>Sheet (step 4)</span><span>Merged</span></div>
       <div class="stat"><span>Deploy (step 5)</span><span>Merged</span></div>
       <div class="stat"><span>Merge conflicts</span><span>0</span></div>
-      <div class="stat"><span>iPhone app (step 6)</span><span>Starting</span></div>
-      <div class="stat"><span>Trends (step 12)</span><span>Starting</span></div>
-      <p class="note">Steps 6 and 12 now start side by side; Jev rated them independent (0.03 and 0.05), as it did steps 4 and 5. Each lane has its own copy of the code and its own fresh reviewer before it lands.</p>
+      <div class="stat"><span>iPhone app (step 6)</span><span>Building</span></div>
+      <div class="stat"><span>Trends (step 12)</span><span>Merged</span></div>
+      <p class="note">Steps 6 and 12 ran side by side; step 12 landed first with no conflict. Jev rated them independent (0.03 and 0.05), as it did steps 4 and 5. Each lane has its own copy of the code and its own fresh reviewer before it lands.</p>
     </div>
   </div>
 
-  <footer>Updated 2026-10-12 · Steps 1–5 landed (PRs #1, #2, #3 merged) · Now starting: iPhone app (step 6) and trends (step 12), side by side</footer>
+  <footer>Updated 2026-10-12 · Steps 1–5 and 12 landed (PRs #1 to #4 merged) · Now building: iPhone app (step 6)</footer>
 </div>

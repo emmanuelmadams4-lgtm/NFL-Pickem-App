@@ -382,3 +382,16 @@ Paraphrased from the linked pages. "Inferred" marks a reading, not a statement o
 3. Yahoo bye-week point range (D3) and whether a tied game scores zero: owner to check.
 4. "Tough matchup" is a fixed product term now. `PRODUCT.md` terms and banned words need the
    three labels added; the existing uncertainty grade stays a separate thing.
+
+## Owner answers on the hive ASK ME board, 2026-10-12 (cards HAG-7 to HAG-14)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D43 | HAG-7: for Thursday 2026-10-15 the order is the iPhone app (step 6), then alerts (step 7); trends runs beside them. | two-way | step 6 is not landed by Wednesday night |
+| D44 | HAG-8, his words: "If it works merge everything to main please ill review during the actual test". Standing yes to push, open the PR and merge a step that passed its full gate, security review and fresh critic. Deploys stay his. | two-way | a merged step breaks `main` or his own test |
+| D45 | HAG-9: trends sample floor is 4 games (was 8). He wants play callers, and news about play-calling switches. Records come from a sourced table (step 12); the news belongs to step 8. | two-way | 4-game records prove too noisy to show |
+| D46 | HAG-10: he wants every injury and news feed he can get (insiders such as Adam Schefter, Twitter, Reddit, articles), Pro Bowl stats, and named scraping tools (ScrapeGraphAI, agent-reach, Scrapling). Step 8 grows and is re-planned; each source and tool is checked for terms, cost and security before use. | one-way for any paid or terms-bound source, else two-way | the re-plan of step 8 |
+| D47 | HAG-12: an alert fires when the win chance moves 7 points (`alert_move_threshold` 0.07, was 0.10). Applied in step 7. | two-way | alerts are too many or too few in a real week |
+| D48 | HAG-11: passkey sign-in (step 10) is wanted, after steps 6 and 7. | two-way | none |
+| D49 | HAG-14: two lanes at once until step 6 lands. | two-way | step 6 lands |
+| D50 | HAG-13: the app is on his iPhone home screen; he reports the points have not landed. Open: the live app predates step 4 on `main`; a rebuild is a deploy and waits for his yes (card HAG-15). | open | his answer on HAG-15 |
