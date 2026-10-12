@@ -1,0 +1,81 @@
+# Step 2 of 8 — Desktop web app (T2)
+
+Session started 2026-10-12 in the cloud sandbox (`/home/user/NFL-Pickem-App`), coordinator on Opus 5.5. `DIRECT_COORDINATOR / ONE_SHOT`, from the step 2 handoff in STATE.md `## 0` (owner request 2026-10-11: finish the remaining steps in the cloud).
+Evidence and review reports: `docs/gauntlet/logs/step-2-evidence/` (in the repo, because this container is wiped when the session ends).
+
+## What this step builds, in plain words
+
+* **Builds:** the desktop app you open each week, checked by a robot that clicks through it: sign in, sort, pick and clear, a game locking at kickoff while you watch, every matchup section, Results, CSV in and out, Backtest, Settings. Results stops mixing after-the-fact predictions into the model's headline. A game with no kickoff time says "Time TBD" instead of midnight. A weather outage stops shouting. The look moves to the agreed design system (Geist type, stronger control borders, unboxed sections, real icons).
+* **Replaces:** the pre-built web screens' unverified state, the blue probability bar, the five KPI cards, boxed Matchup sections.
+* **Is not:** phone layouts, the floating tab bar, offline polish (step 4), deploy (step 3), alerts UI (step 5).
+
+## 1. PLANNING
+
+* Step, base, branch: PLAN.md roadmap row 2. Branch `claude/nfl-pickem-intelligence`, draft PR #1, HEAD at start `94d389d` (CI green, 6/6 checks, mergeable clean).
+* Baseline (ran 2026-10-12): `uv run pytest -q` 48 passed · `uvx ruff check nflpi tests migrations` clean · `npm run gen:api` no drift · `npm run typecheck` exit 0 · `npm run web:build` exit 0 (8 static routes). Postgres 17 container `nflpi-db` restarted (`dockerd`, image cached).
+* Environment: Codex not installed, so `IMPLEMENTATION_PROVIDER: CLAUDE (limit hit: Codex not installed)`; builders are general-purpose subagents on the matching rung. Jev unavailable (no `jev.sh`, no `OPENROUTER_API_KEY`): routing decided by the coordinator, recorded `JEV: unavailable`. `/graft`, `/tdd`, `/ponytail`, `/refactor`, `harness-engineering`, `ecc:*` agents: not installed; behavioral equivalents applied and named below. Playwright 1.56.1 matches the preinstalled Chromium 1194.
+* Prior decisions read: PLAN.md § Owner decisions, STATE.md § User constraints, CLAUDE.md § Decisions, step-1 log § carried items, PRODUCT.md, design.md.
+* Skills: repository discovery by targeted `grep` and file reads (graft equivalent): pinned `api/views.py` `performance`/`is_locked`, `ingestion/service.py` `ingest_weather`, `predictions/engine.py` `backfill_season`, `components/pick-buttons.tsx`, `components/week/week-board.tsx`, `components/freshness.tsx`, `components/performance/performance-view.tsx`. TDD: no project `tdd` skill; `/tdd` rules applied (red first, one slice at a time). `harness-engineering`: N/A beyond PLAN.md § Harness, except one new feedback surface (the e2e CI job, below). Design Gauntlet: design.md and PRODUCT.md are the source of truth.
+
+### Product Mode (T2)
+
+1. **Problem:** Emmanuel's weekly desktop review runs on screens nobody has verified; they mix after-the-fact predictions into the model's record, show a TBD game at midnight, keep a pick button live past kickoff until the next fetch, and put a weather outage in a full-width warning.
+2. **Why now:** week 6 starts Thursday 2026-10-15 (SEA @ DEN); the desktop board is where he makes 14–16 picks before then.
+3. **Scope:** PLAN row 2 (C3, C4, B3, B9, verify and fix every desktop screen) plus the carried A7 follow-ups (`time_tbd` in the API and UI; weather ingest and backfill skip TBD/postponed games) plus the design tokens and the desktop findings of design.md § 15. **Cut:** phone-only design items (a card per game on the phone, the floating tab bar, 48px phone pills) → step 4; the pick radiogroup keyboard pattern (design.md § 12) → step 4 with the phone pills; the ESPN visual verdict → PENDING (no screenshots yet); a server clock override (not needed, see assumptions).
+4. **Success metric:** the e2e gate below, 12/12 (baseline 4/12), and axe 0 serious/critical on six screens in both themes (baseline: issues on five screens). Product number: Emmanuel's live season accuracy on Results, now kept apart from backfill.
+5. **Reversibility:** two-way for the UI. The API changes are additive (`time_tbd`, `model_backfill`, `weeks[].model_backfill_total`) except that `model` now counts live predictions only: a contract meaning change, approved by PLAN row 2 (B9), single user, the web app is the only client.
+
+Assumptions:
+* Ties: `views.winner` returns no winner for a tie, so ties are left out of every accuracy count (validated in code). The Yahoo tie rule is an open owner question; it does not change this step's design.
+* "Fixed test clock": the seed puts games at times relative to the server's real clock; the browser clock is installed at the server's time and moved forward to a kickoff. The server's own lock is already covered by pytest (A3, A7). So no server clock override is built (validated: E4 is red today for the right reason).
+* Phone-only findings belong to step 4 (assumed from PLAN row 4's scope).
+* `geist` npm package is the font source (decided in design.md § 4; reason: the PWA renders offline).
+
+Instrumentation: Results shows live and backfilled model records apart (`tally-model-live`, `tally-model-backfill`); the e2e job runs on every push. Read by: the owner on Results after week 6 (check 2026-10-20); guardrail: CI e2e green.
+
+Open owner questions (not blocking; current behavior kept): Yahoo tie rule; a "submitted in Yahoo" mark per pick; ESPN reference screenshots.
+
+## 2. SPECIFICATION — frozen acceptance criteria
+
+Functional, backend (pytest, real Postgres, `backend/tests/test_web_contract.py`):
+
+| ID | Finding | Criterion |
+|---|---|---|
+| W1 | A7 carry | `time_tbd` is a field of every game in `/api/weeks/{s}/{w}` and `/api/games/{id}`: true for a game with no clock time, false otherwise |
+| W2 | A7 carry | Weather ingest asks for no forecast for a TBD game. Backfill writes no prediction for a TBD or postponed game; a started game still gets one |
+| W3 | B9 | `/api/performance/{season}`: `model` counts live predictions only; `model_backfill` counts backfilled ones; `weeks[].model_backfill_total` sums to `model_backfill.total` |
+
+User-facing (Playwright on the production export served by FastAPI, seeded by `backend/tests/e2e_seed.py`, `timezoneId: America/New_York`, 1440×900, `apps/web/e2e/step2.spec.ts`):
+
+| ID | Finding | Criterion |
+|---|---|---|
+| E1 | verify | A wrong token shows "Wrong token"; the right one opens "Week N" of the current week |
+| E2 | verify | "Most confident" sort orders the games by pick probability and survives a reload |
+| E3 | verify | One tap saves a pick to the server; reload keeps it; a second tap clears it on the server |
+| E4 | B3 | With the browser clock at server time, moving it past a game's kickoff disables both pick buttons within 5 s, no reload |
+| E5 | verify, C3 | Every Matchup section renders (factors, teams, injuries, conditions, market, ai, ask, history, meetings); kickoff shows in Eastern time on the board and the matchup |
+| E6 | A7 carry | A TBD game shows "Time TBD" on the board row and the matchup, and never "12:00 AM" |
+| E7 | B9 | Results: `tally-model-live` says "No graded live picks yet" when no live prediction is graded; `tally-model-backfill` shows the backfilled record "c of n correct" |
+| E8 | verify | CSV import of a past pick says "Imported 1 pick"; "Download CSV" returns it; Results `tally-me` counts it |
+| E9 | C4 | A weather outage puts no "Stale data" banner on the board; Settings' freshness section says weather is not a model input |
+| E10 | design § 4 | The body font is Geist and the Geist face is loaded |
+| E11 | a11y | axe: 0 serious or critical violations on sign-in, Week, Matchup, Results, Backtest, Settings, in dark and light |
+
+Design (grep gates + a fresh design critic):
+
+| ID | Criterion |
+|---|---|
+| D1 | Proposed tokens landed in `apps/web/app/globals.css`: `--border-strong` (dark `#64707f`, light `#818b95`), light `--series-model #c9501c` and `--series-market #168a61`, motion tokens (120/200/320ms, `cubic-bezier(0.32, 0.72, 0, 1)`), type scale, Geist via the `geist` package. `docs/design/design-tokens.json` marks those groups `landed` |
+| D2 | design.md § 15 desktop findings fixed: KPI strip unboxed (no row of equal cards); Matchup sections unboxed; probability bar fill `text-2`; `components/icons.tsx` SVGs replace typed ✓ ✗ and chevrons; inputs, selects and unselected pick buttons use `border-strong`; no Inter in the font stack; skeleton on the ease-out curve; weather banner gone (E9). Gate: `grep -rnE '"Inter"|Inter,|&#10003;|&#10007;|✓|✗|‹|›|ease-in-out' apps/web/app apps/web/components` finds nothing |
+| D3 | Fresh design critic (no build transcript) on 1440×900 screenshots of every screen, both themes, against design.md: PASS. ESPN blind comparison: PENDING until the owner's screenshots arrive |
+
+Operational:
+
+| ID | Criterion |
+|---|---|
+| O1 | CI runs the e2e gate on every push (new `e2e` job: Postgres service, `npm run e2e`) and it is green, with the existing backend, web and docker jobs |
+| O2 | `uv run pytest -q` and `uvx ruff check nflpi tests migrations` green; `npm run gen:api` no drift; `npm run typecheck`; `npm run web:build` |
+
+First failing evidence (ran 2026-10-12, before any production change):
+* pytest `tests/test_web_contract.py`: 4 failed for the intended reasons (`KeyError: 'time_tbd'`; weather asked for the TBD kickoff; backfill wrote `2023_04_MIA_BUF` (TBD); `KeyError: 'model_backfill'`).
+* Playwright: 4 passed (E1, E2, E3, E5), 8 failed for the intended reasons: E4 buttons stay enabled past kickoff; E6 `time_tbd` undefined; E7 `model.total` 9 (backfill mixed in); E8 no `tally-me`; E9 one "Stale data" banner; E10 font stack starts `ui-sans-serif`; E11 dark week `color-contrast` (subtle on warn banner 4.49), matchup chip contrast 4.29 + `definition-list`, settings `label` (`#csv-file`, critical), light theme `color-contrast` on `text-warn` (4.37) across screens.
