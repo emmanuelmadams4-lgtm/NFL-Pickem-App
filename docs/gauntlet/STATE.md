@@ -39,7 +39,7 @@ GAUNTLET_PHASE: ONE_SHOT
 GAUNTLET_LANE: pwa
 STATE FILE: /Users/emmanueladams/.claude/plans/nfl-pickem-lanes/lane-pwa.md
 LANE MAP: /Users/emmanueladams/.claude/plans/nfl-pickem-lanes/lanes.md   (read only for you)
-WORKTREE: /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-pwa   BRANCH: lane/pwa   BASE: main@257054a
+WORKTREE: /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-pwa   BRANCH: lane/pwa   BASE: main, branched at 9d41cb0
 OVERALL STEP: step 6 of 14, iPhone PWA (PLAN.md row 6; carried polish in logs/step-3.md section 5 rounds 3-4 and logs/step-4.md line 222)
 OWNS / NEEDS: as lanes.md, lane pwa. NEEDS none.
 Gate: PLAN.md row 6, plus cd backend && uv run pytest -q && uvx ruff check nflpi tests migrations; npm run gen:api (no drift) && npm run typecheck && npm run web:build && npm run e2e
@@ -55,7 +55,7 @@ GAUNTLET_PHASE: ONE_SHOT
 GAUNTLET_LANE: trends
 STATE FILE: /Users/emmanueladams/.claude/plans/nfl-pickem-lanes/lane-trends.md
 LANE MAP: /Users/emmanueladams/.claude/plans/nfl-pickem-lanes/lanes.md   (read only for you)
-WORKTREE: /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-trends   BRANCH: lane/trends   BASE: main@257054a
+WORKTREE: /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-trends   BRANCH: lane/trends   BASE: main, branched at 9d41cb0
 OVERALL STEP: step 12 of 14, Trends (PLAN.md row 12; D30, Q3-Q5 in OWNER_DECISIONS_2026-10-12.md)
 OWNS / NEEDS: as lanes.md, lane trends. NEEDS none.
 Gate: PLAN.md row 12 (hand-checked counts on known examples; never moves the pick unless it wins walk-forward), plus cd backend && uv run pytest -q && uvx ruff check nflpi tests migrations; npm run gen:api shows no drift
