@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+[31m[1m____________________ ERROR collecting tests/test_trends.py _____________________[0m
+[31mImportError while importing test module '/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-trends/backend/tests/test_trends.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+[1m[31m../../../../../../.local/share/uv/python/cpython-3.13-macos-aarch64-none/lib/python3.13/importlib/__init__.py[0m:88: in import_module
+    [0m[94mreturn[39;49;00m _bootstrap._gcd_import(name[level:], package, level)[90m[39;49;00m
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mtests/test_trends.py[0m:10: in <module>
+    [0m[94mfrom[39;49;00m[90m [39;49;00m[04m[96mnflpi[39;49;00m[04m[96m.[39;49;00m[04m[96manalytics[39;49;00m[04m[96m.[39;49;00m[04m[96mtrends[39;49;00m[90m [39;49;00m[94mimport[39;49;00m MIN_GAMES, game_trends[90m[39;49;00m
+[1m[31mE   ModuleNotFoundError: No module named 'nflpi.analytics.trends'[0m[0m
+[36m[1m=========================== short test summary info ============================[0m
+[31mERROR[0m tests/test_trends.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+[31m[31m[1m1 error[0m[31m in 12.79s[0m[0m
