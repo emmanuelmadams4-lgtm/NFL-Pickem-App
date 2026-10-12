@@ -1,0 +1,17 @@
+NOTICE:  database "nflpi_restore" does not exist, skipping
+ Container nflpi-deploycheck-worker-1  Stopping
+ Container nflpi-deploycheck-worker-1  Stopped
+ Container nflpi-deploycheck-app-1  Stopping
+ Container nflpi-deploycheck-app-1  Stopped
+ Container nflpi-deploycheck-db-1  Running
+ Container nflpi-deploycheck-db-1  Waiting
+ Container nflpi-deploycheck-db-1  Healthy
+ Container nflpi-deploycheck-app-1  Starting
+ Container nflpi-deploycheck-app-1  Started
+ Container nflpi-deploycheck-db-1  Waiting
+ Container nflpi-deploycheck-app-1  Waiting
+ Container nflpi-deploycheck-db-1  Healthy
+ Container nflpi-deploycheck-app-1  Healthy
+ Container nflpi-deploycheck-worker-1  Starting
+ Container nflpi-deploycheck-worker-1  Started
+safety copy failed; live data was not replaced; restart requested for app and worker
