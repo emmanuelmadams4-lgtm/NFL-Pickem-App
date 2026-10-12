@@ -68,7 +68,8 @@ export function Scorecard({ season }: { season: number }) {
     <Section id="scorecard" title="Scorecard" note="Your points beside the model's own sheet.">
       {q.isPending && <Skeleton className="h-48 rounded-card" />}
       {q.isError && !q.data && <ErrorState title="Could not load scorecard" error={q.error} onRetry={() => q.refetch()} />}
-      {q.data && <>
+      {q.data && q.data.weeks.length === 0 && <p className="text-sm text-text-2">No finished games on your sheet yet.</p>}
+      {q.data && q.data.weeks.length > 0 && <>
         <div className="hidden sm:block relative w-full min-w-0 rounded-card border border-border bg-surface">
           <table aria-label="Scorecard" className="w-full text-sm text-text">
             <thead><tr className="border-b border-border text-label text-text-2">

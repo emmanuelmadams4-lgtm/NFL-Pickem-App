@@ -23,7 +23,7 @@ export function KpiStrip({ week }: { week: Week }) {
     },
     {
       label: "My picks",
-      short: "Picked",
+      short: "Yours",
       value: `${s.picks_made}/${s.games_total}`,
       sub: `${s.picks_made} yours, ${modelOpen} model picks`,
     },
