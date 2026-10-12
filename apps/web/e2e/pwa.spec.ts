@@ -300,6 +300,28 @@ test("P14 a tap while an older queued pick is being sent: the tap wins on the se
   }
 });
 
+test("P16 the app is closed while a tapped pick is still being sent: the pick is kept on the phone and sent on the next open", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const g = open[0];
+  const serverPick = async () => (await board(request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+  const { seen: sending } = await holdFirstSave(context, g.game_id, 2_000);
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click(); // online: sent directly
+    await sending;
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}")), "on the phone until the server has it").toEqual({ [g.game_id]: g.home.abbr });
+    await page.reload(); // the request dies with the page, as when iOS closes the app
+    await boardLoaded(page);
+    await expect.poll(serverPick, { message: "sent on the next open", timeout: 10_000 }).toBe(g.home.abbr);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue"))).toBe("{}");
+  } finally {
+    await context.unrouteAll({ behavior: "ignoreErrors" });
+    expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
 test("P15 one queued pick the server keeps refusing does not hold back the others", async ({ page, context, request }) => {
   const { open } = await board(request);
   expect(open.length, "needs two open games").toBeGreaterThanOrEqual(2);
