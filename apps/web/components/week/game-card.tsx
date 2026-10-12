@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { marketFavorite, pickProb, pct, strengthLabel, type GameSummary, type Team } from "@nflpi/shared";
+import { marketFavorite, pickProb, pct, type GameSummary, type Team } from "@nflpi/shared";
 import { Chip, Mark, Tip, cx } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
 import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-bits";
 import { PickButtons } from "@/components/pick-buttons";
+import { PointsControl } from "@/components/week/points-control";
 import { Refresh } from "@/components/icons";
 import { useLocked } from "@/lib/clock";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
@@ -46,7 +47,9 @@ function statusTone(status: string): "bad" | "warn" | "warn-soft" {
  * The whole card opens the matchup; the pills and tooltips sit above that link. `highlight` fills the top band lime
  * (the next game to kick off; at most one per board).
  */
-export function GameCard({ game, highlight }: { game: GameSummary; highlight?: boolean }) {
+const labelWords = { easy_pick: "Easy pick", tough_matchup: "Tough matchup", coin_flip: "Coin flip" } as const;
+
+export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; highlight?: boolean; pointsCount: number }) {
   const p = game.prediction;
   const fav = marketFavorite(game);
   const locked = useLocked(game);
@@ -122,7 +125,12 @@ export function GameCard({ game, highlight }: { game: GameSummary; highlight?: b
           <div>
             <ProbBar value={prob} fromRight={p.pick === game.home.abbr} label={`${p.pick} win probability`} />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <p className="text-label text-text-2">{strengthLabel(prob)}</p>
+              {game.sheet.label && game.sheet.label in labelWords && (
+                <p className="text-label text-text-2">
+                  <span data-testid="pick-label">{labelWords[game.sheet.label as keyof typeof labelWords]}</span>{" "}
+                  {game.sheet.label_hit_rate !== null && <span>won {pct(game.sheet.label_hit_rate)} of the time, 2012-2025</span>}
+                </p>
+              )}
               <span className="flex items-center gap-1.5 text-label text-subtle">
                 Uncertainty <UncertaintyChip prediction={p} />
               </span>
@@ -184,7 +192,13 @@ export function GameCard({ game, highlight }: { game: GameSummary; highlight?: b
           </p>
         )}
 
+        <PointsControl game={game} count={pointsCount} />
+
         <div className="mt-auto pt-1">
+          {game.sheet.pick_by === "app" && !locked && (
+            <p className="mb-2 text-label text-text-2">App pick: {game.sheet.app_pick}. Tap a team to make it yours.</p>
+          )}
+          {game.sheet.pick_by === "auto" && <p className="mb-2"><Chip>Auto pick</Chip></p>}
           <PickButtons game={game} />
           {final && (
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5">

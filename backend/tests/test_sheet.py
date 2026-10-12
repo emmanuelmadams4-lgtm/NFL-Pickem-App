@@ -8,17 +8,19 @@ from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
+from sqlalchemy import func, select, update
 
 from nflpi import jobs
 from nflpi.analytics import metrics
 from nflpi.ingestion import service
-from nflpi.models import Game, UserPick
+from nflpi.models import AppSetting, Game, Prediction, UserPick
 from nflpi.predictions import engine, sheet
 from tests.conftest import CURRENT, schedule_rows
 from tests.test_hardening import moneylines
 
 EASTERN = ZoneInfo("America/New_York")
 WEEK = 4  # three games, all in the future
+HOUR = timedelta(hours=1)
 
 
 def week(client, wk: int = WEEK) -> dict[str, dict]:
@@ -46,7 +48,12 @@ class Schedule:
         service.ingest_schedules(self.session, [r | self.changed.get(r["game_id"], {}) for r in schedule_rows()])
 
     def kick_off(self, game_id: str) -> None:
-        started = (datetime.now(UTC) - timedelta(hours=1)).astimezone(EASTERN)
+        """Kickoff was an hour ago. Its predictions were made before that, as they are in real life."""
+        recent = Prediction.created_at > datetime.now(UTC) - HOUR * 2
+        earlier = Prediction.created_at - HOUR * 2
+        self.session.execute(update(Prediction).where(Prediction.game_id == game_id, recent).values(created_at=earlier))
+        self.session.commit()
+        started = (datetime.now(UTC) - HOUR).astimezone(EASTERN)
         self.change(game_id, gameday=f"{started:%Y-%m-%d}", gametime=f"{started:%H:%M}", home_score="", away_score="")
 
     def finish(self, game_id: str, home: int, away: int) -> None:
@@ -191,6 +198,16 @@ def test_a_started_game_keeps_its_pick_and_points_and_the_open_games_rerank(load
         assert rows[mid][field] == before[field]
 
 
+def test_games_that_kick_off_together_each_keep_their_own_points(loaded, client, schedule):
+    before = {gid: (row["my_points"], row["app_points"]) for gid, row in sheets(client).items()}
+    for game_id in before:  # the whole slate starts in the same minute, like Sunday at 1:00
+        schedule.kick_off(game_id)
+
+    jobs.tick(loaded, datetime.now(UTC))
+
+    assert {gid: (row["my_points"], row["app_points"]) for gid, row in sheets(client).items()} == before
+
+
 def test_points_cannot_move_onto_or_off_a_started_game(loaded, client, schedule):
     high, mid, low = by_points(client)
     schedule.kick_off(high)
@@ -234,6 +251,35 @@ def test_his_own_pick_is_kept_at_kickoff_and_not_marked_auto(loaded, client, sch
     row = sheets(client)[high]
     assert (row["my_pick"], row["pick_by"], row["points_by"]) == (team, "user", "app")
     assert loaded.get(UserPick, high).source == "app"
+
+
+def test_games_played_before_the_sheet_existed_get_no_points_and_no_auto_pick(loaded, client):
+    engine.backfill_season(loaded, CURRENT)  # weeks 1-3 are final and now have (backfill) predictions
+    week(client)  # the sheet's first run
+
+    old = week(client, 1)
+    jobs.tick(loaded, datetime.now(UTC))
+
+    assert len(old) == 3
+    for game in old.values():
+        row = game["sheet"]
+        assert (row["app_points"], row["my_points"], row["my_pick"], row["differs"]) == (None, None, None, False)
+        assert row["label"] is not None  # the label still describes the app's pick
+    assert loaded.scalar(select(func.count()).select_from(UserPick)) == 0
+    assert loaded.scalar(select(func.count()).select_from(sheet.SheetEntry)) == 0
+
+
+def test_a_game_that_started_and_ended_while_nobody_looked_is_still_written_down(loaded, client, schedule):
+    high = by_points(client)[0]
+    app = sheets(client)[high]
+    loaded.merge(AppSetting(key="sheet_start", value={"at": (datetime.now(UTC) - HOUR * 3).isoformat()}))
+    loaded.commit()
+    schedule.finish(high, home=30, away=10)  # kicked off an hour ago and already final
+
+    jobs.tick(loaded, datetime.now(UTC))
+
+    entry = loaded.get(sheet.SheetEntry, high)
+    assert (entry.my_pick, entry.my_points, entry.pick_by) == (app["app_pick"], app["app_points"], "auto")
 
 
 # S5 learning: auto picks apart, rank, scorecard -------------------------------------------------------------------
@@ -296,6 +342,13 @@ def test_a_tied_game_scores_zero_for_both_sheets(loaded, client, schedule):
 
     row = next(w for w in client.get(f"/api/scorecard/{CURRENT}").json()["weeks"] if w["week"] == WEEK)
     assert (row["games"], row["my_points"], row["app_points"], row["my_correct"], row["app_correct"]) == (3, 0, 0, 0, 0)
+
+
+def test_a_week_with_a_rank_but_no_finished_games_is_still_listed(loaded, client):
+    client.put(f"/api/ranks/{CURRENT}/{WEEK}", json={"rank": 7, "leader_points": None})
+
+    row = next(w for w in client.get(f"/api/scorecard/{CURRENT}").json()["weeks"] if w["week"] == WEEK)
+    assert (row["rank"], row["leader_points"], row["games"], row["my_points"]) == (7, None, 0, 0)
 
 
 @pytest.mark.parametrize("body", [{"rank": 0}, {"rank": 3, "leader_points": -1}, {}])

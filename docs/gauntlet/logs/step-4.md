@@ -79,3 +79,40 @@ Gate file: `backend/tests/test_sheet.py` (21 tests) + the changed A12 migration 
 
 Not in this step (named so nobody assumes them): tiebreaker scores (step 9), Claude's written check
 of the sheet (step 11), alerts when a label changes (step 7).
+
+### Spec amendments after the first build (coordinator's faults, found in review; not builder failures)
+
+| # | What was wrong in the spec | Change | Test |
+|---|---|---|---|
+| A1 | The tests "kicked off" a game by moving its time into the past, leaving no prediction before kickoff. Codex added a fallback that accepted a later prediction, which breaks the "last snapshot before kickoff" rule | The test helper now also backdates that game's predictions; the fallback was removed (WO-A2) | all lock tests |
+| A2 | Nothing stopped the sheet from writing down every past game in the database and inventing an "auto" pick for each | A game is written only if it is not final yet, or it kicked off after the sheet's first run (`app_settings.sheet_start`). Old games show no points | `test_games_played_before_the_sheet_existed...`, `test_a_game_that_started_and_ended_while_nobody_looked...` |
+| A3 | A week with a rank but no finished games was left off the scorecard, so a rank he just typed would not show | Such a week is listed with zeros | `test_a_week_with_a_rank_but_no_finished_games...` |
+| A4 | Games that kick off in the same minute were written one at a time, so the first took the highest number left (would scramble the Sunday 1:00 slate) | While one is written, the others of the same pass still count as open (WO-A3) | `test_games_that_kick_off_together...` |
+
+Gate after amendments: `backend/tests/test_sheet.py` 34 tests.
+
+## 3. IMPLEMENTATION
+
+Provider: CODEX. `JEV: model for WO-A → sol (0.53, astra 0.31); effort → high (0.87)`. Astra needs the
+owner's yes, so sol at high is the only allowed start. `CLIMBS: none`.
+
+| WO | Scope | Model / effort | Result (coordinator's own rerun) |
+|---|---|---|---|
+| S4-A | Backend: labels, tables + migration 0002, sheet module, Jev client, points / rank / scorecard API, auto picks in Results | gpt-6-sol / high, try 1 | 87 passed, ruff clean (`s4-wo-a-pytest.log`). Review found A1, A2, A4 above |
+| S4-A2 | Corrections A1-A3 | gpt-6-sol / high | 90 passed, ruff clean (`s4-wo-a2-pytest.log`) |
+| S4-A3 | Correction A4 | gpt-6-sol / high | see below |
+| S4-B | Web: label, points control, whose pick, copy sheet page, rank entry, scorecard | gpt-6-sol / medium | see below |
+
+Live Jev check (one real call through `nflpi.ai.jev.decide`, `s4-jev-live.log`): a clean 71% pick scored 2.91
+(confidence 0.92), a 70% pick with a QB change and stats/line disagreement scored 0.15 (0.85). Request and
+answer shapes match the code; the near-tie swap fired as designed.
+
+### Design brief (web work order)
+
+Register: product (Operate). Character: dense, quiet, scannable; the step 3 look (design.md § 0), no new
+colours or type sizes. Bar: owner references 01 (ESPN pick row) and 03 (Yahoo confidence number per game).
+The label replaces the old "Strong favorite / Toss-up" words (one vocabulary, his). Points are a native select
+(reachable, 48px on the phone) with the number repeated large; "Your number / App says N" in words, never
+colour alone; lime stays "mine", so an untouched game shows no lime pill and names the app's team in text.
+States covered: open, his number, locked, auto pick, no points (postponed / old game), loading, error, offline.
+"Before" evidence: step 3's screenshots in `docs/gauntlet/logs/step-3-evidence/`.

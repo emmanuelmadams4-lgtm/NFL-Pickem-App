@@ -23,9 +23,9 @@ from nflpi.api import views
 from nflpi.config import get_settings
 from nflpi.db import acquire_refresh_lock, get_session, release_refresh_lock, session_factory
 from nflpi.ingestion.service import freshness
-from nflpi.models import AppSetting, BacktestRun, Game, PushSubscription, UserPick
+from nflpi.models import AppSetting, BacktestRun, Game, PickPoint, PushSubscription, UserPick, WeeklyRank
 from nflpi.notify import push
-from nflpi.predictions import engine
+from nflpi.predictions import engine, sheet
 
 log = logging.getLogger(__name__)
 DB = Annotated[Session, Depends(get_session)]
@@ -134,6 +134,63 @@ def clear_pick(game_id: str, session: DB) -> Response:
         session.delete(pick)
         session.commit()
     return Response(status_code=204)
+
+
+@api.put("/picks/{game_id}/points", response_model=s.WeekOut)
+def set_points(game_id: str, body: s.PointsIn, session: DB) -> s.WeekOut:
+    sheet.finalize(session, datetime.now(UTC))
+    g = session.get(Game, game_id)
+    if g is None:
+        raise HTTPException(404, "Game not found")
+    if views.is_locked(g, datetime.now(UTC)):
+        raise HTTPException(409, "Game has kicked off; points are locked")
+    rows = sheet.compute_week(session, g.season, g.week, datetime.now(UTC))
+    if rows[game_id]["my_points"] is None:
+        raise HTTPException(422, "Game has no points to set")
+    if not 1 <= body.points <= sum(x.status != "postponed" for x in session.scalars(
+        select(Game).where(Game.season == g.season, Game.week == g.week))):
+        raise HTTPException(422, "Points outside the week range")
+    other_id = next((gid for gid, row in rows.items() if gid != game_id and row["my_points"] == body.points), None)
+    if other_id and views.is_locked(session.get(Game, other_id), datetime.now(UTC)):
+        raise HTTPException(409, "Points belong to a locked game")
+    if other_id:
+        other = session.get(PickPoint, other_id) or PickPoint(game_id=other_id)
+        other.points = rows[game_id]["my_points"]
+        session.add(other)
+    point = session.get(PickPoint, game_id) or PickPoint(game_id=game_id)
+    point.points = body.points
+    session.add(point)
+    session.commit()
+    return views.week_view(session, g.season, g.week)
+
+
+@api.delete("/picks/{game_id}/points", response_model=s.WeekOut)
+def clear_points(game_id: str, session: DB) -> s.WeekOut:
+    sheet.finalize(session, datetime.now(UTC))
+    g = session.get(Game, game_id)
+    if g is None:
+        raise HTTPException(404, "Game not found")
+    if views.is_locked(g, datetime.now(UTC)):
+        raise HTTPException(409, "Game has kicked off; points are locked")
+    point = session.get(PickPoint, game_id)
+    if point:
+        session.delete(point)
+        session.commit()
+    return views.week_view(session, g.season, g.week)
+
+
+@api.put("/ranks/{season}/{week}", status_code=204)
+def set_rank(season: int, week: int, body: s.RankIn, session: DB) -> Response:
+    rank = session.get(WeeklyRank, (season, week)) or WeeklyRank(season=season, week=week)
+    rank.rank, rank.leader_points, rank.entered_at = body.rank, body.leader_points, datetime.now(UTC)
+    session.add(rank)
+    session.commit()
+    return Response(status_code=204)
+
+
+@api.get("/scorecard/{season}", response_model=s.ScorecardOut)
+def scorecard(season: int, session: DB) -> s.ScorecardOut:
+    return views.scorecard(session, season)
 
 
 @api.get("/picks/export.csv")

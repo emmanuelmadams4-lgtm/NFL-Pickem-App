@@ -25,7 +25,7 @@ from nflpi.db import acquire_refresh_lock, release_refresh_lock, session_factory
 from nflpi.ingestion import nflverse, service
 from nflpi.models import AppSetting, Game, ModelVersion
 from nflpi.notify import push
-from nflpi.predictions import engine
+from nflpi.predictions import engine, sheet
 
 log = logging.getLogger("nflpi.jobs")
 TICK_SECONDS = 300
@@ -51,6 +51,8 @@ def train(session) -> ModelVersion:
 
 def predict(session) -> int:
     events = engine.refresh_predictions(session)
+    season, week = engine.current_week(session)
+    sheet.refresh_tiebreaks(session, season, week)
     return push.alert_prediction_changes(session, events)
 
 
@@ -87,6 +89,9 @@ def backtest() -> None:
         for band, grades in signal["probability_bands"].items():
             cells = ", ".join(f"{grade} {row['accuracy']:.2%} ({row['games']})" for grade, row in grades.items())
             print(f"  pick probability {band}: {cells}")
+        for row in report[key.replace("signals", "labels")]:
+            rate = f"{row['hit_rate']:.2%}" if row["hit_rate"] is not None else "n/a"
+            print(f"  {row['label']}: {row['share']:.2%} ({row['games']}); blend accuracy {rate}")
 
 
 def next_interval(session, now: datetime) -> timedelta:
@@ -110,6 +115,11 @@ def tick(session: Session, now: datetime) -> None:
     else:
         row.value = {"at": now.isoformat()}
     session.commit()
+    try:
+        log.info("pick sheet entries finalized: %s", sheet.finalize(session, now))
+    except Exception:  # noqa: BLE001 - sheet failure must not hide a live worker
+        log.exception("pick sheet finalization failed")
+        session.rollback()
     try:
         log.info("kickoff reminders sent: %s", push.send_kickoff_reminders(session, now))
     except Exception:  # noqa: BLE001 - reminder failure must not hide a live worker

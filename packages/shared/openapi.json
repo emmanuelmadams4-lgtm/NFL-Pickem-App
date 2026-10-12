@@ -299,6 +299,246 @@
     }
    }
   },
+  "/api/picks/{game_id}/points": {
+   "put": {
+    "summary": "Set Points",
+    "operationId": "set_points_api_picks__game_id__points_put",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PointsIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeekOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Clear Points",
+    "operationId": "clear_points_api_picks__game_id__points_delete",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeekOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/ranks/{season}/{week}": {
+   "put": {
+    "summary": "Set Rank",
+    "operationId": "set_rank_api_ranks__season___week__put",
+    "parameters": [
+     {
+      "name": "season",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Season"
+      }
+     },
+     {
+      "name": "week",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Week"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RankIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/scorecard/{season}": {
+   "get": {
+    "summary": "Scorecard",
+    "operationId": "scorecard_api_scorecard__season__get",
+    "parameters": [
+     {
+      "name": "season",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Season"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ScorecardOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/picks/export.csv": {
    "get": {
     "summary": "Export Picks",
@@ -1125,6 +1365,15 @@
       },
       "type": "array",
       "title": "Favorite Split"
+     },
+     "labels": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Labels",
+      "default": []
      }
     },
     "type": "object",
@@ -1385,6 +1634,9 @@
        }
       ]
      },
+     "sheet": {
+      "$ref": "#/components/schemas/SheetOut"
+     },
      "my_pick": {
       "anyOf": [
        {
@@ -1550,6 +1802,7 @@
      "neutral_site",
      "div_game",
      "prediction",
+     "sheet",
      "my_pick",
      "my_pick_correct",
      "model_correct",
@@ -1685,6 +1938,9 @@
        }
       ]
      },
+     "sheet": {
+      "$ref": "#/components/schemas/SheetOut"
+     },
      "my_pick": {
       "anyOf": [
        {
@@ -1769,6 +2025,7 @@
      "neutral_site",
      "div_game",
      "prediction",
+     "sheet",
      "my_pick",
      "my_pick_correct",
      "model_correct",
@@ -2310,6 +2567,9 @@
      "me": {
       "$ref": "#/components/schemas/Tally"
      },
+     "auto": {
+      "$ref": "#/components/schemas/Tally"
+     },
      "model": {
       "$ref": "#/components/schemas/Tally",
       "description": "Live predictions only: the final snapshot was made before kickoff"
@@ -2365,6 +2625,7 @@
      "season",
      "weeks",
      "me",
+     "auto",
      "model",
      "model_backfill",
      "market",
@@ -2418,6 +2679,19 @@
      "source"
     ],
     "title": "PickOut"
+   },
+   "PointsIn": {
+    "properties": {
+     "points": {
+      "type": "integer",
+      "title": "Points"
+     }
+    },
+    "type": "object",
+    "required": [
+     "points"
+    ],
+    "title": "PointsIn"
    },
    "PredictionOut": {
     "properties": {
@@ -2595,6 +2869,153 @@
     "title": "PushSubscriptionIn",
     "description": "Exactly what the browser's PushSubscription.toJSON() returns."
    },
+   "RankIn": {
+    "properties": {
+     "rank": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Rank"
+     },
+     "leader_points": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Points"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rank"
+    ],
+    "title": "RankIn"
+   },
+   "ScorecardOut": {
+    "properties": {
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "weeks": {
+      "items": {
+       "$ref": "#/components/schemas/ScorecardWeek"
+      },
+      "type": "array",
+      "title": "Weeks"
+     },
+     "totals": {
+      "$ref": "#/components/schemas/ScorecardWeek"
+     },
+     "by_label": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "By Label"
+     }
+    },
+    "type": "object",
+    "required": [
+     "season",
+     "weeks",
+     "totals",
+     "by_label"
+    ],
+    "title": "ScorecardOut"
+   },
+   "ScorecardWeek": {
+    "properties": {
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "games": {
+      "type": "integer",
+      "title": "Games"
+     },
+     "max_points": {
+      "type": "integer",
+      "title": "Max Points"
+     },
+     "my_points": {
+      "type": "integer",
+      "title": "My Points"
+     },
+     "app_points": {
+      "type": "integer",
+      "title": "App Points"
+     },
+     "my_correct": {
+      "type": "integer",
+      "title": "My Correct"
+     },
+     "app_correct": {
+      "type": "integer",
+      "title": "App Correct"
+     },
+     "changed": {
+      "type": "integer",
+      "title": "Changed"
+     },
+     "changed_right": {
+      "type": "integer",
+      "title": "Changed Right"
+     },
+     "changed_wrong": {
+      "type": "integer",
+      "title": "Changed Wrong"
+     },
+     "auto": {
+      "type": "integer",
+      "title": "Auto"
+     },
+     "rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank"
+     },
+     "leader_points": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Points"
+     }
+    },
+    "type": "object",
+    "required": [
+     "week",
+     "games",
+     "max_points",
+     "my_points",
+     "app_points",
+     "my_correct",
+     "app_correct",
+     "changed",
+     "changed_right",
+     "changed_wrong",
+     "auto",
+     "rank",
+     "leader_points"
+    ],
+    "title": "ScorecardWeek"
+   },
    "SettingsIn": {
     "properties": {
      "league_leader_accuracy": {
@@ -2627,6 +3048,111 @@
     },
     "type": "object",
     "title": "SettingsIn"
+   },
+   "SheetOut": {
+    "properties": {
+     "label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "label_hit_rate": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label Hit Rate"
+     },
+     "app_pick": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "App Pick"
+     },
+     "app_points": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "App Points"
+     },
+     "my_pick": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "My Pick"
+     },
+     "my_points": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "My Points"
+     },
+     "pick_by": {
+      "type": "string",
+      "enum": [
+       "app",
+       "user",
+       "auto",
+       "csv"
+      ],
+      "title": "Pick By"
+     },
+     "points_by": {
+      "type": "string",
+      "enum": [
+       "app",
+       "user"
+      ],
+      "title": "Points By"
+     },
+     "differs": {
+      "type": "boolean",
+      "title": "Differs"
+     }
+    },
+    "type": "object",
+    "required": [
+     "label",
+     "label_hit_rate",
+     "app_pick",
+     "app_points",
+     "my_pick",
+     "my_points",
+     "pick_by",
+     "points_by",
+     "differs"
+    ],
+    "title": "SheetOut"
    },
    "Tally": {
     "properties": {
@@ -3055,6 +3581,14 @@
       "type": "integer",
       "title": "My Total"
      },
+     "auto_correct": {
+      "type": "integer",
+      "title": "Auto Correct"
+     },
+     "auto_total": {
+      "type": "integer",
+      "title": "Auto Total"
+     },
      "model_live_correct": {
       "type": "integer",
       "title": "Model Live Correct"
@@ -3094,6 +3628,8 @@
      "games_final",
      "my_correct",
      "my_total",
+     "auto_correct",
+     "auto_total",
      "model_live_correct",
      "model_live_total",
      "model_backfill_correct",
