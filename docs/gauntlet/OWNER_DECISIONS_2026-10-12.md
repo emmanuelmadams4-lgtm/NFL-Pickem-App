@@ -192,6 +192,28 @@ D33 notes (coordinator's reading):
 * The installed iPhone PWA keeps its own storage: he registers or signs in once inside the
   installed app, not only in Safari.
 
+## AI model (2026-10-12)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D34 | Owner asked: Sonnet or Haiku, whichever is most efficient, decided with Jev. Result: **Sonnet** (`claude-sonnet-5-5`, already the default in `backend/nflpi/config.py`). The model stays one setting (`ANTHROPIC_MODEL`). | two-way | the go-live comparison below passes for Haiku, or call volume grows past a few hundred a week |
+
+D34 record:
+
+* `JEV: asked -> sonnet` (confidence 1.00; probabilities sonnet 1, haiku 0, other 0). Second
+  question, "would switching to the smallest model produce a saving the single user would
+  notice?": 0.14 (no). State given to Jev: 5 to 30 on-demand calls a week, flat-rate sign-in
+  (D32) so no per-call bill, a few seconds of fixed start-up time per call whatever the model,
+  and the owner's rule that an invented reason is worse than a slower answer.
+* Coordinator's reasoning, same direction: at this volume Haiku saves nothing he would feel, and
+  the fixed start-up time hides most of its speed. The risk that matters is an explanation that
+  states something not in the evidence pack.
+* Not measured: neither model has answered a real question from this app yet. At go-live, run the
+  same 10 questions through both and compare against the existing evidence checks
+  (`ai/research.py:_check`). If Haiku passes all 10, it becomes the default.
+* This is about the app's own AI answers. It does not change which models build the app (the
+  Build Ladder in the gauntlet skill).
+
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
 * New step right after the desktop web app: **Pick sheet** = label (D2), points with re-rank and
