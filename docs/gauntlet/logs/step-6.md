@@ -201,3 +201,35 @@ The implementation reviewer confirmed F1 to F7 fixed and found what remains of F
 Mapped to failing tests before any fix (`red-r2-findings.log`, **4 failed, 25 passed**, commit `dd66d0e`): P13 (N1), P14 (N2), P15 (N3), L11 (C1). Work order 4: `wo-4.md` (`55bed45`).
 
 Deferred, Low, Visual or Polish, none blocks the step: N4 (a second, different failure on the same queued game is not announced again), N5 and C6 (the update toast has no "Later"), N6 and C2 (the fade is 15% of the row, not a fixed width), N7 (section tabs and the points clear button are 40px), C3 and C4 (320-wide footer and first screen), C5, C7 to C9. Listed for the dashboard step with the round 1 items.
+
+### Work order 4, try 1 (Ryan, Codex gpt-6-sol, effort high) — `step-6-evidence/wo-4.md`
+
+Model pick: Jev `model:pwa:wo-4` → sol 1.0, effort high 1.0 (follow). Diff inspected: 3 files, all in the allowed scope (`sync.ts`, `queries.ts`, `kpi-strip.tsx`), 35 lines added and 13 removed. Saves for one game now go through one chain (`orderedPickSend`) from both the tap and the flush; a flush removes a queued pick only if it is still the value it sent; a non-network error moves on to the next game.
+
+First gate run: 75 passed, P13 failed. The failure was in my test, not the build: it waited for the moment the older pick was on the server, which the fix makes too short to see, and it looked for the selected button under its unselected name. P13 now checks the end state (server, queue and button all on the newer pick, and still so 3 s later). Shown still red on the old queue code (`Expected "LV", Received "MIA"`) before I accepted it.
+
+Gate `gate.sh wo4` (logs `wo4-*.log`): pytest **99 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **76 passed, 0 failed**. Committed as `cfbef46`.
+
+### Review round 3 (fresh reviewer on `cfbef46`) — `reviews/r3-implementation.md`
+
+N1, N2 and N3 confirmed fixed. Verdict FAIL on one Medium: the direct send removed the game from the queue before the request, so the pick lived only in memory during the request; if iOS closed the app then, it was lost with no message (F1). Mapped to a failing test first: P16 reloads the page mid-request and expects the pick on the phone during the request and on the server after the next open (`red-r3-findings.log`, **1 failed, 16 passed**, commit `b8890c4`). Low findings F3 to F5 deferred with the others.
+
+### Work order 5, try 1 (Ryan, Codex gpt-6-sol, effort high) — `step-6-evidence/wo-5.md`
+
+Model pick: Jev `model:pwa:wo-5` → sol 0.98; effort split 54/46 (confidence 0.08, route advisor); the Sonnet advisor chose high. Diff inspected: 2 files, both in scope, 8 lines added and 7 removed. A tap is written to the queue before it is sent and removed only if it is still the value sent.
+
+Gate `gate.sh wo5` (logs `wo5-*.log`): pytest **99 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **77 passed, 0 failed**. Committed as `a12dc55`. After screenshots retaken.
+
+## 4. CLEANUP
+
+A separate, scope-locked refactor pass after the last review fix, by a fresh read-only subagent over the production code this step touched (`git diff 9d41cb0..cfbef46 -- apps/web packages/shared scripts`, tests excluded): `reviews/cleanup-pass.md`.
+
+| Item | Decision | Reason |
+|---|---|---|
+| R1: `gameId in queue` before `queue[gameId] !== team`, three places in `sync.ts` | **Changed** (work order 5, part B) | A missing key reads as `undefined`, which never equals a `string \| null` team. No behaviour change. |
+| "Changed:" strip written in `game-card.tsx` and `recommendation.tsx` | No change | Two one-line uses; sharing it needs a new export. |
+| Phone and desktop subtitle spans in `week-board.tsx` | No change | The two texts differ on purpose; same pattern as `kpi-strip.tsx`. |
+| Literal `12px` in `scroll-padding-top` | No change | No token means "gap below the header"; the line above uses a bare `84px`. |
+| `sw.js`, `stamp-sw.mjs`, `persist.ts`, update flow in `pwa.tsx` | No change | No dead code, debug output or false comments; the removed API cache and `replay` helper have no references left. |
+
+Proof after the edit: the `wo5` gate above ran on the tree that contains R1 (77 browser tests passed).

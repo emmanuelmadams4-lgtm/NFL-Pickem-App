@@ -1,0 +1,16 @@
+a12dc55 fix: review round 3: a tapped pick stays queued on the phone until the server answers
+b8890c4 test: red test for review round 3 (a pick lost when the app closes mid-send) + reports, cleanup pass, work order 5
+cfbef46 fix: review round 2: one order per game for pick saves, a refused pick no longer blocks the queue
+d23286b docs: step 6 log, review round 2
+55bed45 docs: work order 4 (review round 2 findings), baseline dd66d0e
+dd66d0e test: red tests for review round 2 (queue races, blocked queue, false caption) + round-2 reports
+d0d7b9e fix: review round 1: newer pick wins over a queued one, readable phone controls
+9572dd2 docs: name the baseline in work order 3
+556ba8a test: red tests for review round 1 findings (P11, P12, L4, L8-L10); critic reports
+7611d89 feat: phone layout: first game's picks on the first screen, compact cards
+0bab418 docs: step 6 work order 1 gate results
+ef02a66 feat: one offline layer, unreachable-server banner, update prompt, storage status
+1a783f3 test: offline tests cut the service worker off too; P7 saves the matchup first
+441f28a test: step 6 phone layout spec, red (L1-L7), and before screenshots
+523f446 docs: name the red commit in work order 1
+ddffa5e test: step 6 phone spec, red before the build (P2, P4, P6, P9)
