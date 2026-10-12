@@ -211,6 +211,8 @@ test("R6 the client lock follows the server rule: a TBD or postponed game stays 
 
 const LIME = "rgb(198, 241, 53)";
 
+test.describe(() => {
+test.use({ serviceWorkers: "block" }); // F1 routes logo images with page.route
 test("F1 smallest phone (320px): no screen scrolls sideways", async ({ page, request }) => {
   const { meta, open } = await board(request);
   const finals = (await api<{ games: Game[] }>(request, `/weeks/${meta.current_season}/1`)).games;
@@ -222,7 +224,8 @@ test("F1 smallest phone (320px): no screen scrolls sideways", async ({ page, req
     await page.waitForLoadState("networkidle");
     expect(await page.evaluate(() => document.documentElement.scrollWidth), path).toBeLessThanOrEqual(320);
   }
-});
+});});
+
 
 test("F2 matchup: a pick against the model says 'Differs from model' in the pick panel", async ({ page, request }) => {
   const { open } = await board(request);
@@ -245,8 +248,14 @@ test("F3 win split: lime is mine, never the model's tile; no check mark on it; b
     await page.goto(`/game/?id=${id}`);
     const tile = page.getByTestId("win-tile-model");
     await expect(tile).toContainText("Model pick");
-    const paint = await tile.evaluate((el) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).borderTopColor, getComputedStyle(el).color]);
+    const paint = await tile.evaluate((el) =>
+      [el, ...el.querySelectorAll("*")].flatMap((n) => {
+        const c = getComputedStyle(n);
+        return [c.backgroundColor, c.color, c.borderTopColor, c.borderRightColor, c.borderBottomColor, c.borderLeftColor];
+      }),
+    );
     expect(paint, id).not.toContain(LIME);
+    await expect(tile).not.toContainText(/[✓✔]/);
     await expect(tile.locator("svg"), "no check icon on the model tile").toHaveCount(0);
   }
   await expect(page.getByTestId("win-split")).toContainText("Backfilled");
@@ -299,8 +308,21 @@ test("G1 week-1 matchup: every en dash in Teams has a reason (no games played ye
   expect(bare, "no row is a bare en dash; the reason replaces or sits in it").toBe(0);
 });
 
-test("G2 lime paints what is mine: a picked pill and the selected filter chip", async ({ page, request }) => {
+test("G2 lime paints what is mine: a picked pill, the selected chip, the primary button, active tabs", async ({ page, request }) => {
   const { open } = await board(request);
+  const bg = (l: ReturnType<Page["locator"]>) => l.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await page.goto("/");
+  expect(await bg(page.getByRole("button", { name: "Sign in" }))).toBe(LIME);
+  await page.goto(`/game/?id=${open[0].game_id}`);
+  await page.evaluate((t) => localStorage.setItem("nflpi_token", t), TOKEN);
+  await page.reload();
+  const sectionsNav = page.getByRole("navigation", { name: "Sections" });
+  await sectionsNav.getByRole("link", { name: "Market" }).click();
+  await expect.poll(() => bg(sectionsNav.getByRole("link", { name: "Market" }))).toBe(LIME);
+  await page.setViewportSize({ width: 393, height: 852 });
+  await page.goto("/");
+  await expect.poll(() => bg(page.getByRole("navigation", { name: "Primary" }).locator('[aria-current="page"]').first())).toBe(LIME);
+  await page.setViewportSize({ width: 1440, height: 900 });
   const g = open[open.length - 1];
   await signIn(page);
   await page.goto("/");
@@ -317,24 +339,32 @@ test("G2 lime paints what is mine: a picked pill and the selected filter chip", 
   }
 });
 
-test("G3 keyboard focus is visible on lime and never hidden under the tab bar (phone)", async ({ page, request }) => {
-  const { open } = await board(request);
+test("G3 keyboard focus is visible and never hidden under the tab bar (phone, real Tab key)", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await signIn(page);
   await page.goto("/");
   await cardsLoaded(page);
-  const chip = page.getByTestId("filter-chips").getByRole("button", { name: /All games/ });
-  await chip.focus();
-  await page.keyboard.press("Shift+Tab");
-  await page.keyboard.press("Tab");
-  const ring = await chip.evaluate((el) => [getComputedStyle(el).outlineStyle, getComputedStyle(el).outlineColor]);
-  expect(ring[0]).not.toBe("none");
-  expect(["rgb(10, 10, 10)", LIME]).not.toContain(ring[1]);
-  const last = card(page, open[open.length - 1]).getByRole("button").last();
-  await last.focus();
-  const [btn, bar] = await Promise.all([last.boundingBox(), page.getByRole("navigation", { name: "Primary" }).boundingBox()]);
-  expect(btn!.y + btn!.height, "focused button sits above the tab bar").toBeLessThanOrEqual(bar!.y);
+  const bar = (await page.getByRole("navigation", { name: "Primary" }).boundingBox())!;
+  let checked = 0;
+  for (let i = 0; i < 80 && checked < 4; i++) {
+    await page.keyboard.press("Tab");
+    const f = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el || el.closest('nav[aria-label="Primary"]')) return null;
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return { name: el.getAttribute("aria-label") ?? el.textContent ?? "", bottom: r.bottom, top: r.top, outline: parseFloat(cs.outlineWidth), style: cs.outlineStyle, pick: !!el.closest('[role="group"]') };
+    });
+    if (!f || !f.pick) continue;
+    checked++;
+    expect(f.style, f.name).not.toBe("none");
+    expect(f.outline, f.name).toBeGreaterThanOrEqual(2);
+    expect(f.bottom, `${f.name} is not hidden under the tab bar`).toBeLessThanOrEqual(bar.y);
+  }
+  expect(checked, "tabbed through at least four pick buttons").toBeGreaterThanOrEqual(4);
 });
+
 
 test.describe(() => {
   test.use({ serviceWorkers: "block" }); // rewrites an API response with page.route
