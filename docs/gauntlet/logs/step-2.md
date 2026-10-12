@@ -102,3 +102,13 @@ Spec fault found while re-running WO-C's proof (the coordinator's, not a builder
 | B | E4, E6, E7, E8, E11: `lib/clock.ts` (`useNow` on one shared 15 s ticker, corrected by `meta.server_time − dataUpdatedAt`; `isLocked` = the API's `locked` or a known kickoff passed, same rule as `views.is_locked`) used by pick buttons, game row, matchup header and pick panel, the "Open to pick" filter and the KPI open count; `kickoffClock`/`kickoffWhen` show "Time TBD"; Results as one unboxed strip (me, model live, market, home) with the backfilled record in its own block and "incl. N backfilled" in the weekly table | sonnet, try 1 (main checkout) | see git log (`feat(web): kickoff lock…`) | `npm run e2e` **12 passed** · typecheck exit 0 · grep gate empty |
 
 WO-B review: 10 files under `apps/web` (+110/-65 plus the new `lib/clock.ts`); no spec, config or backend file touched. Carried, not fixed (traced, not worth code now): a TBD game's date is formatted in the viewer's zone, so a viewer west of Eastern would see the day before (the placeholder is midnight Eastern); the owner's commits are in Eastern (-0400). On Results the market and home records count every final game while the live model record counts only live-graded games; the labels say so, and the pick-sheet step (owner D13 scorecard) redesigns this block.
+
+## 4. CLEANUP
+
+Scope-locked to code touched in this step; `/refactor` is not installed, its behavioral equivalent applied. Picked by the coordinator, built by a Sonnet subagent (rung 1), no behavior change:
+* C1 `app/fonts.ts` (relative path into the hoisted root `node_modules`) deleted; `layout.tsx` uses the `geist` package's own `GeistSans`/`GeistMono` exports; `--font-sans`/`--font-mono` are `var(--font-geist-sans|mono)` + the design.md § 4 fallback stacks. Observed body font: `GeistSans, "GeistSans Fallback", ui-sans-serif, …`.
+* C2 unused `Card` import removed from `components/game/game-view.tsx` (`tsc --noUnusedLocals`). The same check flags `charts/calibration.tsx`, which this step did not touch: left.
+* Not changed, with reasons: `views.performance` still returns `model_live_games`/`model_backfill_games` (now equal to the two totals) because removing them is a contract change and W3 reads one; the Results denominators note (see WO-B) belongs to the pick-sheet step.
+* Spec strengthened (coordinator, recorded): E10's second check was `document.fonts.check('16px "Geist"')`, which is true for any family nothing declares. It now requires a loaded `FontFace` whose family starts with "Geist".
+
+Proof after cleanup (coordinator): `npm run e2e` 12 passed · typecheck exit 0.
