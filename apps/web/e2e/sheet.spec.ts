@@ -171,6 +171,37 @@ test("U3 results: he enters his Yahoo rank for a week and the scorecard shows it
   await expect(table.getByRole("row").filter({ hasText: `Week ${meta.current_week}` })).toContainText("4");
 });
 
+test("U3c results: a rank saved before the scorecard has loaded still shows in the scorecard", async ({ page, request }) => {
+  const { meta } = await board(request);
+  await signIn(page);
+  // The page's first scorecard answer is read from the server at once but handed over only after the save.
+  let release: () => void = () => undefined;
+  const afterSave = new Promise<void>((r) => (release = r));
+  let held = false;
+  await page.route("**/api/scorecard/**", async (route) => {
+    if (held) return route.continue();
+    held = true;
+    const response = await route.fetch();
+    await afterSave;
+    await route.fulfill({ response });
+  });
+  await page.goto("/performance/");
+  const form = page.getByRole("group", { name: "Your Yahoo rank" });
+  try {
+    await form.getByLabel("Week").selectOption(String(meta.current_week));
+    await form.getByLabel("Your rank").fill("6");
+    await form.getByLabel("Leader's points").fill("55");
+    const put = page.waitForResponse((r) => r.url().includes("/api/ranks/") && r.request().method() === "PUT");
+    await form.getByRole("button", { name: "Save rank" }).click();
+    expect((await put).ok()).toBeTruthy();
+  } finally {
+    release();
+  }
+  await expect(page.getByText("Rank saved")).toBeVisible();
+  const row = page.getByRole("table", { name: "Scorecard" }).getByRole("row").filter({ hasText: `Week ${meta.current_week}` });
+  await expect(row, "the scorecard shows what was just saved, not the answer from before the save").toContainText("Leader 55 points");
+});
+
 for (const scheme of ["dark", "light"] as const) {
   test(`U4 accessibility (${scheme}): no serious or critical axe issues on the board, the copy sheet and Results`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
