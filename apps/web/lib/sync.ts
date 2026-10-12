@@ -116,9 +116,9 @@ export function unqueue(gameId: string) {
   if (warnedGameId === gameId) warnedGameId = null;
 }
 
-function unqueueIfCurrent(gameId: string, team: string | null): boolean {
+export function unqueueIfCurrent(gameId: string, team: string | null): boolean {
   const queue = readQueue();
-  if (!(gameId in queue) || queue[gameId] !== team) return false;
+  if (queue[gameId] !== team) return false;
   unqueue(gameId);
   return true;
 }
@@ -171,10 +171,10 @@ export async function flushPicks(api: Api, qc: QueryClient, notify: (message: st
   let locked = 0;
   try {
     for (const [gameId, team] of entries) {
-      if (!(gameId in readQueue()) || readQueue()[gameId] !== team) continue;
+      if (readQueue()[gameId] !== team) continue;
       try {
         const saved = await orderedPickSend(gameId, async () => {
-          if (!(gameId in readQueue()) || readQueue()[gameId] !== team) return false;
+          if (readQueue()[gameId] !== team) return false;
           if (team) await api.setPick(gameId, team);
           else await api.clearPick(gameId);
           return unqueueIfCurrent(gameId, team);

@@ -5,7 +5,7 @@ import { ApiError, keys, type GameDetail, type Provider, type Week } from "@nflp
 import { useApi } from "@/lib/api";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { isNetworkError, isServerReachable, orderedPickSend, queuePick, unqueue } from "@/lib/sync";
+import { isNetworkError, isServerReachable, orderedPickSend, queuePick, unqueueIfCurrent } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
 
@@ -77,15 +77,16 @@ export function useSetPick(gameId: string) {
         return { queued: true };
       }
       try {
-        unqueue(v.gameId);
+        queuePick(v.gameId, v.team);
         if (v.team) await api.setPick(v.gameId, v.team);
         else await api.clearPick(v.gameId);
+        unqueueIfCurrent(v.gameId, v.team);
         return { queued: false };
       } catch (e) {
         if (isNetworkError(e)) {
-          queuePick(v.gameId, v.team);
           return { queued: true };
         }
+        unqueueIfCurrent(v.gameId, v.team);
         throw e;
       }
     }),
