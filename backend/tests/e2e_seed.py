@@ -23,7 +23,8 @@ def main() -> None:
     ids = {r["game_id"] for r in rows}
     week4 = next(r for r in rows if r["week"] == "4")
     away, home = next((a, h) for a in TEAMS for h in TEAMS if a != h and f"{CURRENT}_04_{a}_{h}" not in ids)
-    rows.append(week4 | {"game_id": f"{CURRENT}_04_{away}_{home}", "away_team": away, "home_team": home, "gametime": ""})
+    tbd = f"{CURRENT}_04_{away}_{home}"
+    rows.append(week4 | {"game_id": tbd, "away_team": away, "home_team": home, "gametime": ""})
 
     with session_factory()() as s:
         service.ingest_schedules(s, rows)
@@ -33,7 +34,7 @@ def main() -> None:
         engine.train(s, through_season=CURRENT - 1)
         engine.backfill_season(s, CURRENT)
         engine.refresh_predictions(s)
-    print(f"e2e seed ready: TBD game {CURRENT}_04_{away}_{home}")
+    print(f"e2e seed ready: TBD game {tbd}")
 
 
 if __name__ == "__main__":
