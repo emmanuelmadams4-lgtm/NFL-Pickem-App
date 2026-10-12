@@ -260,6 +260,34 @@ OPEN: which fixed questions Jev is asked per game (to settle at SPECIFICATION wi
 rules), and whether Jev is asked on every chat question or once per evidence change (once per
 change is cheaper and enough).
 
+## Facts looked up 2026-10-12 (research subagent, web; not owner decisions)
+
+Paraphrased from the linked pages. "Inferred" marks a reading, not a statement on the page.
+
+* **Yahoo Pro Football Pick'em** (help.yahoo.com/kb/SLN6640.html, SLN6624.html, SLN6629.html):
+  in a 14-game week the values are 1 to 14, each once (confirms D3 as built, no "16 down").
+  A game that ends in a tie awards no points to anyone. Yahoo picks two "Tiebreak Games" a week;
+  weekly order is closest to total points, then home points, then road points for game 1, the
+  same three for game 2, then the previous week's points. No commissioner setting for tiebreakers
+  is mentioned (inferred from absence). Fits D5: a predicted score for both teams in two games.
+* **Claude sign-in with the Agent SDK** (platform.claude.com/docs/en/agent-sdk/overview,
+  code.claude.com/docs/en/legal-and-compliance, /authentication, support.claude.com/articles/15036540):
+  the restriction is on third-party developers offering claude.ai login or rate limits in their
+  products. `claude setup-token` is documented for CI pipelines and scripts; the help centre
+  (updated 2026-10-07) says the Agent SDK and `claude -p` can be used with subscription limits.
+  No page explicitly approves a private single-user app (reading it as allowed is inferred), and
+  the legal page says enforcement may come without notice. `ANTHROPIC_API_KEY`, if set, overrides
+  `CLAUDE_CODE_OAUTH_TOKEN`: keep it empty (D32).
+* **Odds sources:** The Odds API free tier is 500 credits a month, featured markets refresh about
+  every 60 seconds before a game; moneyline + spread for one region costs 2 credits a call, so
+  about 250 refreshes a month (inferred arithmetic), enough for D9. Cheapest paid tier $30 a
+  month. ESPN's unofficial scoreboard endpoint returned a DraftKings spread, total and moneyline
+  for the one unplayed game when checked; finished games had none.
+* **nflverse `games.csv`:** rebuilt every 5 to 40 minutes during games (commit log). Lines were
+  filled for weeks 5 and 6 and empty from week 7, so lines appear about a week ahead (inferred
+  from one snapshot). Which sportsbook, and whether a line is refreshed within the week: not
+  found. So the "Open" item on line freshness still needs the week-6 measurement.
+
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
 * New step right after the desktop web app: **Pick sheet** = label (D2), points with re-rank and
