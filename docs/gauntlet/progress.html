@@ -82,16 +82,16 @@ footer { color: var(--muted); font-size: 13px; }
   </header>
 
   <div class="headline">
-    <div class="big">1<small> / 8 steps landed</small></div>
+    <div class="big">2<small> / 8 steps landed</small></div>
     <div class="now">
-      <p><b>Finished:</b> step 1, a safe backend. 48 tests pass, automatic checks run on every push (all green), and a fresh reviewer passed it twice.</p>
-      <p><b>Now:</b> step 2 of 8, the desktop web app. A robot test clicks through every screen; it passes 4 of 12 checks today. Builders are fixing the rest: honest Results, "Time TBD", lock at kickoff on screen, the new look.</p>
+      <p><b>Finished:</b> step 2, the desktop app. A robot clicks through every screen (17 checks pass); Results counts only picks made before kickoff; games lock on screen at kickoff; team logos are back; accessibility scan clean.</p>
+      <p><b>Next:</b> the new look you picked: lime on near-black, a card per game, pill tab bar, your P logo. Then the pick sheet (labels, 1–16 points, copy to Yahoo). The roadmap gets re-planned first to fold in your 41 decisions.</p>
     </div>
   </div>
 
   <div class="field" role="list" aria-label="Roadmap steps">
     <div class="yd done" role="listitem"><span class="n">1</span><span class="t">Safe backend + CI</span></div>
-    <div class="yd next" role="listitem"><span class="n">2</span><span class="t">Desktop web</span></div>
+    <div class="yd done" role="listitem"><span class="n">2</span><span class="t">Desktop web</span></div>
     <div class="yd" role="listitem"><span class="n">3</span><span class="t">Deploy + first iPhone install</span></div>
     <div class="yd" role="listitem"><span class="n">4</span><span class="t">iPhone PWA polish</span></div>
     <div class="yd" role="listitem"><span class="n">5</span><span class="t">Alerts</span></div>
@@ -103,7 +103,7 @@ footer { color: var(--muted); font-size: 13px; }
   <div class="waiting">
     <h3>Waiting on you</h3>
     <ul>
-      <li><b>2–3 iPhone screenshots from the ESPN app:</b> the NFL scores list and one game's Matchup Predictor. They are the design bar for steps 2 and 4.</li>
+      <li><b>Nothing blocking.</b> Your screenshots, logo and 41 decisions are in. Line freshness gets measured in week 6.</li>
       <li>At step 3: install the app on your iPhone once and tell me what you see.</li>
       <li>At step 6: API keys, your server, and your iPhone for the live checks.</li>
     </ul>
@@ -116,7 +116,7 @@ footer { color: var(--muted); font-size: 13px; }
         <thead><tr><th>#</th><th>Step</th><th>Proof it must pass</th><th>Status</th></tr></thead>
         <tbody>
           <tr><td class="num">1</td><td>Safe backend + CI + first landing<span class="sub">Docker fix, refresh lock, picks locked after kickoff, reminders that can't get lost, worker heartbeat, no guessed kickoff times</span></td><td>All tests (incl. daylight-saving and London kickoffs), migrations on an empty DB, cold start to live picks, CI green on the PR</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">2</td><td>Desktop web app<span class="sub">Honest Results headline, "Time TBD", lock at kickoff on screen, new design system</span></td><td>12 browser checks in Eastern time, typecheck, build, 0 serious accessibility issues; ESPN side by side waits on your screenshots</td><td><span class="pill next">In progress</span></td></tr>
+          <tr><td class="num">2</td><td>Desktop web app<span class="sub">Honest Results, "Time TBD", lock at kickoff on screen, team logos</span></td><td>17 browser checks + 55 server tests, accessibility clean, two fresh reviewers passed it; the look moves to your reference 06 next</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">3</td><td>Deploy + your first iPhone install<span class="sub">Docker, Tailscale HTTPS, backups off the machine</span></td><td>Clean clone to a running app; real HTTPS path checked; a backup restores with matching counts</td><td><span class="pill todo">To do</span></td></tr>
           <tr><td class="num">4</td><td>iPhone PWA polish<span class="sub">Offline, "can't reach server", app updates</span></td><td>Opens offline with saved data; buttons lock at kickoff offline; new version activates</td><td><span class="pill wait">Needs screenshots</span></td></tr>
           <tr><td class="num">5</td><td>Alerts end to end<span class="sub">Flips, QB news, "no pick yet", test-alert button</span></td><td>Signed push delivered to a test push service; the notification opens the game</td><td><span class="pill todo">To do</span></td></tr>
@@ -152,5 +152,5 @@ footer { color: var(--muted); font-size: 13px; }
     </div>
   </div>
 
-  <footer>Updated 2026-10-12 · Step 1 landed (CI green) · Step 2 building · Branch claude/nfl-pickem-intelligence · draft PR #1 open, not merged</footer>
+  <footer>Updated 2026-10-12 · Step 2 landed · Next: the new look (reference 06) · Branch claude/nfl-pickem-intelligence · draft PR #1, not merged</footer>
 </div>

@@ -4,22 +4,16 @@
 
 ## STATUS
 
-* **Goal:** one private app (desktop web + iPhone PWA) for weekly NFL Pick'em: evidence-based picks that match/beat the market, honest uncertainty, alerts, accuracy tracking. See [PLAN.md](PLAN.md).
-* **Overall step:** **step 1 of 8 DONE** (2026-10-11; pushed `91d7987`, CI green, critic PASS twice). Next: **step 2 of 8 — Desktop web app**. Step log: `docs/gauntlet/logs/step-1.md`.
-* **Phase:** between steps. Next session: `DIRECT_COORDINATOR / ONE_SHOT`, step 2.
-* **DONE THIS STEP:** n/a (step 2 not started).
-* **RESUMING AT:** first, republish the progress page in place with "step 2 of 8" (it was not updated at the end of step 1). Then step 2 PLANNING.
+* **Goal:** one private app (desktop web + iPhone PWA) for weekly NFL Pick'em: evidence-based picks that match/beat the market, honest uncertainty, alerts, accuracy tracking, a model that gets better over time (D18). See [PLAN.md](PLAN.md) and the owner's decisions D1–D41 in [OWNER_DECISIONS_2026-10-12.md](OWNER_DECISIONS_2026-10-12.md).
+* **Overall step:** **step 2 of 8 DONE** (2026-10-12, cloud session; objective critic PASS twice, CI on the pushed head recorded in `logs/step-2.md` § 6). The roadmap is re-planned at the next PLANNING to fold D1–D41 (new steps: restyle, pick sheet, star players, trends, passkey; see the decisions file's roadmap section), so "of 8" changes there.
+* **Next:** the **restyle step** (owner D39 look, D40 layout, D41 logo) with frozen carry-overs R1–R7 from step 2 (`logs/step-2.md` § 5, round 3), then the pick sheet (D15). Owner's chosen build order: restyle first so the pick sheet is built once in the new look.
+* **Phase:** between steps. Next session: `DIRECT_COORDINATOR / ONE_SHOT`.
 * **STRIKES:** none. **CONTINUATIONS:** 0.
-* **JEVGREP:** ready. **HEADROOM:** not-routed (desktop app).
-* **Phase:** ONE_SHOT, checkpoint VERIFICATION.
-* **Done:** backend (data pipeline, model, backtest, API, AI layer, Web Push) committed locally, unreviewed; plan; structure review (18 findings); blindspot review (12 findings); progress page.
-* **Pre-gauntlet web build:** finished. Coordinator re-ran `tsc` + `next build` (pass) and inspected screens; findings C1–C5 in PLAN.md. It is input to steps 2 and 4, where it gets a frozen gate and a fresh critic. Not verified until then.
-* **Container restart (2026-10-11):** code and commits survived; the dev API server and the local Docker daemon/Postgres container were lost. Step 1 restarts them (`dockerd &`, then `docker compose up -d db` or a fresh `postgres:17-alpine` container, `alembic upgrade head`, `jobs bootstrap`).
-* **Repo:** `/Users/emmanueladams/Projects/NFL-Pickem-App`, branch `claude/nfl-pickem-intelligence`, base `origin/main` = `83a9ae4`. Pushed 2026-10-11 after a container restart (durability, owner-approved). **Draft PR #1**: https://github.com/emmanuelmadams4-lgtm/NFL-Pickem-App/pull/1 (watched by this session). No CI yet (step 1 adds it).
-* **Provider ledger:** `CODEX_AVAILABLE: yes` (codex-cli 0.156.1, `gpt-6-luna` probe OK 2026-10-11) → `IMPLEMENTATION_PROVIDER: CODEX`. `CODEX_POLICY: CODEX_FIRST`. Jev: available. `CLIMBS: none`. Fable / gpt-6-astra: never without the owner's yes in chat.
+* **Repo:** branch `claude/nfl-pickem-intelligence`, draft PR #1, base `main` `83a9ae4`. Two Claude sessions write to this branch (cloud: code; owner's Mac: decisions and research, docs only); merge, never rebase or force.
+* **Provider ledger:** cloud sandbox: Codex not installed → `IMPLEMENTATION_PROVIDER: CLAUDE (limit hit)`; Jev unavailable (no key here). On the owner's Mac: Codex and Jev available. Fable / gpt-6-astra: never without the owner's yes in chat.
+* **21st.dev:** connected; search and theme CSS free; component code 2 retrievals a day on the free tier (`docs/design/COMPONENT_SOURCES.md`).
 * **Progress page:** https://claude.ai/artifact/6U5zCcvZijcXVMuH6Hbnvd, source `docs/gauntlet/progress.html`. Republish in place only.
-* **Review reports:** `~/.claude/plans/nfl-pickem-intelligence-reviews/` and summaries in `docs/gauntlet/STRUCTURE_REVIEW.md`, PLAN.md § Blindspot review.
-* **Waiting on owner:** ESPN iPhone screenshots (scores list + a game's Matchup Predictor), needed by steps 2 and 4 for the visual verdict only.
+* **Waiting on owner:** nothing blocking. Open items in the decisions file (line freshness measured in week 6; Claude sign-in terms read as allowed with OpenRouter fallback, D32/Q10).
 
 ## User constraints (carry every handoff)
 
@@ -40,33 +34,30 @@ See PLAN.md § Owner decisions (each has reversibility + revisit trigger).
 ```text
 GAUNTLET_MODE: DIRECT_COORDINATOR
 GAUNTLET_PHASE: ONE_SHOT
-STATE FILE: /Users/emmanueladams/Projects/NFL-Pickem-App/docs/gauntlet/STATE.md  (in a cloud checkout: docs/gauntlet/STATE.md at the repo root)
+STATE FILE: docs/gauntlet/STATE.md (repo root of the checkout; on the owner's Mac /Users/emmanueladams/Projects/NFL-Pickem-App/docs/gauntlet/STATE.md)
 
 This is a Gauntlet Loop handoff for a fresh session. Load/re-read the gauntlet-loop skill, then read the
-STATE FILE. Do not re-plan. Do not restart step 1. Execute only step 2.
+STATE FILE, docs/gauntlet/OWNER_DECISIONS_2026-10-12.md and docs/gauntlet/logs/step-2.md (§ 5 round 3, § 6).
+If they disagree with this handoff, stop and report. Do not restart steps 1-2.
 
-OVERALL STEP: step 2 of 8 — Desktop web app (T2). Scope and frozen gate: docs/gauntlet/PLAN.md roadmap row 2
-  (C3, C4, B3, B9, verify and fix the pre-built apps/web).
-ALSO IN SCOPE (carried from step 1, see docs/gauntlet/logs/step-1.md):
-  - expose `time_tbd` in the API contract and show "time TBD" in the UI; skip TBD/postponed games in weather
-    ingest and backfill (critic finding on A7);
-  - Design Gauntlet applies: PRODUCT.md and design.md at the repo root are the source of truth; land the
-    `proposed` tokens (docs/design/design-tokens.json) and fix the audit findings in design.md section 15.
-BASELINE: branch claude/nfl-pickem-intelligence at 91d7987 (draft PR #1, CI green). Backend: 48 tests pass,
-  ruff clean. Gate commands: cd backend && uv run pytest -q && uvx ruff check nflpi tests migrations;
-  npm run gen:api (no drift) && npm run typecheck && npm run web:build; plus row 2's Playwright e2e and axe.
-DONE WHEN: every gate item in PLAN row 2 is green with its own numbers, design critic and fresh critic PASS,
-  pushed, CI green.
+OVERALL STEP: restyle step (inserted by owner decisions D39-D41), after step 2 of 8. PLANNING first folds
+  D1-D41 into PLAN.md (new roadmap, renumbered), then rewrites design.md to D39/D40 before any code.
+GOAL: the app looks and is laid out like reference 06 (docs/design/references/06-concept-dark-lime.jpg) with
+  the app's own information; the owner's lime P is the app icon (docs/design/brand/app-icon/).
+GATE: R1-R7 (logs/step-2.md § 5 round 3) + existing E1-E14 and W1-W5 stay green + new browser checks for the
+  card layout, tab bar and icons + axe 0 serious/critical + fresh design critic, blind side by side with
+  reference 06 at 393x852 and 1440x900 (the image is in the repo now).
+BASELINE: branch claude/nfl-pickem-intelligence at the step 2 landing commit (logs/step-2.md § 6).
+  Gate commands: cd backend && uv run pytest -q && uvx ruff check nflpi tests migrations;
+  npm run gen:api (no drift) && npm run typecheck && npm run e2e.
+DONE WHEN: gate green with its own numbers, objective critic PASS, design critic PASS, pushed, CI green.
 STOP WHEN: three straight failures of the same command, or a one-way door needs the owner.
-OPEN OWNER QUESTIONS: Yahoo tie rule; add a "submitted in Yahoo" mark?; ESPN reference screenshots (visual
-  verdict stays PENDING until they arrive).
-IMPLEMENTATION_PROVIDER: CODEX on the owner's Mac (Codex works there; launch with
-  -c sandbox_workspace_write.network_access=true). In a cloud sandbox: CLAUDE (limit hit: Codex not installed).
+OPEN OWNER QUESTIONS: none blocking (team logos in dark mode use ESPN's 500-dark variant with fallback).
+IMPLEMENTATION_PROVIDER: CODEX on the owner's Mac; in a cloud sandbox CLAUDE (limit hit: Codex not installed)
 CODEX_POLICY: CODEX_FIRST
-BUILD_RUNG: decide per work order with Jev (Mac) or the advisor (cloud); try 1 of 2
+BUILD_RUNG: decide per work order (Jev on the Mac, coordinator in the cloud); try 1 of 2
 CLIMBS: none
 STRIKES: none
-PROGRESS PAGE: https://claude.ai/artifact/6U5zCcvZijcXVMuH6Hbnvd (source docs/gauntlet/progress.html); republish
-  in place, it still shows step 1.
-CONSTRAINTS: STATE FILE § User constraints. Owner-only gates (deploy, real iPhone, keys) stay PENDING.
+PROGRESS PAGE: https://claude.ai/artifact/6U5zCcvZijcXVMuH6Hbnvd (source docs/gauntlet/progress.html); republish in place
+CONSTRAINTS: STATE FILE § User constraints. 21st.dev: adapt, never paste whole; 2 code retrievals a day.
 ```

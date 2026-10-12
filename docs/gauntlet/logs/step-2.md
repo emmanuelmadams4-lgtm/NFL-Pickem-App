@@ -138,7 +138,7 @@ Review: 21 files (+250/-130), in scope. Backend diff read in full (`schemas.py`,
 
 Owner decision during review (in chat, 2026-10-12): **team logos come back** (D38; PRODUCT.md, design.md § 5, PLAN.md, CLAUDE.md updated). The reference images are now in the repo (owner's `75a867c`); the blind ESPN/Yahoo comparison is at phone size (393×852), so it runs in step 4.
 
-Round 3 spec (red before any fix): W5 (no API field mixes live and backfill: `model_first*`, `weeks[].model_correct/model_total` removed) — pytest 1 failed for the intended reason; E12 rewritten for D38 (logos only from the API's `logo_url`; type floor kept) — red, 0 logo requests; E13 (backfill labeled on week rows, Results table, weekly chart) — green guard against the critic's surviving mutant; E14 (no bare "-" as a missing value) — red, 2 on the board.
+Round 3 spec (red before any fix): W5 (no API field mixes live and backfill: `model_first*`, `weeks[].model_correct/model_total` removed) — pytest 1 failed for the intended reason; E12 rewritten for D38 (logos only from the API's `logo_url`; type floor kept) — red, 0 logo requests; E13 (backfill labeled on week rows, Results table, weekly chart) — green guard; it kills the dropped-row-chip part of the round-2 mutant only (the chart/table/calibration re-mixing still survives, see round 3); E14 (no bare "-" as a missing value) — red, 2 on the board.
 
 Frozen criteria added after the first table, for the record: W3b, W4, W5 (backend); E9b, E10b, E12, E13, E14 (browser). E4 and E5 tightened in round 1.
 
@@ -148,3 +148,20 @@ Frozen criteria added after the first table, for the record: W3b, W4, W5 (backen
 * **Fresh design critic (Opus): DESIGN VERDICT FAIL**, with the palette and typeface excluded from judgment (owner D39). Confirmed: D38 logos compliant everywhere (ring only at ≥ 33px, solid dot below, never empty, real logos render when served); backfill honest on every screen; no text under 11px; weights 400/500/600 only; blue only for me/interactive; no banned words; § 15 items fixed except the phone card (step 4). Blocking: (1) a game's "what changed" note is never shown on the board or in the pick panel, only at the bottom of Matchup history (§ 3 reading order, § 2.8); (2) no "differs from model" pick state (§ 2.7); (3) weather says "No forecast yet" during a source outage (§ 2.5 reason). Non-blocking: many § 4/§ 6/§ 10/§ 13 polish items (Geist Mono unused, off-scale sizes, chart heights and gridlines, motion durations, waiting-to-sync styling, no "Saved" toast, radiogroup keys).
 
 Coordinator decision (recorded; two-way; `JEV: unavailable`): D3 moves to the restyle step. Owner decisions D39 (look) and D40 (layout: a card per game, split win-chance tiles, pill tabs) replace the design this verdict judges, and the three blocking items are information on exactly the rows and pick panel that step rebuilds; the pick sheet (D1, D10) also adds "his pick vs the app's pick". Building them twice is waste. They become frozen criteria of the restyle step, with the non-blocking list as its design backlog: R1 "what changed" on the game card and in the pick panel; R2 a visible "differs from model" pick state; R3 weather shows the real reason when the source is down. Step 2 lands on its objective gate, the objective critic, and the design checks that survive D39/D40 (honesty, logos, type floor, a11y).
+
+### Round 3 build (WO-E)
+
+| WO | Scope | Rung | Commit | Proof rerun by the coordinator |
+|---|---|---|---|---|
+| E | W5 (mixed API fields removed), E12 (logos back per D38, team-color fallback: ring ≥ 33px, solid dot below), E14 (en dash + reasons), pill pick buttons, `shrink-0` icons, final score at `stat` size, "Results" naming, hollow backfill dot in history, one primary button on Matchup, neutral "Locked" chip | sonnet, try 1 | `8e7bf88` | pytest 55 passed · ruff clean · `gen:api` no drift after commit · typecheck exit 0 · grep gate empty · `npm run e2e` **17 passed** |
+
+WO-E review: 20 files, all in scope; backend diff read in full (removals only, plus `final = valid[-1]`). Builder note accepted: every call site prints the team name beside the logo, so `alt=""`.
+
+**Fresh critic round 3 (Opus): VERDICT PASS** on `692cf24`. Own gate: pytest 55, ruff, gen:api no drift, typecheck, e2e 17/17, grep empty, scratch alembic clean. Mutants killed: 19 (all API backfill mixes, W1/W2/W5 skips, 60 s tick, no lock icon, non-logo image, bare "-", dropped row chip). Survivors (no test turns red, the code is correct today): client-side re-mixing of backfill into the weekly chart, weekly table, calibration and Week KPI; backfill relabeled "Live" on Matchup; `season_model_accuracy` mixed; no logo fallback; client lock ignoring TBD/postponed; a 5.5 s tick. Other non-blocking: CSV export has no prediction-kind column (pre-existing, "always labeled"); calibration aria-label says "live" when all points are backfill; several en dashes without reasons; doc/naming drift.
+`JEV: unavailable` (no `jev.sh`, no key in this sandbox) → no council run; recorded as not run. Pass basis: every frozen gate green on the exact head, two consecutive fresh objective critics PASS (rounds 2 and 3), design verdict moved to the restyle step by the recorded decision above.
+
+Carried to the restyle step as frozen criteria (R1–R3 above, plus): R4 browser guards for every live/backfill split on screen (weekly chart, weekly table, calibration, Week KPI, Matchup labels) and a pytest guard on `season_model_accuracy`; R5 CSV export carries the prediction kind; R6 client-lock tests for TBD and postponed, and E4 bound at 5 s; R7 every en dash has a reason where one is known. Design backlog: the round 1–3 non-blocking lists.
+
+## 6. LANDING
+
+Owner consent on file (2026-10-12: push the feature branch and update the draft PR after a step verifies). Pushed with the owner's merged decision commits; CI result recorded below. Not merged. Not deployed.
