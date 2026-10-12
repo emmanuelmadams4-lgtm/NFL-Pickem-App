@@ -75,3 +75,4 @@ npm run web:dev
 * 2026-10-11 — Claude default model `claude-sonnet-5-5` (cheapest capable); Opus via `ANTHROPIC_MODEL`.
 * 2026-10-12 — The model must get better over time at choosing winners (owner). Gauntlet step 8 is required: each idea is tested walk-forward first and ships only if it wins. No changes after a single loss.
 * 2026-10-12 — Team logos are shown (owner, D37), from the API's `logo_url`, cached offline, team-color fallback. Owner decisions D1-D37: `docs/gauntlet/OWNER_DECISIONS_2026-10-12.md`.
+* 2026-10-12 — Look = reference 06 (owner, D38): near-black, lime accent, condensed bold headings, pill tab bar. Replaces D17 blue. Own step after step 2.
