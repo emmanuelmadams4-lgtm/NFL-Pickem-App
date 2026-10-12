@@ -1,9 +1,9 @@
 # Owner design references (received 2026-10-12)
 
-The image files sit next to this note on the owner's Mac only. They are screenshots of other
-companies' apps, and this repository is public, so they are git-ignored. This note is the
-committed record. A session without the files (cloud) works from the descriptions and marks the
-blind side-by-side verdict PENDING.
+The seven image files sit next to this note. The owner chose to commit them to this public
+repository (2026-10-12, his decision after being told it is public). They are screenshots of
+other companies' apps and other designers' concepts: reference only, never shipped in the app,
+never copied pixel for pixel.
 
 ## Owner statement, 2026-10-12 (his words)
 

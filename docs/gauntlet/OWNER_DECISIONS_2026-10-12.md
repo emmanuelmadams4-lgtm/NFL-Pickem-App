@@ -172,6 +172,26 @@ D32 notes (coordinator's reading, checked on the Mac 2026-10-12):
 * OPEN (owner to confirm, coordinator has not verified): that his plan's terms allow using the
   sign-in for his own private app. Single user, not offered to anyone else.
 
+## Sign-in (2026-10-12)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D33 | Owner asked for email sign-in with an emailed password and two-step; offered four options, chose **Face ID / Touch ID (passkey)**. The app token stays as the backup way in. No email, no password. | two-way | a device he uses cannot do passkeys |
+
+D33 notes (coordinator's reading):
+
+* T3: this is the security boundary. Needs the security reviewer and owner sign-off on the design.
+* Passkeys (WebAuthn) only work over HTTPS on a stable hostname (or `localhost`). So this lands
+  after the deploy step fixes the Tailscale HTTPS name; a passkey is tied to that name and must be
+  re-registered if the name changes.
+* Shape: register a passkey while signed in with `APP_ACCESS_TOKEN`; after that the passkey signs
+  him in and the server issues a session (HttpOnly, Secure cookie or a short-lived token). Every
+  `/api` route except health still requires auth; the constant-time token check stays as fallback.
+* Use a maintained WebAuthn library on the server (new dependency, justified: do not hand-roll
+  crypto). One user, so one small `passkeys` table.
+* The installed iPhone PWA keeps its own storage: he registers or signs in once inside the
+  installed app, not only in Safari.
+
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
 * New step right after the desktop web app: **Pick sheet** = label (D2), points with re-rank and
@@ -185,6 +205,8 @@ D32 notes (coordinator's reading, checked on the Mac 2026-10-12):
   list + star alerts + morning summary + ESPN source (D21-D27). Likely two steps, not one.
 * Model challengers, in order: play-by-play efficiency (old step 8), stars missing (D24),
   matchup and situation trends (D30).
+* New step after deploy: passkey sign-in (D33).
+* Go-live step: Claude through the Agent SDK sign-in (D32); Jev on the OpenRouter key (D31).
 * New step: trends panel on the game screen + trends in the chat evidence pack (D30).
 
 ## Open, and honest limits
