@@ -2,7 +2,7 @@
 
 import type { Week } from "@nflpi/shared";
 import { isLocked, useNow } from "@/lib/clock";
-import { cx } from "@/components/ui";
+import { BigDash, cx } from "@/components/ui";
 import { pctOr } from "@/lib/fmt";
 
 /**
@@ -58,7 +58,7 @@ export function KpiStrip({ week }: { week: Week }) {
               <span className="lg:hidden">{c.short}</span>
               <span className="hidden lg:inline">{c.label}</span>
             </dt>
-            <dd className="font-display text-[28px] leading-8 text-text lg:mt-1 lg:text-[36px] lg:leading-10">{c.value}</dd>
+            <dd className="font-display text-[28px] leading-8 text-text lg:mt-1 lg:text-[36px] lg:leading-10">{c.value === "–" ? <BigDash /> : c.value}</dd>
             <dd className={cx("mt-0.5 text-label text-text-2", c.missing ? "order-3 lg:order-none" : "hidden lg:block")}>{c.sub}</dd>
           </div>
         ))}

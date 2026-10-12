@@ -11,7 +11,7 @@ import { FreshnessIndicator } from "@/components/freshness";
 import { OfflineBanner, PickSync } from "@/components/pwa";
 import { SeasonPicker, WeekPicker } from "@/components/pickers";
 import { Button, cx, errorMessage } from "@/components/ui";
-import { BarChart, Calendar, Gear } from "@/components/icons";
+import { BarChart, Calendar, Gear, Refresh } from "@/components/icons";
 import { useOnline } from "@/lib/sync";
 
 const REFRESH_WAIT_MS = 20_000;
@@ -47,8 +47,10 @@ function RefreshButton() {
   }
 
   return (
-    <Button size="sm" onClick={run} loading={busy} disabled={!online} aria-live="polite" className="max-lg:h-10">
-      {busy ? "Refreshing…" : "Refresh data"}
+    // Phones: icon only (the words stay as its accessible name) so the bar fits at 320px.
+    <Button size="sm" onClick={run} loading={busy} disabled={!online} aria-live="polite" className="max-lg:h-10 max-sm:w-10 max-sm:px-0">
+      {!busy && <Refresh size={16} className="sm:hidden" />}
+      <span className="max-sm:sr-only">{busy ? "Refreshing…" : "Refresh data"}</span>
     </Button>
   );
 }
@@ -87,11 +89,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       <PickSync />
 
       <header className="sticky top-0 z-30 border-b border-border bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-bg/80">
-        <div className="mx-auto flex min-h-[52px] max-w-[1360px] items-center gap-x-6 px-4 lg:min-h-14 lg:px-5">
+        <div className="mx-auto flex min-h-[52px] max-w-[1360px] items-center gap-x-3 px-4 sm:gap-x-6 lg:min-h-14 lg:px-5">
           <Link href={`/${qs}`} className="flex items-center gap-2 text-[15px] font-semibold tracking-tight whitespace-nowrap text-text">
             {/* eslint-disable-next-line @next/next/no-img-element -- static export; the owner's app icon (D41) */}
             <img src="/icons/icon-192.png" alt="" width={28} height={28} className="size-7 rounded-[8px]" />
-            <span>
+            <span className="max-[379px]:sr-only">
               Pick&apos;em <span className="text-text-2">Intel</span>
             </span>
           </Link>

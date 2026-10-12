@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useGame, useMeta } from "@/lib/queries";
@@ -24,44 +24,67 @@ const SECTIONS = [
   { id: "conditions", label: "Conditions" },
   { id: "market", label: "Market" },
   { id: "ai", label: "AI" },
+  { id: "ask", label: "Ask" },
   { id: "history", label: "History" },
   { id: "meetings", label: "Meetings" },
 ];
 
-/** Pill section tabs (design.md § 0): sticky under the top bar, the section in view is the lime pill, jump on tap. */
+/** Below the top bar and this tab row: the last section whose top has passed this line is the one in view. */
+const SPY_LINE = 160;
+
+/**
+ * Pill section tabs (design.md § 0): sticky under the top bar, the section in view is the lime pill, jump on tap.
+ * A tapped tab stays current while its jump scrolls (and when the page cannot scroll that far), until the next user scroll.
+ */
 function SectionNav() {
   const [active, setActive] = useState<string>(SECTIONS[0].id);
+  const jumping = useRef(false);
 
   useEffect(() => {
-    const els = SECTIONS.map((s) => document.getElementById(s.id)).filter((e): e is HTMLElement => !!e);
-    if (els.length === 0 || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible[0]) setActive(visible[0].target.id);
-      },
-      { rootMargin: "-110px 0px -65% 0px", threshold: 0 },
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    let frame = 0;
+    const spy = () => {
+      if (jumping.current) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (jumping.current) return;
+        let current = SECTIONS[0].id;
+        for (const s of SECTIONS) {
+          const el = document.getElementById(s.id);
+          if (el && el.getBoundingClientRect().top <= SPY_LINE) current = s.id;
+        }
+        setActive(current);
+      });
+    };
+    const release = () => {
+      jumping.current = false;
+    };
+    const gestures = ["wheel", "touchstart", "keydown", "scrollend"] as const;
+    window.addEventListener("scroll", spy, { passive: true });
+    gestures.forEach((g) => window.addEventListener(g, release, { passive: true }));
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", spy);
+      gestures.forEach((g) => window.removeEventListener(g, release));
+    };
   }, []);
 
   function jump(id: string) {
     const el = document.getElementById(id);
     if (!el) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    jumping.current = true;
     setActive(id);
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   }
 
   return (
-    <nav aria-label="Sections" className="sticky top-[var(--header-h)] z-20 -mx-4 bg-bg px-4 lg:-mx-5 lg:px-5">
+    <nav aria-label="Sections" className="sticky top-[var(--header-h)] z-20 -mx-4 bg-bg px-4 lg:mx-0 lg:px-0">
       <ul className="no-scrollbar flex gap-1.5 overflow-x-auto py-2">
         {SECTIONS.map((s) => (
           <li key={s.id} className="shrink-0">
             <a
               href={`#${s.id}`}
-              aria-current={active === s.id ? "location" : undefined}
+              aria-current={active === s.id ? "true" : undefined}
               onClick={(e) => {
                 e.preventDefault();
                 jump(s.id);
@@ -123,12 +146,14 @@ export function GameView() {
     <div className="space-y-4 lg:space-y-5">
       <GameHeader game={game} />
       <WinSplit game={game} />
-      <SectionNav />
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
-        <aside className="lg:sticky lg:top-[calc(var(--header-h)+64px)] lg:col-start-2 lg:row-start-1">
+      {/* Phone: the pick panel comes right after the win tiles, then the section tabs. Desktop: tabs over the sections,
+          the panel sticky beside them. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
+        <aside className="lg:sticky lg:top-[calc(var(--header-h)+16px)] lg:col-start-2 lg:row-start-1">
           <Recommendation game={game} />
         </aside>
         <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
+          <SectionNav />
           <Factors game={game} />
           <TeamCompare game={game} />
           <Injuries game={game} />

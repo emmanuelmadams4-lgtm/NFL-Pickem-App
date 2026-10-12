@@ -3,7 +3,7 @@
 import { ago, type Freshness, type GameDetail } from "@nflpi/shared";
 import { Section } from "@/components/ui";
 import { useFreshness } from "@/lib/queries";
-import { isIndoor, kickoffWhen } from "@/lib/fmt";
+import { dateTime, isIndoor, kickoffWhen } from "@/lib/fmt";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -18,17 +18,19 @@ function cap(s: string | null | undefined) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 }
 
-/** "Weather source is down. Last error: ... Last update: never." The age and error come from the ingestion run log. */
+/**
+ * From the ingestion run log, claiming only a known cause: "Weather source is down" needs a logged error; stale without
+ * one says only how old the data is ("Weather not updated since Oct 9, 3:00 PM (3d ago)", or "never").
+ */
 function outageText(d: Freshness): string {
-  return [`Weather source is down.`, d.last_error ? `Last error: ${d.last_error}.` : null, `Last update: ${d.last_success ? ago(d.last_success) : "never"}.`]
-    .filter(Boolean)
-    .join(" ");
+  if (!d.last_error) return d.last_success ? `Weather not updated since ${dateTime(d.last_success)} (${ago(d.last_success)}).` : "Weather not updated: never.";
+  return `Weather source is down. Last error: ${d.last_error}. Last update: ${d.last_success ? ago(d.last_success) : "never"}.`;
 }
 
-function WeatherFact({ game, outage }: { game: GameDetail; outage: Freshness | null }) {
+function WeatherFact({ game, down }: { game: GameDetail; down: boolean }) {
   const w = game.weather;
   if (isIndoor(game.roof)) return <span>Indoor</span>;
-  if (!w) return <span className="text-text-2">{outage ? "No reading: the weather source is down" : "No forecast yet"}</span>;
+  if (!w) return <span className="text-text-2">{down ? "No reading: the weather source is down" : "No forecast yet"}</span>;
   const parts = [
     w.temp_f != null ? `${Math.round(w.temp_f)}°F` : null,
     w.wind_mph != null ? `wind ${Math.round(w.wind_mph)} mph` : null,
@@ -71,7 +73,7 @@ export function Schedule({ game }: { game: GameDetail }) {
           <span className="mt-0.5 block text-[11px] text-subtle">Rest days showed no proven effect in testing.</span>
         </Fact>
         <Fact label="Weather">
-          <WeatherFact game={game} outage={outage} />
+          <WeatherFact game={game} down={!!outage?.last_error} />
         </Fact>
       </dl>
     </Section>

@@ -7,6 +7,7 @@ import { TeamLogo } from "@/components/team";
 import { PickButtons } from "@/components/pick-buttons";
 import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-bits";
 import { useLocked } from "@/lib/clock";
+import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { pctOr } from "@/lib/fmt";
 
 function Divider() {
@@ -29,15 +30,35 @@ export function Recommendation({ game }: { game: GameDetail }) {
   const pickTeam: Team | null = p ? (p.pick === game.home.abbr ? game.home : game.away) : null;
   const pickIsHome = p ? p.pick === game.home.abbr : false;
   const forPick = (home: number | null) => (home === null ? null : pickIsHome ? home : 1 - home);
+  const mine = effectivePick(usePendingPicks(), game.game_id, game.my_pick).pick;
+  const differs = !!(p && mine && mine !== p.pick);
 
   return (
     // The screen's one elevated surface. The core scrolls on short desktop windows while the panel stays sticky.
-    <Bezel aria-label="Recommendation" coreClassName="p-5 lg:max-h-[calc(100dvh-var(--header-h)-96px)] lg:overflow-y-auto">
+    <Bezel aria-label="Recommendation" coreClassName="p-5 lg:max-h-[calc(100dvh-var(--header-h)-48px)] lg:overflow-y-auto">
+      {/* My pick first, so the buttons sit right under the win tiles and are on screen without scrolling (design.md § 0). */}
+      <div>
+        <div className="mb-2 flex min-h-5 items-center justify-between gap-2">
+          <p className="text-xs font-medium text-text">Your pick</p>
+          {differs && <Chip tone="accent">Differs from model</Chip>}
+        </div>
+        <PickButtons game={game} size="lg" />
+        {locked && game.status === "scheduled" && <p className="mt-2 text-xs text-text-2">Locked at kickoff.</p>}
+        {locked && game.status !== "final" && game.status !== "scheduled" && <p className="mt-2 text-xs text-text-2">Locked. The game has started.</p>}
+        {!locked && !game.my_pick && <p className="mt-2 text-xs text-subtle">Tap a team to pick. Tap again to clear.</p>}
+        {game.status === "final" && (
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+            {game.my_pick ? <Mark correct={game.my_pick_correct} who="Your pick" /> : <span className="text-xs text-subtle">You made no pick.</span>}
+            <Mark correct={game.model_correct} who="Model pick" />
+          </div>
+        )}
+      </div>
+      <Divider />
+
       {!p || !pickTeam ? (
         <div>
           <h2 className="text-heading">Model pick</h2>
           <p className="mt-2 text-sm text-text-2">No prediction has been computed for this game yet.</p>
-          <Divider />
         </div>
       ) : (
         <>
@@ -120,23 +141,8 @@ export function Recommendation({ game }: { game: GameDetail }) {
           {p.kind === "backfill" && (
             <p className="mt-1 text-[11px] text-subtle">Backfilled: computed after the fact using only pre-game data.</p>
           )}
-          <Divider />
         </>
       )}
-
-      <div>
-        <p className="mb-2 text-xs font-medium text-text">Your pick</p>
-        <PickButtons game={game} size="lg" />
-        {locked && game.status === "scheduled" && <p className="mt-2 text-xs text-text-2">Locked at kickoff.</p>}
-        {locked && game.status !== "final" && game.status !== "scheduled" && <p className="mt-2 text-xs text-text-2">Locked. The game has started.</p>}
-        {!locked && !game.my_pick && <p className="mt-2 text-xs text-subtle">Tap a team to pick. Tap again to clear.</p>}
-        {game.status === "final" && (
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-            {game.my_pick ? <Mark correct={game.my_pick_correct} who="Your pick" /> : <span className="text-xs text-subtle">You made no pick.</span>}
-            <Mark correct={game.model_correct} who="Model pick" />
-          </div>
-        )}
-      </div>
     </Bezel>
   );
 }

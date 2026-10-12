@@ -81,7 +81,7 @@ export function PageHead({ kicker, title, sub, aside }: { kicker: string; title:
     <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
       <div className="min-w-0">
         <p className="text-sm text-text-2">{kicker}</p>
-        <h1 className="mt-0.5 text-[48px] leading-[44px] text-text lg:text-[64px] lg:leading-[58px]">{title}</h1>
+        <h1 className="mt-0.5 text-hero text-text lg:text-[64px] lg:leading-[58px]">{title}</h1>
         {sub && <p className="mt-2 text-sm text-text-2">{sub}</p>}
       </div>
       {aside}
@@ -331,6 +331,11 @@ export function Notice({ tone = "warn", title, children, className }: { tone?: "
 }
 
 /* ---------- small pieces ---------- */
+
+/** A missing big figure: the en dash in the body face, since the display face draws it like a hyphen. Keep the reason beside it. */
+export function BigDash() {
+  return <span className="font-sans font-normal">–</span>;
+}
 
 export function Stat({ label, value, sub, className }: { label: string; value: ReactNode; sub?: ReactNode; className?: string }) {
   return (

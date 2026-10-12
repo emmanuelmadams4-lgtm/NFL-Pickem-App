@@ -7,7 +7,7 @@ import { useWeek } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
 import { isLocked, useNow } from "@/lib/clock";
 import { safeGet, safeSet } from "@/lib/fmt";
-import { EmptyState, ErrorState, PageHead, SelectField, Segmented, Skeleton, cx } from "@/components/ui";
+import { EmptyState, ErrorState, PageHead, SelectField, Skeleton, cx } from "@/components/ui";
 import { describeStale, feedsModel, staleList } from "@/components/freshness";
 import { KpiStrip } from "@/components/week/kpi-strip";
 import { WeekPicker } from "@/components/pickers";
@@ -17,6 +17,17 @@ import { GameCard } from "@/components/week/game-card";
 const SORT_KEY = "nflpi_sort";
 const SCOPE_KEY = "nflpi_scope";
 type Scope = "all" | "open";
+const SCOPES: { value: Scope; label: string }[] = [
+  { value: "all", label: "All games" },
+  { value: "open", label: "Open to pick" },
+];
+
+/** A filter chip (design.md § 0): a pill, lime when selected (amber for the attention filter). */
+const chipClass = (on: boolean, onTone = "border-transparent bg-accent text-accent-ink") =>
+  cx(
+    "h-10 shrink-0 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap transition-colors lg:h-9",
+    on ? onTone : "border-border bg-elevated text-text-2 hover:border-border-strong hover:text-text",
+  );
 
 function initialSort(): SortKey {
   const saved = safeGet(SORT_KEY);
@@ -98,6 +109,39 @@ export function WeekBoard() {
         }
       />
 
+      {/* Filter chips directly under the title, before any summary (design.md § 0); one scrolling row on the phone. */}
+      <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
+        <div role="group" aria-label="Games shown" className="flex shrink-0 gap-2">
+          {SCOPES.map((o) => (
+            <button key={o.value} type="button" aria-pressed={scope === o.value} onClick={() => setScope(o.value)} className={chipClass(scope === o.value)}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {data && (
+          <button
+            type="button"
+            aria-pressed={onlyAttention}
+            onClick={() => setOnlyAttention((v) => !v)}
+            className={chipClass(onlyAttention, "border-warn/50 bg-warn/12 text-warn")}
+          >
+            Needs attention ({data.summary.attention})
+          </button>
+        )}
+        {data && (
+          <span className="hidden text-xs text-subtle lg:ml-auto lg:inline" aria-live="polite">
+            {games.length} of {data.games.length} games
+          </span>
+        )}
+        <SelectField label="Sort by" className="inline-flex shrink-0" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+          {SORTS.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.label}
+            </option>
+          ))}
+        </SelectField>
+      </div>
+
       <WeekPicker className="lg:hidden" />
       <InstallHint />
 
@@ -125,39 +169,6 @@ export function WeekBoard() {
             <EmptyState title={`No games scheduled for Week ${week}`} hint={`There are no ${season} games in this week. Pick another week or season above.`} />
           ) : (
             <section aria-label="Games">
-              <div className="no-scrollbar -mx-4 mb-4 flex items-center gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
-                <SelectField label="Sort by" className="inline-flex shrink-0" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-                  {SORTS.map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.label}
-                    </option>
-                  ))}
-                </SelectField>
-                <Segmented
-                  label="Games shown"
-                  value={scope}
-                  onChange={setScope}
-                  options={[
-                    { value: "all", label: "All games" },
-                    { value: "open", label: "Open to pick" },
-                  ]}
-                />
-                <button
-                  type="button"
-                  aria-pressed={onlyAttention}
-                  onClick={() => setOnlyAttention((v) => !v)}
-                  className={cx(
-                    "h-10 shrink-0 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap transition-colors lg:h-9",
-                    onlyAttention ? "border-warn/50 bg-warn/12 text-warn" : "border-border bg-elevated text-text-2 hover:border-border-strong hover:text-text",
-                  )}
-                >
-                  Needs attention ({data.summary.attention})
-                </button>
-                <span className="hidden text-xs text-subtle lg:ml-auto lg:inline" aria-live="polite">
-                  {games.length} of {data.games.length} games
-                </span>
-              </div>
-
               {games.length === 0 ? (
                 <p className="rounded-card border border-border bg-surface px-4 py-10 text-center text-sm text-text-2">{scope === "open" ? "No games are open to pick in this week." : "No games need attention in this week."}</p>
               ) : (

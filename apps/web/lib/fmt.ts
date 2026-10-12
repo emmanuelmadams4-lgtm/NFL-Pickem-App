@@ -61,3 +61,9 @@ export function isIndoor(roof: string | null | undefined): boolean {
 export function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
+
+export type ScoreTone = "won" | "lost" | "even";
+/** Final-score emphasis: the winning side in ink, the loser in text-2, a tie even. */
+export function scoreTone(mine: number, theirs: number): ScoreTone {
+  return mine > theirs ? "won" : mine < theirs ? "lost" : "even";
+}

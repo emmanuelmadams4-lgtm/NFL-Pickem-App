@@ -106,24 +106,12 @@
   --radius-chip: 9999px;
 }
 
-/* Type scale (design.md § 4): text-display, text-stat, ... set size, line height, weight and tracking. */
+/* Type scale (design.md § 4): text-hero, text-heading, ... set size, line height, weight and tracking. */
 @theme {
   /* Page titles in the display face (design.md § 0). */
   --text-hero: 48px;
   --text-hero--line-height: 44px;
   --text-hero--letter-spacing: 0;
-  --text-display: 40px;
-  --text-display--line-height: 44px;
-  --text-display--font-weight: 600;
-  --text-display--letter-spacing: -0.02em;
-  --text-stat: 24px;
-  --text-stat--line-height: 32px;
-  --text-stat--font-weight: 600;
-  --text-stat--letter-spacing: -0.02em;
-  --text-title: 22px;
-  --text-title--line-height: 28px;
-  --text-title--font-weight: 600;
-  --text-title--letter-spacing: -0.01em;
   --text-row-lead: 16px;
   --text-row-lead--line-height: 22px;
   --text-row-lead--font-weight: 600;

@@ -9,7 +9,10 @@ import { PickButtons } from "@/components/pick-buttons";
 import { Lock, Refresh } from "@/components/icons";
 import { useLocked } from "@/lib/clock";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
-import { kickoffClock, shortDate } from "@/lib/fmt";
+import { kickoffClock, scoreTone, shortDate, type ScoreTone } from "@/lib/fmt";
+
+/** Final scores: the winning side in ink with a bold abbreviation, the loser in text-2. */
+const scoreClass = (t: ScoreTone) => (t === "lost" ? "text-text-2 [&>span]:font-medium" : "text-text");
 
 /** One side of the card's top band: logo, abbreviation in the display face, name and record. */
 function TeamSide({ team, record, right, onLime }: { team: Team; record: string; right?: boolean; onLime?: boolean }) {
@@ -54,6 +57,8 @@ export function GameCard({ game, highlight }: { game: GameSummary; highlight?: b
   const pickTeam: Team | null = p ? (p.pick === game.home.abbr ? game.home : game.away) : null;
   const prob = p ? pickProb(p) : null;
   const differs = !!(p && mine && mine !== p.pick);
+  const away = game.away_score;
+  const home = game.home_score;
 
   return (
     <li data-testid="game-card" className="relative flex flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-border-strong">
@@ -72,21 +77,27 @@ export function GameCard({ game, highlight }: { game: GameSummary; highlight?: b
       </div>
 
       <div className="flex flex-1 flex-col gap-3 border-t border-border p-4">
-        <div className="flex items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <p className="text-label text-text-2">
               {shortDate(game.kickoff_utc)}
               {highlight && <span className="text-accent-text">, next kickoff</span>}
             </p>
-            {started && game.away_score !== null && game.home_score !== null ? (
-              <p className="font-display text-[32px] leading-9 text-text">
+            {started && away !== null && home !== null ? (
+              <p className="font-display flex items-baseline gap-1.5 text-[32px] leading-9 whitespace-nowrap">
                 <span className="sr-only">
-                  Score {game.away.abbr} {game.away_score}, {game.home.abbr} {game.home_score}
+                  {final ? "Final score" : "Score"} {game.away.abbr} {away}, {game.home.abbr} {home}
                 </span>
-                <span aria-hidden>
-                  {game.away_score}
-                  <span className="mx-1.5 text-text-2">:</span>
-                  {game.home_score}
+                <span aria-hidden className={scoreClass(final ? scoreTone(away, home) : "even")}>
+                  <span className="mr-1 font-sans text-sm">{game.away.abbr}</span>
+                  {away}
+                </span>
+                <span aria-hidden className="font-sans font-normal text-text-2">
+                  –
+                </span>
+                <span aria-hidden className={scoreClass(final ? scoreTone(home, away) : "even")}>
+                  {home}
+                  <span className="ml-1 font-sans text-sm">{game.home.abbr}</span>
                 </span>
               </p>
             ) : (

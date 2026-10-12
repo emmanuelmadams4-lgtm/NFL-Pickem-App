@@ -79,8 +79,3 @@ export function TeamLogo({ team, size = 24, className, onLight }: { team: Team; 
     </>
   );
 }
-
-/** 3px team-color accent bar. */
-export function TeamBar({ team, className }: { team: Team; className?: string }) {
-  return <span aria-hidden style={teamAccent(team)} className={cx("team-accent block w-[3px] shrink-0 rounded-full", className)} />;
-}

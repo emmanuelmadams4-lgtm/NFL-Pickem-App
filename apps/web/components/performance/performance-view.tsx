@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Performance, Tally } from "@nflpi/shared";
 import { usePerformance, useMeta } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
-import { EmptyState, ErrorState, PageHead, Section, Skeleton, cx } from "@/components/ui";
+import { BigDash, EmptyState, ErrorState, PageHead, Section, Skeleton, cx } from "@/components/ui";
 import { SeasonPicker } from "@/components/pickers";
 import { ChevronRight } from "@/components/icons";
 import { WeeklyBars } from "@/components/charts/weekly-bars";
@@ -33,7 +33,9 @@ function TallyCell({ testId, label, tally, color, empty, note }: { testId: strin
         </>
       ) : (
         <>
-          <p className="font-display mt-2 text-[40px] leading-10 text-subtle">–</p>
+          <p className="font-display mt-2 text-[40px] leading-10 text-subtle">
+            <BigDash />
+          </p>
           <p className="mt-1 text-label text-text-2">{empty ?? "No graded games yet"}</p>
         </>
       )}
