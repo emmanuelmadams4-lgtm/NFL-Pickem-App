@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import func, select
 
 from nflpi.ai import research
+from nflpi.analytics.play_callers import PLAY_CALLERS
 from nflpi.analytics.trends import MIN_GAMES, game_trends
 from nflpi.models import Game, Prediction
 from tests.conftest import CURRENT
@@ -72,8 +73,8 @@ def test_team_vs_team_record_counts_wins_losses_ties_from_each_side(session):
     assert _record(buf) == (6, 2, 1, 9, 2015, 2023)
     assert _record(mia) == (2, 6, 1, 9, 2015, 2023)
     assert buf["context"] == "MIA" and mia["context"] == "BUF" and buf["person"] is None
-    # 2019-2023 holds only 5 of these games: under the floor, so no last-5 row.
-    assert _find(rows, kind="team_vs_team", team="BUF", window="last_5_seasons") is None
+    # 2019-2023: MIA, BUF, MIA, BUF, BUF.
+    assert _record(_find(rows, kind="team_vs_team", team="BUF", window="last_5_seasons")) == (3, 2, 0, 5, 2019, 2023)
     # Not a neutral-site game: no site rows at all.
     assert [r for r in rows if r["kind"] == "team_at_site"] == []
 
@@ -109,16 +110,16 @@ def test_weekday_record_and_last_five_finished_seasons_window(session):
     assert _find(rows, kind="team_on_weekday", team="LV", window="all") is None
 
 
-def test_records_under_eight_games_are_left_out(session):
-    assert MIN_GAMES == 8
-    for season in range(2017, 2024):  # 7 Monday games for NE
+def test_records_under_four_games_are_left_out(session):
+    assert MIN_GAMES == 4  # owner decision HAG-9, 2026-10-12
+    for season in range(2021, 2024):  # 3 Monday games for NE
         _game(session, season, "NYJ", "NE", 10, 20, weekday="Monday")
     target = _game(session, 2024, "KC", "NE", None, None, weekday="Monday")
     assert _find(game_trends(session, target), kind="team_on_weekday", team="NE", window="all") is None
 
-    _game(session, 2016, "NYJ", "NE", 10, 20, weekday="Monday")  # the 8th
+    _game(session, 2016, "NYJ", "NE", 10, 20, weekday="Monday")  # the 4th
     row = _find(game_trends(session, target), kind="team_on_weekday", team="NE", window="all")
-    assert _record(row) == (8, 0, 0, 8, 2016, 2023)
+    assert _record(row) == (4, 0, 0, 4, 2016, 2023)
 
 
 def test_only_finished_games_before_kickoff_count(session):
@@ -219,12 +220,12 @@ def test_trends_reach_the_evidence_pack_and_never_touch_predictions(loaded):
     pack = research.evidence_pack(loaded, gid)
 
     trends = pack["trends"]
-    assert trends["min_games"] == 8
+    assert trends["min_games"] == MIN_GAMES
     assert isinstance(trends["note"], str) and trends["note"]
     assert trends["records"] == game_trends(loaded, gid)
-    assert trends["records"], "the fixture seasons give every team more than 8 games at its stadium"
+    assert trends["records"], "the fixture seasons give every team more than 4 games at its stadium"
     for r in trends["records"]:
-        assert r["games"] >= 8 and r["wins"] + r["losses"] + r["ties"] == r["games"]
+        assert r["games"] >= MIN_GAMES and r["wins"] + r["losses"] + r["ties"] == r["games"]
         assert r["last_season"] <= CURRENT
     assert loaded.scalar(select(func.count()).select_from(Prediction)) == before
     # Trends are context only: nothing in the prediction code may read them.
@@ -271,7 +272,8 @@ def test_missing_stadium_id_gives_no_stadium_or_site_rows(session):
 def test_a_trends_failure_reaches_the_caller_and_the_note_states_the_limits(loaded, monkeypatch):
     gid = loaded.scalars(select(Game.game_id).where(Game.season == CURRENT, Game.week == 4)).first()
     note = research.evidence_pack(loaded, gid)["trends"]["note"].lower()
-    assert str(MIN_GAMES) in note and "playoff" in note and "name" in note and "finished seasons" in note
+    for words in (str(MIN_GAMES), "play caller", "playoff", "name", "finished seasons"):
+        assert words in note
 
     def boom(*args):
         raise RuntimeError("db down")
@@ -279,3 +281,52 @@ def test_a_trends_failure_reaches_the_caller_and_the_note_states_the_limits(load
     monkeypatch.setattr(research, "game_trends", boom)
     with pytest.raises(RuntimeError, match="db down"):
         research.evidence_pack(loaded, gid)
+
+
+# Owner decision HAG-9 (2026-10-12): records by offensive and defensive play caller, from a hand-kept sourced table.
+
+SRC = "https://example.test/source"
+# (team, season, side, name, first week, source link). Made-up people.
+CALLERS = (
+    ("NYJ", 2019, "off", "Pat Caller", 1, SRC),  # an earlier club
+    ("DEN", 2020, "off", "Pat Caller", 1, SRC),
+    ("DEN", 2021, "off", "Pat Caller", 1, SRC),
+    ("DEN", 2022, "off", "New Guy", 1, SRC),
+    ("DEN", 2022, "off", "Pat Caller", 10, SRC),  # took play calling back in week 10
+    ("DEN", 2023, "off", "Pat Caller", 1, SRC),
+    ("DEN", 2024, "off", "Pat Caller", 1, SRC),
+    ("DEN", 2023, "def", "Dee Fence", 1, SRC),
+    ("DEN", 2024, "def", "Dee Fence", 1, SRC),
+)
+
+
+def test_play_caller_records_follow_the_person_and_a_mid_season_switch(session):
+    _game(session, 2019, "NYJ", "KC", 30, 20, week=1)  # Pat Caller (NYJ) wins
+    _game(session, 2020, "KC", "DEN", 30, 20, week=1)  # Pat Caller loses
+    _game(session, 2021, "KC", "DEN", 10, 20, week=1)  # Pat Caller wins
+    _game(session, 2022, "KC", "DEN", 30, 20, week=5)  # New Guy called it: not Pat Caller's game
+    _game(session, 2022, "DEN", "KC", 30, 20, week=12)  # Pat Caller again, wins
+    _game(session, 2023, "KC", "DEN", 30, 20, week=3)  # Pat Caller loses; Dee Fence's only game
+    target = _game(session, 2024, "KC", "DEN", None, None, week=2)
+
+    rows = game_trends(session, target, play_callers=CALLERS)
+
+    off = _find(rows, kind="off_caller_vs_team", team="DEN", window="all")
+    assert _record(off) == (3, 2, 0, 5, 2019, 2023)
+    assert (off["person"], off["context"]) == ("Pat Caller", "KC")
+    assert _find(rows, kind="def_caller_vs_team", team="DEN", window="all") is None  # 1 game: under the floor
+    # No play caller on file for KC: missing stays missing.
+    assert [r for r in rows if r["team"] == "KC" and "caller" in r["kind"]] == []
+    # DEN as a club is 2-3 against KC in these games; the play-caller record is a different thing.
+    assert _record(_find(rows, kind="team_vs_team", team="DEN", window="all")) == (2, 3, 0, 5, 2020, 2023)
+
+
+def test_the_real_play_caller_table_is_sourced_and_shows_nothing_when_empty(session):
+    for team, season, side, name, first_week, source in PLAY_CALLERS:
+        assert team and name and side in ("off", "def") and season >= 2002 and first_week >= 1
+        assert source.startswith("https://")
+    for season in range(2019, 2024):
+        _game(session, season, "KC", "DEN", 30, 20)
+    target = _game(session, 2024, "KC", "DEN", None, None)
+    if not PLAY_CALLERS:
+        assert [r for r in game_trends(session, target) if "caller" in r["kind"]] == []
