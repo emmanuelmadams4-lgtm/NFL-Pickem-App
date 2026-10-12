@@ -40,7 +40,7 @@ Win probability and uncertainty are separate numbers and are always shown separa
 
 * Name: NFL Pick'em Intelligence. Short name in the app bar: "Pick'em Intel".
 * Voice: plain, specific, calm. States what the evidence says and what is missing. No hype.
-* Team logos from the API (`logo_url`, nflverse's ESPN links), cached for offline use (owner decision D37, 2026-10-12, replaces "no logos"). When a logo cannot load, the team shows its abbreviation in a team-color mark; never an empty ring.
+* Team logos from the API (`logo_url`, nflverse's ESPN links), cached for offline use (owner decision D38, 2026-10-12, replaces "no logos"). When a logo cannot load, the team shows its abbreviation in a team-color mark; never an empty ring.
 
 ## Evidence on Hand
 

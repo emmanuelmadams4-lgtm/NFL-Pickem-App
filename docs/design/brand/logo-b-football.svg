@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Pick'em Intel">
+  <rect width="512" height="512" rx="112" fill="#0B0F14"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" transform="rotate(-32 256 256)">
+    <path d="M92 256Q256 96 420 256Q256 416 92 256Z" fill="#E6EDF3" stroke="#E6EDF3" stroke-width="20"/>
+    <path d="M200 256H312M222 232V280M256 232V280M290 232V280" stroke="#3B82F6" stroke-width="20"/>
+  </g>
+</svg>

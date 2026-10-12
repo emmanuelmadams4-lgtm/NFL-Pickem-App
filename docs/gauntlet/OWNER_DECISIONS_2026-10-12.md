@@ -260,17 +260,27 @@ OPEN: which fixed questions Jev is asked per game (to settle at SPECIFICATION wi
 rules), and whether Jev is asked on every chat question or once per evidence change (once per
 change is cheaper and enough).
 
+## Design build (2026-10-12)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D37 | Owner, his words: "update components using the design.md file and ... use 21st.dev mcp to build out whats in the design md file and build out themes and logos for this app". Components are rebuilt to `design.md`, using 21st.dev components as the starting point where a good one exists; the app gets a theme switch and a real logo. | two-way | - |
+
+D37 notes: the map, the 21st account limits (2 code retrievals a day, no hosted generation) and
+the three logo options are in `docs/design/COMPONENT_SOURCES.md` and `docs/design/brand/`.
+OPEN (owner): which logo; whether to pay for 21st to lift the retrieval limit.
+
 ## Team logos (2026-10-12, asked in the cloud step 2 session)
 
 | # | Decision | Door | Revisit when |
 |---|---|---|---|
-| D37 | Owner chose "Bring logos back" when shown that every reference (01-07) uses real team logos while `PRODUCT.md` said "no NFL or team logos". Team logos come from the API's `logo_url` (nflverse's ESPN links), are cached by the service worker for offline use, and fall back to the team-color mark when a logo cannot load. Replaces the "no logos" brand commitment. | two-way | logos fail to load often, or a use beyond this private app |
+| D38 | Owner chose "Bring logos back" when shown that every reference (01-07) uses real team logos while `PRODUCT.md` said "no NFL or team logos". Team logos come from the API's `logo_url` (nflverse's ESPN links), are cached by the service worker for offline use, and fall back to the team-color mark when a logo cannot load. Replaces the "no logos" brand commitment. | two-way | logos fail to load often, or a use beyond this private app |
 
 ## Look (2026-10-12, cloud step 2 session)
 
 | # | Decision | Door | Revisit when |
 |---|---|---|---|
-| D38 | Owner, his words, sending reference 06 again: "the styling of the image is what I like the best". The app's look follows reference 06: near-black background, one lime accent, big bold condensed display headings, pill chips, a floating pill tab bar whose active tab is a filled lime pill, pill buttons. Replaces D17's "accent stays blue" (the soft top glow from 07 is dropped unless asked). Built with 21st.dev pieces where they fit (lime themes "Lime Frost/Haze/Grove", "Expanding Tabs" tab bar), adapted to the app's rules; never copied from the reference pixel for pixel. App logo: an original lime mark in this style (options sent 2026-10-12; owner may send his own). | two-way | owner names a different reference |
+| D39 | Owner, his words, sending reference 06 again: "the styling of the image is what I like the best". The app's look follows reference 06: near-black background, one lime accent, big bold condensed display headings, pill chips, a floating pill tab bar whose active tab is a filled lime pill, pill buttons. Replaces D17's "accent stays blue"; builds on D37 (the soft top glow from 07 is dropped unless asked). Built with 21st.dev pieces where they fit (lime themes "Lime Frost/Haze/Grove", "Expanding Tabs" tab bar), adapted to the app's rules; never copied from the reference pixel for pixel. App logo: an original lime mark in this style (options sent 2026-10-12; owner may send his own). | two-way | owner names a different reference |
 
 D38 notes (coordinator's reading): lime replaces blue as "me / interactive". The semantic green ("correct", low uncertainty) must move so it is not confused with lime; text on lime is near-black. Condensed display type is for page titles and big numbers only; body stays readable. Lands as its own step right after step 2 (desktop + phone tokens, judged blind against reference 06 now that it is in the repo), before the pick sheet is built on it.
 

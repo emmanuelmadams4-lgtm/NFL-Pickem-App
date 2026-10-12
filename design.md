@@ -72,7 +72,7 @@ Rules:
 * **The probability bar fill is `text-2`**, with a tick at 50%.
 * Model orange and market teal appear in charts and as a 6px identity dot beside the words "Model" and "Market". Never as fills behind text.
 * Semantic colors appear only in chips, marks, notices and chart reference lines, always with a word.
-* Team identity is the team logo (owner decision D37) with a 3px team-color bar. When the logo cannot load: the abbreviation in a team-color ring where it fits at 11px or more, else a solid team-color dot beside the printed abbreviation. Team color comes from `apps/web/lib/team.ts` per theme. Never a background, never text.
+* Team identity is the team logo (owner decision D38) with a 3px team-color bar. When the logo cannot load: the abbreviation in a team-color ring where it fits at 11px or more, else a solid team-color dot beside the printed abbreviation. Team color comes from `apps/web/lib/team.ts` per theme. Never a background, never text.
 * `subtle` text sits on `bg` or `surface` only. On `elevated` it measures 4.47:1 in dark, so use `text-2` there.
 * No pure black, no gradients, no glow. One accent.
 

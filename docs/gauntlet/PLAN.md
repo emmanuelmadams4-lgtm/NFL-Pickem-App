@@ -38,8 +38,8 @@ Deadline pressure: week 6 starts Thursday 2026-10-15 (SEA @ DEN). Steps are orde
 | 2026-10-11 | Design bar = ESPN iPhone app screens | two-way | Owner names a better reference |
 | 2026-10-11 | Recommendation = stats + market blend (ties market; stats-only is 2.1 pts worse). JEV: unavailable, decided on backtest evidence | two-way | Step 8 model beats it |
 | 2026-10-12 | The model must get better over time at choosing winners (owner, in chat). Step 8 is required, not optional. Every idea is tested on past seasons first and ships only if it wins; no rule changes after a single loss. JEV: unavailable; owner's own goal | two-way | Owner changes the goal |
-| 2026-10-12 | Look = reference 06 (owner: "the styling of the image is what I like the best"): near-black, lime accent, condensed bold headings, pill tab bar; replaces the blue accent (D17). D38 in `OWNER_DECISIONS_2026-10-12.md`. Own step right after step 2 | two-way | Owner names a different reference |
-| 2026-10-12 | Team logos back (owner, in chat: "Bring logos back"; every reference uses them). From the API's `logo_url`, cached offline, team-color fallback. Recorded as D37 in `OWNER_DECISIONS_2026-10-12.md` | two-way | Logos fail to load often |
+| 2026-10-12 | Look = reference 06 (owner: "the styling of the image is what I like the best"): near-black, lime accent, condensed bold headings, pill tab bar; replaces the blue accent (D17). D39 in `OWNER_DECISIONS_2026-10-12.md`. Own step right after step 2 | two-way | Owner names a different reference |
+| 2026-10-12 | Team logos back (owner, in chat: "Bring logos back"; every reference uses them). From the API's `logo_url`, cached offline, team-color fallback. Recorded as D38 in `OWNER_DECISIONS_2026-10-12.md` | two-way | Logos fail to load often |
 | 2026-10-11 | Claude model for reports `claude-sonnet-5-5` (cheapest capable) | two-way | Reports fail validation often, or owner asks |
 
 ## Harness (harness-engineering skill not installed here; behavioral equivalent)
