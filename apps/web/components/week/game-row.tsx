@@ -66,7 +66,7 @@ export function GameRow({ game }: { game: GameSummary }) {
       <Cell className="col-span-2 flex items-baseline gap-2 lg:col-span-1 lg:block">
         <p className="text-sm font-medium text-text">{kickoffTime(game.kickoff_utc)}</p>
         <p className="text-xs text-subtle">{shortDay(game.kickoff_utc)}</p>
-        {game.status === "in_progress" && <Chip tone="accent" className="ml-auto lg:mt-1 lg:ml-0">Live</Chip>}
+        {game.status === "in_progress" && <Chip className="ml-auto lg:mt-1 lg:ml-0">Live</Chip>}
         {final && <p className="ml-auto text-xs text-text-2 lg:mt-0.5 lg:ml-0">Final</p>}
       </Cell>
 

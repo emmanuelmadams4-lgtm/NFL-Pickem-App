@@ -71,7 +71,7 @@ export function TeamCompare({ game }: { game: GameDetail }) {
               <dt className="order-first col-span-2 text-xs text-subtle sm:order-none sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:text-center">{r.label}</dt>
               <dd className={cx("text-sm sm:col-start-1 sm:row-start-1", w === "away" ? "font-semibold text-text" : w === "home" ? "text-text-2" : "text-text")}>{r.away}</dd>
               <dd className={cx("text-right text-sm sm:col-start-3 sm:row-start-1", w === "home" ? "font-semibold text-text" : w === "away" ? "text-text-2" : "text-text")}>{r.home}</dd>
-              {r.note && <p className="col-span-2 mt-1 text-[11px] text-subtle sm:col-span-3 sm:text-center">{r.note}</p>}
+              {r.note && <dd className="col-span-2 mt-1 text-[11px] text-subtle sm:col-span-3 sm:text-center">{r.note}</dd>}
             </div>
           );
         })}

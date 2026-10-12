@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { kickoffLabel, type GameDetail, type Team } from "@nflpi/shared";
-import { Card, Chip } from "@/components/ui";
+import { Chip } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
+import { ChevronLeft } from "@/components/icons";
 import { teamAccent } from "@/lib/team";
 import { cx } from "@/components/ui";
 import { isIndoor } from "@/lib/fmt";
@@ -21,7 +22,7 @@ function TeamBlock({ team, record, split, side, score, winner }: { team: Team; r
       <TeamLogo team={team} size={56} className="lg:size-16" />
       <div className="min-w-0">
         <p className="text-xs text-subtle">{side === "away" ? "Away" : "Home"}</p>
-        <h2 className="truncate text-xl font-semibold tracking-tight">{team.name}</h2>
+        <p className="truncate text-xl font-semibold tracking-tight">{team.name}</p>
         <p className="mt-0.5 text-sm text-text-2">
           <span className="font-medium text-text">{record}</span>
           <span className="ml-2 text-subtle">{split}</span>
@@ -41,21 +42,25 @@ export function GameHeader({ game }: { game: GameDetail }) {
   const homeWon = final && (game.home_score ?? 0) > (game.away_score ?? 0);
 
   return (
-    <Card className="p-5">
+    <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <Link href={`/?season=${game.season}&week=${game.week}`} className="text-sm text-text-2 hover:text-text">
-          <span aria-hidden>&lsaquo; </span>Week {game.week}, {game.season}
+        <Link href={`/?season=${game.season}&week=${game.week}`} className="-ml-1 inline-flex items-center gap-1 text-sm text-text-2 hover:text-text">
+          <ChevronLeft />
+          Week {game.week}, {game.season}
         </Link>
         <div className="flex flex-wrap items-center gap-1.5">
           {game.div_game && <Chip>Division game</Chip>}
           {game.neutral_site && <Chip>Neutral site</Chip>}
           {game.game_type !== "REG" && <Chip>{game.game_type}</Chip>}
-          {game.status === "in_progress" && <Chip tone="accent">Live</Chip>}
+          {game.status === "in_progress" && <Chip>Live</Chip>}
           {final && <Chip>Final</Chip>}
           {game.status === "scheduled" && <Chip tone={game.locked ? "warn-soft" : "neutral"}>{game.locked ? "Locked" : "Scheduled"}</Chip>}
         </div>
       </div>
 
+      <h1 className="sr-only">
+        {game.away.name} at {game.home.name}
+      </h1>
       <div className="grid items-center gap-x-8 gap-y-5 lg:grid-cols-[1fr_auto_1fr]">
         <TeamBlock team={game.away} record={game.away_record} split={`Road ${game.away_form.away_record}`} side="away" score={started ? game.away_score : null} winner={awayWon} />
         <div className="text-center">
@@ -67,6 +72,6 @@ export function GameHeader({ game }: { game: GameDetail }) {
         </div>
         <TeamBlock team={game.home} record={game.home_record} split={`Home ${game.home_form.home_record}`} side="home" score={started ? game.home_score : null} winner={homeWon} />
       </div>
-    </Card>
+    </div>
   );
 }

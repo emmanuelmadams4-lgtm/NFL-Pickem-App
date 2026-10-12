@@ -43,7 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role="status"
-            className={`pointer-events-auto rounded-ctl border bg-elevated px-3 py-2 text-sm shadow-[var(--shadow-pop)] ${toneClass[t.tone]}`}
+            className={`enter pointer-events-auto rounded-ctl border bg-elevated px-3 py-2 text-sm shadow-[var(--shadow-pop)] ${toneClass[t.tone]}`}
           >
             <span className={`mr-2 text-xs font-semibold ${toneText[t.tone]}`}>{toneLabel[t.tone]}</span>
             <span className="text-text">{t.message}</span>

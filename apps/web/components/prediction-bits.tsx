@@ -12,11 +12,12 @@ export function ProbBar({ value, className, label }: { value: number; className?
       aria-valuemax={100}
       aria-valuenow={Math.round(w)}
       aria-label={label ?? "Win probability"}
-      className={cx("relative h-1 w-full rounded-full bg-border/70", className)}
+      className={cx("relative h-1 w-full rounded-full bg-border", className)}
     >
-      <div className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${w}%` }} />
+      {/* The model's probability is not "me", so the fill is ink, never accent blue (design.md § 5). */}
+      <div className="absolute inset-y-0 left-0 rounded-full bg-text-2" style={{ width: `${w}%` }} />
       {/* 50% reference tick */}
-      <div aria-hidden className="absolute -top-px -bottom-px left-1/2 w-px bg-muted/60" />
+      <div aria-hidden className="absolute -top-0.5 -bottom-0.5 left-1/2 w-px bg-text" />
     </div>
   );
 }

@@ -50,7 +50,7 @@ export function Ask({ game, ai }: { game: GameDetail; ai: Meta["ai_providers"] }
           rows={3}
           disabled={none}
           placeholder="For example: why is the model lower on this team than the market?"
-          className="w-full resize-y rounded-ctl border border-border bg-elevated px-3 py-2 text-base text-text lg:text-sm placeholder:text-subtle hover:border-muted disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full resize-y rounded-ctl border border-border-strong bg-elevated px-3 py-2 text-base text-text lg:text-sm placeholder:text-subtle hover:border-text-2 disabled:cursor-not-allowed disabled:opacity-60"
         />
         <div className="flex flex-wrap gap-1.5">
           {suggestions.map((s) => (
@@ -59,7 +59,7 @@ export function Ask({ game, ai }: { game: GameDetail; ai: Meta["ai_providers"] }
               type="button"
               disabled={none}
               onClick={() => setQ(s)}
-              className="rounded-chip border border-border px-2 py-1 text-left text-[11px] text-text-2 hover:border-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-chip border border-border px-2 py-1 text-left text-[11px] text-text-2 hover:border-border-strong hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
             >
               {s}
             </button>

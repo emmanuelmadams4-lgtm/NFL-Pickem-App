@@ -154,9 +154,9 @@ export function BacktestView() {
   const [calKey, setCalKey] = useState<"blend" | "logistic" | "market">("blend");
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Backtest</h1>
+        <h1 className="text-title">Backtest</h1>
         <p className="mt-0.5 text-sm text-text-2">How each approach would have done on past seasons, with uncertainty.</p>
       </div>
 
@@ -183,7 +183,7 @@ export function BacktestView() {
                     <span className="min-w-0 flex-1">
                       <ComparisonText c={c} />
                     </span>
-                    <Chip tone={c.significant ? "accent" : "neutral"}>{c.significant ? "Real gap" : "Not proven"}</Chip>
+                    <Chip>{c.significant ? "Real gap" : "Not proven"}</Chip>
                   </li>
                 ))}
               </ul>

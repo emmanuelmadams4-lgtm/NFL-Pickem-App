@@ -128,10 +128,10 @@ export function GameView() {
       <GameHeader game={game} />
       <SectionNav />
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
-        <aside className="lg:sticky lg:top-[calc(var(--header-h)+64px)] lg:col-start-2 lg:row-start-1 lg:max-h-[calc(100dvh-var(--header-h)-80px)] lg:overflow-y-auto lg:rounded-card">
+        <aside className="lg:sticky lg:top-[calc(var(--header-h)+64px)] lg:col-start-2 lg:row-start-1">
           <Recommendation game={game} />
         </aside>
-        <div className="min-w-0 space-y-5 lg:col-start-1 lg:row-start-1">
+        <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
           <Factors game={game} />
           <TeamCompare game={game} />
           <Injuries game={game} />

@@ -11,6 +11,7 @@
   "dependencies": {
     "@nflpi/shared": "*",
     "@tanstack/react-query": "^5.104.2",
+    "geist": "^1.7.2",
     "next": "16.4.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

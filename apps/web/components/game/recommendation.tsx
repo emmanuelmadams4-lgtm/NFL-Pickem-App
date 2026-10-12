@@ -1,7 +1,7 @@
 "use client";
 
 import { UNCERTAINTY, ago, pct, pickProb, strengthLabel, type GameDetail, type Prediction, type Team } from "@nflpi/shared";
-import { Card, Chip, Mark } from "@/components/ui";
+import { Bezel, Chip, Mark } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
 import { PickButtons } from "@/components/pick-buttons";
 import { BackfillChip, UncertaintyChip } from "@/components/prediction-bits";
@@ -28,18 +28,19 @@ export function Recommendation({ game }: { game: GameDetail }) {
   const forPick = (home: number | null) => (home === null ? null : pickIsHome ? home : 1 - home);
 
   return (
-    <Card className="p-5" aria-label="Recommendation">
+    // The screen's one elevated surface. The core scrolls on short desktop windows while the panel stays sticky.
+    <Bezel aria-label="Recommendation" coreClassName="p-5 lg:max-h-[calc(100dvh-var(--header-h)-96px)] lg:overflow-y-auto">
       {!p || !pickTeam ? (
         <div>
-          <h2 className="text-sm font-semibold">Model pick</h2>
+          <h2 className="text-heading">Model pick</h2>
           <p className="mt-2 text-sm text-text-2">No prediction has been computed for this game yet.</p>
           <Divider />
         </div>
       ) : (
         <>
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Model pick</h2>
-            {p.kind === "backfill" ? <BackfillChip /> : <Chip tone="accent">Live</Chip>}
+            <h2 className="text-heading">Model pick</h2>
+            {p.kind === "backfill" ? <BackfillChip /> : <Chip>Live</Chip>}
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-3">
@@ -51,7 +52,7 @@ export function Recommendation({ game }: { game: GameDetail }) {
               </div>
             </div>
             <div className="text-right">
-              <p className="num-display text-[44px] leading-[44px] font-semibold text-text">{pct(pickProb(p))}</p>
+              <p className="num-display text-display text-text">{pct(pickProb(p))}</p>
               <p className="mt-1 text-xs text-text-2">{strengthLabel(pickProb(p))}</p>
             </div>
           </div>
@@ -124,6 +125,6 @@ export function Recommendation({ game }: { game: GameDetail }) {
           </div>
         )}
       </div>
-    </Card>
+    </Bezel>
   );
 }

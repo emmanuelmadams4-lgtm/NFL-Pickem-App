@@ -2,6 +2,7 @@
 
 import { useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { ApiError } from "@nflpi/shared";
+import { Check, X } from "@/components/icons";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
@@ -24,6 +25,24 @@ export function Card({ className, children, ...rest }: { className?: string; chi
   );
 }
 
+/**
+ * The one elevated surface on a screen (design.md § 7): an `elevated` shell with a hairline ring around a `surface` core.
+ * Used for the Model pick panel on Matchup and the sign-in card. Nowhere else.
+ */
+export function Bezel({
+  className,
+  coreClassName,
+  children,
+  ...rest
+}: { className?: string; coreClassName?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx("enter rounded-bezel border border-border bg-elevated/60 p-1.5", className)} {...rest}>
+      <div className={cx("rounded-card bg-surface shadow-[var(--shadow-inset-highlight),var(--shadow-float)]", coreClassName)}>{children}</div>
+    </div>
+  );
+}
+
+/** Unboxed section (design.md § 8): heading, optional note, hairline, content. */
 export function Section({
   id,
   title,
@@ -42,18 +61,16 @@ export function Section({
   const headingId = useId();
   return (
     <section id={id} aria-labelledby={headingId} className={cx("scroll-mt-32", className)}>
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3">
-          <div className="min-w-0">
-            <h2 id={headingId} className="text-sm font-semibold text-text">
-              {title}
-            </h2>
-            {note && <p className="mt-0.5 text-xs text-subtle">{note}</p>}
-          </div>
-          {action}
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
+        <div className="min-w-0">
+          <h2 id={headingId} className="text-heading text-text">
+            {title}
+          </h2>
+          {note && <p className="mt-0.5 text-label text-subtle">{note}</p>}
         </div>
-        <div className="p-5">{children}</div>
-      </Card>
+        {action}
+      </div>
+      <div className="pt-4">{children}</div>
     </section>
   );
 }
@@ -68,14 +85,14 @@ const chipTone: Record<ChipTone, string> = {
   warn: "border-warn/40 bg-warn/14 text-warn",
   "warn-soft": "border-warn/35 bg-transparent text-warn",
   bad: "border-bad/40 bg-bad/14 text-bad",
-  accent: "border-accent/40 bg-accent/12 text-accent",
+  accent: "border-accent/50 bg-transparent text-accent",
 };
 
 export function Chip({ tone = "neutral", children, className }: { tone?: ChipTone; children: ReactNode; className?: string }) {
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1 rounded-chip border px-1.5 py-px text-[11px] leading-4 font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-chip border px-1.5 py-px text-micro whitespace-nowrap",
         chipTone[tone],
         className,
       )}
@@ -151,7 +168,7 @@ export function Tip({ content, children, className, align = "left" }: { content:
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 const variantClass: Record<Variant, string> = {
   primary: "bg-accent-solid text-white border-transparent hover:brightness-110",
-  secondary: "bg-elevated text-text border-border hover:border-muted",
+  secondary: "bg-elevated text-text border-border hover:border-border-strong",
   ghost: "bg-transparent text-text-2 border-transparent hover:bg-elevated hover:text-text",
   danger: "bg-transparent text-bad border-bad/40 hover:bg-bad/10",
 };
@@ -169,7 +186,7 @@ export function Button({
       {...rest}
       disabled={rest.disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-ctl border font-medium whitespace-nowrap transition-[transform,background-color,border-color,filter,opacity] duration-150",
+        "inline-flex items-center justify-center gap-2 rounded-ctl border font-medium whitespace-nowrap transition-[transform,background-color,border-color,filter,opacity] duration-(--duration-press)",
         "active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0",
         size === "sm" ? "h-9 px-3 text-xs lg:h-8" : "h-10 px-4 text-sm lg:h-9",
         variantClass[variant],
@@ -208,7 +225,7 @@ export function SelectField({
         <select
           id={id}
           {...rest}
-          className={cx("h-10 rounded-ctl border border-border bg-elevated px-2 text-base text-text hover:border-muted lg:h-8 lg:text-sm", grow && "min-w-0 flex-1")}
+          className={cx("h-10 rounded-ctl border border-border-strong bg-elevated px-2 text-base text-text hover:border-text-2 lg:h-8 lg:text-sm", grow && "min-w-0 flex-1")}
         >
           {children}
         </select>
@@ -317,9 +334,7 @@ export function Mark({ correct, who }: { correct: boolean | null | undefined; wh
   return (
     <span className={cx("inline-flex items-center gap-1 text-xs", correct ? "text-good" : "text-bad")}>
       <span className="text-text-2">{who}</span>
-      <span aria-hidden className="text-sm font-semibold">
-        {correct ? "✓" : "✗"}
-      </span>
+      {correct ? <Check size={14} /> : <X size={14} />}
       <span className="sr-only">{correct ? "correct" : "incorrect"}</span>
     </span>
   );

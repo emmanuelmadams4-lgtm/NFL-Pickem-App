@@ -1,7 +1,7 @@
 # Design System — NFL Pick'em Intelligence
 
 > Source of truth for visual and interaction decisions. Product context lives in PRODUCT.md.
-> Last reviewed: 2026-10-11 · Register: product · Preset: high-end-visual-design ("Ethereal Glass", restrained) with design-taste-frontend dials VARIANCE 3 · MOTION 3 · DENSITY 6 phone / 7 desktop
+> Last reviewed: 2026-10-12 · Register: product · Preset: high-end-visual-design ("Ethereal Glass", restrained) with design-taste-frontend dials VARIANCE 3 · MOTION 3 · DENSITY 6 phone / 7 desktop
 >
 > Runtime tokens live in `apps/web/app/globals.css`. `docs/design/design-tokens.json` mirrors them and marks each group `landed` or `proposed`. `docs/design/design-preview.html` renders them. A rule tagged **(proposed)** is decided here but not yet in the app.
 
@@ -30,7 +30,7 @@ Per game the reading order is fixed: matchup → model pick and probability → 
 
 ## 4. Typography
 
-**(proposed)** Geist for text, Geist Mono for machine values. Self-hosted through the `geist` npm package (reason for the dependency: the PWA must render offline, and both chosen presets ban a default system/Inter stack). Fallback: `ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", sans-serif`. No serif anywhere.
+Geist for text, Geist Mono for machine values. Self-hosted through the `geist` npm package, loaded in `apps/web/app/fonts.ts` (reason for the dependency: the PWA must render offline, and both chosen presets ban a default system/Inter stack). Fallback: `ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", sans-serif`. No serif anywhere.
 
 | Role | Size / line | Weight | Tracking | Used for |
 |---|---|---|---|---|
@@ -59,16 +59,16 @@ Hex, dark-first, light follows the system setting. Values and measured contrast 
 | `surface` | `#11161d` | `#ffffff` | Grouped rows, bars |
 | `elevated` | `#171e27` | `#f0f3f6` | Controls, tooltips, the pick core |
 | `border` | `#232c38` | `#d8dee4` | Hairlines and dividers (decorative, 1.3:1) |
-| `border-strong` **(proposed)** | `#64707f` | `#818b95` | Boundary of inputs, selects and unselected pick buttons (3:1) |
+| `border-strong` | `#64707f` | `#818b95` | Boundary of inputs, selects and unselected pick buttons (3:1) |
 | `text` / `text-2` / `subtle` | `#e6edf3` / `#9aa7b4` / mix | `#1f2328` / `#57606a` / mix | 15:1 / 7:1 / 4.8:1 on `surface` |
 | `accent` / `accent-solid` | `#3b82f6` / `#2563eb` | `#0969da` | Me, and anything I can act on |
-| `good` / `warn` / `bad` | `#3fb950` / `#d29922` / `#f85149` | `#1a7f37` / `#9a6700` / `#cf222e` | Correct or low uncertainty / moderate, stale, questionable / incorrect, high, out |
-| `series-me` / `-model` / `-market` | `#3987e5` / `#d95926` / `#199e70` | `#2a78d6` / `#c9501c` / `#168a61` **(light values proposed)** | Fixed identity colors |
+| `good` / `warn` / `bad` | `#3fb950` / `#d29922` / `#f85149` | `#166f31` / `#855700` / `#b91c25` | Correct or low uncertainty / moderate, stale, questionable / incorrect, high, out. Light values clear 4.5:1 on `elevated` and on their own chip tint |
+| `series-me` / `-model` / `-market` | `#3987e5` / `#d95926` / `#199e70` | `#2a78d6` / `#c9501c` / `#168a61` | Fixed identity colors |
 
 Rules:
 
 * **Blue means me or interactive.** Selected pick, links, focus ring, primary button, the Me series. It must not color the model's probability bar, headings, icons at rest, or any second chart series.
-* **The probability bar fill is `text-2`**, with a tick at 50%. **(proposed; today it is blue.)**
+* **The probability bar fill is `text-2`**, with a tick at 50%.
 * Model orange and market teal appear in charts and as a 6px identity dot beside the words "Model" and "Market". Never as fills behind text.
 * Semantic colors appear only in chips, marks, notices and chart reference lines, always with a word.
 * Team color is a 3px bar and a monogram ring, chosen per theme by `apps/web/lib/team.ts`. Never a background, never text.
@@ -105,11 +105,11 @@ Radius: bezel 18, group 12, control 8, chip 6, pill for pick buttons, bars, and 
 | Chip | `ui.tsx` `Chip` | Tones neutral, good, warn, warn-soft, bad, accent. Text always. At most two per game row on the phone; the rest fold into "+n" with a tooltip |
 | Segmented, Select | `ui.tsx` | Segmented for 2 to 3 mutually exclusive views; a native `select` above that. Labels sit above or inline-left, never as placeholder |
 | Tooltip | `ui.tsx` `Tip` | Keyboard and tap focusable. Explains a chip or a figure; never holds an action |
-| Section | `ui.tsx` `Section` | **(proposed)** Unboxed: heading, optional note, hairline, content. The current boxed card version is retired on Matchup |
+| Section | `ui.tsx` `Section` | Unboxed: heading, optional note, hairline, content. The boxed card version is retired |
 | Stat / KPI strip | `ui.tsx` `Stat`, `components/week/kpi-strip.tsx` | One unboxed strip, cells divided by vertical hairlines, on every width. "Needs attention" is a filter chip, not a KPI |
 | Game row | `components/week/game-row.tsx` | Table row on desktop, two-line row inside the day group on the phone |
 | Navigation | `components/app-shell.tsx` | Desktop: full-width sticky bar (it holds the week picker and freshness, so it stays docked). Phone: **(proposed)** floating pill tab bar, 12px above the safe area, three text tabs, 48px targets, active tab on an `elevated` pill |
-| Notice / freshness | `ui.tsx` `Notice`, `components/freshness.tsx` | Full-width banner only when a source that feeds the model is stale (schedules, lines, injuries). Weather is a note on Settings |
+| Notice / freshness | `ui.tsx` `Notice`, `components/freshness.tsx` | Full-width banner only when a source that feeds the model is stale (schedules, lines, injuries). The header indicator turns amber for those only. Weather is a note on Settings |
 | Toast | `components/toast.tsx` | Bottom, above the tab bar. Confirms saves and sync; errors stay until dismissed |
 | Empty / loading / error | `ui.tsx` `EmptyState`, `Skeleton`, `ErrorState` | Skeletons match the final layout. Empty states say what will appear and when. Errors are inline with a Retry |
 
@@ -173,7 +173,7 @@ Recharts, wrappers in `components/charts/`.
 
 ## 14. Iconography
 
-**(proposed)** One file, `components/icons.tsx`, of inline SVGs: chevron-left, chevron-right, check, x, lock, warning, refresh, bell, cloud-off, clock, info. 1.5px stroke, round caps, `currentColor`, 16px beside `body` text and 20px in controls. No icon library (a dozen icons do not justify a dependency). An icon never stands alone without an `aria-label`; tabs and buttons use text.
+One file, `components/icons.tsx`, of inline SVGs: chevron-left, chevron-right, check, x, lock, warning, refresh, bell, cloud-off, clock, info. 1.5px stroke, round caps, `currentColor`, 16px beside `body` text and 20px in controls. No icon library (a dozen icons do not justify a dependency). An icon never stands alone without an `aria-label`; tabs and buttons use text.
 
 ## 15. Anti-Patterns
 
@@ -192,18 +192,18 @@ Banned in this app:
 
 Found in the 2026-10-11 audit of the current build (fix in the UI steps):
 
-| Finding | Where | Rule |
-|---|---|---|
-| Five equal KPI cards on desktop | `docs/screenshots/web-week-light.png`, `components/week/kpi-strip.tsx` | §7, §8 |
-| Every Matchup section is a boxed card | `docs/screenshots/web-matchup.png`, `ui.tsx` `Section` | §7 |
-| Each game is its own card on the phone | `docs/screenshots/pwa-week-dark.png` | §7 |
-| Model probability bar is accent blue | `components/prediction-bits.tsx` | §5 |
-| `✓ ✗` and the week chevrons typed as characters | `ui.tsx` `Mark`, `components/pickers.tsx` | §14 |
-| Control borders at 1.29:1 | `ui.tsx` `SelectField`, pick buttons | §5 `border-strong` |
-| Light `series-market` at 2.82:1 and `series-model` at 3.20:1 on white | `globals.css` | §5 |
-| Font stack names Inter and falls back to the system | `globals.css` `--font-sans` | §4 |
-| Full-width "Stale data: weather" banner | `components/week/week-board.tsx`, `components/freshness.tsx` | §8 |
-| Skeleton uses `ease-in-out` | `globals.css` `.skeleton` | §10 |
+| Finding | Where | Rule | Status |
+|---|---|---|---|
+| Five equal KPI cards on desktop | `docs/screenshots/web-week-light.png`, `components/week/kpi-strip.tsx` | §7, §8 | Fixed 2026-10-12 |
+| Every Matchup section is a boxed card | `docs/screenshots/web-matchup.png`, `ui.tsx` `Section` | §7 | Fixed 2026-10-12 |
+| Each game is its own card on the phone | `docs/screenshots/pwa-week-dark.png` | §7 | Open (phone step) |
+| Model probability bar is accent blue | `components/prediction-bits.tsx` | §5 | Fixed 2026-10-12 |
+| `✓ ✗` and the week chevrons typed as characters | `ui.tsx` `Mark`, `components/pickers.tsx` | §14 | Fixed 2026-10-12 |
+| Control borders at 1.29:1 | `ui.tsx` `SelectField`, pick buttons | §5 `border-strong` | Fixed 2026-10-12 |
+| Light `series-market` at 2.82:1 and `series-model` at 3.20:1 on white | `globals.css` | §5 | Fixed 2026-10-12 |
+| Font stack names Inter and falls back to the system | `globals.css` `--font-sans` | §4 | Fixed 2026-10-12 |
+| Full-width "Stale data: weather" banner | `components/week/week-board.tsx`, `components/freshness.tsx` | §8 | Fixed 2026-10-12 |
+| Skeleton uses `ease-in-out` | `globals.css` `.skeleton` | §10 | Fixed 2026-10-12 |
 
 ## 16. Reference Components
 

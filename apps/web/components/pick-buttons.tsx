@@ -4,6 +4,7 @@ import type { GameSummary } from "@nflpi/shared";
 import { useSetPick } from "@/lib/queries";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { TeamLogo } from "@/components/team";
+import { Check } from "@/components/icons";
 import { cx } from "@/components/ui";
 
 type PickGame = Pick<GameSummary, "game_id" | "season" | "week" | "away" | "home" | "my_pick" | "locked">;
@@ -34,23 +35,19 @@ export function PickButtons({ game, size = "sm", className }: { game: PickGame; 
             disabled={game.locked}
             onClick={() => mutation.mutate({ gameId: game.game_id, season: game.season, week: game.week, team: selected ? null : t.abbr })}
             className={cx(
-              "relative z-10 inline-flex items-center justify-center gap-1.5 rounded-ctl border font-semibold transition-[transform,background-color,border-color,opacity] duration-150 active:translate-y-px",
+              "relative z-10 inline-flex items-center justify-center gap-1.5 rounded-ctl border font-semibold transition-[transform,background-color,border-color,opacity] active:translate-y-px",
               size === "sm" ? "h-12 min-w-[68px] flex-1 px-2 text-base lg:h-8 lg:text-xs" : "h-12 flex-1 px-3 text-base lg:h-11 lg:text-sm",
               selected
                 ? "border-transparent bg-accent-solid text-white"
-                : "border-border bg-elevated text-text hover:border-accent",
+                : "border-border-strong bg-elevated text-text hover:border-accent",
               game.locked && "cursor-not-allowed active:translate-y-0",
-              game.locked && !selected && "opacity-55 hover:border-border",
+              game.locked && !selected && "opacity-55 hover:border-border-strong",
               game.locked && selected && "opacity-80",
             )}
           >
             {size === "lg" && <TeamLogo team={t} size={22} className={selected ? "rounded-full bg-white/90 p-0.5" : undefined} />}
             <span>{t.abbr}</span>
-            {selected && (
-              <span aria-hidden className="text-[11px] leading-none">
-                &#10003;
-              </span>
-            )}
+            {selected && <Check size={size === "lg" ? 16 : 14} />}
           </button>
         );
       })}

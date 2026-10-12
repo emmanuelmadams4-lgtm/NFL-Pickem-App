@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 /*
- * Design tokens. Dark is the default (dark-first); light applies when the system asks for it.
- * Radius scale (one rule): cards 12px, controls 8px, chips 6px, bars fully round.
+ * Design tokens (design.md, mirrored in docs/design/design-tokens.json). Dark is the default
+ * (dark-first); light applies when the system asks for it.
+ * Radius scale (one rule): bezel 18px, cards 12px, controls 8px, chips 6px, bars fully round.
  * Spacing runs on a 4px grid.
  */
 :root {
@@ -11,6 +12,7 @@
   --surface: #11161d;
   --elevated: #171e27;
   --border: #232c38;
+  --border-strong: #64707f; /* boundary of inputs, selects, unselected pick buttons: 3:1 */
   --text: #e6edf3;
   --text-2: #9aa7b4;
   --muted: #6b7785;
@@ -29,6 +31,13 @@
   --series-home: #6b7785;
 
   --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-float: 0 12px 32px -12px rgb(0 0 0 / 0.6);
+  --shadow-inset-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
+
+  /* motion (design.md § 10): press and hover, state changes, things that enter */
+  --duration-press: 120ms;
+  --duration-state: 200ms;
+  --duration-enter: 320ms;
 }
 
 @media (prefers-color-scheme: light) {
@@ -38,23 +47,26 @@
     --surface: #ffffff;
     --elevated: #f0f3f6;
     --border: #d8dee4;
+    --border-strong: #818b95;
     --text: #1f2328;
     --text-2: #57606a;
     --muted: #6e7781;
     --accent: #0969da;
     --accent-solid: #0969da;
-    --good: #1a7f37;
-    --warn: #9a6700;
-    --bad: #cf222e;
+    --good: #166f31; /* semantic inks clear 4.5:1 on elevated and on their own chip tint */
+    --warn: #855700;
+    --bad: #b91c25;
 
     --series-me: #2a78d6;
-    --series-model: #eb6834;
-    --series-market: #1baf7a;
+    --series-model: #c9501c;
+    --series-market: #168a61;
     --series-stats: #6250d6;
     --series-elo: #e87ba4;
     --series-home: #8c959f;
 
     --shadow-pop: 0 8px 24px rgb(31 35 40 / 0.16);
+    --shadow-float: 0 16px 40px -16px rgb(31 35 40 / 0.18);
+    --shadow-inset-highlight: inset 0 1px 0 rgb(255 255 255 / 0.8);
   }
 }
 
@@ -63,6 +75,7 @@
   --color-surface: var(--surface);
   --color-elevated: var(--elevated);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-text: var(--text);
   --color-text-2: var(--text-2);
   --color-muted: var(--muted);
@@ -73,13 +86,50 @@
   --color-warn: var(--warn);
   --color-bad: var(--bad);
 
-  --font-sans: ui-sans-serif, -apple-system, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  /* Geist and Geist Mono are self-hosted by app/fonts.ts (geist npm package) so the PWA renders offline. */
+  --font-sans: "Geist", ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
+  --radius-bezel: 18px;
   --radius-card: 12px;
   --radius-ctl: 8px;
   --radius-chip: 6px;
+}
 
+/* Type scale (design.md § 4): text-display, text-stat, ... set size, line height, weight and tracking. */
+@theme {
+  --text-display: 40px;
+  --text-display--line-height: 44px;
+  --text-display--font-weight: 600;
+  --text-display--letter-spacing: -0.02em;
+  --text-stat: 24px;
+  --text-stat--line-height: 32px;
+  --text-stat--font-weight: 600;
+  --text-stat--letter-spacing: -0.02em;
+  --text-title: 22px;
+  --text-title--line-height: 28px;
+  --text-title--font-weight: 600;
+  --text-title--letter-spacing: -0.01em;
+  --text-row-lead: 16px;
+  --text-row-lead--line-height: 22px;
+  --text-row-lead--font-weight: 600;
+  --text-heading: 14px;
+  --text-heading--line-height: 20px;
+  --text-heading--font-weight: 600;
+  --text-body: 14px;
+  --text-body--line-height: 21px;
+  --text-body--font-weight: 400;
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+  --text-label--font-weight: 400;
+  --text-micro: 11px;
+  --text-micro--line-height: 16px;
+  --text-micro--font-weight: 500;
+
+  /* Motion (design.md § 10): one curve for everything; transition-* utilities default to the state duration. */
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --default-transition-duration: 200ms;
+  --default-transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 :root {
@@ -162,7 +212,7 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .skeleton {
-    animation: shimmer 1.4s ease-in-out infinite;
+    animation: shimmer 1.4s var(--ease-out) infinite;
   }
 }
 @keyframes shimmer {
@@ -171,6 +221,33 @@
   }
   to {
     background-position: -100% 0;
+  }
+}
+
+/* Things that enter (toast, the bezel's first mount): fade and rise 4px over the enter duration. */
+@media (prefers-reduced-motion: no-preference) {
+  .enter {
+    animation: enter var(--duration-enter) var(--ease-out) both;
+  }
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+
+/* Reduced motion (design.md § 10): nothing moves on press; transitions take at most the press duration. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-state: var(--duration-press);
+    --duration-enter: var(--duration-press);
+    --default-transition-duration: var(--duration-press);
+  }
+  *,
+  *::before,
+  *::after {
+    translate: none !important;
   }
 }
 

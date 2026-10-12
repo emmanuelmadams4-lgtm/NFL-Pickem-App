@@ -3,6 +3,7 @@
 import { useMeta } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
 import { Button, SelectField, cx } from "@/components/ui";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
 
 export function SeasonPicker({ className }: { className?: string }) {
   const meta = useMeta().data;
@@ -41,7 +42,7 @@ export function WeekPicker({ className }: { className?: string }) {
       </SelectField>
       <div className="flex items-center gap-1">
         <Button size="sm" variant="ghost" aria-label="Previous week" disabled={idx <= 0} onClick={() => step(-1)} className="w-9 px-0 max-lg:h-10 max-lg:w-11 max-lg:border-border max-lg:bg-elevated">
-          <span aria-hidden className="text-lg leading-none">&lsaquo;</span>
+          <ChevronLeft size={20} />
         </Button>
         <SelectField label="Week" value={week} onChange={(e) => setWeek(Number(e.target.value))} hideLabel>
           {weeks.map((w) => (
@@ -51,7 +52,7 @@ export function WeekPicker({ className }: { className?: string }) {
           ))}
         </SelectField>
         <Button size="sm" variant="ghost" aria-label="Next week" disabled={idx >= weeks.length - 1} onClick={() => step(1)} className="w-9 px-0 max-lg:h-10 max-lg:w-11 max-lg:border-border max-lg:bg-elevated">
-          <span aria-hidden className="text-lg leading-none">&rsaquo;</span>
+          <ChevronRight size={20} />
         </Button>
       </div>
     </div>

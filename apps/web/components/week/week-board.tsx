@@ -7,7 +7,7 @@ import { useWeek } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { EmptyState, ErrorState, SelectField, Segmented, Skeleton, cx } from "@/components/ui";
-import { describeStale, staleList } from "@/components/freshness";
+import { describeStale, feedsModel, staleList } from "@/components/freshness";
 import { KpiStrip } from "@/components/week/kpi-strip";
 import { WeekPicker } from "@/components/pickers";
 import { InstallHint } from "@/components/pwa";
@@ -25,9 +25,11 @@ function initialSort(): SortKey {
 function BoardSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading week" className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        {Array.from({ length: 5 }, (_, i) => (
-          <Skeleton key={i} className="h-[104px] rounded-card" />
+      <div className="grid grid-cols-4 divide-x divide-border lg:flex">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="px-2 lg:px-6 lg:first:pl-0">
+            <Skeleton className="mx-auto h-12 w-14 lg:mx-0 lg:h-[72px] lg:w-32" />
+          </div>
         ))}
       </div>
       <div className="space-y-3 lg:space-y-0 lg:divide-y lg:divide-border lg:rounded-card lg:border lg:border-border lg:bg-surface">
@@ -83,13 +85,14 @@ export function WeekBoard() {
     return out;
   }, [games, sort]);
 
-  const stale = staleList(data?.freshness);
+  // Loud only for what can change a pick: stale model inputs. Weather is context; Settings notes it.
+  const stale = staleList(data?.freshness).filter(feedsModel);
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Week {week}</h1>
+          <h1 className="text-title">Week {week}</h1>
           <p className="mt-0.5 text-sm text-text-2">
             {season} season{data ? `, ${data.summary.games_total} games` : ""}
           </p>
@@ -115,7 +118,7 @@ export function WeekBoard() {
               <span className="font-semibold text-warn">Stale data: {stale.map(describeStale).join(", ")}.</span>{" "}
               <span className="hidden sm:inline">Anything that depends on {stale.length === 1 ? "it" : "them"} may be missing or out of date.</span>
               {stale.some((s) => s.last_error) && (
-                <span className="hidden text-subtle sm:inline"> Last error: {stale.filter((s) => s.last_error).map((s) => `${s.dataset} ${s.last_error}`).join("; ")}.</span>
+                <span className="hidden sm:inline"> Last error: {stale.filter((s) => s.last_error).map((s) => `${s.dataset} ${s.last_error}`).join("; ")}.</span>
               )}{" "}
               <Link href="/settings/" className="text-accent underline underline-offset-2">
                 See data sources
@@ -153,7 +156,7 @@ export function WeekBoard() {
                     onClick={() => setOnlyAttention((v) => !v)}
                     className={cx(
                       "h-10 rounded-ctl border px-3 text-sm font-medium transition-colors lg:h-8 lg:text-xs",
-                      onlyAttention ? "border-warn/50 bg-warn/12 text-warn" : "border-border bg-elevated text-text-2 hover:border-muted hover:text-text",
+                      onlyAttention ? "border-warn/50 bg-warn/12 text-warn" : "border-border bg-elevated text-text-2 hover:border-border-strong hover:text-text",
                     )}
                   >
                     <span className="lg:hidden">Attention ({data.summary.attention})</span>

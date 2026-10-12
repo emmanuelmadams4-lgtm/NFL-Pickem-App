@@ -79,7 +79,7 @@ function AccessSection() {
               onChange={(e) => setNext(e.target.value)}
               placeholder="New access token"
               aria-invalid={!!error}
-              className="h-11 w-full rounded-ctl border border-border bg-elevated px-3 text-base text-text placeholder:text-subtle hover:border-muted lg:h-9 lg:text-sm"
+              className="h-11 w-full rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text placeholder:text-subtle hover:border-text-2 lg:h-9 lg:text-sm"
             />
             {error && (
               <p role="alert" className="mt-1.5 text-sm text-bad">
@@ -149,7 +149,7 @@ function LeaderSection({ meta }: { meta: Meta }) {
                   onChange={(e) => setValue(e.target.value)}
                   placeholder="e.g. 68.5"
                   aria-invalid={!!error}
-                  className="h-11 w-32 rounded-ctl border border-border bg-elevated px-3 text-base text-text placeholder:text-subtle hover:border-muted lg:h-9 lg:text-sm"
+                  className="h-11 w-32 rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text placeholder:text-subtle hover:border-text-2 lg:h-9 lg:text-sm"
                 />
                 <span className="text-sm text-text-2">%</span>
               </div>
@@ -238,7 +238,8 @@ function CsvSection({ meta }: { meta: Meta }) {
       </Row>
       <Row label="Import" hint="A CSV with game_id and my_pick columns. Past games are allowed.">
         <div className="space-y-3">
-          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="sr-only" id="csv-file" />
+          {/* Opened by the button below; named so assistive tech can still identify it. */}
+          <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="sr-only" id="csv-file" aria-label="Picks CSV file to import" tabIndex={-1} />
           <Button onClick={() => fileRef.current?.click()} loading={importing}>
             Choose CSV file
           </Button>
@@ -343,7 +344,11 @@ function ModelSection({ meta }: { meta: Meta }) {
   const providers = useMemo(() => Object.entries(meta.ai_providers), [meta.ai_providers]);
   return (
     <>
-      <Section id="freshness" title="Data freshness" note="When each source last updated successfully.">
+      <Section
+        id="freshness"
+        title="Data freshness"
+        note="When each source last updated successfully. Weather is shown for context and is not a model input, so a stale weather feed does not change a pick."
+      >
         {fresh.isPending ? (
           <Skeleton className="h-24 w-full" />
         ) : fresh.isError ? (
@@ -381,9 +386,9 @@ export function SettingsView() {
   const q = useMeta();
   const meta = q.data;
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="text-title">Settings</h1>
         <p className="mt-0.5 text-sm text-text-2">Access, alerts, picks data and system status.</p>
       </div>
       {q.isPending && <Skeleton className="h-64 rounded-card" />}

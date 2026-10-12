@@ -6,6 +6,7 @@ import { usePerformance, useMeta } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
 import { Card, EmptyState, ErrorState, Section, Skeleton, cx } from "@/components/ui";
 import { SeasonPicker } from "@/components/pickers";
+import { ChevronRight } from "@/components/icons";
 import { WeeklyBars } from "@/components/charts/weekly-bars";
 import { CalibrationChart } from "@/components/charts/calibration";
 import { pctOr } from "@/lib/fmt";
@@ -116,10 +117,10 @@ export function PerformanceView() {
   const leader = perf?.league_leader_accuracy ?? meta?.league_leader_accuracy ?? null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Performance</h1>
+          <h1 className="text-title">Performance</h1>
           <p className="mt-0.5 text-sm text-text-2">{season} season. Finished games only.</p>
         </div>
         <SeasonPicker className="inline-flex lg:hidden" />
@@ -175,12 +176,12 @@ export function PerformanceView() {
               </Section>
             </>
           )}
-          <Link href="/backtest/" className="flex items-center justify-between gap-4 rounded-card border border-border bg-surface p-4 hover:border-muted">
+          <Link href="/backtest/" className="flex items-center justify-between gap-4 rounded-card border border-border bg-surface p-4 hover:border-border-strong">
             <span>
               <span className="block text-sm font-semibold text-text">Backtest</span>
               <span className="block text-xs text-text-2">How the model, the market and simpler baselines did over past seasons.</span>
             </span>
-            <span aria-hidden className="text-lg text-text-2">&rsaquo;</span>
+            <ChevronRight size={20} className="shrink-0 text-text-2" />
           </Link>
         </>
       )}

@@ -1,6 +1,6 @@
 {
   "$description": "Spec mirror of the design tokens for NFL Pick'em Intelligence. Runtime source is apps/web/app/globals.css. status: landed = already in globals.css, proposed = decided in design.md, not yet in the app.",
-  "reviewed": "2026-10-11",
+  "reviewed": "2026-10-12",
   "color": {
     "status": "landed",
     "dark": {
@@ -29,23 +29,24 @@
       "subtle": "color-mix(in srgb, #6e7781 70%, #57606a)",
       "accent": "#0969da",
       "accent-solid": "#0969da",
-      "good": "#1a7f37",
-      "warn": "#9a6700",
-      "bad": "#cf222e"
+      "good": "#166f31",
+      "warn": "#855700",
+      "bad": "#b91c25"
     }
   },
   "color-proposed": {
-    "status": "proposed",
+    "status": "landed",
+    "$description": "Decided as proposals, landed 2026-10-12. border-strong is exposed to Tailwind as a color (border-border-strong).",
     "dark": { "border-strong": "#64707f" },
     "light": { "border-strong": "#818b95", "series-model": "#c9501c", "series-market": "#168a61" }
   },
   "series": {
     "status": "landed",
     "dark": { "me": "#3987e5", "model": "#d95926", "market": "#199e70", "stats": "#9085e9", "elo": "#d55181", "home": "#6b7785" },
-    "light": { "me": "#2a78d6", "model": "#eb6834", "market": "#1baf7a", "stats": "#6250d6", "elo": "#e87ba4", "home": "#8c959f" }
+    "light": { "me": "#2a78d6", "model": "#c9501c", "market": "#168a61", "stats": "#6250d6", "elo": "#e87ba4", "home": "#8c959f" }
   },
   "contrast-measured": {
-    "$description": "WCAG 2 ratios computed 2026-10-11 from the hex values above. subtle resolves to #798593 dark, #67707a light.",
+    "$description": "WCAG 2 ratios computed 2026-10-11 (light semantic inks re-measured 2026-10-12) from the hex values above. subtle resolves to #798593 dark, #67707a light. 'tint' is the chip background: the ink at 14% over the named surface.",
     "dark": {
       "text/surface": 15.37,
       "text-2/surface": 7.4,
@@ -74,28 +75,35 @@
       "subtle/elevated": 4.52,
       "accent/surface": 5.19,
       "white/accent-solid": 5.19,
-      "good/surface": 5.08,
-      "warn/surface": 4.87,
-      "bad/surface": 5.36,
+      "good/surface": 6.26,
+      "warn/surface": 6.25,
+      "bad/surface": 6.45,
+      "good/elevated": 5.62,
+      "warn/elevated": 5.61,
+      "bad/elevated": 5.79,
+      "good/tint on surface": 5.1,
+      "warn/tint on surface": 5.1,
+      "bad/tint on surface": 5.08,
+      "warn/tint on elevated": 4.61,
       "border/surface": 1.36,
       "border-strong/elevated": 3.11,
       "border-strong/bg": 3.25,
       "series-me/surface": 4.42,
-      "series-model/surface (landed #eb6834)": 3.2,
-      "series-market/surface (landed #1baf7a)": 2.82,
-      "series-model/surface (proposed #c9501c)": 4.52,
-      "series-market/surface (proposed #168a61)": 4.34
+      "series-model/surface": 4.52,
+      "series-market/surface": 4.34,
+      "$replaced": "2026-10-12: good #1a7f37, warn #9a6700, bad #cf222e (under 4.5:1 on elevated or on their own chip tint); series-model #eb6834 (3.2), series-market #1baf7a (2.82)"
     }
   },
   "font": {
-    "status": "proposed",
+    "status": "landed",
     "sans": "\"Geist\", ui-sans-serif, -apple-system, \"SF Pro Text\", \"Segoe UI\", sans-serif",
     "mono": "\"Geist Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
     "weights": [400, 500, 600],
-    "source": "npm package geist, self-hosted (offline PWA)"
+    "source": "npm package geist, self-hosted with next/font/local in apps/web/app/fonts.ts (offline PWA); variable woff2, families named Geist / Geist Mono"
   },
   "type": {
-    "status": "proposed",
+    "status": "landed",
+    "$description": "Tailwind utilities text-display, text-stat, text-title, text-row-lead, text-heading, text-body, text-label, text-micro set size, line height, weight and tracking.",
     "display": { "size": 40, "line": 44, "weight": 600, "tracking": "-0.02em" },
     "stat": { "size": 24, "line": 32, "weight": 600, "tracking": "-0.02em" },
     "title": { "size": 22, "line": 28, "weight": 600, "tracking": "-0.01em" },
@@ -115,20 +123,19 @@
     "tab-bar-clearance": "88px + safe-area-inset-bottom"
   },
   "radius": {
-    "landed": { "card": 12, "ctl": 8, "chip": 6 },
-    "proposed": { "bezel": 18, "bezel-padding": 6, "pill": 9999 }
+    "landed": { "bezel": 18, "bezel-padding": 6, "card": 12, "ctl": 8, "chip": 6 },
+    "proposed": { "pill": 9999 }
   },
   "shadow": {
     "landed": {
-      "pop": { "dark": "0 8px 24px rgb(0 0 0 / 0.45)", "light": "0 8px 24px rgb(31 35 40 / 0.16)" }
-    },
-    "proposed": {
+      "pop": { "dark": "0 8px 24px rgb(0 0 0 / 0.45)", "light": "0 8px 24px rgb(31 35 40 / 0.16)" },
       "float": { "dark": "0 12px 32px -12px rgb(0 0 0 / 0.6)", "light": "0 16px 40px -16px rgb(31 35 40 / 0.18)" },
       "inset-highlight": { "dark": "inset 0 1px 0 rgb(255 255 255 / 0.06)", "light": "inset 0 1px 0 rgb(255 255 255 / 0.8)" }
     }
   },
   "motion": {
-    "status": "proposed",
+    "status": "landed",
+    "$description": "CSS --duration-press/state/enter and Tailwind --ease-out; transition-* utilities default to the state duration on ease-out.",
     "duration": { "press": 120, "state": 200, "enter": 320 },
     "ease-out": "cubic-bezier(0.32, 0.72, 0, 1)",
     "reduced-motion": "no transforms; opacity changes at most 120ms"
