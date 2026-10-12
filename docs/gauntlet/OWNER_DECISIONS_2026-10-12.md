@@ -284,6 +284,15 @@ OPEN (owner): which logo; whether to pay for 21st to lift the retrieval limit.
 
 D38 notes (coordinator's reading): lime replaces blue as "me / interactive". The semantic green ("correct", low uncertainty) must move so it is not confused with lime; text on lime is near-black. Condensed display type is for page titles and big numbers only; body stays readable. Lands as its own step right after step 2 (desktop + phone tokens, judged blind against reference 06 now that it is in the repo), before the pick sheet is built on it.
 
+## Layout and logo (2026-10-12, cloud step 2 session)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D40 | Owner, his words, with reference 06: "I want the app to look similar to this as far as the layout, not having anything to do with soccer, but the structure of the tabs and keeping the same info of what we have in the app." The app keeps all its current information and takes reference 06's structure: big bold page titles, filter chips under the title, one card per game (team logo left and right, "VS" between, kickoff time large), win chances as split tiles, a floating pill tab bar, pill section tabs on the game screen. Overrides design.md § 7 "a game is never its own card". | two-way | owner names a different reference |
+| D41 | Owner sent his own app logo: a lime "P" on a black rounded tile (`docs/design/brand/app-logo-owner.webp`). It replaces the blue "P" for the iPhone icon, the PWA icons and the browser tab. Full-bleed icon sizes are prepared in `docs/design/brand/app-icon/` (180, 192, 512, maskable 512 with the mark in the safe zone, 32, 1024). The other logo options (cloud lime 1-3, Mac `brand/logo-*.svg`) are dropped. | two-way | owner sends a new logo |
+
+D40/D41 land together with D39 in the restyle step right after step 2 (design.md is rewritten there first, then built and judged blind against reference 06).
+
 ## Facts looked up 2026-10-12 (research subagent, web; not owner decisions)
 
 Paraphrased from the linked pages. "Inferred" marks a reading, not a statement on the page.
