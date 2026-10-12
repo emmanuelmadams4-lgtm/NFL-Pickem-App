@@ -448,6 +448,38 @@ test("P21 a waiting pick the server refuses as locked (409): it is dropped, he i
   }
 });
 
+test("P22 while the phone cannot store the queue, an older stored pick never comes back over a newer one", async ({ page, request }) => {
+  const { open } = await board(request);
+  expect(open.length, "needs two open games").toBeGreaterThanOrEqual(2);
+  const [a, b] = open;
+  const serverPick = async (id: string) => (await board(request)).games.find((x) => x.game_id === id)!.my_pick;
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    // An older waiting pick is in storage, then storage stops taking writes.
+    await page.evaluate(([id, team]) => {
+      localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team }));
+      const real = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k: string, v: string) {
+        if (k === "nflpi_pick_queue") throw new DOMException("full", "QuotaExceededError");
+        return real.call(this, k, v);
+      };
+    }, [a.game_id, a.away.abbr]);
+    await pickGroup(page, a).getByRole("button", { name: `Pick ${a.home.name}` }).click();
+    await expect.poll(() => serverPick(a.game_id), { message: "the newer pick is saved" }).toBe(a.home.abbr);
+    await pickGroup(page, b).getByRole("button", { name: `Pick ${b.home.name}` }).click();
+    await expect.poll(() => serverPick(b.game_id)).toBe(b.home.abbr);
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange"))); // a later flush
+    await page.waitForTimeout(3_000);
+    expect(await serverPick(a.game_id), "the older stored pick was not sent over the newer one").toBe(a.home.abbr);
+    await expect(pickGroup(page, a).getByRole("button", { name: `${a.home.name} picked` })).toBeVisible();
+    await expect(page.getByText("Waiting to sync")).toHaveCount(0);
+  } finally {
+    for (const g of [a, b]) expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
 test("P15 one queued pick the server keeps refusing does not hold back the others", async ({ page, context, request }) => {
   const { open } = await board(request);
   expect(open.length, "needs two open games").toBeGreaterThanOrEqual(2);
