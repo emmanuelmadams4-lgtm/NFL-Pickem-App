@@ -16,7 +16,9 @@ No App Store, no TestFlight, no $99 Apple account, nothing that expires.
 
 1. Install Tailscale on the server computer and on your iPhone. Sign in to both with the same account.
 2. In the Tailscale admin console, turn on **MagicDNS** and **HTTPS certificates**.
-3. On the server: `tailscale serve --bg 8000`. It prints an address like `https://my-server.tail1234.ts.net`.
+3. On the server: `tailscale serve --bg 8000`. It prints an address like `https://my-server.tail1234.ts.net`. If it says Serve is not enabled, open the link it prints and enable it. Do not use Funnel.
+
+Full server setup, backups and token rotation are in `docs/DEPLOY.md`.
 
 The server is never on the public internet. Only your devices can reach it.
 
@@ -24,10 +26,14 @@ The server is never on the public internet. Only your devices can reach it.
 
 ## Step 2: install on the iPhone
 
-1. Open that `https://…ts.net` address in **Safari**.
-2. Paste your access token and sign in.
-3. Tap **Share** → **Add to Home Screen** → **Add**.
-4. Open **Pick'em** from your Home Screen. From now on use this icon, not the Safari tab.
+Install first, then sign in. The Home Screen app keeps its own storage, separate from Safari, so signing in inside Safari is not shared with it.
+
+1. Open that `https://…ts.net` address in **Safari**. Do not sign in there.
+2. Tap **Share** → **Add to Home Screen** → **Add**.
+3. Open **Pick'em** from your Home Screen. From now on use this icon, not the Safari tab.
+4. Paste your access token and sign in, inside the Home Screen app.
+
+The app is tied to the server's address. If the server moves to a new computer, delete the icon and add it again from the new address.
 
 ## Step 3: turn on alerts (optional)
 
