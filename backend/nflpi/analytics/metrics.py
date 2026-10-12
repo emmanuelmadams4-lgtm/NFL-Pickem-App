@@ -6,6 +6,16 @@ EPS = 1e-6
 UPSET_GAP = 0.12
 UNCERTAINTY_GAP = 0.08
 EARLY_WEEK_END = 4
+COIN_FLIP_BELOW = 0.55
+EASY_PICK_FROM = 0.67
+# Measured on the 2012-2025 walk-forward backtest, blend model (docs/gauntlet/logs/step-4-evidence/s4-label-cuts.log).
+LABEL_HIT_RATE = {"coin_flip": 0.524, "tough_matchup": 0.596, "easy_pick": 0.770}
+
+
+def pick_label(prob: float) -> str:
+    if prob < COIN_FLIP_BELOW:
+        return "coin_flip"
+    return "easy_pick" if prob >= EASY_PICK_FROM else "tough_matchup"
 
 
 def uncertainty_grade(

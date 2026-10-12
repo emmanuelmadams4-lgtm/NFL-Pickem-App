@@ -14,6 +14,7 @@ from nflpi.analytics.metrics import (
     bootstrap_ci,
     calibration,
     log_loss,
+    pick_label,
     summarize,
     uncertainty_grade,
     upset_watch,
@@ -128,6 +129,19 @@ def signal_report(preds: pd.DataFrame) -> dict:
     }
 
 
+def label_report(preds: pd.DataFrame) -> list[dict]:
+    p = preds["p_blend"].to_numpy()
+    y = preds["home_win"].to_numpy()
+    labels = np.array([pick_label(max(prob, 1 - prob)) for prob in p])
+    correct = (p > 0.5) == (y == 1)
+    return [
+        {"label": label, "games": int(mask.sum()), "share": float(mask.mean()) if len(mask) else 0.0,
+         "hit_rate": float(correct[mask].mean()) if mask.any() else None}
+        for label in ("coin_flip", "tough_matchup", "easy_pick")
+        for mask in [labels == label]
+    ]
+
+
 def run_backtest(df: pd.DataFrame, seasons: list[int], window: int = 10) -> dict:
     frames = _elo_frames(df)
     preds = pd.concat([predict_season(frames, s, window) for s in seasons], ignore_index=True)
@@ -188,11 +202,18 @@ def run_backtest(df: pd.DataFrame, seasons: list[int], window: int = 10) -> dict
         "by_season": by_season,
         "calibration": {m: calibration(preds[f"p_{m}"].to_numpy(), y) for m in ("logistic", "blend", "market")},
         "favorite_split": fav_split,
+        "labels": label_report(preds),
         "signals": signal_report(preds),
         "signals_2012_2021": signal_report(preds[preds["season"].between(2012, 2021)])
         if any(2012 <= s <= 2021 for s in seasons)
         else None,
+        "labels_2012_2021": label_report(preds[preds["season"].between(2012, 2021)])
+        if any(2012 <= s <= 2021 for s in seasons)
+        else None,
         "signals_2022_2025": signal_report(preds[preds["season"].between(2022, 2025)])
+        if any(2022 <= s <= 2025 for s in seasons)
+        else None,
+        "labels_2022_2025": label_report(preds[preds["season"].between(2022, 2025)])
         if any(2022 <= s <= 2025 for s in seasons)
         else None,
         "elo_settings": sorted({(float(k), float(h)) for k, h in zip(preds["elo_k"], preds["elo_hfa"], strict=True)}),

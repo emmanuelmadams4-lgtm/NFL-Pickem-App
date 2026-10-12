@@ -90,6 +90,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/picks/{game_id}/points": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Points */
+        put: operations["set_points_api_picks__game_id__points_put"];
+        post?: never;
+        /** Clear Points */
+        delete: operations["clear_points_api_picks__game_id__points_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ranks/{season}/{week}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Rank */
+        put: operations["set_rank_api_ranks__season___week__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scorecard/{season}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scorecard */
+        get: operations["scorecard_api_scorecard__season__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/picks/export.csv": {
         parameters: {
             query?: never;
@@ -370,6 +422,13 @@ export interface components {
             favorite_split: {
                 [key: string]: unknown;
             }[];
+            /**
+             * Labels
+             * @default []
+             */
+            labels: {
+                [key: string]: unknown;
+            }[];
         };
         /** CalibrationBucket */
         CalibrationBucket: {
@@ -452,6 +511,7 @@ export interface components {
             /** Div Game */
             div_game: boolean;
             prediction: components["schemas"]["PredictionOut"] | null;
+            sheet: components["schemas"]["SheetOut"];
             /** My Pick */
             my_pick: string | null;
             /** My Pick Correct */
@@ -531,6 +591,7 @@ export interface components {
             /** Div Game */
             div_game: boolean;
             prediction: components["schemas"]["PredictionOut"] | null;
+            sheet: components["schemas"]["SheetOut"];
             /** My Pick */
             my_pick: string | null;
             /** My Pick Correct */
@@ -716,6 +777,7 @@ export interface components {
             /** Weeks */
             weeks: components["schemas"]["WeekPerformance"][];
             me: components["schemas"]["Tally"];
+            auto: components["schemas"]["Tally"];
             /** @description Live predictions only: the final snapshot was made before kickoff */
             model: components["schemas"]["Tally"];
             /** @description Backfill predictions only: computed after the fact, labeled */
@@ -757,6 +819,11 @@ export interface components {
             picked_at: string;
             /** Source */
             source: string;
+        };
+        /** PointsIn */
+        PointsIn: {
+            /** Points */
+            points: number;
         };
         /** PredictionOut */
         PredictionOut: {
@@ -818,6 +885,54 @@ export interface components {
             endpoint: string;
             keys: components["schemas"]["PushKeys"];
         };
+        /** RankIn */
+        RankIn: {
+            /** Rank */
+            rank: number;
+            /** Leader Points */
+            leader_points?: number | null;
+        };
+        /** ScorecardOut */
+        ScorecardOut: {
+            /** Season */
+            season: number;
+            /** Weeks */
+            weeks: components["schemas"]["ScorecardWeek"][];
+            totals: components["schemas"]["ScorecardWeek"];
+            /** By Label */
+            by_label: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** ScorecardWeek */
+        ScorecardWeek: {
+            /** Week */
+            week: number;
+            /** Games */
+            games: number;
+            /** Max Points */
+            max_points: number;
+            /** My Points */
+            my_points: number;
+            /** App Points */
+            app_points: number;
+            /** My Correct */
+            my_correct: number;
+            /** App Correct */
+            app_correct: number;
+            /** Changed */
+            changed: number;
+            /** Changed Right */
+            changed_right: number;
+            /** Changed Wrong */
+            changed_wrong: number;
+            /** Auto */
+            auto: number;
+            /** Rank */
+            rank: number | null;
+            /** Leader Points */
+            leader_points: number | null;
+        };
         /** SettingsIn */
         SettingsIn: {
             /** League Leader Accuracy */
@@ -827,6 +942,33 @@ export interface components {
              * @description 0 turns reminders off
              */
             reminder_minutes?: number | null;
+        };
+        /** SheetOut */
+        SheetOut: {
+            /** Label */
+            label: string | null;
+            /** Label Hit Rate */
+            label_hit_rate: number | null;
+            /** App Pick */
+            app_pick: string | null;
+            /** App Points */
+            app_points: number | null;
+            /** My Pick */
+            my_pick: string | null;
+            /** My Points */
+            my_points: number | null;
+            /**
+             * Pick By
+             * @enum {string}
+             */
+            pick_by: "app" | "user" | "auto" | "csv";
+            /**
+             * Points By
+             * @enum {string}
+             */
+            points_by: "app" | "user";
+            /** Differs */
+            differs: boolean;
         };
         /** Tally */
         Tally: {
@@ -949,6 +1091,10 @@ export interface components {
             my_correct: number;
             /** My Total */
             my_total: number;
+            /** Auto Correct */
+            auto_correct: number;
+            /** Auto Total */
+            auto_total: number;
             /** Model Live Correct */
             model_live_correct: number;
             /** Model Live Total */
@@ -1183,6 +1329,145 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_points_api_picks__game_id__points_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PointsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeekOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_points_api_picks__game_id__points_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeekOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_rank_api_ranks__season___week__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                season: number;
+                week: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RankIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scorecard_api_scorecard__season__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                season: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScorecardOut"];
+                };
             };
             /** @description Validation Error */
             422: {

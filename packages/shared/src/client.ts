@@ -15,6 +15,8 @@ export type Market = S["MarketOut"];
 export type Weather = S["WeatherOut"];
 export type Freshness = S["DatasetFreshness"];
 export type Performance = S["PerformanceOut"];
+export type Scorecard = S["ScorecardOut"];
+export type ScorecardWeek = S["ScorecardWeek"];
 export type WeekPerformance = S["WeekPerformance"];
 export type Tally = S["Tally"];
 export type Backtest = S["BacktestOut"];
@@ -82,10 +84,16 @@ export function createClient(config: ClientConfig) {
     setPick: (gameId: string, team: string) =>
       call<Pick>(`/picks/${gameId}`, { method: "PUT", body: JSON.stringify({ team }) }),
     clearPick: (gameId: string) => call<void>(`/picks/${gameId}`, { method: "DELETE" }),
+    setPoints: (gameId: string, points: number) =>
+      call<Week>(`/picks/${gameId}/points`, { method: "PUT", body: JSON.stringify({ points }) }),
+    clearPoints: (gameId: string) => call<Week>(`/picks/${gameId}/points`, { method: "DELETE" }),
     exportPicks: (season: number) => call<string>(`/picks/export.csv?season=${season}`),
     importPicks: (csv: string) =>
       call<ImportResult>("/picks/import", { method: "POST", body: csv, headers: { "Content-Type": "text/csv" } }),
     performance: (season: number) => call<Performance>(`/performance/${season}`),
+    scorecard: (season: number) => call<Scorecard>(`/scorecard/${season}`),
+    setRank: (season: number, week: number, rank: { rank: number; leader_points: number | null }) =>
+      call<void>(`/ranks/${season}/${week}`, { method: "PUT", body: JSON.stringify(rank) }),
     backtest: () => call<Backtest>("/backtest"),
     report: (gameId: string, provider: Provider = "claude") =>
       call<AIReport>(`/games/${gameId}/report?provider=${provider}`, { method: "POST" }),
@@ -111,5 +119,6 @@ export const keys = {
   week: (season: number, week: number) => ["week", season, week] as const,
   game: (gameId: string) => ["game", gameId] as const,
   performance: (season: number) => ["performance", season] as const,
+  scorecard: (season: number) => ["scorecard", season] as const,
   backtest: ["backtest"] as const,
 };

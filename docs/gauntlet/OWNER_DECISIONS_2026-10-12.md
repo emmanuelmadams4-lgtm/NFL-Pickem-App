@@ -293,6 +293,38 @@ D38 notes (coordinator's reading): lime replaces blue as "me / interactive". The
 
 D40/D41 land together with D39 in the restyle step right after step 2 (design.md is rewritten there first, then built and judged blind against reference 06).
 
+## Where the app runs (2026-10-12, owner's Mac session)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D42 | Owner, his words: "I have an old pc that I can always keep running if need be". The always-on home for the app is his old PC, kept running at home and reached through Tailscale. Until it is set up, the app runs on his MacBook. No cloud server, no monthly bill. Sets the target of roadmap step 5 (Deploy and operate). | two-way | the PC cannot run Docker, or home power/internet makes it miss game days |
+
+D42 state and notes (coordinator, checked on the Mac 2026-10-12):
+
+* Working today on the MacBook: Docker `db` + `app` + `worker` built from `main` `4df2622`, health
+  ok; Tailscale installed and signed in; `tailscale serve --bg 8000` gives
+  `https://emmanuels-macbook-pro.tailbae2cf.ts.net` (tailnet only), tested from the Mac: health ok,
+  page 200. The iPhone is not on the tailnet yet. `.env` on the Mac holds the app token, the
+  OpenRouter key and the Claude sign-in token (never committed).
+* A passkey (D33) and the installed iPhone app are tied to the host name. Moving from the MacBook
+  to the PC changes the address, so the phone app is re-added once and passkeys come after the move.
+* Owner, 2026-10-12: the PC runs **Windows 11** and has "a lot of space". Memory (RAM) not yet
+  stated. Windows needs Docker Desktop with WSL 2 (or a Linux install); the PC must not sleep,
+  must start Docker and Tailscale on boot, and should come back by itself after a power cut.
+* Data moves with a database dump and restore (also the first real backup-restore test for step 5).
+* The Mac's database still uses the default local password; the PC gets a real one.
+
+## Confidence points method (2026-10-12, owner's Mac session)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D43 | Owner, his words: "we could use jev to rank and give the confidence points first and have claude verify". Offered three ways, he chose: win chance sets the order of the points; Jev breaks near-ties (which pick has the stronger evidence); Claude checks the finished sheet. He also chose to build step 4 on the Mac. Refines D3. | two-way | the scorecard shows Jev's swaps cost points |
+
+D43 notes: measured on 2012-2025, ranking by win chance earns 86.9 points a week of 120.8 possible;
+a random order of the same picks earns 80.3. "Near-tie" is 1 point of win chance (at 2 points most
+of the sheet would count). Claude's written check waits for the Claude connection (step 11); until
+then the sheet's rules are checked in code. Details: `docs/gauntlet/logs/step-4.md`.
+
 ## Facts looked up 2026-10-12 (research subagent, web; not owner decisions)
 
 Paraphrased from the linked pages. "Inferred" marks a reading, not a statement on the page.

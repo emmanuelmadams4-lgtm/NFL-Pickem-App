@@ -18,10 +18,13 @@ from nflpi.models import (
     MarketSnapshot,
     ModelVersion,
     Prediction,
+    SheetEntry,
     Team,
     UserPick,
     WeatherForecast,
+    WeeklyRank,
 )
+from nflpi.predictions import sheet
 
 ALERT_STATUSES = ("Out", "Doubtful", "Questionable")
 
@@ -153,7 +156,8 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
     teams = {t.abbr: t for t in session.scalars(select(Team))}
     names = dict(session.execute(select(ModelVersion.id, ModelVersion.name)).all())
     picks = {p.game_id: p for p in session.scalars(select(UserPick).where(UserPick.game_id.in_(ids)))}
-    preds_all = session.scalars(select(Prediction).where(Prediction.game_id.in_(ids)).order_by(Prediction.id)).all()
+    sheets = {week: sheet.compute_week(session, games[0].season, week, now) for week in {g.week for g in games}}
+    recommendations = sheet.recommendations(session, games)
     wx = _latest_by_game(session, WeatherForecast, ids)
     season = games[0].season
     involved = {g.home_team for g in games} | {g.away_team for g in games}
@@ -164,10 +168,7 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
     out = []
     for g in games:
         # The recommendation for a game is the last snapshot made before kickoff.
-        pre = [
-            p for p in preds_all if p.game_id == g.game_id and (p.created_at < g.kickoff_utc or p.kind == "backfill")
-        ]
-        pred = pre[-1] if pre else None
+        pred = recommendations.get(g.game_id)
         win = winner(g)
         pick = picks.get(g.game_id)
         inj = injuries[g.week]
@@ -197,6 +198,7 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                 neutral_site=g.neutral_site,
                 div_game=g.div_game,
                 prediction=prediction_out(pred, names) if pred else None,
+                sheet=s.SheetOut(**sheets[g.week][g.game_id]),
                 my_pick=pick.picked_team if pick else None,
                 my_pick_correct=(pick.picked_team == win) if pick and win else None,
                 model_correct=(pred.pick == win) if pred and win else None,
@@ -217,12 +219,13 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
 
 def week_view(session: Session, season: int, week: int) -> s.WeekOut:
     now = now_utc()
+    sheet.finalize(session, now)
     games = session.scalars(
         select(Game).where(Game.season == season, Game.week == week).order_by(Game.kickoff_utc, Game.game_id)
     ).all()
     items = summaries(session, games, now)
     perf = performance(session, season)
-    graded = [g for g in items if g.my_pick_correct is not None]
+    graded = [g for g in items if g.my_pick_correct is not None and g.sheet.pick_by != "auto"]
     mgraded = [g for g in items if g.model_correct is not None and g.prediction and g.prediction.kind == "live"]
     attention = sum(
         1
@@ -233,7 +236,7 @@ def week_view(session: Session, season: int, week: int) -> s.WeekOut:
         games_total=len(items),
         games_final=sum(g.status == "final" for g in items),
         games_remaining=sum(g.status != "final" for g in items),
-        picks_made=sum(g.my_pick is not None for g in items),
+        picks_made=sum(g.my_pick is not None and g.sheet.pick_by != "auto" for g in items),
         picks_correct=sum(bool(g.my_pick_correct) for g in graded),
         picks_incorrect=sum(not g.my_pick_correct for g in graded),
         my_accuracy=(sum(bool(g.my_pick_correct) for g in graded) / len(graded)) if graded else None,
@@ -380,7 +383,7 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         .order_by(Game.kickoff_utc)
     ).all()
     ids = [g.game_id for g in games]
-    picks = {p.game_id: p.picked_team for p in session.scalars(select(UserPick).where(UserPick.game_id.in_(ids)))}
+    picks = {p.game_id: p for p in session.scalars(select(UserPick).where(UserPick.game_id.in_(ids)))}
     preds: dict[str, list[Prediction]] = defaultdict(list)
     for p in session.scalars(select(Prediction).where(Prediction.game_id.in_(ids)).order_by(Prediction.id)):
         preds[p.game_id].append(p)
@@ -396,8 +399,9 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         if win is None:
             continue
         if g.game_id in picks:
-            w["my_total"] += 1
-            w["my_correct"] += picks[g.game_id] == win
+            key = "auto" if picks[g.game_id].source == "auto" else "my"
+            w[f"{key}_total"] += 1
+            w[f"{key}_correct"] += picks[g.game_id].picked_team == win
         valid = [p for p in preds[g.game_id] if p.created_at < g.kickoff_utc or p.kind == "backfill"]
         if valid:
             final = valid[-1]
@@ -422,6 +426,8 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         "games_final",
         "my_correct",
         "my_total",
+        "auto_correct",
+        "auto_total",
         "model_live_correct",
         "model_live_total",
         "model_backfill_correct",
@@ -435,6 +441,7 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         season=season,
         weeks=[s.WeekPerformance(week=wk, **{k: weeks[wk][k] for k in keys}) for wk in sorted(weeks)],
         me=total("my"),
+        auto=total("auto"),
         model=total("model_live"),
         model_backfill=total("model_backfill"),
         market=total("market"),
@@ -445,3 +452,50 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         calibration_backfill=calibration(*map(np.array, cal["backfill"])) if cal["backfill"][0] else [],
         league_leader_accuracy=get_setting(session, "league_leader_accuracy"),
     )
+
+
+def scorecard(session: Session, season: int) -> s.ScorecardOut:
+    sheet.finalize(session, now_utc())
+    games = session.scalars(select(Game).where(Game.season == season, Game.game_type == "REG",
+                                               Game.status == "final").order_by(Game.week)).all()
+    entries = {e.game_id: e for e in session.scalars(
+        select(SheetEntry).where(SheetEntry.game_id.in_([g.game_id for g in games])))}
+    ranks = {r.week: r for r in session.scalars(select(WeeklyRank).where(WeeklyRank.season == season))}
+    keys = ("games", "max_points", "my_points", "app_points", "my_correct", "app_correct",
+            "changed", "changed_right", "changed_wrong", "auto")
+    weeks: dict[int, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    labels = {label: {"label": label, "games": 0, "my_correct": 0, "app_correct": 0}
+              for label in ("coin_flip", "tough_matchup", "easy_pick")}
+    for g in games:
+        e = entries.get(g.game_id)
+        if e is None:
+            continue
+        row = weeks[g.week]
+        row["games"] += 1
+        win = winner(g)
+        my_correct = win is not None and e.my_pick == win
+        app_correct = win is not None and e.app_pick == win
+        row["my_correct"] += my_correct
+        row["app_correct"] += app_correct
+        row["max_points"] += e.my_points or 0
+        row["my_points"] += (e.my_points or 0) if my_correct else 0
+        row["app_points"] += (e.app_points or 0) if app_correct else 0
+        changed = e.my_pick != e.app_pick
+        row["changed"] += changed
+        row["changed_right"] += changed and my_correct
+        row["changed_wrong"] += changed and app_correct
+        row["auto"] += e.pick_by == "auto"
+        labels[e.label]["games"] += 1
+        labels[e.label]["my_correct"] += my_correct
+        labels[e.label]["app_correct"] += app_correct
+    output = []
+    for week in sorted(weeks.keys() | ranks.keys()):
+        row = weeks[week]
+        rank = ranks.get(week)
+        output.append(s.ScorecardWeek(week=week, **{k: row[k] for k in keys},
+                                      rank=rank.rank if rank else None,
+                                      leader_points=rank.leader_points if rank else None))
+    totals = {key: sum(getattr(row, key) for row in output) for key in keys}
+    return s.ScorecardOut(season=season, weeks=output,
+                          totals=s.ScorecardWeek(week=0, rank=None, leader_points=None, **totals),
+                          by_label=list(labels.values()))
