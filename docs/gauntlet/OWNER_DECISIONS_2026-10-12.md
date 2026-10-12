@@ -56,6 +56,36 @@ How D18 is met without breaking the validation rules in `CLAUDE.md` (coordinator
 * Bar: the market picks about 66.6%, the league leader about 69%. No promise of a number.
 * His picks still never train the model (D7).
 
+## Star players (second grill, 8 questions, 2026-10-12)
+
+Owner, his words: "a teams star player as well it's not always the QB but the QB and star
+offensive and defensive players".
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D21 | A star is decided automatically from this season's playing time and production, re-ranked weekly. No award lists, no hand-kept list. | two-way | the list misses names he considers obvious |
+| D22 | Per team: the QB + top 2 on offense + top 2 on defense (5 per team, 160 league-wide). | two-way | too many or too few alerts |
+| D23 | Alert triggers on a star: Out or Doubtful (and game-day inactive); injured reserve, suspension or trade; Questionable; return after missing games. | two-way | Questionable proves to be noise |
+| D24 | A star out is shown and alerted now. Whether it moves the suggested winner is tested as a model challenger on 2012-2025 (D18 rule) and enters the model only if it wins. No untested adjustment. | two-way | the challenger result |
+| D25 | Delivery: one morning summary of that day's star changes; in the last 90 minutes before a game, a new change to that game is its own immediate alert. | two-way | - |
+| D26 | Add ESPN's free public (unofficial) feed as a second source for injuries, inactives and roster moves. Fall back to nflverse; label each item's source and age. | two-way | the feed breaks or its terms forbid this use |
+| D27 | On the game row: a short "who's out" line, stars only, with its age. Full list on the game screen. The label never changes because of an injury (D2 stays measured win chance). | two-way | - |
+| D28 | The win-chance move that counts as drastic stays 10 points (`alert_move_threshold = 0.10`). | two-way | - |
+
+Star-player notes (coordinator's reading, facts checked in the repo and database):
+
+* Today `injury_reports` holds player, position, report and practice status from nflverse (1,413
+  rows through 2026 week 5: 309 Out, 267 Questionable, 25 Doubtful). There is no snap, production
+  or transaction data, so D21 and the IR/trade trigger in D23 need new ingestion.
+* "Production" needs one stated formula per side before it is built (for example offense = share
+  of team scrimmage yards and snaps; defense = snaps plus sacks, tackles for loss, passes
+  defended). Offensive linemen have no box-score production; with "top 2 on offense" they will
+  rarely qualify. OPEN: accept that, or rank linemen by snaps alone.
+* ESPN's feed is unofficial: check its terms of use before building on it, never present it as
+  official, and keep the app working when it is down.
+* Honest limit: with about 160 stars and Questionable included, the morning summary will often
+  list 10 or more items midweek.
+
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
 * New step right after the desktop web app: **Pick sheet** = label (D2), points with re-rank and
@@ -65,6 +95,9 @@ How D18 is met without breaking the validation rules in `CLAUDE.md` (coordinator
 * Alerts step: drop the kickoff reminder work that is not built yet; keep flip and QB alerts (D6).
 * Go-live step: AI is tap-only (D16).
 * New later step: tiebreaker scores for two games (D5), gated on a backtest.
+* Alerts step grows: per-day reminder (D19), drastic-change alerts incl. label change (D20), star
+  list + star alerts + morning summary + ESPN source (D21-D27). Likely two steps, not one.
+* Model challengers, in order: play-by-play efficiency (old step 8), stars missing (D24).
 
 ## Open, and honest limits
 
