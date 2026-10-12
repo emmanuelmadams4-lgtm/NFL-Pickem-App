@@ -330,3 +330,16 @@ def test_the_real_play_caller_table_is_sourced_and_shows_nothing_when_empty(sess
     target = _game(session, 2024, "KC", "DEN", None, None)
     if not PLAY_CALLERS:
         assert [r for r in game_trends(session, target) if "caller" in r["kind"]] == []
+
+
+def test_neutral_site_game_with_no_stadium_name_still_counts_and_adds_no_name(session):
+    london = {"neutral_site": True, "stadium_id": "LON00"}
+    for season in range(2019, 2023):  # 4 JAX wins at Wembley
+        _game(session, season, "IND", "JAX", 10, 20, stadium="Wembley Stadium", **london)
+    _game(session, 2023, "IND", "JAX", 30, 20, stadium=None, **london)  # name missing in the feed: a loss
+    target = _game(session, 2024, "LA", "JAX", None, None, stadium="Wembley Stadium", **london)
+
+    site = _find(game_trends(session, target), kind="team_at_site", team="JAX", window="all")
+
+    assert _record(site) == (4, 1, 0, 5, 2019, 2023)
+    assert site["context"] == "Wembley Stadium"

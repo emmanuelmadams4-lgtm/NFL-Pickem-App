@@ -1,6 +1,6 @@
 """Historical matchup and situation records for game context."""
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from nflpi.analytics.play_callers import PLAY_CALLERS
@@ -9,6 +9,8 @@ from nflpi.models import Game
 MIN_GAMES = 4
 LAST_SEASONS = 5
 type PlayCallers = tuple[tuple[str, int, str, str, int, str], ...]
+type HomeSideMatchup = tuple[str, str, str | None]
+type HomeSideContext = tuple[Game, PlayCallers, str | None, set[str]]
 
 
 def _caller_on_file(play_callers: PlayCallers, team: str, season: int, week: int, side: str) -> str | None:
@@ -20,46 +22,9 @@ def _caller_on_file(play_callers: PlayCallers, team: str, season: int, week: int
     return row[3] if row else None
 
 
-def _matches(
-    g: Game, kind: str, team: str, opponent: str, person: str | None, target: Game, sites: set[str],
-    play_callers: PlayCallers,
-) -> bool:
-    team_home = g.home_team == team
-    team_away = g.away_team == team
-    if kind == "team_vs_team":
-        return (team_home and g.away_team == opponent) or (team_away and g.home_team == opponent)
-    if kind in ("qb_vs_team", "coach_vs_team"):
-        field = "qb" if kind == "qb_vs_team" else "coach"
-        return (g.away_team == opponent and getattr(g, f"home_{field}") == person) or (
-            g.home_team == opponent and getattr(g, f"away_{field}") == person
-        )
-    if kind in ("off_caller_vs_team", "def_caller_vs_team"):
-        side = "off" if kind == "off_caller_vs_team" else "def"
-        return (
-            g.away_team == opponent and _caller_on_file(play_callers, g.home_team, g.season, g.week, side) == person
-        ) or (
-            g.home_team == opponent and _caller_on_file(play_callers, g.away_team, g.season, g.week, side) == person
-        )
-    if not (team_home or team_away):
-        return False
-    if kind == "team_at_stadium":
-        return g.stadium_id == target.stadium_id
-    if kind == "team_at_site":
-        return g.neutral_site and (
-            (g.stadium_id and g.stadium_id.startswith(target.stadium_id[:3])) or g.stadium in sites
-        )
-    return g.weekday == target.weekday
-
-
-def _record(games: list[Game], kind: str, team: str, person: str | None, context: str, window: str) -> dict:
+def _record(games: list[tuple[Game, bool]], row: tuple[str, str, str | None, str, str]) -> dict:
     wins = losses = ties = 0
-    for g in games:
-        if kind in ("off_caller_vs_team", "def_caller_vs_team"):
-            home_side = g.away_team == context
-        elif kind in ("qb_vs_team", "coach_vs_team"):
-            home_side = (g.home_qb if kind == "qb_vs_team" else g.home_coach) == person
-        else:
-            home_side = g.home_team == team
+    for g, home_side in games:
         own, other = (g.home_score, g.away_score) if home_side else (g.away_score, g.home_score)
         if own == other:
             ties += 1
@@ -68,34 +33,95 @@ def _record(games: list[Game], kind: str, team: str, person: str | None, context
         else:
             losses += 1
     return {
-        "kind": kind, "team": team, "person": person, "context": context, "window": window,
+        "kind": row[0], "team": row[1], "person": row[2], "context": row[3], "window": row[4],
         "wins": wins, "losses": losses, "ties": ties, "games": len(games),
-        "first_season": min(g.season for g in games), "last_season": max(g.season for g in games),
+        "first_season": min(g.season for g, _ in games), "last_season": max(g.season for g, _ in games),
     }
 
 
-def game_trends(session: Session, game_id: str, play_callers: PlayCallers = PLAY_CALLERS) -> list[dict]:
-    """Return established records from final games before this kickoff."""
-    target = session.get(Game, game_id)
-    if target is None:
-        raise LookupError(game_id)
+def _load_games(session: Session, target: Game, prefix: str | None) -> tuple[list[Game], set[str]]:
     historical = (
         Game.status == "final",
         Game.home_score.is_not(None),
         Game.away_score.is_not(None),
         Game.kickoff_utc < target.kickoff_utc,
     )
-    prefix = target.stadium_id[:3] if target.neutral_site and target.stadium_id else None
-    games = session.scalars(select(Game).where(*historical)).all()
-    sites = {
-        g.stadium
-        for g in games
-        if prefix and g.neutral_site and g.stadium_id and g.stadium_id.startswith(prefix) and g.stadium
-    }
+    teams = (target.home_team, target.away_team)
+    games = session.scalars(
+        select(Game).where(
+            *historical,
+            or_(Game.home_team.in_(teams), Game.away_team.in_(teams)),
+        )
+    ).all()
+    sites: set[str] = set()
+    if prefix:
+        sites = set(session.scalars(
+            select(Game.stadium).distinct().where(
+                *historical,
+                Game.neutral_site.is_(True),
+                Game.stadium_id.startswith(prefix, autoescape=True),
+                Game.stadium.is_not(None),
+            )
+        ).all())
     if target.stadium:
         sites.add(target.stadium)
+    return games, sites
 
+
+def _home_side(
+    game: Game, kind: str, matchup: HomeSideMatchup, shared: HomeSideContext
+) -> bool | None:
+    team, opponent, person = matchup
+    target, play_callers, prefix, sites = shared
+    home = game.home_team == team
+    away = game.away_team == team
+    if kind == "team_vs_team":
+        if home and game.away_team == opponent:
+            return True
+        if away and game.home_team == opponent:
+            return False
+        return None
+    if kind in ("qb_vs_team", "coach_vs_team"):
+        field = "qb" if kind == "qb_vs_team" else "coach"
+        if game.away_team == opponent and getattr(game, f"home_{field}") == person:
+            return True
+        if game.home_team == opponent and getattr(game, f"away_{field}") == person:
+            return False
+        return None
+    if kind in ("off_caller_vs_team", "def_caller_vs_team"):
+        caller_side = "off" if kind == "off_caller_vs_team" else "def"
+        if game.away_team == opponent and _caller_on_file(
+            play_callers, game.home_team, game.season, game.week, caller_side
+        ) == person:
+            return True
+        if game.home_team == opponent and _caller_on_file(
+            play_callers, game.away_team, game.season, game.week, caller_side
+        ) == person:
+            return False
+        return None
+    if not (home or away):
+        return None
+    if kind == "team_at_stadium":
+        if game.stadium_id != target.stadium_id:
+            return None
+        return home
+    if kind == "team_at_site":
+        qualifies = game.neutral_site and (
+            (game.stadium_id and game.stadium_id.startswith(prefix or "")) or game.stadium in sites
+        )
+        if not qualifies:
+            return None
+        return home
+    if game.weekday == target.weekday:
+        return home
+    return None
+
+
+def _trend_rows(
+    target: Game, games: list[Game], play_callers: PlayCallers, prefix: str | None, sites: set[str]
+) -> list[dict]:
     rows = []
+    shared: HomeSideContext = (target, play_callers, prefix, sites)
     for team, opponent, qb, coach in (
         (target.home_team, target.away_team, target.home_qb, target.home_coach),
         (target.away_team, target.home_team, target.away_qb, target.away_coach),
@@ -114,11 +140,29 @@ def game_trends(session: Session, game_id: str, play_callers: PlayCallers = PLAY
         if prefix:
             kinds.append(("team_at_site", None, ", ".join(sorted(sites))))
         for kind, person, context in kinds:
-            matched = [g for g in games if _matches(g, kind, team, opponent, person, target, sites, play_callers)]
-            for window, selected in (
+            matchup = (team, opponent, person)
+            matched = [
+                (game, side) for game in games
+                if (side := _home_side(game, kind, matchup, shared)) is not None
+            ]
+            windows = (
                 ("all", matched),
-                ("last_5_seasons", [g for g in matched if target.season - LAST_SEASONS <= g.season < target.season]),
-            ):
+                (
+                    "last_5_seasons",
+                    [pair for pair in matched if target.season - LAST_SEASONS <= pair[0].season < target.season],
+                ),
+            )
+            for window, selected in windows:
                 if len(selected) >= MIN_GAMES:
-                    rows.append(_record(selected, kind, team, person, context, window))
+                    rows.append(_record(selected, (kind, team, person, context, window)))
     return rows
+
+
+def game_trends(session: Session, game_id: str, play_callers: PlayCallers = PLAY_CALLERS) -> list[dict]:
+    """Return established records from final games before this kickoff."""
+    target = session.get(Game, game_id)
+    if target is None:
+        raise LookupError(game_id)
+    prefix = target.stadium_id[:3] if target.neutral_site and target.stadium_id else None
+    games, sites = _load_games(session, target, prefix)
+    return _trend_rows(target, games, play_callers, prefix, sites)
