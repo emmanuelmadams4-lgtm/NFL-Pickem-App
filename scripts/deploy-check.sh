@@ -245,7 +245,10 @@ rc=0; wait "$rpid" 2>/dev/null || rc=$?
 [ "$rc" -ne 0 ] || fail "D7 a restore that was sent SIGTERM exited 0"
 grep -q "^restored " "$WORK/restore4.log" && fail "D7 the killed restore still printed 'restored'"
 for _ in $(seq 1 150); do running app && running worker && break; sleep 2; done  # up to 300 s: the restart waits for the app health check, and a busy machine is slow
-running app && running worker || fail "D7 a killed restore did not start the app and worker again by itself (exit handler)"
+if ! { running app && running worker; }; then
+  echo "--- restore4.log (rc=$rc)"; cat "$WORK/restore4.log"; echo "--- containers"; dc ps -a; echo "--- databases"; dc exec -T db psql -U nflpi -d postgres -Atc "select datname from pg_database order by 1" || true
+  fail "D7 a killed restore did not start the app and worker again by itself (exit handler)"
+fi
 [ -s "$WORK/restore4.log" ] && grep -qiE "restart requested|live data" "$WORK/restore4.log" || fail "D7 a killed restore printed no explanation"
 wait_health "d['database'] is True" 300 && running worker || { tail -20 "$WORK/restore4.log"; fail "D7 a restore killed mid-way left the app unrecoverable"; }
 [ "$(counts)" = "$mutated" ] || fail "D7 a restore killed before the swap changed the live data: $(counts) vs $mutated"
