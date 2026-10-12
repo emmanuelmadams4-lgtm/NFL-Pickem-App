@@ -1,0 +1,209 @@
+"""Run ingestion jobs. Each run is logged; a failed run keeps old data in place."""
+
+import logging
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import and_, case, func, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import Session
+
+from nflpi.config import get_settings
+from nflpi.ingestion import nflverse, weather
+from nflpi.models import Game, IngestionRun, InjuryReport, MarketSnapshot, Team, WeatherForecast
+from nflpi.predictions.market import novig_home_prob
+
+log = logging.getLogger(__name__)
+
+STALE_HOURS = {
+    "schedules": lambda s: s.stale_hours_schedules,
+    "teams": lambda s: 24 * 30,
+    "injuries": lambda s: s.stale_hours_injuries,
+    "weather": lambda s: s.stale_hours_weather,
+}
+
+
+def run_logged(session: Session, source: str, dataset: str, job: Callable[[], int]) -> IngestionRun:
+    run = IngestionRun(source=source, dataset=dataset, status="running")
+    session.add(run)
+    session.commit()
+    try:
+        run.rows = job()
+        run.status = "ok"
+    except Exception as exc:  # noqa: BLE001 - every failure is recorded, then surfaced
+        session.rollback()
+        run.status = "failed"
+        run.error = str(exc)[:2000]
+        log.exception("ingestion %s/%s failed", source, dataset)
+    run.finished_at = datetime.now(UTC)
+    session.add(run)
+    session.commit()
+    return run
+
+
+def upsert_games(session: Session, games: list[dict], observed_at: datetime) -> int:
+    """Upsert schedule rows and record a market snapshot when the line changed."""
+    if not games:
+        return 0
+    rows = [{k: v for k, v in g.items() if not k.startswith("_")} | {"updated_at": observed_at} for g in games]
+    for start in range(0, len(rows), 1000):
+        chunk = rows[start : start + 1000]
+        stmt = insert(Game).values(chunk)
+        update = {c: stmt.excluded[c] for c in chunk[0] if c != "game_id"}
+        update["status"] = case(
+            (
+                and_(
+                    Game.status == "postponed",
+                    stmt.excluded.status == "scheduled",
+                    Game.kickoff_utc == stmt.excluded.kickoff_utc,
+                ),
+                Game.status,
+            ),
+            else_=stmt.excluded.status,
+        )
+        session.execute(stmt.on_conflict_do_update(index_elements=["game_id"], set_=update))
+
+    latest = {
+        m.game_id: m
+        for m in session.scalars(
+            select(MarketSnapshot).where(
+                MarketSnapshot.id.in_(select(func.max(MarketSnapshot.id)).group_by(MarketSnapshot.game_id))
+            )
+        )
+    }
+    new_snaps = []
+    for g in games:
+        line = (g["_home_ml"], g["_away_ml"], g["_spread"], g["_total"])
+        if all(v is None for v in line):
+            continue
+        prev = latest.get(g["game_id"])
+        kind = "closing" if g["status"] == "final" else "latest"
+        if prev and (prev.home_moneyline, prev.away_moneyline, prev.spread_line, prev.total_line) == line:
+            if prev.kind != kind:
+                prev.kind = kind
+            continue
+        new_snaps.append(
+            MarketSnapshot(
+                game_id=g["game_id"],
+                observed_at=observed_at,
+                source=nflverse.SOURCE,
+                kind=kind,
+                home_moneyline=line[0],
+                away_moneyline=line[1],
+                spread_line=line[2],
+                total_line=line[3],
+                home_prob_novig=novig_home_prob(line[0], line[1]),
+            )
+        )
+    session.add_all(new_snaps)
+    session.commit()
+    return len(rows)
+
+
+def ingest_schedules(session: Session, rows: list[dict[str, str]] | None = None) -> IngestionRun:
+    settings = get_settings()
+
+    def job() -> int:
+        data = rows if rows is not None else nflverse.fetch_csv("schedules/games.csv")
+        games = nflverse.parse_games(data, settings.first_season)
+        return upsert_games(session, games, datetime.now(UTC))
+
+    return run_logged(session, nflverse.SOURCE, "schedules", job)
+
+
+def ingest_teams(session: Session, rows: list[dict[str, str]] | None = None) -> IngestionRun:
+    def job() -> int:
+        data = rows if rows is not None else nflverse.fetch_csv("teams/teams_colors_logos.csv")
+        season = session.scalar(select(func.max(Game.season)))
+        current = set(session.scalars(select(Game.home_team).where(Game.season == season)))
+        teams = nflverse.parse_teams(data, current)
+        if not teams:
+            raise RuntimeError("no current teams matched; load schedules first")
+        stmt = insert(Team).values(teams)
+        session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=["abbr"], set_={c: stmt.excluded[c] for c in teams[0] if c != "abbr"}
+            )
+        )
+        session.commit()
+        return len(teams)
+
+    return run_logged(session, nflverse.SOURCE, "teams", job)
+
+
+def ingest_injuries(
+    session: Session, season: int, rows: list[dict[str, str]] | None = None
+) -> tuple[IngestionRun, list[InjuryReport]]:
+    """Insert a row only when a player's status changed. Returns the changed rows."""
+    changed: list[InjuryReport] = []
+
+    def job() -> int:
+        data = rows if rows is not None else nflverse.fetch_csv(f"injuries/injuries_{season}.csv")
+        now = datetime.now(UTC)
+        incoming = nflverse.parse_injuries(data, now)
+        current = {}
+        for r in session.scalars(select(InjuryReport).where(InjuryReport.season == season).order_by(InjuryReport.id)):
+            current[(r.week, r.team, r.player_id or r.player)] = (r.report_status, r.practice_status)
+        for r in incoming:
+            key = (r["week"], r["team"], r["player_id"] or r["player"])
+            if current.get(key) != (r["report_status"], r["practice_status"]):
+                changed.append(InjuryReport(**r))
+        session.add_all(changed)
+        session.commit()
+        return len(changed)
+
+    return run_logged(session, nflverse.SOURCE, "injuries", job), changed
+
+
+def ingest_weather(session: Session, now: datetime | None = None) -> IngestionRun:
+    now = now or datetime.now(UTC)
+
+    def job() -> int:
+        upcoming = session.scalars(
+            select(Game).where(
+                Game.status == "scheduled",
+                Game.time_tbd.is_(False),
+                Game.kickoff_utc > now,
+                Game.kickoff_utc < now + timedelta(days=7),
+            )
+        ).all()
+        saved = 0
+        for g in upcoming:
+            if not weather.needs_forecast(g.roof, g.stadium_id):
+                continue
+            wx = weather.fetch_forecast(g.stadium_id, g.kickoff_utc)
+            if wx is None:
+                continue
+            session.add(WeatherForecast(game_id=g.game_id, observed_at=now, source=weather.SOURCE, **wx))
+            saved += 1
+        session.commit()
+        return saved
+
+    return run_logged(session, weather.SOURCE, "weather", job)
+
+
+def freshness(session: Session, now: datetime | None = None) -> list[dict]:
+    """Last good refresh per dataset, plus whether it is stale."""
+    settings = get_settings()
+    now = now or datetime.now(UTC)
+    out = []
+    for dataset, hours in STALE_HOURS.items():
+        ok = session.scalar(
+            select(func.max(IngestionRun.finished_at)).where(
+                IngestionRun.dataset == dataset, IngestionRun.status == "ok"
+            )
+        )
+        last = session.scalars(
+            select(IngestionRun).where(IngestionRun.dataset == dataset).order_by(IngestionRun.id.desc()).limit(1)
+        ).first()
+        age = (now - ok).total_seconds() / 3600 if ok else None
+        out.append(
+            {
+                "dataset": dataset,
+                "last_success": ok,
+                "age_hours": round(age, 2) if age is not None else None,
+                "stale": age is None or age > hours(settings),
+                "last_error": last.error if last and last.status == "failed" else None,
+            }
+        )
+    return out

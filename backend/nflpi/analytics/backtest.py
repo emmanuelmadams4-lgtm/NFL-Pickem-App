@@ -1,0 +1,199 @@
+"""Walk-forward backtest.
+
+To test season S, every choice (Elo settings, model weights, home rate) is
+made on seasons before S only. Elo is online and only sees finished games.
+The market line is the closing line, so it is a benchmark, not a fair
+mid-week input; the "blend" model inherits that advantage and is labeled so.
+"""
+
+import numpy as np
+import pandas as pd
+
+from nflpi.analytics.metrics import (
+    EARLY_WEEK_END,
+    bootstrap_ci,
+    calibration,
+    log_loss,
+    summarize,
+    uncertainty_grade,
+    upset_watch,
+)
+from nflpi.predictions.elo import EloParams, run_elo
+from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features
+from nflpi.predictions.model import LogitModel
+
+ELO_GRID = [EloParams(k=k, hfa=h) for k in (15.0, 20.0, 25.0) for h in (30.0, 48.0, 65.0)]
+MODELS = ["home", "elo", "logistic", "market", "blend"]
+ABLATE = ["home_qb_change", "away_qb_change"]
+LABELS = {
+    "home": "Always pick home team",
+    "elo": "Elo ratings only",
+    "logistic": "Stats model (Elo + rest + QB + home)",
+    "market": "Betting market (closing line)",
+    "blend": "Stats model + market (uses closing line)",
+}
+
+
+def _elo_frames(df: pd.DataFrame) -> dict[EloParams, pd.DataFrame]:
+    base = add_features(df, ELO_GRID[0])
+    frames = {}
+    for params in ELO_GRID:
+        e = run_elo(df, params)
+        f = base.copy()
+        f[["home_elo", "away_elo", "elo_prob"]] = e[["home_elo", "away_elo", "elo_prob"]]
+        f["elo_diff"] = (f["home_elo"] - f["away_elo"]) / 100
+        frames[params] = f
+    return frames
+
+
+def tune_elo(frames: dict[EloParams, pd.DataFrame], seasons: list[int]) -> EloParams:
+    def loss(params: EloParams) -> float:
+        f = frames[params]
+        m = f["season"].isin(seasons) & f["home_win"].notna()
+        return log_loss(f.loc[m, "elo_prob"].to_numpy(), f.loc[m, "home_win"].to_numpy())
+
+    return min(ELO_GRID, key=loss)
+
+
+def predict_season(frames: dict[EloParams, pd.DataFrame], season: int, window: int) -> pd.DataFrame:
+    train_seasons = list(range(season - window, season))
+    params = tune_elo(frames, train_seasons)
+    f = frames[params]
+    train = f[f["season"].isin(train_seasons) & f["home_win"].notna()]
+    test = f[(f["season"] == season) & (f["game_type"] == "REG") & f["home_win"].notna()].copy()
+
+    home_rate = train.loc[train["home_field"] == 1, "home_win"].mean()
+    test["p_home"] = np.where(test["home_field"] == 1, home_rate, 0.5)
+    test["p_elo"] = test["elo_prob"]
+    test["p_logistic"] = LogitModel.fit(train, BASE_FEATURES).predict(test)
+    test["p_market"] = test["market_prob"]
+    blend = LogitModel.fit(train.dropna(subset=["market_logit"]), BLEND_FEATURES)
+    has_mkt = test["market_logit"].notna()
+    test["p_blend"] = test["p_logistic"]
+    test.loc[has_mkt, "p_blend"] = blend.predict(test[has_mkt])
+    for feat in ABLATE:  # ablations: does each extra feature add value?
+        keep = [x for x in BASE_FEATURES if x != feat]
+        test[f"p_without_{feat}"] = LogitModel.fit(train, keep).predict(test)
+    test["elo_k"], test["elo_hfa"] = params.k, params.hfa
+    return test
+
+
+def signal_report(preds: pd.DataFrame) -> dict:
+    """Count only games scored by all three recommendation benchmarks."""
+    flags = np.array([upset_watch(s, m) for s, m in zip(preds["p_logistic"], preds["p_market"], strict=True)])
+    market = preds["p_market"].to_numpy()
+    y = preds["home_win"].to_numpy()
+    flagged_dogs = flags & (market != 0.5)
+    unflagged_dogs = ~flags & (market != 0.5)
+    dog_wins = np.where(market < 0.5, y == 1, y == 0)
+    grades = np.array([
+        uncertainty_grade(abs(s - m), bool(h or a), w <= EARLY_WEEK_END)[0]
+        for s, m, h, a, w in zip(
+            preds["p_logistic"], preds["p_market"], preds["home_qb_change"],
+            preds["away_qb_change"], preds["week"], strict=True
+        )
+    ])
+    correct = (preds["p_blend"].to_numpy() > 0.5) == (y == 1)
+    pick_prob = np.maximum(preds["p_blend"].to_numpy(), 1 - preds["p_blend"].to_numpy())
+    n = len(preds)
+    by_grade = {}
+    for grade in ("low", "moderate", "high"):
+        mask = grades == grade
+        by_grade[grade] = {
+            "games": int(mask.sum()),
+            "share": float(mask.sum() / n),
+            "correct": int(correct[mask].sum()),
+            "accuracy": float(correct[mask].mean()) if mask.any() else None,
+        }
+    by_band = {}
+    for label, lo, hi in (("below 60%", 0.5, 0.6), ("60 to 70%", 0.6, 0.7), ("70% and above", 0.7, 1.0)):
+        band = (pick_prob >= lo) & (pick_prob < hi if hi < 1 else pick_prob <= hi)
+        by_band[label] = {
+            grade: {"games": int(mask.sum()), "accuracy": float(correct[mask].mean()) if mask.any() else None}
+            for grade in ("low", "moderate", "high")
+            for mask in [band & (grades == grade)]
+        }
+    return {
+        "games": n,
+        "upset_flagged": int(flags.sum()),
+        "upset_flag_rate": float(flags.mean()),
+        "flagged_underdogs": int(flagged_dogs.sum()),
+        "flagged_underdog_wins": int((flagged_dogs & dog_wins).sum()),
+        "flagged_underdog_win_rate": float(dog_wins[flagged_dogs].mean()) if flagged_dogs.any() else None,
+        "unflagged_underdogs": int(unflagged_dogs.sum()),
+        "unflagged_underdog_wins": int((unflagged_dogs & dog_wins).sum()),
+        "unflagged_underdog_win_rate": float(dog_wins[unflagged_dogs].mean()) if unflagged_dogs.any() else None,
+        "grades": by_grade,
+        "probability_bands": by_band,
+    }
+
+
+def run_backtest(df: pd.DataFrame, seasons: list[int], window: int = 10) -> dict:
+    frames = _elo_frames(df)
+    preds = pd.concat([predict_season(frames, s, window) for s in seasons], ignore_index=True)
+    # Compare every model on the same games: those with a market line.
+    preds = preds[preds["p_market"].notna()]
+    y = preds["home_win"].to_numpy()
+
+    models = []
+    for m in MODELS:
+        p = preds[f"p_{m}"].to_numpy()
+        models.append({"model": m, "label": LABELS[m], **summarize(p, y)})
+
+    ablations = []
+    base_ll = log_loss(preds["p_logistic"].to_numpy(), y)
+    for feat in ABLATE:
+        ll = log_loss(preds[f"p_without_{feat}"].to_numpy(), y)
+        ablations.append({"feature": feat, "log_loss_without": ll, "log_loss_gain": ll - base_ll})
+
+    by_season = []
+    for s, g in preds.groupby("season"):
+        yy = g["home_win"].to_numpy()
+        row = {"season": int(s), "n": len(g)}
+        for m in MODELS:
+            row[m] = float(np.mean((g[f"p_{m}"].to_numpy() > 0.5) == (yy == 1)))
+        by_season.append(row)
+
+    comparisons = []
+    correct = {m: ((preds[f"p_{m}"].to_numpy() > 0.5) == (y == 1)).astype(float) for m in MODELS}
+    for a, b in (("logistic", "market"), ("blend", "market"), ("logistic", "elo"), ("logistic", "home")):
+        diff = correct[a] - correct[b]
+        lo, hi = bootstrap_ci(diff)
+        comparisons.append(
+            {"a": a, "b": b, "accuracy_diff": float(diff.mean()), "ci": [lo, hi], "significant": lo > 0 or hi < 0}
+        )
+
+    fav_split = []
+    market_fav_home = preds["p_market"].to_numpy() > 0.5
+    for m in MODELS:
+        picks_home = preds[f"p_{m}"].to_numpy() > 0.5
+        agrees = picks_home == market_fav_home
+        ok = correct[m]
+        fav_split.append(
+            {
+                "model": m,
+                "picked_favorite": int(agrees.sum()),
+                "favorite_accuracy": float(ok[agrees].mean()) if agrees.any() else None,
+                "picked_underdog": int((~agrees).sum()),
+                "underdog_accuracy": float(ok[~agrees].mean()) if (~agrees).any() else None,
+            }
+        )
+
+    return {
+        "seasons": [int(s) for s in seasons],
+        "games": int(len(preds)),
+        "models": models,
+        "comparisons": comparisons,
+        "ablations": ablations,
+        "by_season": by_season,
+        "calibration": {m: calibration(preds[f"p_{m}"].to_numpy(), y) for m in ("logistic", "blend", "market")},
+        "favorite_split": fav_split,
+        "signals": signal_report(preds),
+        "signals_2012_2021": signal_report(preds[preds["season"].between(2012, 2021)])
+        if any(2012 <= s <= 2021 for s in seasons)
+        else None,
+        "signals_2022_2025": signal_report(preds[preds["season"].between(2022, 2025)])
+        if any(2022 <= s <= 2025 for s in seasons)
+        else None,
+        "elo_settings": sorted({(float(k), float(h)) for k, h in zip(preds["elo_k"], preds["elo_hfa"], strict=True)}),
+    }

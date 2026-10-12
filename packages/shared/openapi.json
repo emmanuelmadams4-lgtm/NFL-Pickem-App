@@ -1,0 +1,3224 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "NFL Pick'em Intelligence",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/api/health": {
+   "get": {
+    "summary": "Health",
+    "operationId": "health_api_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthOut"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/meta": {
+   "get": {
+    "summary": "Meta",
+    "operationId": "meta_api_meta_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MetaOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/weeks/{season}/{week}": {
+   "get": {
+    "summary": "Week",
+    "operationId": "week_api_weeks__season___week__get",
+    "parameters": [
+     {
+      "name": "season",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Season"
+      }
+     },
+     {
+      "name": "week",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Week"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeekOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/games/{game_id}": {
+   "get": {
+    "summary": "Game",
+    "operationId": "game_api_games__game_id__get",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/GameDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/picks/{game_id}": {
+   "put": {
+    "summary": "Set Pick",
+    "operationId": "set_pick_api_picks__game_id__put",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PickIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PickOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Clear Pick",
+    "operationId": "clear_pick_api_picks__game_id__delete",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/picks/export.csv": {
+   "get": {
+    "summary": "Export Picks",
+    "operationId": "export_picks_api_picks_export_csv_get",
+    "parameters": [
+     {
+      "name": "season",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Season"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/picks/import": {
+   "post": {
+    "summary": "Import Picks",
+    "description": "CSV with columns game_id and my_pick (or picked_team). Past games allowed, for Yahoo history.",
+    "operationId": "import_picks_api_picks_import_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportResult"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/performance/{season}": {
+   "get": {
+    "summary": "Performance",
+    "operationId": "performance_api_performance__season__get",
+    "parameters": [
+     {
+      "name": "season",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Season"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PerformanceOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/backtest": {
+   "get": {
+    "summary": "Backtest",
+    "operationId": "backtest_api_backtest_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BacktestOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/games/{game_id}/report": {
+   "post": {
+    "summary": "Make Report",
+    "operationId": "make_report_api_games__game_id__report_post",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     },
+     {
+      "name": "provider",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "claude",
+        "jev"
+       ],
+       "type": "string",
+       "default": "claude",
+       "title": "Provider"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AIReportOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/games/{game_id}/ask": {
+   "post": {
+    "summary": "Ask",
+    "operationId": "ask_api_games__game_id__ask_post",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AskIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AskOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/push/subscribe": {
+   "post": {
+    "summary": "Push Subscribe",
+    "operationId": "push_subscribe_api_push_subscribe_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PushSubscriptionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Push Unsubscribe",
+    "operationId": "push_unsubscribe_api_push_subscribe_delete",
+    "parameters": [
+     {
+      "name": "endpoint",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Endpoint"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/settings": {
+   "put": {
+    "summary": "Update Settings",
+    "operationId": "update_settings_api_settings_put",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SettingsIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MetaOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/refresh": {
+   "post": {
+    "summary": "Refresh",
+    "description": "Start a data + prediction refresh in the background (one at a time).",
+    "operationId": "refresh_api_refresh_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Refresh Api Refresh Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/freshness": {
+   "get": {
+    "summary": "Data Freshness",
+    "operationId": "data_freshness_api_freshness_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/DatasetFreshness"
+         },
+         "title": "Response Data Freshness Api Freshness Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AIReportOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "provider": {
+      "type": "string",
+      "title": "Provider"
+     },
+     "model": {
+      "type": "string",
+      "title": "Model"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "ok",
+       "failed"
+      ],
+      "title": "Status"
+     },
+     "report": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/MatchupReport"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "error": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error"
+     },
+     "prediction_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Prediction Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "created_at",
+     "provider",
+     "model",
+     "status",
+     "report",
+     "error",
+     "prediction_id"
+    ],
+    "title": "AIReportOut"
+   },
+   "AskIn": {
+    "properties": {
+     "question": {
+      "type": "string",
+      "maxLength": 1000,
+      "minLength": 3,
+      "title": "Question"
+     },
+     "provider": {
+      "type": "string",
+      "enum": [
+       "claude",
+       "jev"
+      ],
+      "title": "Provider",
+      "default": "claude"
+     }
+    },
+    "type": "object",
+    "required": [
+     "question"
+    ],
+    "title": "AskIn"
+   },
+   "AskOut": {
+    "properties": {
+     "answer": {
+      "type": "string",
+      "title": "Answer"
+     },
+     "provider": {
+      "type": "string",
+      "title": "Provider"
+     },
+     "model": {
+      "type": "string",
+      "title": "Model"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "answer",
+     "provider",
+     "model",
+     "created_at"
+    ],
+    "title": "AskOut"
+   },
+   "BacktestModel": {
+    "properties": {
+     "model": {
+      "type": "string",
+      "title": "Model"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "n": {
+      "type": "integer",
+      "title": "N"
+     },
+     "accuracy": {
+      "type": "number",
+      "title": "Accuracy"
+     },
+     "accuracy_ci": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Accuracy Ci"
+     },
+     "brier": {
+      "type": "number",
+      "title": "Brier"
+     },
+     "log_loss": {
+      "type": "number",
+      "title": "Log Loss"
+     }
+    },
+    "type": "object",
+    "required": [
+     "model",
+     "label",
+     "n",
+     "accuracy",
+     "accuracy_ci",
+     "brier",
+     "log_loss"
+    ],
+    "title": "BacktestModel"
+   },
+   "BacktestOut": {
+    "properties": {
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "seasons": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Seasons"
+     },
+     "games": {
+      "type": "integer",
+      "title": "Games"
+     },
+     "models": {
+      "items": {
+       "$ref": "#/components/schemas/BacktestModel"
+      },
+      "type": "array",
+      "title": "Models"
+     },
+     "comparisons": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Comparisons"
+     },
+     "ablations": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Ablations"
+     },
+     "by_season": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "By Season"
+     },
+     "calibration": {
+      "additionalProperties": {
+       "items": {
+        "$ref": "#/components/schemas/CalibrationBucket"
+       },
+       "type": "array"
+      },
+      "type": "object",
+      "title": "Calibration"
+     },
+     "favorite_split": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Favorite Split"
+     }
+    },
+    "type": "object",
+    "required": [
+     "created_at",
+     "seasons",
+     "games",
+     "models",
+     "comparisons",
+     "ablations",
+     "by_season",
+     "calibration",
+     "favorite_split"
+    ],
+    "title": "BacktestOut"
+   },
+   "CalibrationBucket": {
+    "properties": {
+     "bucket": {
+      "type": "string",
+      "title": "Bucket"
+     },
+     "n": {
+      "type": "integer",
+      "title": "N"
+     },
+     "predicted": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Predicted"
+     },
+     "observed": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Observed"
+     }
+    },
+    "type": "object",
+    "required": [
+     "bucket",
+     "n",
+     "predicted",
+     "observed"
+    ],
+    "title": "CalibrationBucket"
+   },
+   "DatasetFreshness": {
+    "properties": {
+     "dataset": {
+      "type": "string",
+      "title": "Dataset"
+     },
+     "last_success": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Success"
+     },
+     "age_hours": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Age Hours"
+     },
+     "stale": {
+      "type": "boolean",
+      "title": "Stale"
+     },
+     "last_error": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Error"
+     }
+    },
+    "type": "object",
+    "required": [
+     "dataset",
+     "last_success",
+     "age_hours",
+     "stale",
+     "last_error"
+    ],
+    "title": "DatasetFreshness"
+   },
+   "Factor": {
+    "properties": {
+     "key": {
+      "type": "string",
+      "title": "Key"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "detail": {
+      "type": "string",
+      "title": "Detail"
+     },
+     "favors": {
+      "type": "string",
+      "title": "Favors"
+     },
+     "weight": {
+      "type": "number",
+      "title": "Weight",
+      "description": "Push on the home team's log-odds; sign shows direction"
+     }
+    },
+    "type": "object",
+    "required": [
+     "key",
+     "label",
+     "detail",
+     "favors",
+     "weight"
+    ],
+    "title": "Factor"
+   },
+   "GameDetail": {
+    "properties": {
+     "game_id": {
+      "type": "string",
+      "title": "Game Id"
+     },
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "game_type": {
+      "type": "string",
+      "title": "Game Type"
+     },
+     "kickoff_utc": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Kickoff Utc"
+     },
+     "time_tbd": {
+      "type": "boolean",
+      "title": "Time Tbd"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "scheduled",
+       "postponed",
+       "in_progress",
+       "final"
+      ],
+      "title": "Status"
+     },
+     "away": {
+      "$ref": "#/components/schemas/TeamOut"
+     },
+     "home": {
+      "$ref": "#/components/schemas/TeamOut"
+     },
+     "away_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Away Score"
+     },
+     "home_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Score"
+     },
+     "away_record": {
+      "type": "string",
+      "title": "Away Record"
+     },
+     "home_record": {
+      "type": "string",
+      "title": "Home Record"
+     },
+     "stadium": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stadium"
+     },
+     "roof": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Roof"
+     },
+     "neutral_site": {
+      "type": "boolean",
+      "title": "Neutral Site"
+     },
+     "div_game": {
+      "type": "boolean",
+      "title": "Div Game"
+     },
+     "prediction": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PredictionOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "my_pick": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "My Pick"
+     },
+     "my_pick_correct": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "My Pick Correct"
+     },
+     "model_correct": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Correct"
+     },
+     "locked": {
+      "type": "boolean",
+      "title": "Locked",
+      "description": "Known kickoff has passed; picks can no longer change"
+     },
+     "qb_not_projected": {
+      "type": "boolean",
+      "title": "Qb Not Projected"
+     },
+     "qb_alerts": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Qb Alerts"
+     },
+     "injury_count": {
+      "type": "integer",
+      "title": "Injury Count"
+     },
+     "weather": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/WeatherOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "home_form": {
+      "$ref": "#/components/schemas/TeamForm"
+     },
+     "away_form": {
+      "$ref": "#/components/schemas/TeamForm"
+     },
+     "injuries": {
+      "items": {
+       "$ref": "#/components/schemas/InjuryOut"
+      },
+      "type": "array",
+      "title": "Injuries"
+     },
+     "market_history": {
+      "items": {
+       "$ref": "#/components/schemas/MarketOut"
+      },
+      "type": "array",
+      "title": "Market History"
+     },
+     "prediction_history": {
+      "items": {
+       "$ref": "#/components/schemas/PredictionOut"
+      },
+      "type": "array",
+      "title": "Prediction History"
+     },
+     "meetings": {
+      "items": {
+       "$ref": "#/components/schemas/MeetingOut"
+      },
+      "type": "array",
+      "title": "Meetings"
+     },
+     "ai_report": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/AIReportOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "coach_home": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Coach Home"
+     },
+     "coach_away": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Coach Away"
+     },
+     "surface": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Surface"
+     },
+     "weekday": {
+      "type": "string",
+      "title": "Weekday"
+     }
+    },
+    "type": "object",
+    "required": [
+     "game_id",
+     "season",
+     "week",
+     "game_type",
+     "kickoff_utc",
+     "time_tbd",
+     "status",
+     "away",
+     "home",
+     "away_score",
+     "home_score",
+     "away_record",
+     "home_record",
+     "stadium",
+     "roof",
+     "neutral_site",
+     "div_game",
+     "prediction",
+     "my_pick",
+     "my_pick_correct",
+     "model_correct",
+     "locked",
+     "qb_not_projected",
+     "qb_alerts",
+     "injury_count",
+     "weather",
+     "home_form",
+     "away_form",
+     "injuries",
+     "market_history",
+     "prediction_history",
+     "meetings",
+     "ai_report",
+     "coach_home",
+     "coach_away",
+     "surface",
+     "weekday"
+    ],
+    "title": "GameDetail"
+   },
+   "GameSummary": {
+    "properties": {
+     "game_id": {
+      "type": "string",
+      "title": "Game Id"
+     },
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "game_type": {
+      "type": "string",
+      "title": "Game Type"
+     },
+     "kickoff_utc": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Kickoff Utc"
+     },
+     "time_tbd": {
+      "type": "boolean",
+      "title": "Time Tbd"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "scheduled",
+       "postponed",
+       "in_progress",
+       "final"
+      ],
+      "title": "Status"
+     },
+     "away": {
+      "$ref": "#/components/schemas/TeamOut"
+     },
+     "home": {
+      "$ref": "#/components/schemas/TeamOut"
+     },
+     "away_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Away Score"
+     },
+     "home_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Score"
+     },
+     "away_record": {
+      "type": "string",
+      "title": "Away Record"
+     },
+     "home_record": {
+      "type": "string",
+      "title": "Home Record"
+     },
+     "stadium": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stadium"
+     },
+     "roof": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Roof"
+     },
+     "neutral_site": {
+      "type": "boolean",
+      "title": "Neutral Site"
+     },
+     "div_game": {
+      "type": "boolean",
+      "title": "Div Game"
+     },
+     "prediction": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PredictionOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "my_pick": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "My Pick"
+     },
+     "my_pick_correct": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "My Pick Correct"
+     },
+     "model_correct": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Correct"
+     },
+     "locked": {
+      "type": "boolean",
+      "title": "Locked",
+      "description": "Known kickoff has passed; picks can no longer change"
+     },
+     "qb_not_projected": {
+      "type": "boolean",
+      "title": "Qb Not Projected"
+     },
+     "qb_alerts": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Qb Alerts"
+     },
+     "injury_count": {
+      "type": "integer",
+      "title": "Injury Count"
+     },
+     "weather": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/WeatherOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "game_id",
+     "season",
+     "week",
+     "game_type",
+     "kickoff_utc",
+     "time_tbd",
+     "status",
+     "away",
+     "home",
+     "away_score",
+     "home_score",
+     "away_record",
+     "home_record",
+     "stadium",
+     "roof",
+     "neutral_site",
+     "div_game",
+     "prediction",
+     "my_pick",
+     "my_pick_correct",
+     "model_correct",
+     "locked",
+     "qb_not_projected",
+     "qb_alerts",
+     "injury_count",
+     "weather"
+    ],
+    "title": "GameSummary"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "HealthOut": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "enum": [
+       "ok",
+       "degraded"
+      ],
+      "title": "Status"
+     },
+     "database": {
+      "type": "boolean",
+      "title": "Database"
+     },
+     "active_model": {
+      "type": "boolean",
+      "title": "Active Model"
+     },
+     "stale_datasets": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Stale Datasets"
+     },
+     "worker_heartbeat": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Worker Heartbeat"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "database",
+     "active_model",
+     "stale_datasets"
+    ],
+    "title": "HealthOut"
+   },
+   "ImportResult": {
+    "properties": {
+     "imported": {
+      "type": "integer",
+      "title": "Imported"
+     },
+     "skipped": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Skipped"
+     }
+    },
+    "type": "object",
+    "required": [
+     "imported",
+     "skipped"
+    ],
+    "title": "ImportResult"
+   },
+   "InjuryOut": {
+    "properties": {
+     "team": {
+      "type": "string",
+      "title": "Team"
+     },
+     "player": {
+      "type": "string",
+      "title": "Player"
+     },
+     "position": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Position"
+     },
+     "report_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Report Status"
+     },
+     "practice_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Practice Status"
+     },
+     "injury": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Injury"
+     },
+     "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Observed At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team",
+     "player",
+     "position",
+     "report_status",
+     "practice_status",
+     "injury",
+     "observed_at"
+    ],
+    "title": "InjuryOut"
+   },
+   "MarketOut": {
+    "properties": {
+     "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Observed At"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "home_moneyline": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Moneyline"
+     },
+     "away_moneyline": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Away Moneyline"
+     },
+     "spread_line": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Spread Line"
+     },
+     "total_line": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total Line"
+     },
+     "home_prob": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Prob"
+     }
+    },
+    "type": "object",
+    "required": [
+     "observed_at",
+     "kind",
+     "source",
+     "home_moneyline",
+     "away_moneyline",
+     "spread_line",
+     "total_line",
+     "home_prob"
+    ],
+    "title": "MarketOut"
+   },
+   "MatchupReport": {
+    "properties": {
+     "game_id": {
+      "type": "string",
+      "title": "Game Id"
+     },
+     "recommended_winner": {
+      "type": "string",
+      "title": "Recommended Winner"
+     },
+     "statistical_win_probability": {
+      "type": "number",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Statistical Win Probability"
+     },
+     "headline": {
+      "type": "string",
+      "title": "Headline"
+     },
+     "supporting_factors": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 6,
+      "minItems": 1,
+      "title": "Supporting Factors"
+     },
+     "opposing_factors": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 6,
+      "title": "Opposing Factors"
+     },
+     "injury_impact": {
+      "type": "string",
+      "title": "Injury Impact"
+     },
+     "rest_and_schedule": {
+      "type": "string",
+      "title": "Rest And Schedule"
+     },
+     "weather_impact": {
+      "type": "string",
+      "title": "Weather Impact"
+     },
+     "market_view": {
+      "type": "string",
+      "title": "Market View"
+     },
+     "key_uncertainties": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 6,
+      "title": "Key Uncertainties"
+     },
+     "what_would_change_the_pick": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 4,
+      "title": "What Would Change The Pick"
+     },
+     "data_quality_warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Data Quality Warnings"
+     },
+     "sources": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Sources",
+      "description": "Evidence-pack keys the report relied on"
+     }
+    },
+    "type": "object",
+    "required": [
+     "game_id",
+     "recommended_winner",
+     "statistical_win_probability",
+     "headline",
+     "supporting_factors",
+     "opposing_factors",
+     "injury_impact",
+     "rest_and_schedule",
+     "weather_impact",
+     "market_view",
+     "key_uncertainties",
+     "what_would_change_the_pick",
+     "data_quality_warnings",
+     "sources"
+    ],
+    "title": "MatchupReport",
+    "description": "Validated AI output. The AI explains; it never sets the probability."
+   },
+   "MeetingOut": {
+    "properties": {
+     "game_id": {
+      "type": "string",
+      "title": "Game Id"
+     },
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "away_team": {
+      "type": "string",
+      "title": "Away Team"
+     },
+     "home_team": {
+      "type": "string",
+      "title": "Home Team"
+     },
+     "away_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Away Score"
+     },
+     "home_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Score"
+     }
+    },
+    "type": "object",
+    "required": [
+     "game_id",
+     "season",
+     "week",
+     "away_team",
+     "home_team",
+     "away_score",
+     "home_score"
+    ],
+    "title": "MeetingOut"
+   },
+   "MetaOut": {
+    "properties": {
+     "current_season": {
+      "type": "integer",
+      "title": "Current Season"
+     },
+     "current_week": {
+      "type": "integer",
+      "title": "Current Week"
+     },
+     "seasons": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Seasons"
+     },
+     "weeks": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Weeks"
+     },
+     "model_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Name"
+     },
+     "model_trained_through": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Trained Through"
+     },
+     "ai_providers": {
+      "additionalProperties": {
+       "type": "boolean"
+      },
+      "type": "object",
+      "title": "Ai Providers"
+     },
+     "push_public_key": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Push Public Key",
+      "description": "VAPID public key for PushManager.subscribe; null = push off"
+     },
+     "push_subscriptions": {
+      "type": "integer",
+      "title": "Push Subscriptions"
+     },
+     "reminder_minutes": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reminder Minutes"
+     },
+     "league_leader_accuracy": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "League Leader Accuracy"
+     },
+     "server_time": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Server Time"
+     }
+    },
+    "type": "object",
+    "required": [
+     "current_season",
+     "current_week",
+     "seasons",
+     "weeks",
+     "model_name",
+     "model_trained_through",
+     "ai_providers",
+     "push_public_key",
+     "push_subscriptions",
+     "reminder_minutes",
+     "league_leader_accuracy",
+     "server_time"
+    ],
+    "title": "MetaOut"
+   },
+   "PerformanceOut": {
+    "properties": {
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "weeks": {
+      "items": {
+       "$ref": "#/components/schemas/WeekPerformance"
+      },
+      "type": "array",
+      "title": "Weeks"
+     },
+     "me": {
+      "$ref": "#/components/schemas/Tally"
+     },
+     "model": {
+      "$ref": "#/components/schemas/Tally",
+      "description": "Live predictions only: the final snapshot was made before kickoff"
+     },
+     "model_backfill": {
+      "$ref": "#/components/schemas/Tally",
+      "description": "Backfill predictions only: computed after the fact, labeled"
+     },
+     "market": {
+      "$ref": "#/components/schemas/Tally"
+     },
+     "home": {
+      "$ref": "#/components/schemas/Tally"
+     },
+     "model_live_games": {
+      "type": "integer",
+      "title": "Model Live Games"
+     },
+     "model_backfill_games": {
+      "type": "integer",
+      "title": "Model Backfill Games"
+     },
+     "calibration": {
+      "items": {
+       "$ref": "#/components/schemas/CalibrationBucket"
+      },
+      "type": "array",
+      "title": "Calibration",
+      "description": "Live predictions only"
+     },
+     "calibration_backfill": {
+      "items": {
+       "$ref": "#/components/schemas/CalibrationBucket"
+      },
+      "type": "array",
+      "title": "Calibration Backfill",
+      "description": "Backfill predictions only: labeled"
+     },
+     "league_leader_accuracy": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "League Leader Accuracy"
+     }
+    },
+    "type": "object",
+    "required": [
+     "season",
+     "weeks",
+     "me",
+     "model",
+     "model_backfill",
+     "market",
+     "home",
+     "model_live_games",
+     "model_backfill_games",
+     "calibration",
+     "calibration_backfill",
+     "league_leader_accuracy"
+    ],
+    "title": "PerformanceOut"
+   },
+   "PickIn": {
+    "properties": {
+     "team": {
+      "type": "string",
+      "title": "Team"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team"
+    ],
+    "title": "PickIn"
+   },
+   "PickOut": {
+    "properties": {
+     "game_id": {
+      "type": "string",
+      "title": "Game Id"
+     },
+     "picked_team": {
+      "type": "string",
+      "title": "Picked Team"
+     },
+     "picked_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Picked At"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     }
+    },
+    "type": "object",
+    "required": [
+     "game_id",
+     "picked_team",
+     "picked_at",
+     "source"
+    ],
+    "title": "PickOut"
+   },
+   "PredictionOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "live",
+       "backfill"
+      ],
+      "title": "Kind"
+     },
+     "model_version": {
+      "type": "string",
+      "title": "Model Version"
+     },
+     "home_win_prob": {
+      "type": "number",
+      "title": "Home Win Prob"
+     },
+     "away_win_prob": {
+      "type": "number",
+      "title": "Away Win Prob"
+     },
+     "pick": {
+      "type": "string",
+      "title": "Pick"
+     },
+     "uncertainty": {
+      "type": "string",
+      "enum": [
+       "low",
+       "moderate",
+       "high"
+      ],
+      "title": "Uncertainty"
+     },
+     "uncertainty_reasons": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Uncertainty Reasons"
+     },
+     "factors": {
+      "items": {
+       "$ref": "#/components/schemas/Factor"
+      },
+      "type": "array",
+      "title": "Factors"
+     },
+     "market_home_prob": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Market Home Prob"
+     },
+     "stats_only_home_prob": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stats Only Home Prob"
+     },
+     "upset_flags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Upset Flags"
+     },
+     "change_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Change Note"
+     },
+     "data_freshness": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "object",
+      "title": "Data Freshness"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "created_at",
+     "kind",
+     "model_version",
+     "home_win_prob",
+     "away_win_prob",
+     "pick",
+     "uncertainty",
+     "uncertainty_reasons",
+     "factors",
+     "market_home_prob",
+     "stats_only_home_prob",
+     "upset_flags",
+     "change_note",
+     "data_freshness"
+    ],
+    "title": "PredictionOut"
+   },
+   "PushKeys": {
+    "properties": {
+     "p256dh": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 10,
+      "title": "P256Dh"
+     },
+     "auth": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 8,
+      "title": "Auth"
+     }
+    },
+    "type": "object",
+    "required": [
+     "p256dh",
+     "auth"
+    ],
+    "title": "PushKeys"
+   },
+   "PushSubscriptionIn": {
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "maxLength": 2048,
+      "minLength": 10,
+      "pattern": "^https://",
+      "title": "Endpoint"
+     },
+     "keys": {
+      "$ref": "#/components/schemas/PushKeys"
+     }
+    },
+    "type": "object",
+    "required": [
+     "endpoint",
+     "keys"
+    ],
+    "title": "PushSubscriptionIn",
+    "description": "Exactly what the browser's PushSubscription.toJSON() returns."
+   },
+   "SettingsIn": {
+    "properties": {
+     "league_leader_accuracy": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "League Leader Accuracy"
+     },
+     "reminder_minutes": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 1440.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reminder Minutes",
+      "description": "0 turns reminders off"
+     }
+    },
+    "type": "object",
+    "title": "SettingsIn"
+   },
+   "Tally": {
+    "properties": {
+     "correct": {
+      "type": "integer",
+      "title": "Correct"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "accuracy": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Accuracy"
+     },
+     "ci_low": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ci Low"
+     },
+     "ci_high": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ci High"
+     }
+    },
+    "type": "object",
+    "required": [
+     "correct",
+     "total",
+     "accuracy",
+     "ci_low",
+     "ci_high"
+    ],
+    "title": "Tally"
+   },
+   "TeamForm": {
+    "properties": {
+     "team": {
+      "type": "string",
+      "title": "Team"
+     },
+     "record": {
+      "type": "string",
+      "title": "Record"
+     },
+     "home_record": {
+      "type": "string",
+      "title": "Home Record"
+     },
+     "away_record": {
+      "type": "string",
+      "title": "Away Record"
+     },
+     "points_for_pg": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Points For Pg"
+     },
+     "points_against_pg": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Points Against Pg"
+     },
+     "last3_margin": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last3 Margin"
+     },
+     "last5_margin": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last5 Margin"
+     },
+     "elo": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Elo"
+     },
+     "qb": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Qb"
+     },
+     "prev_qb": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Prev Qb"
+     },
+     "rest_days": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rest Days"
+     },
+     "coach": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Coach"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team",
+     "record",
+     "home_record",
+     "away_record",
+     "points_for_pg",
+     "points_against_pg",
+     "last3_margin",
+     "last5_margin",
+     "elo",
+     "qb",
+     "prev_qb",
+     "rest_days",
+     "coach"
+    ],
+    "title": "TeamForm"
+   },
+   "TeamOut": {
+    "properties": {
+     "abbr": {
+      "type": "string",
+      "title": "Abbr"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "nick": {
+      "type": "string",
+      "title": "Nick"
+     },
+     "conference": {
+      "type": "string",
+      "title": "Conference"
+     },
+     "division": {
+      "type": "string",
+      "title": "Division"
+     },
+     "color": {
+      "type": "string",
+      "title": "Color"
+     },
+     "color2": {
+      "type": "string",
+      "title": "Color2"
+     },
+     "logo_url": {
+      "type": "string",
+      "title": "Logo Url"
+     }
+    },
+    "type": "object",
+    "required": [
+     "abbr",
+     "name",
+     "nick",
+     "conference",
+     "division",
+     "color",
+     "color2",
+     "logo_url"
+    ],
+    "title": "TeamOut"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "WeatherOut": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "forecast",
+       "observed"
+      ],
+      "title": "Kind"
+     },
+     "observed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Observed At"
+     },
+     "temp_f": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Temp F"
+     },
+     "wind_mph": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Wind Mph"
+     },
+     "gust_mph": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gust Mph"
+     },
+     "precip_prob": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Precip Prob"
+     },
+     "precip_in": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Precip In"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "observed_at",
+     "temp_f",
+     "wind_mph"
+    ],
+    "title": "WeatherOut"
+   },
+   "WeekOut": {
+    "properties": {
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "summary": {
+      "$ref": "#/components/schemas/WeekSummary"
+     },
+     "games": {
+      "items": {
+       "$ref": "#/components/schemas/GameSummary"
+      },
+      "type": "array",
+      "title": "Games"
+     },
+     "freshness": {
+      "items": {
+       "$ref": "#/components/schemas/DatasetFreshness"
+      },
+      "type": "array",
+      "title": "Freshness"
+     },
+     "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Generated At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "season",
+     "week",
+     "summary",
+     "games",
+     "freshness",
+     "generated_at"
+    ],
+    "title": "WeekOut"
+   },
+   "WeekPerformance": {
+    "properties": {
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "games_final": {
+      "type": "integer",
+      "title": "Games Final"
+     },
+     "my_correct": {
+      "type": "integer",
+      "title": "My Correct"
+     },
+     "my_total": {
+      "type": "integer",
+      "title": "My Total"
+     },
+     "model_live_correct": {
+      "type": "integer",
+      "title": "Model Live Correct"
+     },
+     "model_live_total": {
+      "type": "integer",
+      "title": "Model Live Total"
+     },
+     "model_backfill_correct": {
+      "type": "integer",
+      "title": "Model Backfill Correct"
+     },
+     "model_backfill_total": {
+      "type": "integer",
+      "title": "Model Backfill Total"
+     },
+     "market_correct": {
+      "type": "integer",
+      "title": "Market Correct"
+     },
+     "market_total": {
+      "type": "integer",
+      "title": "Market Total"
+     },
+     "home_correct": {
+      "type": "integer",
+      "title": "Home Correct"
+     },
+     "home_total": {
+      "type": "integer",
+      "title": "Home Total"
+     }
+    },
+    "type": "object",
+    "required": [
+     "week",
+     "games_final",
+     "my_correct",
+     "my_total",
+     "model_live_correct",
+     "model_live_total",
+     "model_backfill_correct",
+     "model_backfill_total",
+     "market_correct",
+     "market_total",
+     "home_correct",
+     "home_total"
+    ],
+    "title": "WeekPerformance"
+   },
+   "WeekSummary": {
+    "properties": {
+     "games_total": {
+      "type": "integer",
+      "title": "Games Total"
+     },
+     "games_final": {
+      "type": "integer",
+      "title": "Games Final"
+     },
+     "games_remaining": {
+      "type": "integer",
+      "title": "Games Remaining"
+     },
+     "picks_made": {
+      "type": "integer",
+      "title": "Picks Made"
+     },
+     "picks_correct": {
+      "type": "integer",
+      "title": "Picks Correct"
+     },
+     "picks_incorrect": {
+      "type": "integer",
+      "title": "Picks Incorrect"
+     },
+     "my_accuracy": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "My Accuracy"
+     },
+     "model_correct": {
+      "type": "integer",
+      "title": "Model Correct"
+     },
+     "model_graded": {
+      "type": "integer",
+      "title": "Model Graded"
+     },
+     "model_accuracy": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Accuracy"
+     },
+     "season_my_accuracy": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Season My Accuracy"
+     },
+     "season_model_accuracy": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Season Model Accuracy"
+     },
+     "league_leader_accuracy": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "League Leader Accuracy"
+     },
+     "attention": {
+      "type": "integer",
+      "title": "Attention",
+      "description": "Games with high uncertainty or an upset flag still to play"
+     }
+    },
+    "type": "object",
+    "required": [
+     "games_total",
+     "games_final",
+     "games_remaining",
+     "picks_made",
+     "picks_correct",
+     "picks_incorrect",
+     "my_accuracy",
+     "model_correct",
+     "model_graded",
+     "model_accuracy",
+     "season_my_accuracy",
+     "season_model_accuracy",
+     "league_leader_accuracy",
+     "attention"
+    ],
+    "title": "WeekSummary"
+   }
+  }
+ }
+}

@@ -1,0 +1,315 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens (design.md, mirrored in docs/design/design-tokens.json). Dark is the default
+ * (dark-first); light applies when the system asks for it.
+ * Radius scale (one rule): bezel 18px, cards 12px, controls 8px, chips 6px, bars fully round.
+ * Spacing runs on a 4px grid.
+ */
+/* Reference 06 direction (design.md § 0, owner D39): near-black, one lime accent. Lime means me / interactive / selected;
+   text on lime is accent-ink. accent-text is lime that reads as text on a page background (4.5:1). */
+:root {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --surface: #151515;
+  --elevated: #1f1f1f;
+  --border: #2a2a2a;
+  --border-strong: #6b6b6b; /* boundary of inputs, selects, unselected pick buttons: 3:1 */
+  --text: #f5f5f5;
+  --text-2: #a8a8a8;
+  --muted: #737373;
+  --subtle: #8a8a8a; /* tertiary ink: 4.8:1 on elevated, 5.3:1 on surface */
+  --accent: #c6f135;
+  --accent-ink: #0a0a0a;
+  --accent-text: #c6f135;
+  --good: #38bdf8; /* sky, so "correct" is never confused with lime */
+  --warn: #fbbf24;
+  --bad: #f87171;
+
+  /* chart series (design.md § 0): me lime, model orange, market teal. Each is at least 3:1 on --surface in both
+     themes, none is purple, and stats/elo/home sit at least 30 degrees of hue from lime. */
+  --series-me: #c6f135;
+  --series-model: #d95926;
+  --series-market: #199e70;
+  --series-stats: #5b8def;
+  --series-elo: #d55181;
+  --series-home: #7d8794;
+
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.55);
+  --shadow-float: 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  --shadow-inset-highlight: inset 0 1px 0 rgb(255 255 255 / 0.05);
+
+  /* motion (design.md § 10): press and hover, state changes, things that enter */
+  --duration-press: 120ms;
+  --duration-state: 200ms;
+  --duration-enter: 320ms;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f0;
+    --surface: #ffffff;
+    --elevated: #ecede6;
+    --border: #d9dbd2;
+    --border-strong: #7d8076;
+    --text: #141414;
+    --text-2: #52554c;
+    --muted: #74776e;
+    --subtle: #62655c;
+    --accent: #c6f135;
+    --accent-ink: #0a0a0a;
+    --accent-text: #4d6b00;
+    --good: #0369a1;
+    --warn: #92400e;
+    --bad: #b91c1c;
+
+    --series-me: #5f8700;
+    --series-model: #c9501c;
+    --series-market: #168a61;
+    --series-stats: #2f6fd6;
+    --series-elo: #c93673;
+    --series-home: #727c87;
+
+    --shadow-pop: 0 8px 24px rgb(20 20 20 / 0.14);
+    --shadow-float: 0 16px 40px -16px rgb(20 20 20 / 0.16);
+    --shadow-inset-highlight: inset 0 1px 0 rgb(255 255 255 / 0.8);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-text: var(--accent-text);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+
+  /* Geist and Geist Mono are self-hosted by the geist package's GeistSans / GeistMono exports (app/layout.tsx), so the PWA renders offline. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Display face (design.md § 0): Barlow Condensed 700, self-hosted by @fontsource (app/layout.tsx), always uppercase. */
+  --font-display: "Barlow Condensed", var(--font-geist-sans), ui-sans-serif, sans-serif;
+
+  --radius-bezel: 30px;
+  --radius-card: 24px;
+  --radius-ctl: 12px;
+  --radius-chip: 9999px;
+}
+
+/* Type scale (design.md § 4): text-hero, text-heading, ... set size, line height, weight and tracking. */
+@theme {
+  /* Page titles in the display face (design.md § 0). */
+  --text-hero: 48px;
+  --text-hero--line-height: 44px;
+  --text-hero--letter-spacing: 0;
+  --text-row-lead: 16px;
+  --text-row-lead--line-height: 22px;
+  --text-row-lead--font-weight: 600;
+  --text-heading: 14px;
+  --text-heading--line-height: 20px;
+  --text-heading--font-weight: 600;
+  --text-body: 14px;
+  --text-body--line-height: 21px;
+  --text-body--font-weight: 400;
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+  --text-label--font-weight: 400;
+  --text-micro: 11px;
+  --text-micro--line-height: 16px;
+  --text-micro--font-weight: 500;
+
+  /* Motion (design.md § 10): one curve for everything; transition-* utilities default to the state duration. */
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --default-transition-duration: 200ms;
+  --default-transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--border);
+  }
+  html {
+    background: var(--bg);
+    -webkit-text-size-adjust: 100%;
+    /* Keyboard focus scrolls stop clear of the floating phone tab bar. */
+    scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 1024px) {
+    html {
+      scroll-padding-bottom: 0;
+    }
+  }
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent-text);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  button,
+  select,
+  input,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button:not(:disabled),
+  [role="button"] {
+    cursor: pointer;
+  }
+  button,
+  a,
+  select,
+  summary {
+    touch-action: manipulation;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  /* Page titles: the display face, uppercase (design.md § 0). Uppercase appears only in this face. */
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+}
+
+/* The display face for big figures: kickoff time on a card, final scores, win-chance tiles. */
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-variant-numeric: proportional-nums;
+  letter-spacing: 0;
+}
+
+/* Large standalone figures read better with proportional digits. */
+.num-display {
+  font-variant-numeric: proportional-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Team color accent: a dark team color on a dark surface disappears, so each team gets
+   a light-theme and a dark-theme pick (see lib/team.ts). */
+.team-accent {
+  background: var(--tc-dark);
+}
+@media (prefers-color-scheme: light) {
+  .team-accent {
+    background: var(--tc-light);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--elevated) 0%, color-mix(in srgb, var(--elevated) 60%, var(--border)) 50%, var(--elevated) 100%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: shimmer 1.4s var(--ease-out) infinite;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* Things that enter (toast, the bezel's first mount): fade and rise 4px over the enter duration. */
+@media (prefers-reduced-motion: no-preference) {
+  .enter {
+    animation: enter var(--duration-enter) var(--ease-out) both;
+  }
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+
+/* Reduced motion (design.md § 10): nothing moves on press; transitions take at most the press duration. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-state: var(--duration-press);
+    --duration-enter: var(--duration-press);
+    --default-transition-duration: var(--duration-press);
+  }
+  *,
+  *::before,
+  *::after {
+    translate: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .spin {
+    animation: spin 0.9s linear infinite;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Recharts: recede the chrome. */
+.recharts-cartesian-grid line {
+  stroke: var(--border);
+}
+.recharts-text {
+  fill: var(--text-2);
+}
+
+/* Monogram ring follows the same dark/light team color pick as .team-accent */
+@media (prefers-color-scheme: light) {
+  .light-ring {
+    border-color: var(--tc-light) !important;
+  }
+}
+
+/* Horizontally scrolling chip rows without a visible scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Sticky offset under the top bar: compact app bar below lg, desktop bar at lg and up. */
+:root {
+  --header-h: calc(52px + env(safe-area-inset-top));
+}
+@media (min-width: 1024px) {
+  :root {
+    --header-h: 57px;
+  }
+}

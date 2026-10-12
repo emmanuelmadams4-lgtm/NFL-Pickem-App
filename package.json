@@ -1,0 +1,23 @@
+{
+  "name": "nfl-pickem-intelligence",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "gen:api": "cd backend && uv run python -c \"import json; from nflpi.api.main import app; print(json.dumps(app.openapi(), indent=1))\" > ../packages/shared/openapi.json && cd .. && npx --yes openapi-typescript@7.13.0 packages/shared/openapi.json -o packages/shared/src/api-types.ts",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "web:dev": "npm run dev -w apps/web",
+    "web:build": "npm run build -w apps/web",
+    "e2e": "npm run web:build && npm run e2e -w apps/web"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "playwright-core": "1.56.1"
+  }
+}

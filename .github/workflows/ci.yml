@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: nflpi
+          POSTGRES_PASSWORD: nflpi
+          POSTGRES_DB: nflpi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nflpi -d nflpi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://nflpi:nflpi@localhost:5432/nflpi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+        working-directory: backend
+      - run: uv run alembic upgrade head
+        working-directory: backend
+      - run: uv run alembic check
+        working-directory: backend
+      - run: uv run pytest -q
+        working-directory: backend
+      - run: uvx ruff check nflpi tests
+        working-directory: backend
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v6
+      - run: npm ci
+      - run: uv sync
+        working-directory: backend
+      - run: npm run gen:api
+      - run: git diff --exit-code packages/shared
+      - run: npm run typecheck
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: nflpi
+          POSTGRES_PASSWORD: nflpi
+          POSTGRES_DB: nflpi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nflpi -d nflpi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v6
+      - run: npm ci
+      - run: uv sync
+        working-directory: backend
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run e2e
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build .
