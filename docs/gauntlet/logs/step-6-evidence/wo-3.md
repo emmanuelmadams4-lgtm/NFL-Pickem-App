@@ -5,7 +5,7 @@ Launch (prompt on stdin, never as an argument): `codex exec -m gpt-6-sol -c 'mod
 
 GOAL: make the eight red tests pass (`apps/web/e2e/pwa.spec.ts` P11, P12; `apps/web/e2e/phone-layout.spec.ts` L4, L8 at 393 and 320, L9 at 393 and 320, L10) without breaking the 17 that pass in those two files or any other browser test.
 
-BASELINE: worktree `/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-pwa`, branch `lane/pwa`, commit `__R1_SHA__`. Never work in any other checkout.
+BASELINE: worktree `/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-pwa`, branch `lane/pwa`, commit `556ba8a`. Never work in any other checkout.
 
 SOURCE: three fresh reviews of `7611d89`, in `docs/gauntlet/logs/step-6-evidence/reviews/r1-ux.md`, `r1-visual.md`, `r1-implementation.md`. Finding ids below refer to them.
 
