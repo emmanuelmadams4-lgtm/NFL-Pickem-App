@@ -108,6 +108,28 @@ D29 notes (coordinator's reading, checked in the repo). Most of this exists and 
 * Rule kept: answers explain the model's numbers; they never invent a fact that is not in the
   pack, and say what is missing instead. No "lock", no "guaranteed".
 
+## Matchup trends (2026-10-12)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D30 | Owner, his words: "matchups as well like a key player, qb, offensive coordinator has secret trends against a certain team ... and key trends like the jags never lost in London or the browns never lost on Tuesday night". The app surfaces matchup and situation trends for each game. | two-way | - |
+
+D30 notes (coordinator's reading, checked against the database: 6,576 final games, 2002-2026).
+
+* Can be computed today from `games` (teams, scores, `home_qb`/`away_qb`, `home_coach`/`away_coach`,
+  `stadium`, `weekday`, `neutral_site`, `div_game`, rest days): team vs team, starting QB vs a team,
+  head coach vs a team or vs another coach, record at a stadium or in London, by weekday or kickoff
+  slot, off a bye or short week, in division.
+* Needs new data: offensive and defensive coordinators (not in nflverse; no free clean source
+  known), and non-QB player game logs for "player X vs team Y".
+* Every trend is shown as a record with its sample size and years, never as a claim. Checked
+  examples: Jaguars in London are 8-6 over 14 games, not unbeaten. Browns on Tuesday: 0 games in
+  the data; only 5 Tuesday games exist at all.
+* Rule kept (`CLAUDE.md`, D18): a trend moves the suggested winner only if it wins a walk-forward
+  test. Most small-sample trends will not; they stay context on the game screen and in the chat's
+  evidence pack (D29). A floor on sample size (proposal: 8 games) keeps 2-0 "trends" off the row.
+* OPEN (owner): the sample-size floor; whether coordinators are worth a hand-kept table.
+
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
 * New step right after the desktop web app: **Pick sheet** = label (D2), points with re-rank and
@@ -119,7 +141,9 @@ D29 notes (coordinator's reading, checked in the repo). Most of this exists and 
 * New later step: tiebreaker scores for two games (D5), gated on a backtest.
 * Alerts step grows: per-day reminder (D19), drastic-change alerts incl. label change (D20), star
   list + star alerts + morning summary + ESPN source (D21-D27). Likely two steps, not one.
-* Model challengers, in order: play-by-play efficiency (old step 8), stars missing (D24).
+* Model challengers, in order: play-by-play efficiency (old step 8), stars missing (D24),
+  matchup and situation trends (D30).
+* New step: trends panel on the game screen + trends in the chat evidence pack (D30).
 
 ## Open, and honest limits
 
