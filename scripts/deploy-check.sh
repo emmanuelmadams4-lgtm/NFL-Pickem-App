@@ -178,12 +178,12 @@ for bad in notdump empty broken; do
   [ "$(counts)" = "$before" ] || fail "D7 a refused $bad restore changed the data: $(counts) vs $before"
 done
 # Two backups started together must both succeed and both be good, with no half files left anywhere.
-n0=$(ls -1 "$CLONE"/backups/nflpi-*.sql.gz | wc -l)
+n0=$(( $(ls -1 "$CLONE"/backups/nflpi-*.sql.gz | wc -l) ))
 (cd "$CLONE" && ./scripts/backup.sh >/dev/null 2>&1) & p1=$!
 (cd "$CLONE" && BACKUP_COPY_DIR="$OFFHOST" ./scripts/backup.sh >/dev/null 2>&1) & p2=$!
 wait "$p1" || fail "D7 first of two simultaneous backups failed"
 wait "$p2" || fail "D7 second of two simultaneous backups failed"
-[ "$(ls -1 "$CLONE"/backups/nflpi-*.sql.gz | wc -l)" = "$((n0 + 2))" ] || fail "D7 two simultaneous backups did not leave two files"
+[ "$(( $(ls -1 "$CLONE"/backups/nflpi-*.sql.gz | wc -l) ))" = "$((n0 + 2))" ] || fail "D7 two simultaneous backups did not leave two files"
 for f in "$CLONE"/backups/nflpi-*.sql.gz "$OFFHOST"/*.sql.gz; do gzip -t "$f" || fail "D7 corrupt backup $f"; done
 [ -z "$(find "$CLONE/backups" "$OFFHOST" -name '*.part*' 2>/dev/null)" ] || fail "D7 a half-written backup file was left behind"
 # A dump that stops early (no pg_dump trailer) is not a complete backup.
