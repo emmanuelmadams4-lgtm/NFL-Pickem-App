@@ -6,7 +6,7 @@ Plan for the gauntlet-loop. Planned on Opus, 2026-10-11. Steps are numbered; pro
 
 Emmanuel uses one private app every week of the 2026 season, on desktop and on his iPhone (Home Screen PWA). It gives an evidence-based pick for every game that matches or beats the betting market. It shows how sure it is and why, alerts him to flips, QB news and unpicked kickoffs, and tracks his accuracy against the model, the market and the league leader (about 69%).
 
-Done when: steps 1–7 are landed. Step 8 (model upgrade) ships only if it beats the current model in the walk-forward test.
+Done when: steps 1–8 are landed. Step 8 (the model gets better) is required since 2026-10-12; a model change inside it ships only if it beats the current model in the walk-forward test, and if none does, step 8 lands the evidence and the weekly scorecard.
 
 Deadline pressure: week 6 starts Thursday 2026-10-15 (SEA @ DEN). Steps are ordered so a usable, deployed app exists as early as possible; the backend refactor waits.
 
@@ -37,6 +37,7 @@ Deadline pressure: week 6 starts Thursday 2026-10-15 (SEA @ DEN). Steps are orde
 | 2026-10-11 | Push the feature branch and open a draft PR after verification | two-way | none |
 | 2026-10-11 | Design bar = ESPN iPhone app screens | two-way | Owner names a better reference |
 | 2026-10-11 | Recommendation = stats + market blend (ties market; stats-only is 2.1 pts worse). JEV: unavailable, decided on backtest evidence | two-way | Step 8 model beats it |
+| 2026-10-12 | The model must get better over time at choosing winners (owner, in chat). Step 8 is required, not optional. Every idea is tested on past seasons first and ships only if it wins; no rule changes after a single loss. JEV: unavailable; owner's own goal | two-way | Owner changes the goal |
 | 2026-10-11 | Claude model for reports `claude-sonnet-5-5` (cheapest capable) | two-way | Reports fail validation often, or owner asks |
 
 ## Harness (harness-engineering skill not installed here; behavioral equivalent)
@@ -69,7 +70,7 @@ Order decision (2026-10-11): blindspot review B-order adopted. Usable deployed a
 | 5 | **Alerts end to end** | T2 | Alerts + reminder settings UI, SW push display · B6 re-send the subscription on every open, resubscribe on key mismatch, `POST /api/push/test` + "Send test alert" showing the push service status · build `scripts/smoke.sh` for step 6 | pywebpush → local mock push service (valid VAPID JWT, aes128gcm body) · Chromium CDP `ServiceWorker.deliverPushMessage` shows the notification and opens the game · server row deleted → next open re-creates it | Opus | Real iPhone alert `PENDING` (owner) |
 | 6 | **Owner go-live** | T1 | Owner adds keys (Anthropic, OpenRouter, VAPID), installs on the iPhone, runs `scripts/smoke.sh` | Smoke output + owner screenshots, every check PASS on the owner's server: live AI report, live Jev answer, test alert on the iPhone, live weather | Sonnet | Owner: keys, server, phone |
 | 7 | **Backend layering, speed, data-timing instrumentation** | T1 | S7 import cycles and layers · S14 query shape · S12 backtest label + hindsight-QB caveat · B8 log first-seen/last-changed for line, QB and injury; show line age at the final pregame snapshot; after week 6, report median line age and blank-QB count | Same test suite green · no cross-package private imports (grep gate) · Week endpoint prediction queries ≤ 3 (query-count test) · backtest numbers unchanged · week-6 timing report written | Sonnet | Week 6 played |
-| 8 | **Model upgrade (optional)** | T3 | EPA-per-play team ratings from nflverse play-by-play · B9 tuning protocol: tune on 2012–2021, confirm once on 2022–2025, log every variant tried | Paired-bootstrap log-loss gain vs the current blend on 2022–2025 excludes 0; else record it and keep the blend | Opus | — |
+| 8 | **The model gets better (required, owner 2026-10-12)** | T3 | Candidates, tested in this order, one at a time: in-season refit (weights refit each week on games already played), EPA-per-play team ratings from nflverse play-by-play, then others · B9 tuning protocol: tune on 2012–2021, confirm once on 2022–2025, log every variant tried · weekly scorecard on Results: model vs market vs you, live picks only, plus "when you went against the model, who was right" | A candidate ships only if its paired-bootstrap log-loss gain vs the current blend on 2022–2025 excludes 0 and its accuracy does not drop (accuracy gain reported with its 95% interval); else record it and keep the blend · scorecard numbers match a hand count on the seed data | Opus | — |
 
 Every step runs as one `DIRECT_COORDINATOR / ONE_SHOT` session with the six checkpoints (PLANNING → SPECIFICATION → IMPLEMENTATION → CLEANUP → VERIFICATION → LANDING) and a fresh subagent critic before landing. Landing = commit, push the feature branch, update the draft PR, CI green (consent given 2026-10-11). Merge to `main` and any deploy still need the owner's yes.
 

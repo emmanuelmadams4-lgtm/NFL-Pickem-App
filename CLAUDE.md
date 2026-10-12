@@ -73,3 +73,4 @@ npm run web:dev
 * 2026-10-11 — Push the feature branch + open draft PRs after verification (owner said yes).
 * 2026-10-11 — Recommendation model = stats + market blend (ties market in backtest; stats-only is 2.1 pts worse).
 * 2026-10-11 — Claude default model `claude-sonnet-5-5` (cheapest capable); Opus via `ANTHROPIC_MODEL`.
+* 2026-10-12 — The model must get better over time at choosing winners (owner). Gauntlet step 8 is required: each idea is tested walk-forward first and ships only if it wins. No changes after a single loss.
