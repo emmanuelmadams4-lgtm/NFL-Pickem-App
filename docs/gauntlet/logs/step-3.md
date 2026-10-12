@@ -79,3 +79,20 @@ Round 3 spec (red before any fix): F1 now covers the week-1 matchups with logo i
 | WO | Scope | Rung | Commit | Proof rerun by the coordinator |
 |---|---|---|---|---|
 | I | G1 reasons in Team comparison, G5 select names, factor-row fit, bars fill from the pick's side, dashed waiting pill, "Locked" under locked pills, Results caption, chart label from the bar data, "Postponed" chip | sonnet, try 1 | `a890585` | pytest 57 · typecheck 0 · grep empty · `npm run e2e` **39 passed, twice** (`step-3-evidence/coord-r3-*.log`) |
+
+## 5. VERIFICATION, round 3 (on `171e267`)
+* **Fresh design critic (Opus): DESIGN VERDICT PASS.** Polish carried to step 6 (iPhone PWA): phone card density (about one card per screen); doubled "What changed: Changed:" copy; tooltip can sit under the tab bar; 2px sideways scroll at 320 from the sticky section nav on a final game; lime on disabled AI buttons; no chips on Results/Backtest/Settings; league-leader reference missing.
+* **Fresh critic (Opus): VERDICT FAIL** on G3. With a real Tab key at 393×852, the first cards' pick buttons (y 782–836) sat under the floating tab bar (778–840): no `scroll-padding-bottom`. The old G3 also read the ring color mid-transition. Non-blocking, fixed in round 4 specs: F1 never really loaded logos (service worker not blocked); blue survivors possible on the primary button, phone active tab and section pill; F3 survivors through children, side borders and ✔; duplicate "Locked" on in-progress matchups. Doc drift (design.md §§ 5/7/8 still describe the blue system) goes to step 4 PLANNING.
+
+Round 4 spec (red, `6ed3c5b`): G3 presses the real Tab key with reduced motion and checks up to four focused pick buttons: outline not none, width ≥ 2px, bottom above the tab bar (red: `Pick BUF Team` bottom 830 vs bar top 778). G2 also requires lime on the Sign in button, the active section pill, the phone active tab, a picked pill and the selected chip. F3 checks every descendant of the model tile for lime and no ✓/✔. F1 blocks the service worker so the logos really load.
+
+### Round 4 fix (coordinator, `8973ec4`)
+`html { scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom)) }` below 1024px (tab bar 62px + 12px gap + margin); removed the second "Locked. The game has started." line from the pick panel (the pill row already says Locked). A first try also set `scroll-padding-top`; it stacked with the sections' `scroll-mt-32` and made F6 fail once in a full run, so it was dropped (top bar offset stays with `scroll-mt`).
+
+Proof (`step-3-evidence/coord-r4-*.log`): pytest 57 passed · ruff clean · gen:api no drift · typecheck 0 · `npm run e2e` **39 passed, three runs in a row** after the rebuild.
+
+Grep gate (empty on `8973ec4`):
+```bash
+grep -rnE "#3b82f6|#2563eb|blue-[0-9]" apps/web/app apps/web/components
+grep -rnE "sk-ant-|sk-or-v1|VAPID_PRIVATE" apps/web/app apps/web/components apps/web/lib packages/shared/src
+```
