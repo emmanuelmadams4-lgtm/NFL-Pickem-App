@@ -6,8 +6,8 @@
 
 * **Goal:** one private app (desktop web + iPhone PWA) for weekly NFL Pick'em: evidence-based picks that match/beat the market, honest uncertainty, alerts, accuracy tracking. See [PLAN.md](PLAN.md).
 * **Overall step:** **step 1 of 8 — Safe backend + CI + first landing**, in progress (ONE_SHOT session started 2026-10-11). Step log: `docs/gauntlet/logs/step-1.md`.
-* **DONE THIS STEP:** `a107074` design docs; `3c8c499` PLANNING + frozen criteria; `223d169` red tests; `4fe9701` WO-A; `b582630` WO-B; `b08d179` explicit migration (A12 green). Suite: 36 passed / 10 red (C, D).
-* **RESUMING AT:** IMPLEMENTATION: Codex WO-C is running (`s1-wo-c.md`, gpt-6-sol high, try 1 of 2; last message `s1-wo-c-last.md`). When it ends: read the diff, rerun pytest/ruff/alembic check (scratch DB via `docker exec nfl-pickem-app-db-1 psql`)/gen:api/typecheck, commit. Then WO-D (`s1-wo-d.md`, sol high). Launch Codex with `-c sandbox_workspace_write.network_access=true`. Never re-dispatch a running Codex job.
+* **DONE THIS STEP:** `a107074` design docs; `3c8c499` PLANNING; `223d169` red tests; `4fe9701` WO-A; `b582630` WO-B; `b08d179` explicit migration; `1794a56` WO-C. Suite: 45 passed / 1 red (A14, WO-D).
+* **RESUMING AT:** IMPLEMENTATION: Codex WO-D is running (`s1-wo-d.md`, gpt-6-sol high, try 1 of 2; last message `s1-wo-d-last.md`): upset rule (A14) + uncertainty regrade with backtest numbers (G1, G2). When it ends: read the diff, rerun pytest/ruff and the backtest report myself on real data, commit. Then review fan-out, CLEANUP, O2/O6/O7 live checks, VERIFICATION (fresh critic), LANDING (push + CI). Never re-dispatch a running Codex job.
 * **STRIKES:** none. **CONTINUATIONS:** 0.
 * **JEVGREP:** ready. **HEADROOM:** not-routed (desktop app).
 * **Phase:** ONE_SHOT, checkpoint SPECIFICATION.
