@@ -22,6 +22,10 @@ if ! gzip -dc "$file" | awk '/^CREATE TABLE public[.]games [(]/ { found=1 } END 
   echo "restore refused: dump does not create public.games" >&2
   exit 1
 fi
+if gzip -dc "$file" | awk '/^(\\connect|\\c[[:space:]]|CREATE DATABASE|DROP DATABASE|\\!)/ { found=1 } END { exit !found }'; then
+  echo "restore refused: dump switches or creates databases" >&2
+  exit 1
+fi
 
 cd "$(dirname "$0")/.."
 mkdir -p backups
@@ -39,6 +43,7 @@ failure='restore failed'
 # shellcheck disable=SC2329
 on_exit() {
   local status=$? cleanup_ok=1
+  trap '' INT TERM HUP
   local names
   trap - EXIT
   if [[ -n "$safety_part" ]]; then rm -f "$safety_part" || cleanup_ok=0; fi
@@ -52,10 +57,11 @@ on_exit() {
     echo "$failure; swap state is uncertain; $safety_note" >&2
     echo "run: docker compose exec db psql -U nflpi -d postgres -c '\l' and see docs/DEPLOY.md (If a restore stops with a message about nflpi_old)" >&2
   elif (( status != 0 && swap_done )); then
+    echo "$failure" >&2
     if (( current_exists )); then
-      echo "restore was interrupted after the swap; the restored data is live; old data is kept in nflpi_old; $safety_note; run docker compose up -d and check health" >&2
+      echo "the restored data is live; old data is kept in nflpi_old; $safety_note; run docker compose up -d and check health" >&2
     else
-      echo "restore was interrupted after the swap; the restored data is live; no old database existed; $safety_note; run docker compose up -d and check health" >&2
+      echo "the restored data is live; no old database existed; $safety_note; run docker compose up -d and check health" >&2
     fi
   elif (( status != 0 )); then
     if (( scratch_exists )); then
@@ -100,7 +106,7 @@ docker compose exec -T db psql -U nflpi -d postgres -v ON_ERROR_STOP=1 -c 'DROP 
 docker compose exec -T db psql -U nflpi -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE nflpi_restore OWNER nflpi' >/dev/null
 
 failure='scratch restore load failed'
-gzip -dc "$file" | docker compose exec -T db psql -U nflpi -d nflpi_restore -v ON_ERROR_STOP=1 -1 >/dev/null
+gzip -dc "$file" | docker compose exec -T db psql -U nflpi -d nflpi_restore -v ON_ERROR_STOP=1 -1 -f - >/dev/null
 
 failure='could not count games in scratch database'
 scratch_games=$(docker compose exec -T db psql -U nflpi -d nflpi_restore -v ON_ERROR_STOP=1 -At -c 'SELECT count(*) FROM games')

@@ -15,12 +15,13 @@ if [[ -e "$file" ]]; then
 fi
 part=$(mktemp backups/.nflpi.XXXXXX)
 copy_part=''
-finalized=0
 cleanup() {
   local status=$?
   rm -f "$part"
   if [[ -n "$copy_part" ]]; then rm -f "$copy_part"; fi
-  if (( status != 0 && finalized == 0 )); then rm -f "$file"; fi
+  if (( status != 0 )); then
+    echo "backup failed or was interrupted (status $status) at $(date +%FT%T)" >&2
+  fi
 }
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -47,7 +48,6 @@ if ! gzip -dc "$part" | awk '/^COPY public[.]games [(]/ { in_games=1; next } in_
 fi
 
 mv "$part" "$file"
-finalized=1
 
 retain() {
   local dir=$1 newest=$2 old count=0
@@ -61,8 +61,8 @@ retain() {
 retain backups "$file"
 
 if [[ -n "${BACKUP_COPY_DIR:-}" ]]; then
-  if [[ ! -d "$BACKUP_COPY_DIR" ]]; then
-    echo "BACKUP_COPY_DIR does not exist (is the drive plugged in?)" >&2
+  if [[ ! -d "$BACKUP_COPY_DIR" || ! -f "$BACKUP_COPY_DIR/.pickem-backups" ]]; then
+    echo "BACKUP_COPY_DIR is missing or has no .pickem-backups marker file (is the drive plugged in? create it once with: touch <dir>/.pickem-backups)" >&2
     exit 1
   fi
   copy_file="$BACKUP_COPY_DIR/$(basename "$file")"
