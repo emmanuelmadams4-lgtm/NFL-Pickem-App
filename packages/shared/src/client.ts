@@ -43,7 +43,7 @@ export interface ClientConfig {
   fetch?: typeof fetch;
 }
 
-/** One typed client for web and mobile. Every call goes to our own backend only. */
+/** One typed client for web. Every call goes to our own backend only. */
 export function createClient(config: ClientConfig) {
   const f = config.fetch ?? fetch;
   const base = config.baseUrl.replace(/\/+$/, "");
@@ -105,7 +105,7 @@ export function createClient(config: ClientConfig) {
 
 export type Api = ReturnType<typeof createClient>;
 
-/** Query keys shared by web and mobile so caches line up. */
+/** Query keys shared by web so caches line up. */
 export const keys = {
   meta: ["meta"] as const,
   week: (season: number, week: number) => ["week", season, week] as const,

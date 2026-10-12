@@ -1,4 +1,4 @@
-"""API contract. TypeScript types for web and mobile are generated from these."""
+"""API contract. TypeScript types for web are generated from these."""
 
 from datetime import datetime
 from typing import Literal

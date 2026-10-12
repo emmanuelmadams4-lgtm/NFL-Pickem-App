@@ -2,7 +2,7 @@
   "name": "nfl-pickem-intelligence",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "apps/web",
     "packages/*"
   ],
   "scripts": {

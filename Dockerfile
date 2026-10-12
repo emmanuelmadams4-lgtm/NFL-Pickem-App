@@ -4,7 +4,6 @@ WORKDIR /src
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/web/package.json apps/web/
-COPY apps/mobile/package.json apps/mobile/
 RUN npm ci --workspace apps/web --include-workspace-root --no-audit --no-fund
 COPY packages/shared packages/shared
 COPY apps/web apps/web
@@ -21,4 +20,4 @@ RUN uv sync --frozen --no-dev
 COPY --from=web /src/apps/web/out /app/web
 ENV WEB_DIST_DIR=/app/web PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
-CMD ["sh", "-c", "alembic upgrade head && uvicorn nflpi.api.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn nflpi.api.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=\"*\""]

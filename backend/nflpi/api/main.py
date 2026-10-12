@@ -271,6 +271,21 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def cache_headers(request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith("/api"):
+            return response
+        if path.startswith("/_next/static/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif path in ("/sw.js", "/manifest.webmanifest", "/manifest.json") or "text/html" in response.headers.get(
+            "content-type", ""
+        ):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     app.include_router(public)
     app.include_router(api)
     if settings.web_dist_dir.is_dir():

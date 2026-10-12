@@ -13,9 +13,3 @@ apps/web/.next/
 apps/web/out/
 apps/web/next-env.d.ts
 *.tsbuildinfo
-# mobile
-apps/mobile/.expo/
-apps/mobile/dist/
-apps/mobile/ios/
-apps/mobile/android/
-apps/mobile/expo-env.d.ts

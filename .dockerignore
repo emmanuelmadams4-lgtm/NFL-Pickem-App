@@ -5,8 +5,6 @@
 **/.ruff_cache
 **/.next
 apps/web/out
-apps/mobile/*
-!apps/mobile/package.json
 .git
 .env
 backend/.env

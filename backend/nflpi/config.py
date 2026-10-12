@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://nflpi:nflpi@localhost:5432/nflpi"
     # Single-user access token. Every /api route except /api/health requires it.
     app_access_token: str = ""
-    cors_origins: str = "http://localhost:3000,http://localhost:8081"
+    cors_origins: str = "http://localhost:3000"
     web_dist_dir: Path = Path(__file__).resolve().parents[2] / "apps" / "web" / "out"
 
     # Data sources

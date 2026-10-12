@@ -54,7 +54,7 @@ npm run web:dev
 * Weights refit once per season (`jobs train`); Elo moves weekly from results. No ad-hoc changes after a loss.
 
 ## Status (2026-10-11)
-- [x] Phase 1 Architecture + research (docs/ARCHITECTURE.md, docs/MOBILE_DEPLOYMENT.md)
+- [x] Phase 1 Architecture + research (docs/ARCHITECTURE.md, docs/IPHONE_PWA.md)
 - [x] Phase 2 Foundation (FastAPI, Postgres, Alembic, auth, health, tests, Compose)
 - [x] Phase 3 Data pipeline (schedules, lines, teams, injuries; weather adapter untested live here: host blocked in build sandbox)
 - [x] Phase 4 Prediction engine + backtest (2012–2025: market 66.6%, stats 64.5%, blend 66.5%)
