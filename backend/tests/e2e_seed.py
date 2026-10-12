@@ -21,7 +21,7 @@ def main() -> None:
 
     rows = schedule_rows()
     ids = {r["game_id"] for r in rows}
-    week4 = next(r for r in rows if r["week"] == "4")
+    week4 = next(r for r in rows if r["season"] == str(CURRENT) and r["week"] == "4")
     away, home = next((a, h) for a in TEAMS for h in TEAMS if a != h and f"{CURRENT}_04_{a}_{h}" not in ids)
     tbd = f"{CURRENT}_04_{away}_{home}"
     rows.append(week4 | {"game_id": tbd, "away_team": away, "home_team": home, "gametime": ""})
