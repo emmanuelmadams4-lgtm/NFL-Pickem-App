@@ -37,6 +37,16 @@ at 8:30 AM and none before the 1:00 PM slate. Today's code reminds per game and 
 with no pick (`notify/push.py`, `send_kickoff_reminders`); D11 makes every game have a pick, so
 that rule would never fire and is replaced by this per-day rule. Games with no kickoff time yet
 (`time_tbd`) never trigger a reminder.
+| D20 | Owner, his words: "if there are any drastic changes right before kickoff of any other games, send me a reminder." For every game, not only a day's first: an alert when something drastic changes before that game's kickoff. Confirms the "alerts when a suggestion changes" half of D6. | two-way | alerts are too many or too few in a real week |
+
+D20 notes (coordinator's reading). "Drastic" = any of: the suggested winner flips; the game's
+label changes (easy pick / tough matchup / coin flip, D2); a team's starting QB changes; the win
+chance moves by the existing threshold (`settings.alert_move_threshold`, used at
+`predictions/engine.py:286`). Flip and big-move alerts already exist (`notify/push.py`,
+`alert_prediction_changes`); label change is new and needs D2 built first. One alert per game per
+change, never after kickoff, never for a locked game. These fire at the D9 refreshes (daily, 90
+and 15 minutes before kickoff), so the limit in "Open" item 1 applies: with the free line source a
+late change may not be seen. OPEN (owner): the threshold in points of win chance.
 
 How D18 is met without breaking the validation rules in `CLAUDE.md` (coordinator's reading):
 
