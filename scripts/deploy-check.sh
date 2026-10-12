@@ -19,6 +19,8 @@ dc() { (cd "$CLONE" && docker compose "$@"); }
 api() { curl -fsS -H "Authorization: Bearer $TOKEN" "$BASE/api/$1"; }
 json() { python3 -c "import json,sys; d=json.load(sys.stdin); print($1)"; }
 counts() { dc exec -T db psql -U nflpi -d nflpi -Atc "select (select count(*) from user_picks)||','||(select count(*) from predictions)||','||(select count(*) from games)"; }
+running() { [ -n "$(dc ps --status running -q "$1" 2>/dev/null)" ]; }
+leftovers() { dc exec -T db psql -U nflpi -d postgres -Atc "select count(*) from pg_database where datname in ('nflpi_restore','nflpi_old')" | tr -d ' '; }
 wait_health() { # $1 = python expression over d (health json) that must be truthy, $2 = seconds
   for _ in $(seq 1 "$2"); do
     if curl -fsS "$BASE/api/health" 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if ($1) else 1)" 2>/dev/null; then return 0; fi
@@ -154,6 +156,8 @@ done < <(api "weeks/$season/$(api meta | json "d['current_week']")" | json "'\n'
 before=$(counts)
 case "$before" in 0,*|*,0,*) fail "D7 expected picks, predictions and games above zero, got $before" ;; esac
 OFFHOST="$WORK/offhost"; mkdir -p "$OFFHOST"
+if (cd "$CLONE" && BACKUP_COPY_DIR="$WORK/not-plugged-in" ./scripts/backup.sh) >/dev/null 2>&1; then fail "D7 backup.sh treated a missing BACKUP_COPY_DIR as success (an unplugged drive would go unnoticed)"; fi
+[ ! -e "$WORK/not-plugged-in" ] || fail "D7 backup.sh created a missing BACKUP_COPY_DIR"
 (cd "$CLONE" && BACKUP_COPY_DIR="$OFFHOST" ./scripts/backup.sh) >"$WORK/backup.log" 2>&1 || { cat "$WORK/backup.log"; fail "D7 backup.sh"; }
 file=$(ls -1t "$CLONE"/backups/*.sql.gz | head -1)
 gzip -t "$file" && [ -s "$file" ] || fail "D7 backup file is empty or corrupt"
@@ -162,6 +166,8 @@ dc exec -T db psql -U nflpi -d nflpi -qc "delete from user_picks; delete from pr
 [ "$(counts)" != "$before" ] || fail "D7 test could not change the data"
 (cd "$CLONE" && ./scripts/restore.sh "$file" --yes) >"$WORK/restore.log" 2>&1 || { tail -20 "$WORK/restore.log"; fail "D7 restore.sh"; }
 wait_health "d['database'] is True" 120 || fail "D7 app did not come back after restore"
+running worker && running app || fail "D7 app or worker is not running after restore"
+[ "$(leftovers)" = 0 ] || fail "D7 scratch or old database left behind after restore"
 after=$(counts)
 [ "$after" = "$before" ] || fail "D7 counts after restore $after differ from before $before"
 ls "$CLONE"/backups/pre-restore-*.sql.gz >/dev/null 2>&1 || fail "D7 restore.sh did not keep a safety copy of the data it replaced"
@@ -175,7 +181,9 @@ cmp -s <(gzip -dc "$file") <(gzip -dc "$WORK/broken.sql.gz") && fail "D7 test co
 for bad in notdump empty broken; do
   if (cd "$CLONE" && ./scripts/restore.sh "$WORK/$bad.sql.gz" --yes) >"$WORK/restore-$bad.log" 2>&1; then fail "D7 restore.sh accepted a $bad file"; fi
   wait_health "d['database'] is True and d.get('worker_heartbeat')" 120 || fail "D7 app is not running after a refused $bad restore"
+  running worker || fail "D7 worker is not running after a refused $bad restore"
   [ "$(counts)" = "$before" ] || fail "D7 a refused $bad restore changed the data: $(counts) vs $before"
+  [ "$(leftovers)" = 0 ] || fail "D7 a refused $bad restore left a scratch database behind"
 done
 # Two backups started together must both succeed and both be good, with no half files left anywhere.
 n0=$(( $(ls -1 "$CLONE"/backups/nflpi-*.sql.gz | wc -l) ))
@@ -201,8 +209,27 @@ dc exec -T db psql -U nflpi -d nflpi -qc "truncate games cascade" >/dev/null
 all_before=$(ls -1A "$CLONE"/backups | wc -l)
 if (cd "$CLONE" && ./scripts/backup.sh) >/dev/null 2>&1; then fail "D7 backup.sh saved a database with no games"; fi
 [ "$(ls -1A "$CLONE"/backups | wc -l)" = "$all_before" ] || fail "D7 backing up an empty database changed the backup folder"
+safeties=$(ls -1 "$CLONE"/backups/pre-restore-*.sql.gz | wc -l | tr -d ' ')
 (cd "$CLONE" && ./scripts/restore.sh "$file" --yes) >"$WORK/restore2.log" 2>&1 || { tail -20 "$WORK/restore2.log"; fail "D7 restore.sh could not recover from an emptied database"; }
 wait_health "d['database'] is True" 120 && [ "$(counts)" = "$before" ] || fail "D7 recovery from an emptied database did not return the data"
+[ "$(ls -1 "$CLONE"/backups/pre-restore-*.sql.gz | wc -l | tr -d ' ')" = "$((safeties + 1))" ] || fail "D7 no safety copy was kept when the database had no games (other tables can still hold data)"
+# The database itself is gone: restore must still work.
+dc stop app worker >/dev/null 2>&1
+dc exec -T db psql -U nflpi -d postgres -qc "DROP DATABASE nflpi WITH (FORCE)" >/dev/null
+(cd "$CLONE" && ./scripts/restore.sh "$file" --yes) >"$WORK/restore3.log" 2>&1 || { tail -20 "$WORK/restore3.log"; fail "D7 restore.sh could not recover when the database was missing"; }
+wait_health "d['database'] is True" 120 && [ "$(counts)" = "$before" ] && running worker || fail "D7 recovery from a missing database did not return the data and the worker"
+[ "$(leftovers)" = 0 ] || fail "D7 scratch or old database left behind after recovery"
+# A restore killed after the app was stopped (closed terminal, SIGTERM) must leave the owner able to recover with docker compose up -d.
+(cd "$CLONE" && exec ./scripts/restore.sh "$file" --yes) >"$WORK/restore4.log" 2>&1 & rpid=$!
+for _ in $(seq 1 300); do
+  kill -0 "$rpid" 2>/dev/null || break
+  running app || { kill -TERM "$rpid" 2>/dev/null || true; break; }
+  sleep 0.2
+done
+wait "$rpid" 2>/dev/null || true
+dc up -d >/dev/null 2>&1
+wait_health "d['database'] is True" 180 && [ "$(counts)" = "$before" ] && running worker || { tail -20 "$WORK/restore4.log"; fail "D7 a restore killed mid-way left the app unrecoverable or the data changed"; }
+[ "$(leftovers)" = 0 ] || [ -s "$WORK/restore4.log" ] || fail "D7 a killed restore left a scratch database and said nothing"
 pass "D7 backup restored with matching counts ($after); safety copy kept; 3 bad files refused with data intact; failed backup fails loudly; off-host copy made"
 
 # --- D8 token rotation -----------------------------------------------------------------------------------------------
