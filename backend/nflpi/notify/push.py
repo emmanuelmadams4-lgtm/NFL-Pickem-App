@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from pywebpush import WebPushException, webpush
+from requests import RequestException
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -52,7 +53,9 @@ def _record(session: Session, kind: str, game_id: str | None, key: str, payload:
         return False
 
 
-def _send(session: Session, title: str, body: str, url: str) -> int:
+def _send(
+    session: Session, title: str, body: str, url: str, ttl: int = 6 * 3600, headers: dict[str, str] | None = None
+) -> int:
     """Send to every subscription. Drops subscriptions the push service says are gone."""
     if not configured():
         return 0
@@ -63,7 +66,13 @@ def _send(session: Session, title: str, body: str, url: str) -> int:
         info = {"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}}
         try:
             webpush(
-                info, data, vapid_private_key=s.vapid_private_key, vapid_claims={"sub": s.vapid_subject}, ttl=6 * 3600
+                info,
+                data,
+                vapid_private_key=s.vapid_private_key,
+                vapid_claims={"sub": s.vapid_subject},
+                ttl=ttl,
+                headers=headers,
+                timeout=10,
             )
             sent += 1
         except WebPushException as exc:
@@ -71,6 +80,8 @@ def _send(session: Session, title: str, body: str, url: str) -> int:
             if status in (404, 410):
                 session.delete(sub)
             log.warning("web push failed (%s): %s", status, exc)
+        except RequestException as exc:
+            log.warning("web push network error: %s", exc)
     return sent
 
 
@@ -150,7 +161,17 @@ def send_kickoff_reminders(session: Session, now: datetime) -> int:
         model = f" Model: {pred.pick} {max(pred.home_win_prob, 1 - pred.home_win_prob):.0%}." if pred else ""
         body = f"Kicks off in {mins} min.{model}"
         key = f"remind:{g.game_id}:{g.kickoff_utc.isoformat()}"
-        if _record(session, "reminder", g.game_id, key, {"title": title, "body": body}):
-            sent += _send(session, title, body, game_url(g.game_id))
+        if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
+            continue
+        delivered = _send(
+            session,
+            title,
+            body,
+            game_url(g.game_id),
+            ttl=int((g.kickoff_utc - now).total_seconds()),
+            headers={"Urgency": "high"},
+        )
+        if delivered and _record(session, "reminder", g.game_id, key, {"title": title, "body": body}):
+            sent += delivered
     session.commit()
     return sent

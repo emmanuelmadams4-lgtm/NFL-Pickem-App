@@ -341,3 +341,4 @@ class HealthOut(BaseModel):
     database: bool
     active_model: bool
     stale_datasets: list[str]
+    worker_heartbeat: datetime | None = None

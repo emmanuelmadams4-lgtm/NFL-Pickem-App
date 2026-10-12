@@ -17,7 +17,7 @@ class AIProvider(Protocol):
     name: str
     model: str
 
-    def complete(self, system: str, user: str, json_schema: dict | None = None, max_tokens: int = 4000) -> str:
+    def complete(self, system: str, user: str, json_schema: dict | None = None, max_tokens: int = 16000) -> str:
         """Return the model's text. With json_schema, the text must be a JSON object."""
         ...
 
@@ -29,7 +29,7 @@ class ClaudeProvider:
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key, timeout=120.0, max_retries=2)
 
-    def complete(self, system: str, user: str, json_schema: dict | None = None, max_tokens: int = 4000) -> str:
+    def complete(self, system: str, user: str, json_schema: dict | None = None, max_tokens: int = 16000) -> str:
         output_config: dict = {"effort": "medium" if json_schema else "low"}
         if json_schema:
             output_config["format"] = {"type": "json_schema", "schema": json_schema}
@@ -62,7 +62,7 @@ class OpenRouterProvider:
     def __init__(self, api_key: str, model: str, url: str) -> None:
         self.api_key, self.model, self.url = api_key, model, url
 
-    def complete(self, system: str, user: str, json_schema: dict | None = None, max_tokens: int = 4000) -> str:
+    def complete(self, system: str, user: str, json_schema: dict | None = None, max_tokens: int = 16000) -> str:
         if json_schema:
             system += "\n\nReply with one JSON object only, matching this JSON Schema:\n" + json.dumps(json_schema)
         body = {

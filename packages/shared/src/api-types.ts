@@ -564,6 +564,8 @@ export interface components {
             active_model: boolean;
             /** Stale Datasets */
             stale_datasets: string[];
+            /** Worker Heartbeat */
+            worker_heartbeat?: string | null;
         };
         /** ImportResult */
         ImportResult: {

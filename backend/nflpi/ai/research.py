@@ -6,17 +6,17 @@ validated, retried a limited number of times, and saved even when it fails.
 """
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from nflpi.ai.providers import AIError, AIProvider, get_provider
 from nflpi.api import schemas as s
 from nflpi.api.views import ai_report_out, game_detail
 from nflpi.config import get_settings
-from nflpi.models import AIReport, BacktestRun
+from nflpi.models import AIReport, AppSetting, BacktestRun
 
 SYSTEM = """You are an NFL analyst writing for one person making weekly Pick'em picks.
 Use ONLY the evidence pack you are given. Do not add injuries, stats, quotes, news or
@@ -133,14 +133,20 @@ def _check(report: s.MatchupReport, pack: dict) -> list[str]:
     return errors
 
 
-def _calls_today(session: Session) -> int:
-    since = datetime.now(UTC) - timedelta(days=1)
-    return session.scalar(select(func.count(AIReport.id)).where(AIReport.created_at >= since)) or 0
-
-
-def _guard_budget(session: Session) -> None:
-    if _calls_today(session) >= get_settings().ai_daily_call_limit:
+def _reserve_call(session: Session) -> None:
+    """Count a provider attempt before making it, including failed attempts."""
+    key = f"ai_attempts_{datetime.now(UTC).date().isoformat()}"
+    session.execute(text("select pg_advisory_xact_lock(:k)"), {"k": 0x4149434150})
+    row = session.get(AppSetting, key, populate_existing=True)
+    count = row.value["v"] if row else 0
+    if count >= get_settings().ai_daily_call_limit:
+        session.rollback()
         raise AIError("Daily AI call limit reached (AI_DAILY_CALL_LIMIT)")
+    if row is None:
+        session.add(AppSetting(key=key, value={"v": 1}))
+    else:
+        row.value = {"v": count + 1}
+    session.commit()
 
 
 def generate_report(
@@ -151,14 +157,14 @@ def generate_report(
     if pack["prediction"]:
         detail = game_detail(session, game_id)
         pred_id = detail.prediction.id if detail and detail.prediction else None
-    _guard_budget(session)
     provider = provider or get_provider(provider_name)
     user = "Evidence pack (JSON):\n" + json.dumps(pack, default=str) + "\n\nWrite the matchup report."
     error = "no attempt"
     for _ in range(get_settings().ai_max_retries + 1):
+        _reserve_call(session)
         try:
-            text = provider.complete(SYSTEM, user, REPORT_SCHEMA)
-            report = s.MatchupReport.model_validate_json(text)
+            response = provider.complete(SYSTEM, user, REPORT_SCHEMA, max_tokens=16000)
+            report = s.MatchupReport.model_validate_json(response)
             problems = _check(report, pack)
             if not problems:
                 row = AIReport(
@@ -196,14 +202,14 @@ def answer_question(
     session: Session, game_id: str, question: str, provider_name: str = "claude", provider: AIProvider | None = None
 ) -> s.AskOut:
     pack = evidence_pack(session, game_id)
-    _guard_budget(session)
     provider = provider or get_provider(provider_name)
     user = (
         "Evidence pack (JSON):\n"
         + json.dumps(pack, default=str)
         + f"\n\nQuestion: {question}\n\nAnswer in under 150 words. If the pack can't answer it, say what is missing."
     )
-    text = provider.complete(SYSTEM, user, None, max_tokens=1500)
+    _reserve_call(session)
+    text = provider.complete(SYSTEM, user, None, max_tokens=16000)
     row = AIReport(
         game_id=game_id,
         kind="answer",

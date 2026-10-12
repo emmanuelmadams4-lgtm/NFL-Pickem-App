@@ -15,6 +15,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
+from nflpi import jobs
 from nflpi.ai import providers, research
 from nflpi.ai.providers import AIError
 from nflpi.api import schemas as s
@@ -52,11 +53,20 @@ def health(session: DB) -> s.HealthOut:
         return s.HealthOut(status="degraded", database=False, active_model=False, stale_datasets=[])
     stale = [f["dataset"] for f in freshness(session) if f["stale"]]
     has_model = engine.active_model(session) is not None
+    heartbeat_row = session.get(AppSetting, jobs.HEARTBEAT_KEY)
+    heartbeat_text = heartbeat_row.value.get("at") if heartbeat_row else None
+    heartbeat = datetime.fromisoformat(heartbeat_text) if heartbeat_text else None
+    heartbeat_fresh = bool(
+        heartbeat
+        and heartbeat.tzinfo
+        and 0 <= (datetime.now(UTC) - heartbeat).total_seconds() <= jobs.HEARTBEAT_STALE_SECONDS
+    )
     return s.HealthOut(
-        status="ok" if has_model and not stale else "degraded",
+        status="ok" if has_model and not stale and heartbeat_fresh else "degraded",
         database=db_ok,
         active_model=has_model,
         stale_datasets=stale,
+        worker_heartbeat=heartbeat,
     )
 
 

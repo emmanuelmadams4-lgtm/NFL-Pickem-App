@@ -101,7 +101,7 @@ def test_ai_without_keys_returns_clear_error(loaded, client):
 
 def test_push_subscribe_alerts_and_reminders_are_deduplicated(loaded, client, monkeypatch):
     sent = []
-    monkeypatch.setattr(push, "_send", lambda session, title, body, url: sent.append((title, url)) or 1)
+    monkeypatch.setattr(push, "_send", lambda session, title, body, url, **kw: sent.append((title, url)) or 1)
     sub = {"endpoint": "https://web.push.apple.com/abc123", "keys": {"p256dh": "B" * 87, "auth": "a" * 22}}
     assert client.post("/api/push/subscribe", json=sub).status_code == 204
     assert client.post("/api/push/subscribe", json=sub).status_code == 204  # idempotent

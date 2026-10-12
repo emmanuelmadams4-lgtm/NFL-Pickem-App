@@ -1807,6 +1807,18 @@
       },
       "type": "array",
       "title": "Stale Datasets"
+     },
+     "worker_heartbeat": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Worker Heartbeat"
      }
     },
     "type": "object",
