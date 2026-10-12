@@ -130,6 +130,28 @@ D30 notes (coordinator's reading, checked against the database: 6,576 final game
   evidence pack (D29). A floor on sample size (proposal: 8 games) keeps 2-0 "trends" off the row.
 * OPEN (owner): the sample-size floor; whether coordinators are worth a hand-kept table.
 
+## AI keys (2026-10-12)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D31 | Owner, his words: "We don't need anthropic keys we have the anthropic sdk and the openrouter key on this device anyway". No separate Anthropic key. The OpenRouter key already on the owner's Mac powers the AI features. | two-way | OpenRouter cost or limits become a problem |
+
+D31 notes (coordinator's reading, checked on the Mac 2026-10-12, values never printed):
+
+* `OPENROUTER_API_KEY` is set in the owner's shell (`~/.zshenv`). `ANTHROPIC_API_KEY` is not set
+  anywhere. The repo has no `.env`, only `.env.example`.
+* The Anthropic SDK is a library, not a login: `ai/providers.py:ClaudeProvider` cannot call Claude
+  without `ANTHROPIC_API_KEY`. So "Claude" must go through OpenRouter, which serves Claude models
+  on the same key. Change needed: when no Anthropic key is set, build the "claude" provider as an
+  `OpenRouterProvider` with a Claude model id. Small, in `get_provider` and `available`.
+* Jev risk, untested: Jev returns choices, scores and yes/no probabilities, not prose. The owner's
+  own helper (`~/.claude/bin/jev.sh`) calls OpenRouter's decisions endpoint, while the app's
+  provider posts a chat completion to the Jev model. A written "why this pick" answer from Jev may
+  not work as built. To check in the first live call; likely Jev's role in the chat becomes a
+  structured second opinion (agree / disagree, how sure) beside Claude's written answer.
+* Still owner-gated: the first real paid call, and putting the key into the server's `.env`
+  (the coordinator does not copy keys).
+
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
 * New step right after the desktop web app: **Pick sheet** = label (D2), points with re-rank and
