@@ -43,7 +43,6 @@ export function Recommendation({ game }: { game: GameDetail }) {
           {differs && <Chip tone="accent">Differs from model</Chip>}
         </div>
         <PickButtons game={game} size="lg" />
-        {locked && game.status !== "final" && game.status !== "scheduled" && <p className="mt-2 text-xs text-text-2">Locked. The game has started.</p>}
         {!locked && !game.my_pick && <p className="mt-2 text-xs text-subtle">Tap a team to pick. Tap again to clear.</p>}
         {game.status === "final" && (
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
