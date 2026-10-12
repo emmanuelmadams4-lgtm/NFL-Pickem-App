@@ -3,7 +3,7 @@
 # and behaves behind a TLS proxy. It uses its own compose project, ports and volume, so a live stack is never touched.
 #   ./scripts/deploy-check.sh          (commit first: it clones HEAD, not your working tree)
 # Env: DEPLOYCHECK_APP_PORT (18000), DEPLOYCHECK_DB_PORT (15432), KEEP=1 keeps the clone and stack for inspection.
-set -euo pipefail
+set -eEuo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 APP_PORT=${DEPLOYCHECK_APP_PORT:-18000}
@@ -32,6 +32,11 @@ cleanup() {
   rm -rf "$WORK"
 }
 trap cleanup EXIT
+trap 'fail "unexpected error at line $LINENO"' ERR
+
+stale=$(docker ps -aq --filter label=com.docker.compose.project=nflpi-deploycheck 2>/dev/null || true)
+[ -z "$stale" ] || docker rm -f $stale >/dev/null 2>&1 || true
+docker volume rm -f nflpi-deploycheck_pgdata >/dev/null 2>&1 || true
 
 # --- D0 inputs -------------------------------------------------------------------------------------------------
 for tool in docker git curl python3 node; do command -v "$tool" >/dev/null || fail "D0 $tool is not installed"; done
@@ -55,13 +60,15 @@ for line in text.splitlines():
 (pathlib.Path(clone) / ".env").write_text("\n".join(out) + "\n")
 PY
 git -C "$CLONE" check-ignore -q .env || fail "D1 .env is not git-ignored"
-dc config --format json | python3 -c "
+dc config --format json | python3 -E -c "
 import json, sys
 c = json.load(sys.stdin)['services']
 want = {'app': '$APP_PORT', 'db': '$DB_PORT'}
 for name, port in want.items():
     published = [p.get('published') for p in c[name].get('ports', [])]
     assert port in published, f'{name} ports {published} do not follow {port}: a second stack would collide with a live one'
+    hosts = [p.get('host_ip') for p in c[name].get('ports', [])]
+    assert hosts and all(h == '127.0.0.1' for h in hosts), f'{name} is published on {hosts}, not only 127.0.0.1'
 for name in ('app', 'worker', 'db'):
     assert c[name].get('restart') == 'unless-stopped', f'{name} does not restart by itself after a reboot or power cut'
 " || fail "D1 compose file: ports must follow APP_PORT/DB_PORT and every service restart: unless-stopped"
@@ -69,7 +76,7 @@ for f in scripts/backup.sh scripts/restore.sh; do [ -x "$CLONE/$f" ] || fail "D1
 [ -s "$CLONE/docs/DEPLOY.md" ] || fail "D1 docs/DEPLOY.md is missing"
 grep -qi "rotate" "$CLONE/docs/DEPLOY.md" && grep -qi "windows" "$CLONE/docs/DEPLOY.md" && grep -qi "restore" "$CLONE/docs/DEPLOY.md" \
   || fail "D1 docs/DEPLOY.md must cover Windows PC setup, restore and token rotation"
-python3 - "$CLONE/docs/IPHONE_PWA.md" <<'PY' || fail "D1 IPHONE_PWA.md must say: add to Home Screen first, then sign in inside the app"
+python3 -E - "$CLONE/docs/IPHONE_PWA.md" <<'PY' || fail "D1 IPHONE_PWA.md must say: add to Home Screen first, then sign in inside the app"
 import re, sys
 t = open(sys.argv[1]).read().lower()
 home = t.find("add to home screen")
@@ -122,10 +129,10 @@ for line in sys.stdin:
         for side in ('home', 'away'):
             t = g[side]
             logos[t['abbr']] = t['logo_url']
-print(len(logos), file=sys.stderr)
+print(len([u for u in logos.values() if u]), file=sys.stderr)
 print('\n'.join(logos.values()))
 " 2>"$WORK/logo-count")
-[ "$(cat "$WORK/logo-count")" = 32 ] || fail "D6 expected 32 teams, found $(cat "$WORK/logo-count")"
+[ "$(cat "$WORK/logo-count")" = 32 ] || fail "D6 expected 32 teams with a logo url, found $(cat "$WORK/logo-count")"
 echo "$urls" | dc exec -T app python -c "
 import sys, urllib.request
 bad = []
@@ -150,7 +157,7 @@ OFFHOST="$WORK/offhost"; mkdir -p "$OFFHOST"
 (cd "$CLONE" && BACKUP_COPY_DIR="$OFFHOST" ./scripts/backup.sh) >"$WORK/backup.log" 2>&1 || { cat "$WORK/backup.log"; fail "D7 backup.sh"; }
 file=$(ls -1t "$CLONE"/backups/*.sql.gz | head -1)
 gzip -t "$file" && [ -s "$file" ] || fail "D7 backup file is empty or corrupt"
-[ -s "$OFFHOST/$(basename "$file")" ] || fail "D7 off-host copy was not made (BACKUP_COPY_DIR)"
+cmp -s "$file" "$OFFHOST/$(basename "$file")" || fail "D7 off-host copy is missing or differs (BACKUP_COPY_DIR)"
 dc exec -T db psql -U nflpi -d nflpi -qc "delete from user_picks; delete from predictions where id = (select max(id) from predictions);" >/dev/null
 [ "$(counts)" != "$before" ] || fail "D7 test could not change the data"
 (cd "$CLONE" && ./scripts/restore.sh "$file" --yes) >"$WORK/restore.log" 2>&1 || { tail -20 "$WORK/restore.log"; fail "D7 restore.sh"; }
@@ -184,11 +191,18 @@ gzip -dc "$file" | sed '/^-- PostgreSQL database dump complete/,$d' | gzip > "$W
 if (cd "$CLONE" && ./scripts/restore.sh "$WORK/truncated.sql.gz" --yes) >/dev/null 2>&1; then fail "D7 restore.sh accepted a dump with no completion trailer"; fi
 wait_health "d['database'] is True and d.get('worker_heartbeat')" 120 && [ "$(counts)" = "$before" ] || fail "D7 a truncated dump changed the data or stopped the app"
 dc stop db >/dev/null 2>&1
-n_before=$(ls -1 "$CLONE"/backups/*.sql.gz | wc -l)
+n_before_all=$(ls -1A "$CLONE"/backups | wc -l)
 if (cd "$CLONE" && ./scripts/backup.sh) >/dev/null 2>&1; then fail "D7 backup.sh exited 0 with the database stopped (pipefail missing)"; fi
-[ "$(ls -1 "$CLONE"/backups/*.sql.gz | wc -l)" = "$n_before" ] || fail "D7 a failed backup left a file behind"
+[ "$(ls -1A "$CLONE"/backups | wc -l)" = "$n_before_all" ] || fail "D7 a failed backup left a file behind"
 dc start db >/dev/null 2>&1
 wait_health "d['database'] is True" 120 || fail "D7 database did not come back"
+# An empty-looking database must not become a "good" backup that pushes real ones out of the rotation.
+dc exec -T db psql -U nflpi -d nflpi -qc "truncate games cascade" >/dev/null
+all_before=$(ls -1A "$CLONE"/backups | wc -l)
+if (cd "$CLONE" && ./scripts/backup.sh) >/dev/null 2>&1; then fail "D7 backup.sh saved a database with no games"; fi
+[ "$(ls -1A "$CLONE"/backups | wc -l)" = "$all_before" ] || fail "D7 backing up an empty database changed the backup folder"
+(cd "$CLONE" && ./scripts/restore.sh "$file" --yes) >"$WORK/restore2.log" 2>&1 || { tail -20 "$WORK/restore2.log"; fail "D7 restore.sh could not recover from an emptied database"; }
+wait_health "d['database'] is True" 120 && [ "$(counts)" = "$before" ] || fail "D7 recovery from an emptied database did not return the data"
 pass "D7 backup restored with matching counts ($after); safety copy kept; 3 bad files refused with data intact; failed backup fails loudly; off-host copy made"
 
 # --- D8 token rotation -----------------------------------------------------------------------------------------------
