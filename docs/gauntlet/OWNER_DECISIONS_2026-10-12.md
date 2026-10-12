@@ -29,13 +29,14 @@ session is editing them); the next PLANNING checkpoint must do it.
 | D16 | AI report runs only when he taps "explain this game". No automatic calls. Daily cap stays. | two-way | - |
 | D17 | Accent stays blue. Phone screens borrow the soft glow at the top from reference 07. | two-way | - |
 | D18 | Owner goal, his words: "I want the model to get better over time by choosing the winners more often." The model's share of winners picked is a tracked number, and model improvement is ongoing work, not optional. | two-way | - |
-| D19 | Owner, his words: "I would like a 1 hour reminder right before kickoff. On Thursday and on Sunday." Replaces the "cut the reminder" half of D6. One alert one hour before the first kickoff on Thursday and one hour before the first kickoff on Sunday, sent whether or not he has picked, opening the week's sheet. | two-way | he asks for Monday, Saturday or per-game reminders |
+| D19 | Owner, his words: "I would like a 1 hour reminder right before kickoff. On Thursday and on Sunday." then "I would like all of the reminders to be 1 hour before kickoff of the first game." Replaces the "cut the reminder" half of D6. Rule: on every day that has a game, one alert one hour before that day's first kickoff (Eastern day). Sent whether or not he has picked; opens the week's sheet. | two-way | he asks for per-game or per-slate reminders |
 
-D19 notes (coordinator's reading): today's code reminds per game and only for games with no pick
-(`notify/push.py`, `send_kickoff_reminders`). D11 makes every game have a pick, so that rule would
-never fire; D19 needs a per-day reminder instead. "First kickoff on Sunday" includes a 9:30 AM ET
-London game when there is one. OPEN (owner): Monday night, Saturday games late in the season, and
-whether Sunday should also remind before the 1:00 PM ET slate when there is a London game.
+D19 notes (coordinator's reading): "all" = every game day, so Thursday, Sunday, Monday, and
+Saturday or holiday games get the same single reminder. A 9:30 AM ET London game means one alert
+at 8:30 AM and none before the 1:00 PM slate. Today's code reminds per game and only for games
+with no pick (`notify/push.py`, `send_kickoff_reminders`); D11 makes every game have a pick, so
+that rule would never fire and is replaced by this per-day rule. Games with no kickoff time yet
+(`time_tbd`) never trigger a reminder.
 
 How D18 is met without breaking the validation rules in `CLAUDE.md` (coordinator's reading):
 
