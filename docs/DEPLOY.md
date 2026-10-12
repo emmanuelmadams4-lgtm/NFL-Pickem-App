@@ -2,7 +2,7 @@
 
 One computer at home runs three containers (`db`, `app`, `worker`) from `docker-compose.yml`. Your phone and laptop reach it through Tailscale, so it is never on the public internet. Your always-on computer is the old Windows 11 PC (decision D42). Until it is set up, the Mac runs the app.
 
-`scripts/deploy-check.sh` ran these on the Mac from a clean copy: the install, bootstrap, the https-proxy checks, backup, restore (and refusing bad files), and token rotation. It did not test the Windows PC, real Tailscale HTTPS, an iPhone, a scheduled backup, a reboot, or updating an existing install. Anything marked **UNVERIFIED** is written from the vendors' docs and has not been run on your PC yet. Tell me what you see and I will fix the page.
+`scripts/deploy-check.sh` ran these on the Mac from a clean copy: the install, bootstrap, the https-proxy checks, backup, restore (including refusing bad files and a restore killed partway), and token rotation. It did not test the Windows PC, real Tailscale HTTPS, an iPhone, a scheduled backup, a reboot, updating an existing install, moving between two computers, or Docker Desktop on Windows passing port 8000 to Tailscale. Anything marked **UNVERIFIED** is written from the vendors' docs and has not been run on your PC yet. Tell me what you see and I will fix the page.
 
 Commands run in a terminal on the server. On Windows, the Docker, git and script commands run in the **Ubuntu (WSL 2) terminal**, and the `tailscale` commands run in **Windows PowerShell**, because Tailscale is a Windows app (UNVERIFIED). The scripts need bash.
 
@@ -49,20 +49,21 @@ Test it once: restart the PC, sign in, wait a few minutes, then run `docker comp
 
 The address changes when the computer changes, so the iPhone app is added again once. Passkeys (step 10) come after the move. Do not make picks while you move: the Mac stops taking them at step 1, and the PC does not have them until step 5.
 
-1. **On the Mac, stop the app and take the last backup:**
+1. **On the Mac, stop the app and take the last backup** (from the repo folder):
    ```bash
+   cd ~/Projects/NFL-Pickem-App
    docker compose stop app worker
    ./scripts/backup.sh
    ```
-   The newest file in `backups/` has everything. Copy it to the PC (a USB stick or a Tailscale file copy, not email). Inside Ubuntu a file on the Windows side is under `/mnt/c/Users/<your name>/`.
-2. **On the PC:** do section 1 once, up to and including `docker compose up -d --build`, with its own new `POSTGRES_PASSWORD`. Do not run `cp .env.example .env` a second time: it erases your password, and the database already uses it. Copy only the keys you want to keep from the Mac's `.env` (access token, AI keys, VAPID keys). Skip the bootstrap; the restore brings the data.
-3. **Restore** the file (section 5).
+   The newest file in `backups/` has everything (`ls -t backups | head -1`). Copy it to the PC (a USB stick or a Tailscale file copy, not email). Inside Ubuntu a file on the Windows side is under `/mnt/c/Users/<your name>/`; put quotes around any path with a space in it.
+2. **On the PC:** do section 1 once, up to and including `docker compose up -d --build`, with its own new `POSTGRES_PASSWORD`. Do not run `cp .env.example .env` a second time: it erases your password, and the database already uses it. Copy only the keys you want to keep from the Mac's `.env` (access token, AI keys, VAPID keys) by the same safe route as the backup (a password manager, section 4), not email. After the restore, `docker compose up -d --force-recreate app worker` makes them use the new `.env`. Skip the bootstrap; the restore brings the data.
+3. **Restore** the file (section 5). A fresh clone has no `backups/` folder, so first make it and copy the file in, for example `mkdir -p backups && cp "/mnt/c/Users/<your name>/Downloads/<that file>" backups/`.
 4. **On the iPhone:** delete the old Pick'em icon, add the new address to the Home Screen (`docs/IPHONE_PWA.md`), sign in, and turn alerts on again. Each phone subscribes again from the new address, with or without the same VAPID keys. Keep the same keys anyway so nothing else changes.
-5. **When the PC looks right,** on the Mac run `docker compose down` so two servers never send alerts. Keep the backup file.
+5. **When the PC looks right,** on the Mac run `docker compose down` so two servers never send alerts, remove its backup job (the `cron` line, if you made one), and run `tailscale serve reset`. Keep the backup file.
 
 ## 4. Backups
 
-Run a backup by hand: `./scripts/backup.sh`. It keeps the newest 14 `nflpi-*.sql.gz` files in `backups/`. It saves nothing and exits with an error if the dump is incomplete, the database has no games, or anything fails. A failed run leaves no half file and never deletes an older good backup. Do not run a backup while a restore is running.
+Run a backup by hand: `./scripts/backup.sh`. It keeps the newest 14 `nflpi-*.sql.gz` files in `backups/`. It saves nothing and exits with an error if the dump is incomplete, the database has no games, or anything fails. A failed run leaves no half file. A run whose only failure is the off-computer copy still keeps its good local backup. Do not run a backup while a restore is running.
 
 Copy it **off the computer** too. A folder on the same PC does not count. Point `BACKUP_COPY_DIR` at a USB drive, another computer, or a folder that syncs to a cloud drive:
 
@@ -79,7 +80,7 @@ Replace `/path/to/other-place` with your real off-computer folder.
 * **Windows (UNVERIFIED):** Task Scheduler, a daily task set to "Run only when user is logged on" (the PC signs in by itself, step 6 above). In the action, Program is `wsl.exe` and Arguments is `-d Ubuntu -- bash -lc "cd ~/NFL-Pickem-App && BACKUP_COPY_DIR=/path/to/other-place ./scripts/backup.sh >> ~/pickem-backup.log 2>&1"`.
 * **Mac (UNVERIFIED as a scheduled job):** `cron` does not have `docker` on its PATH. Use a crontab line like `0 3 * * * cd ~/Projects/NFL-Pickem-App && PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin BACKUP_COPY_DIR=/path/to/other-place ./scripts/backup.sh >> ~/pickem-backup.log 2>&1`.
 
-Once a week, look at the date of the newest file in `backups/` (`ls -t backups | head -3`) and the last lines of the log. `pre-restore-*` files (made by a restore) are never deleted by the script; remove old ones by hand.
+Once a week, look at the date of the newest file in `backups/` (`ls -t backups | head -3`) and the last lines of the log. `pre-restore-*` files (made by a restore) are never deleted by the script; remove old ones by hand. Hidden `.nflpi.*.part` files in `backups/` are left by a run that was killed (for example WSL shutting down) and are safe to delete.
 
 **Keep the secrets safe too.** `.env` is not in git and not in the database dump. Put a copy of `.env` (token, AI keys, VAPID private key) in your password manager. Without the VAPID private key, alerts stop until every phone subscribes again.
 
@@ -94,12 +95,23 @@ This replaces the data with the backup. It first checks the file is a complete b
 
 If the app is not running after a problem, `docker compose up -d` starts it.
 
-**If a restore stops with a message about `nflpi_old`:** the swap happened (or may have), the old data is still there as a database called `nflpi_old`, and the safety copy named in the message is a file in `backups/`. Look: `docker compose exec db psql -U nflpi -d postgres -c '\l'`. Then pick one:
+**If a restore stops with a message about database names or `nflpi_old` (UNVERIFIED: these steps were written from the script's logic and were not run):** list the databases first:
 
-* The app is healthy and shows the restored data: remove the old copy with `docker compose exec -T db psql -U nflpi -d postgres -c 'DROP DATABASE nflpi_old WITH (FORCE)'`. A later restore is refused until `nflpi_old` is gone.
-* You want the old data back: remove `nflpi_old` the same way only after you have checked the safety copy with `gzip -t backups/pre-restore-<time>.sql.gz`, then run `./scripts/restore.sh backups/pre-restore-<time>.sql.gz --yes`.
+```bash
+docker compose exec db psql -U nflpi -d postgres -c '\l'
+```
 
-The same file is how you **undo a restore**: restore the `pre-restore-*` file the previous restore made.
+Look for `nflpi`, `nflpi_old` and `nflpi_restore`, then follow the row that matches:
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `nflpi` and `nflpi_restore`, no `nflpi_old` | The swap never started; your data is still in `nflpi`. | `docker compose up -d`. Remove the scratch copy: `docker compose exec -T db psql -U nflpi -d postgres -c 'DROP DATABASE nflpi_restore WITH (FORCE)'`. |
+| `nflpi_old` and `nflpi_restore`, no `nflpi` | The swap stopped halfway. Your old data is in `nflpi_old`, the restored data is in `nflpi_restore`. | Pick which one you want live: `docker compose exec -T db psql -U nflpi -d postgres -c 'ALTER DATABASE nflpi_old RENAME TO nflpi'` for the old data (or `nflpi_restore` for the restored data), then `docker compose up -d`. |
+| `nflpi` and `nflpi_old` | The swap finished. `nflpi` is the restored data; `nflpi_old` is what it replaced. | `docker compose up -d`, check health. When happy, remove the old copy: `docker compose exec -T db psql -U nflpi -d postgres -c 'DROP DATABASE nflpi_old WITH (FORCE)'`. A new restore is refused until `nflpi_old` is gone. |
+
+**Undo a restore:** restore the `pre-restore-*` file the earlier restore made (after removing `nflpi_old` as above). One limit: a restore refuses any file whose database has no games, so if the data you replaced had no games, the safety copy cannot be restored this way; load it by hand with `gunzip -c backups/pre-restore-<time>.sql.gz | docker compose exec -T db psql -U nflpi -d <a new empty database>`.
+
+Do not press Ctrl-C a second time while it is restarting the app. If you did, run `docker compose up -d`.
 
 ## 6. Rotate the access token
 

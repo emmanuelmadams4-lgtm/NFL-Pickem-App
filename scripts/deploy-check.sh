@@ -92,7 +92,7 @@ pass "D1 compose ports/restart, scripts, runbook and iPhone order"
 dc up -d --build >/dev/null 2>&1 || { dc logs --tail 30 2>&1 | tail -30; fail "D2 docker compose up -d --build"; }
 wait_health "d['database'] is True and d.get('worker_heartbeat')" 180 \
   || { dc logs --tail 20 2>&1 | tail -20; fail "D2 health never showed database up and a worker heartbeat"; }
-pass "D2 up from a clean clone; database ok, worker heartbeat fresh"
+pass "D2 up from a clean clone; database ok, worker heartbeat present"
 
 # --- D3 bootstrap -> health ok ---------------------------------------------------------------------------------------
 dc exec -T app python -m nflpi.jobs bootstrap >"$WORK/bootstrap.log" 2>&1 || { tail -20 "$WORK/bootstrap.log"; fail "D3 bootstrap"; }
@@ -221,16 +221,22 @@ wait_health "d['database'] is True" 120 && [ "$(counts)" = "$before" ] && runnin
 [ "$(leftovers)" = 0 ] || fail "D7 scratch or old database left behind after recovery"
 # A restore killed after the app was stopped (closed terminal, SIGTERM) must leave the owner able to recover with docker compose up -d.
 (cd "$CLONE" && exec ./scripts/restore.sh "$file" --yes) >"$WORK/restore4.log" 2>&1 & rpid=$!
+killed=0
 for _ in $(seq 1 300); do
   kill -0 "$rpid" 2>/dev/null || break
-  running app || { kill -TERM "$rpid" 2>/dev/null || true; break; }
+  running app || { kill -TERM "$rpid" 2>/dev/null && killed=1; break; }
   sleep 0.2
 done
-wait "$rpid" 2>/dev/null || true
-dc up -d >/dev/null 2>&1
+[ "$killed" = 1 ] || fail "D7 test could not catch the restore after the app stopped, so it did not test a killed restore"
+rc=0; wait "$rpid" 2>/dev/null || rc=$?
+[ "$rc" -ne 0 ] || fail "D7 a restore that was sent SIGTERM exited 0"
+grep -q "^restored " "$WORK/restore4.log" && fail "D7 the killed restore still printed 'restored'"
+for _ in $(seq 1 90); do running app && running worker && break; sleep 2; done
+running app && running worker || fail "D7 a killed restore did not start the app and worker again by itself (exit handler)"
+[ -s "$WORK/restore4.log" ] && grep -qiE "restart requested|live data" "$WORK/restore4.log" || fail "D7 a killed restore printed no explanation"
 wait_health "d['database'] is True" 180 && [ "$(counts)" = "$before" ] && running worker || { tail -20 "$WORK/restore4.log"; fail "D7 a restore killed mid-way left the app unrecoverable or the data changed"; }
-[ "$(leftovers)" = 0 ] || [ -s "$WORK/restore4.log" ] || fail "D7 a killed restore left a scratch database and said nothing"
-pass "D7 backup restored with matching counts ($after); safety copy kept; 3 bad files refused with data intact; failed backup fails loudly; off-host copy made"
+[ "$(leftovers)" = 0 ] || fail "D7 a killed restore left a scratch or old database behind"
+pass "D7 backup restored with matching counts ($after); safety copy kept; 4 bad files refused with data intact; killed restore recovers; failed backup fails loudly; off-host copy made"
 
 # --- D8 token rotation -----------------------------------------------------------------------------------------------
 NEW=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
