@@ -165,3 +165,7 @@ Carried to the restyle step as frozen criteria (R1–R3 above, plus): R4 browser
 ## 6. LANDING
 
 Owner consent on file (2026-10-12: push the feature branch and update the draft PR after a step verifies). Pushed with the owner's merged decision commits; CI result recorded below. Not merged. Not deployed.
+
+**O1 CI green on `abc72f3`** (the PR head): backend, web, docker and the new **e2e** job (first run in CI, 17 browser checks against the seeded production export) all passed, on both the push and pull_request runs (8/8 check runs). Merged: nothing. Deployed: nothing.
+
+**Step 2 of 8: DONE (2026-10-12).**
