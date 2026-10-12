@@ -230,3 +230,52 @@ def test_trends_reach_the_evidence_pack_and_never_touch_predictions(loaded):
     # Trends are context only: nothing in the prediction code may read them.
     predictions = Path(__file__).resolve().parents[1] / "nflpi" / "predictions"
     assert [p.name for p in predictions.rglob("*.py") if "trends" in p.read_text()] == []
+
+
+# Added after the first review round (step log section 3).
+
+
+def test_final_game_without_a_score_is_not_counted(session):
+    for season in range(2016, 2024):  # 8 KC wins over LV
+        _game(session, season, "LV", "KC", 10, 30)
+    _game(session, 2015, "LV", "KC", None, None, status="final")  # bad row: marked final, no score
+    target = _game(session, 2024, "LV", "KC", None, None)
+
+    row = _find(game_trends(session, target), kind="team_vs_team", team="KC", window="all")
+
+    assert _record(row) == (8, 0, 0, 8, 2016, 2023)
+
+
+def test_neutral_site_record_counts_only_neutral_site_games(session):
+    stadium = {"stadium_id": "MIA00", "stadium": "Hard Rock Stadium"}
+    for season in range(2012, 2020):  # 8 ordinary MIA home wins in its own stadium
+        _game(session, season, "NE", "MIA", 10, 20, **stadium)
+    target = _game(session, 2024, "KC", "MIA", None, None, neutral_site=True, **stadium)  # a neutral game there
+
+    rows = game_trends(session, target)
+
+    assert _find(rows, kind="team_at_site", team="MIA", window="all") is None
+    assert _record(_find(rows, kind="team_at_stadium", team="MIA", window="all")) == (8, 0, 0, 8, 2012, 2019)
+
+
+def test_missing_stadium_id_gives_no_stadium_or_site_rows(session):
+    for season in range(2016, 2024):
+        _game(session, season, "LV", "KC", 10, 30, neutral_site=True)  # stadium not known
+    target = _game(session, 2024, "LV", "KC", None, None, neutral_site=True)
+
+    kinds = {r["kind"] for r in game_trends(session, target)}
+
+    assert "team_vs_team" in kinds and not kinds & {"team_at_stadium", "team_at_site"}
+
+
+def test_a_trends_failure_reaches_the_caller_and_the_note_states_the_limits(loaded, monkeypatch):
+    gid = loaded.scalars(select(Game.game_id).where(Game.season == CURRENT, Game.week == 4)).first()
+    note = research.evidence_pack(loaded, gid)["trends"]["note"].lower()
+    assert str(MIN_GAMES) in note and "playoff" in note and "name" in note and "finished seasons" in note
+
+    def boom(*args):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(research, "game_trends", boom)
+    with pytest.raises(RuntimeError, match="db down"):
+        research.evidence_pack(loaded, gid)

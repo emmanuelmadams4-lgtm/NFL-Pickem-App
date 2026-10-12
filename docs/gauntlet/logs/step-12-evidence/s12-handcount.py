@@ -34,7 +34,7 @@ def load(path: str) -> list[dict]:
 
 def hand(rows: list[dict], target: dict, side_of, last5: bool) -> tuple | None:
     """side_of(row) -> 'home' | 'away' | None: which side of that game the record belongs to."""
-    w = l = t = 0
+    w = lost = t = 0
     seasons = []
     for r in rows:
         if not r["final"] or r["when"] >= target["when"]:
@@ -46,10 +46,10 @@ def hand(rows: list[dict], target: dict, side_of, last5: bool) -> tuple | None:
         if side is None:
             continue
         margin = (int(r["home_score"]) - int(r["away_score"])) * (1 if side == "home" else -1)
-        w, l, t = w + (margin > 0), l + (margin < 0), t + (margin == 0)
+        w, lost, t = w + (margin > 0), lost + (margin < 0), t + (margin == 0)
         seasons.append(season)
-    n = w + l + t
-    return (w, l, t, n, min(seasons), max(seasons)) if n >= MIN_GAMES else None
+    n = w + lost + t
+    return (w, lost, t, n, min(seasons), max(seasons)) if n >= MIN_GAMES else None
 
 
 def team_side(team: str, keep):
@@ -92,19 +92,39 @@ def main(path: str) -> int:
 
     jax = latest(rows, lambda r: "JAX" in (r["home_team"], r["away_team"]) and r["stadium"] in london)
     kc_lv = latest(rows, lambda r: plays(r, "KC", "LV"))
-    kc_den = latest(rows, lambda r: plays(r, "KC", "DEN") and "Patrick Mahomes" in (r["home_qb_name"], r["away_qb_name"]))
+    kc_den = latest(
+        rows, lambda r: plays(r, "KC", "DEN") and "Patrick Mahomes" in (r["home_qb_name"], r["away_qb_name"])
+    )
     dal = latest(rows, lambda r: "DAL" in (r["home_team"], r["away_team"]) and r["weekday"] == "Thursday")
     gb = latest(rows, lambda r: r["home_team"] == "GB" and r["stadium_id"] == "GNB00")
     examples = [
         ("Jaguars in London", jax, "team_at_site", "JAX", None, team_side("JAX", lambda r: r["stadium"] in london)),
         ("Chiefs vs Raiders", kc_lv, "team_vs_team", "KC", None, team_side("KC", lambda r: plays(r, "KC", "LV"))),
         (
-            "Mahomes vs Broncos", kc_den, "qb_vs_team", "KC", "Patrick Mahomes",
+            "Mahomes vs Broncos",
+            kc_den,
+            "qb_vs_team",
+            "KC",
+            "Patrick Mahomes",
             person_side("qb_name", "Patrick Mahomes", "DEN"),
         ),
         ("Andy Reid vs Broncos", kc_den, "coach_vs_team", "KC", "Andy Reid", person_side("coach", "Andy Reid", "DEN")),
-        ("Cowboys on Thursday", dal, "team_on_weekday", "DAL", None, team_side("DAL", lambda r: r["weekday"] == "Thursday")),
-        ("Packers at Lambeau", gb, "team_at_stadium", "GB", None, team_side("GB", lambda r: r["stadium_id"] == "GNB00")),
+        (
+            "Cowboys on Thursday",
+            dal,
+            "team_on_weekday",
+            "DAL",
+            None,
+            team_side("DAL", lambda r: r["weekday"] == "Thursday"),
+        ),
+        (
+            "Packers at Lambeau",
+            gb,
+            "team_at_stadium",
+            "GB",
+            None,
+            team_side("GB", lambda r: r["stadium_id"] == "GNB00"),
+        ),
     ]
     bad = 0
     with session_factory()() as session:
@@ -113,15 +133,25 @@ def main(path: str) -> int:
         for label, target, kind, team, person, side_of in examples:
             app_rows = game_trends(session, target["game_id"])
             for window, last5 in (("all", False), ("last_5_seasons", True)):
-                got = [r for r in app_rows if (r["kind"], r["team"], r["person"], r["window"]) == (kind, team, person, window)]
-                app = None if not got else tuple(got[0][k] for k in ("wins", "losses", "ties", "games", "first_season", "last_season"))
+                got = [
+                    r
+                    for r in app_rows
+                    if (r["kind"], r["team"], r["person"], r["window"]) == (kind, team, person, window)
+                ]
+                app = (
+                    None
+                    if not got
+                    else tuple(got[0][k] for k in ("wins", "losses", "ties", "games", "first_season", "last_season"))
+                )
                 mine = hand(rows, target, side_of, last5)
                 ok = app == mine and len(got) <= 1
                 bad += not ok
                 print(f"{'MATCH' if ok else 'DIFF '} {label} [{target['game_id']}] {window}: app={app} hand={mine}")
         tuesday = [r for r in rows if r["final"] and r["weekday"] == "Tuesday"]
         cle = [r for r in tuesday if "CLE" in (r["home_team"], r["away_team"])]
-        print(f"Browns on Tuesday: {len(cle)} games in the file ({len(tuesday)} Tuesday games in all): no record to show")
+        print(
+            f"Browns on Tuesday: {len(cle)} games in the file ({len(tuesday)} Tuesday games in all): no record to show"
+        )
         bad += len(cle) != 0
     print("RESULT:", "PASS" if not bad else f"FAIL ({bad})")
     return 1 if bad else 0

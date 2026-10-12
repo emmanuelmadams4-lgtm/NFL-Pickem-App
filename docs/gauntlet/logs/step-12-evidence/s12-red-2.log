@@ -1,0 +1,56 @@
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[31mF[0m[32m.[0m[31mF[0m[31m                                                            [100%][0m
+=================================== FAILURES ===================================
+[31m[1m________________ test_final_game_without_a_score_is_not_counted ________________[0m
+
+session = <sqlalchemy.orm.session.Session object at 0x10de5e510>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_final_game_without_a_score_is_not_counted[39;49;00m(session):[90m[39;49;00m
+        [94mfor[39;49;00m season [95min[39;49;00m [96mrange[39;49;00m([94m2016[39;49;00m, [94m2024[39;49;00m):  [90m# 8 KC wins over LV[39;49;00m[90m[39;49;00m
+            _game(session, season, [33m"[39;49;00m[33mLV[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mKC[39;49;00m[33m"[39;49;00m, [94m10[39;49;00m, [94m30[39;49;00m)[90m[39;49;00m
+        _game(session, [94m2015[39;49;00m, [33m"[39;49;00m[33mLV[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mKC[39;49;00m[33m"[39;49;00m, [94mNone[39;49;00m, [94mNone[39;49;00m, status=[33m"[39;49;00m[33mfinal[39;49;00m[33m"[39;49;00m)  [90m# bad row: marked final, no score[39;49;00m[90m[39;49;00m
+        target = _game(session, [94m2024[39;49;00m, [33m"[39;49;00m[33mLV[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mKC[39;49;00m[33m"[39;49;00m, [94mNone[39;49;00m, [94mNone[39;49;00m)[90m[39;49;00m
+    [90m[39;49;00m
+        row = _find(game_trends(session, target), kind=[33m"[39;49;00m[33mteam_vs_team[39;49;00m[33m"[39;49;00m, team=[33m"[39;49;00m[33mKC[39;49;00m[33m"[39;49;00m, window=[33m"[39;49;00m[33mall[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+    [90m[39;49;00m
+>       [94massert[39;49;00m _record(row) == ([94m8[39;49;00m, [94m0[39;49;00m, [94m0[39;49;00m, [94m8[39;49;00m, [94m2016[39;49;00m, [94m2023[39;49;00m)[90m[39;49;00m
+[1m[31mE       assert (8, 0, 1, 9, 2015, 2023) == (8, 0, 0, 8, 2016, 2023)[0m
+[1m[31mE         [0m
+[1m[31mE         At index 2 diff: [0m[94m1[39;49;00m[90m[39;49;00m != [0m[94m0[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_trends.py[0m:246: AssertionError
+[31m[1m___________ test_neutral_site_record_counts_only_neutral_site_games ____________[0m
+
+session = <sqlalchemy.orm.session.Session object at 0x114eb4590>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_neutral_site_record_counts_only_neutral_site_games[39;49;00m(session):[90m[39;49;00m
+        stadium = {[33m"[39;49;00m[33mstadium_id[39;49;00m[33m"[39;49;00m: [33m"[39;49;00m[33mMIA00[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mstadium[39;49;00m[33m"[39;49;00m: [33m"[39;49;00m[33mHard Rock Stadium[39;49;00m[33m"[39;49;00m}[90m[39;49;00m
+        [94mfor[39;49;00m season [95min[39;49;00m [96mrange[39;49;00m([94m2012[39;49;00m, [94m2020[39;49;00m):  [90m# 8 ordinary MIA home wins in its own stadium[39;49;00m[90m[39;49;00m
+            _game(session, season, [33m"[39;49;00m[33mNE[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mMIA[39;49;00m[33m"[39;49;00m, [94m10[39;49;00m, [94m20[39;49;00m, **stadium)[90m[39;49;00m
+        target = _game(session, [94m2024[39;49;00m, [33m"[39;49;00m[33mKC[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mMIA[39;49;00m[33m"[39;49;00m, [94mNone[39;49;00m, [94mNone[39;49;00m, neutral_site=[94mTrue[39;49;00m, **stadium)  [90m# a neutral game there[39;49;00m[90m[39;49;00m
+    [90m[39;49;00m
+        rows = game_trends(session, target)[90m[39;49;00m
+    [90m[39;49;00m
+>       [94massert[39;49;00m _find(rows, kind=[33m"[39;49;00m[33mteam_at_site[39;49;00m[33m"[39;49;00m, team=[33m"[39;49;00m[33mMIA[39;49;00m[33m"[39;49;00m, window=[33m"[39;49;00m[33mall[39;49;00m[33m"[39;49;00m) [95mis[39;49;00m [94mNone[39;49;00m[90m[39;49;00m
+[1m[31mE       AssertionError: assert {'kind': 'team_at_site', 'team': 'MIA', 'person': None, 'context': 'Hard Rock Stadium', ...} is None[0m
+[1m[31mE        +  where {'kind': 'team_at_site', 'team': 'MIA', 'person': None, 'context': 'Hard Rock Stadium', ...} = _find([{'kind': 'team_on_weekday', 'team': 'MIA', 'person': None, 'context': 'Sunday', ...}, {'kind': 'team_at_stadium', 'te...Hard Rock Stadium', ...}, {'kind': 'team_at_site', 'team': 'MIA', 'person': None, 'context': 'Hard Rock Stadium', ...}], kind='team_at_site', team='MIA', window='all')[0m
+
+[1m[31mtests/test_trends.py[0m:257: AssertionError
+[31m[1m___ test_a_trends_failure_reaches_the_caller_and_the_note_states_the_limits ____[0m
+
+loaded = <sqlalchemy.orm.session.Session object at 0x114eb5160>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10df8c2b0>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_a_trends_failure_reaches_the_caller_and_the_note_states_the_limits[39;49;00m(loaded, monkeypatch):[90m[39;49;00m
+        gid = loaded.scalars(select(Game.game_id).where(Game.season == CURRENT, Game.week == [94m4[39;49;00m)).first()[90m[39;49;00m
+        note = research.evidence_pack(loaded, gid)[[33m"[39;49;00m[33mtrends[39;49;00m[33m"[39;49;00m][[33m"[39;49;00m[33mnote[39;49;00m[33m"[39;49;00m].lower()[90m[39;49;00m
+>       [94massert[39;49;00m [96mstr[39;49;00m(MIN_GAMES) [95min[39;49;00m note [95mand[39;49;00m [33m"[39;49;00m[33mplayoff[39;49;00m[33m"[39;49;00m [95min[39;49;00m note [95mand[39;49;00m [33m"[39;49;00m[33mname[39;49;00m[33m"[39;49;00m [95min[39;49;00m note [95mand[39;49;00m [33m"[39;49;00m[33mfinished seasons[39;49;00m[33m"[39;49;00m [95min[39;49;00m note[90m[39;49;00m
+[1m[31mE       AssertionError: assert ('8' in 'these historical records are for context only, are not model inputs, did not change the pick, and leave out records with fewer than 8 games.' and 'playoff' in 'these historical records are for context only, are not model inputs, did not change the pick, and leave out records with fewer than 8 games.')[0m
+[1m[31mE        +  where '8' = str(8)[0m
+
+[1m[31mtests/test_trends.py[0m:274: AssertionError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_trends.py::[1mtest_final_game_without_a_score_is_not_counted[0m - assert (8, 0, 1, 9, 2015, 2023) == (8, 0, 0, 8, 2016, 2023)
+[31mFAILED[0m tests/test_trends.py::[1mtest_neutral_site_record_counts_only_neutral_site_games[0m - AssertionError: assert {'kind': 'team_at_site', 'team': 'MIA', 'person': No...
+[31mFAILED[0m tests/test_trends.py::[1mtest_a_trends_failure_reaches_the_caller_and_the_note_states_the_limits[0m - AssertionError: assert ('8' in 'these historical records are for context on...
+[31m[31m[1m3 failed[0m, [32m10 passed[0m[31m in 6.72s[0m[0m
