@@ -314,6 +314,17 @@ D42 state and notes (coordinator, checked on the Mac 2026-10-12):
 * Data moves with a database dump and restore (also the first real backup-restore test for step 5).
 * The Mac's database still uses the default local password; the PC gets a real one.
 
+## Confidence points method (2026-10-12, owner's Mac session)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D43 | Owner, his words: "we could use jev to rank and give the confidence points first and have claude verify". Offered three ways, he chose: win chance sets the order of the points; Jev breaks near-ties (which pick has the stronger evidence); Claude checks the finished sheet. He also chose to build step 4 on the Mac. Refines D3. | two-way | the scorecard shows Jev's swaps cost points |
+
+D43 notes: measured on 2012-2025, ranking by win chance earns 86.9 points a week of 120.8 possible;
+a random order of the same picks earns 80.3. "Near-tie" is 1 point of win chance (at 2 points most
+of the sheet would count). Claude's written check waits for the Claude connection (step 11); until
+then the sheet's rules are checked in code. Details: `docs/gauntlet/logs/step-4.md`.
+
 ## Facts looked up 2026-10-12 (research subagent, web; not owner decisions)
 
 Paraphrased from the linked pages. "Inferred" marks a reading, not a statement on the page.

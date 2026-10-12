@@ -1,0 +1,30 @@
+games 3649 acc 0.6646 cols has scores: True
+cuts 0.55/0.67
+  all      coin_flip: n=519 share=14.2% hit=52.4% | tough: n=1483 share=40.6% hit=59.6% | easy: n=1647 share=45.1% hit=77.0%
+  12-21    coin_flip: n=364 share=14.2% hit=51.4% | tough: n=1018 share=39.7% hit=58.3% | easy: n=1183 share=46.1% hit=77.2%
+  22-25    coin_flip: n=155 share=14.3% hit=54.8% | tough: n=465 share=42.9% hit=62.6% | easy: n=464 share=42.8% hit=76.7%
+cuts 0.55/0.7
+  all      coin_flip: n=519 share=14.2% hit=52.4% | tough: n=1809 share=49.6% hit=61.2% | easy: n=1321 share=36.2% hit=79.1%
+  12-21    coin_flip: n=364 share=14.2% hit=51.4% | tough: n=1257 share=49.0% hit=60.1% | easy: n=944 share=36.8% hit=79.4%
+  22-25    coin_flip: n=155 share=14.3% hit=54.8% | tough: n=552 share=50.9% hit=63.8% | easy: n=377 share=34.8% hit=78.2%
+cuts 0.57/0.7
+  all      coin_flip: n=760 share=20.8% hit=53.9% | tough: n=1568 share=43.0% hit=61.9% | easy: n=1321 share=36.2% hit=79.1%
+  12-21    coin_flip: n=528 share=20.6% hit=54.0% | tough: n=1093 share=42.6% hit=60.2% | easy: n=944 share=36.8% hit=79.4%
+  22-25    coin_flip: n=232 share=21.4% hit=53.9% | tough: n=475 share=43.8% hit=65.7% | easy: n=377 share=34.8% hit=78.2%
+cuts 0.58/0.72
+  all      coin_flip: n=886 share=24.3% hit=53.6% | tough: n=1660 share=45.5% hit=64.0% | easy: n=1103 share=30.2% hit=80.4%
+  12-21    coin_flip: n=616 share=24.0% hit=52.6% | tough: n=1160 share=45.2% hit=63.0% | easy: n=789 share=30.8% hit=80.9%
+  22-25    coin_flip: n=270 share=24.9% hit=55.9% | tough: n=500 share=46.1% hit=66.4% | easy: n=314 share=29.0% hit=79.3%
+cuts 0.6/0.72
+  all      coin_flip: n=1160 share=31.8% hit=55.0% | tough: n=1386 share=38.0% hit=64.9% | easy: n=1103 share=30.2% hit=80.4%
+  12-21    coin_flip: n=794 share=31.0% hit=53.3% | tough: n=982 share=38.3% hit=64.4% | easy: n=789 share=30.8% hit=80.9%
+  22-25    coin_flip: n=366 share=33.8% hit=58.7% | tough: n=404 share=37.3% hit=66.3% | easy: n=314 share=29.0% hit=79.3%
+cuts 0.6/0.75
+  all      coin_flip: n=1160 share=31.8% hit=55.0% | tough: n=1683 share=46.1% hit=67.3% | easy: n=806 share=22.1% hit=81.3%
+  12-21    coin_flip: n=794 share=31.0% hit=53.3% | tough: n=1209 share=47.1% hit=67.1% | easy: n=562 share=21.9% hit=81.7%
+  22-25    coin_flip: n=366 share=33.8% hit=58.7% | tough: n=474 share=43.7% hit=67.7% | easy: n=244 share=22.5% hit=80.3%
+weeks 243 | points share of max: ranked 71.90%, random order 66.42%, market ranked 72.08%
+avg points/week: ranked 86.9 random-order 80.3 market 87.1 of max 120.8
+band 0.02: adjacent near-tie pairs per week avg 8.3
+band 0.03: adjacent near-tie pairs per week avg 10.4
+band 0.05: adjacent near-tie pairs per week avg 12.5
