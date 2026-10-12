@@ -207,7 +207,8 @@ test.describe(() => {
   await page.goto("/");
   await boardLoaded(page);
   await expect(page.getByText(/Stale data: schedules/)).toBeVisible();
-});});
+});
+});
 
 
 test("E10 design: the app renders in Geist", async ({ page }) => {

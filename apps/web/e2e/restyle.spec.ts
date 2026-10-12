@@ -27,8 +27,6 @@ async function board(request: APIRequestContext) {
   return { meta, games: week.games, open };
 }
 
-test.use({ serviceWorkers: "block" }); // R1/R6 rewrite API responses; a controlling service worker would bypass page.route
-
 const signIn = (page: Page) => page.addInitScript((t) => localStorage.setItem("nflpi_token", t), TOKEN);
 const card = (page: Page, g: Game) => page.getByTestId("game-card").filter({ has: page.getByRole("link", { name: `Open matchup: ${g.away.name} at ${g.home.name}` }) });
 const cardsLoaded = (page: Page) => expect(page.getByTestId("game-card").first()).toBeVisible();
@@ -127,6 +125,8 @@ test("S5 matchup: split win-chance tiles, the model's side labeled, pill section
   await expect(page.locator("#market")).toBeInViewport();
 });
 
+test.describe(() => {
+  test.use({ serviceWorkers: "block" }); // rewrites API responses with page.route
 test("R1 what changed shows on the game card and in the pick panel", async ({ page, request }) => {
   const { open } = await board(request);
   const g = open[0];
@@ -142,7 +142,8 @@ test("R1 what changed shows on the game card and in the pick panel", async ({ pa
   await expect(card(page, g)).toContainText(note);
   await page.goto(`/game/?id=${g.game_id}`);
   await expect(page.locator("aside")).toContainText(note);
-});
+});});
+
 
 test("R2 a pick against the model shows 'Differs from model' on the card", async ({ page, request }) => {
   const { open } = await board(request);
@@ -189,6 +190,8 @@ test("R4 backfill never reads as live: Week KPI, Results table, chart labels, ma
   await expect(page.locator("#history")).not.toContainText(/\bLive\b/, { useInnerText: true });
 });
 
+test.describe(() => {
+  test.use({ serviceWorkers: "block" }); // rewrites API responses with page.route
 test("R6 the client lock follows the server rule: a TBD or postponed game stays open after its placeholder time", async ({ page, request }) => {
   const { open } = await board(request);
   const [tbd, postponed] = open;
@@ -203,15 +206,18 @@ test("R6 the client lock follows the server rule: a TBD or postponed game stays 
   for (const g of [tbd, postponed]) {
     await expect(card(page, g).getByRole("button", { name: new RegExp(`^Pick ${g.home.name}`) }), g.game_id).toBeEnabled();
   }
-});
+});});
+
 
 const LIME = "rgb(198, 241, 53)";
 
 test("F1 smallest phone (320px): no screen scrolls sideways", async ({ page, request }) => {
-  const { open } = await board(request);
+  const { meta, open } = await board(request);
+  const finals = (await api<{ games: Game[] }>(request, `/weeks/${meta.current_season}/1`)).games;
   await page.setViewportSize({ width: 320, height: 700 });
+  await page.route(/example\.test/, (route) => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#0b6"/></svg>' }));
   await signIn(page);
-  for (const path of ["/", `/game/?id=${open[0].game_id}`, "/performance/", "/backtest/", "/settings/"]) {
+  for (const path of ["/", `/game/?id=${open[0].game_id}`, ...finals.map((g) => `/game/?id=${g.game_id}`), "/performance/", "/backtest/", "/settings/"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
     expect(await page.evaluate(() => document.documentElement.scrollWidth), path).toBeLessThanOrEqual(320);
@@ -239,7 +245,8 @@ test("F3 win split: lime is mine, never the model's tile; no check mark on it; b
     await page.goto(`/game/?id=${id}`);
     const tile = page.getByTestId("win-tile-model");
     await expect(tile).toContainText("Model pick");
-    expect(await tile.evaluate((el) => getComputedStyle(el).backgroundColor), id).not.toBe(LIME);
+    const paint = await tile.evaluate((el) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).borderTopColor, getComputedStyle(el).color]);
+    expect(paint, id).not.toContain(LIME);
     await expect(tile.locator("svg"), "no check icon on the model tile").toHaveCount(0);
   }
   await expect(page.getByTestId("win-split")).toContainText("Backfilled");
@@ -280,3 +287,85 @@ test("F6 section tabs: the tab you jump to is the one marked current", async ({ 
   }
   await expect(tabs.getByRole("link", { name: "Ask" })).toBeVisible();
 });
+
+test("G1 week-1 matchup: every en dash in Teams has a reason (no games played yet)", async ({ page, request }) => {
+  const { meta } = await board(request);
+  const g = (await api<{ games: Game[] }>(request, `/weeks/${meta.current_season}/1`)).games[0];
+  await signIn(page);
+  await page.goto(`/game/?id=${g.game_id}`);
+  const teams = page.locator("#teams");
+  await expect(teams).toContainText(/no games (played )?yet this season/i);
+  const bare = await teams.evaluate((el) => [...el.querySelectorAll("*")].filter((n) => [...n.childNodes].some((c) => c.nodeType === 3 && c.textContent!.trim() === "–")).length);
+  expect(bare, "no row is a bare en dash; the reason replaces or sits in it").toBe(0);
+});
+
+test("G2 lime paints what is mine: a picked pill and the selected filter chip", async ({ page, request }) => {
+  const { open } = await board(request);
+  const g = open[open.length - 1];
+  await signIn(page);
+  await page.goto("/");
+  await cardsLoaded(page);
+  expect(await page.getByTestId("filter-chips").getByRole("button", { name: /All games/ }).evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(LIME);
+  const c = card(page, g);
+  await c.getByRole("button", { name: new RegExp(`^Pick ${g.home.name}`) }).click();
+  const picked = c.getByRole("button", { name: new RegExp(`^${g.home.name} picked`) });
+  await page.mouse.move(0, 0);
+  try {
+    await expect.poll(() => picked.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(LIME);
+  } finally {
+    await picked.click();
+  }
+});
+
+test("G3 keyboard focus is visible on lime and never hidden under the tab bar (phone)", async ({ page, request }) => {
+  const { open } = await board(request);
+  await page.setViewportSize({ width: 393, height: 852 });
+  await signIn(page);
+  await page.goto("/");
+  await cardsLoaded(page);
+  const chip = page.getByTestId("filter-chips").getByRole("button", { name: /All games/ });
+  await chip.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  const ring = await chip.evaluate((el) => [getComputedStyle(el).outlineStyle, getComputedStyle(el).outlineColor]);
+  expect(ring[0]).not.toBe("none");
+  expect(["rgb(10, 10, 10)", LIME]).not.toContain(ring[1]);
+  const last = card(page, open[open.length - 1]).getByRole("button").last();
+  await last.focus();
+  const [btn, bar] = await Promise.all([last.boundingBox(), page.getByRole("navigation", { name: "Primary" }).boundingBox()]);
+  expect(btn!.y + btn!.height, "focused button sits above the tab bar").toBeLessThanOrEqual(bar!.y);
+});
+
+test.describe(() => {
+  test.use({ serviceWorkers: "block" }); // rewrites an API response with page.route
+  test("G4 stale weather with no logged error never claims the source is down", async ({ page, request }) => {
+    const { open } = await board(request);
+    await page.route("**/api/freshness", async (route) => {
+      const res = await route.fetch();
+      const body = (await res.json()).map((d: { dataset: string }) => (d.dataset === "weather" ? { ...d, last_error: null } : d));
+      await route.fulfill({ response: res, json: body });
+    });
+    await signIn(page);
+    await page.goto(`/game/?id=${open[0].game_id}`);
+    const conditions = page.locator("#conditions");
+    await expect(conditions).toContainText(/not updated/i);
+    await expect(conditions).not.toContainText(/down|unreachable|unavailable/i);
+  });
+});
+
+for (const scheme of ["dark", "light"] as const) {
+  test(`G5 accessibility on the phone layout (${scheme}): no serious or critical axe issues`, async ({ page, request }) => {
+    const { open } = await board(request);
+    await page.setViewportSize({ width: 393, height: 852 });
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await signIn(page);
+    const AxeBuilder = (await import("@axe-core/playwright")).default;
+    for (const path of ["/", `/game/?id=${open[0].game_id}`, "/performance/", "/backtest/", "/settings/"]) {
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+      const { violations } = await new AxeBuilder({ page }).analyze();
+      const bad = violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.slice(0, 2).map((n) => n.target.join(" ")).join(" | ")}`);
+      expect(bad, `${path} (${scheme})`).toEqual([]);
+    }
+  });
+}
