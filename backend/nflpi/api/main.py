@@ -142,7 +142,12 @@ def export_picks(season: int, session: DB) -> Response:
     summaries = {g.game_id: g for g in views.summaries(session, list(games), datetime.now(UTC))}
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["game_id", "season", "week", "away", "home", "my_pick", "model_pick", "model_pick_prob", "winner"])
+    w.writerow(
+        [
+            *("game_id", "season", "week", "away", "home", "my_pick"),
+            *("model_pick", "model_pick_prob", "model_pick_kind", "winner"),
+        ]
+    )
     for g in games:
         sm = summaries[g.game_id]
         p = sm.prediction
@@ -156,6 +161,7 @@ def export_picks(season: int, session: DB) -> Response:
                 sm.my_pick or "",
                 p.pick if p else "",
                 f"{max(p.home_win_prob, p.away_win_prob):.3f}" if p else "",
+                p.kind if p else "",
                 views.winner(g) or "",
             ]
         )
