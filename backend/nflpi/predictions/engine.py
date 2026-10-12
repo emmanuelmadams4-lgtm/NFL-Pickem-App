@@ -16,6 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from nflpi.analytics.backtest import _elo_frames, run_backtest, tune_elo
+from nflpi.analytics.metrics import EARLY_WEEK_END, UPSET_GAP, uncertainty_grade, upset_watch
 from nflpi.config import get_settings
 from nflpi.ingestion.service import freshness
 from nflpi.models import BacktestRun, Game, InjuryReport, MarketSnapshot, ModelVersion, Prediction
@@ -24,9 +25,6 @@ from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_featur
 from nflpi.predictions.model import LogitModel
 
 MODEL_KIND = "blend-elo-qb"
-UPSET_MIN_PROB = 0.40
-UPSET_MIN_GAP = 0.08
-DISAGREE_GAP = 0.10
 CHANGE_WORDS = {
     "elo_diff": "team ratings after new results",
     "market_logit": "betting line",
@@ -230,9 +228,6 @@ def refresh_predictions(
     stale = [d["dataset"] for d in fresh if d["stale"] and d["dataset"] in ("schedules", "injuries")]
     if kind != "live":
         stale = []
-    qb_inj = _qb_injuries(session, season)
-    finals = f[f["status"] == "final"]
-
     events: list[ChangeEvent] = []
     for _, row in targets.iterrows():
         base_p = base.predict_one(row)
@@ -243,32 +238,24 @@ def refresh_predictions(
         pick = home if prob >= 0.5 else away
         market_p = None if not has_market else float(row["market_prob"])
 
-        before = finals[(finals["season"] == row["season"]) & (finals["kickoff_utc"] < row["kickoff_utc"])]
-        played = pd.concat([before["home_team"], before["away_team"]]).value_counts()
-        reasons = []
-        for side, team in (("home", home), ("away", away)):
-            if row[f"{side}_qb_change"]:
-                reasons.append(f"QB change for {team}")
-            for inj in qb_inj.get((int(row["week"]), team), []) if row["season"] == season else []:
-                reasons.append(f"{team} QB {inj.player} listed {inj.report_status}")
-            if played.get(team, 0) < 3:
-                reasons.append(f"Early season: {team} has played {played.get(team, 0)} games")
-        if not has_market:
-            reasons.append("No betting line yet")
-        elif abs(base_p - market_p) >= DISAGREE_GAP:
-            reasons.append(f"Stats model and market differ by {abs(base_p - market_p):.0%}")
-        reasons += [f"{d} data is stale" for d in stale]
-        uncertainty = "low" if not reasons else "moderate" if len(reasons) == 1 else "high"
+        gap = abs(base_p - market_p) if has_market else None
+        qb_teams = [team for side, team in (("home", home), ("away", away)) if row[f"{side}_qb_change"]]
+        uncertainty, reason_keys = uncertainty_grade(gap, bool(qb_teams), row["week"] <= EARLY_WEEK_END, bool(stale))
+        reason_text = {
+            "missing_market": "No betting line yet",
+            "early_season": f"Early season: week {row['week']}",
+            "disagreement": f"Stats model and market differ by {gap:.0%}" if gap is not None else "",
+            "qb_change": f"QB change for {', '.join(qb_teams)}",
+            "stale": f"{', '.join(stale)} data is stale",
+        }
+        reasons = [reason_text[key] for key in reason_keys]
 
         upset = []
-        if has_market:
+        if upset_watch(base_p, market_p):
             dog = away if market_p >= 0.5 else home
-            dog_stats_p = 1 - base_p if dog == away else base_p
-            if (base_p >= 0.5) != (market_p >= 0.5):
+            if market_p != 0.5 and (base_p >= 0.5) != (market_p >= 0.5):
                 upset.append(f"Stats model picks {dog}, the market underdog")
-            elif dog_stats_p >= UPSET_MIN_PROB:
-                upset.append(f"Stats model gives underdog {dog} {dog_stats_p:.0%}")
-            if abs(base_p - market_p) >= UPSET_MIN_GAP:
+            if gap >= UPSET_GAP:
                 upset.append(f"Stats {base_p:.0%} vs market {market_p:.0%} for {home}")
 
         features = {

@@ -6,6 +6,7 @@ python -m nflpi.jobs train          # fit on seasons before the current one
 python -m nflpi.jobs predict        # refresh current + next week
 python -m nflpi.jobs loop           # worker: refresh on a game-aware schedule
 python -m nflpi.jobs vapid          # print a new Web Push key pair for .env
+python -m nflpi.jobs backtest      # 2012-2025 walk-forward on nflverse games
 """
 
 import argparse
@@ -13,11 +14,14 @@ import logging
 import time
 from datetime import UTC, datetime, timedelta
 
+import pandas as pd
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from nflpi.analytics.backtest import run_backtest
+from nflpi.analytics.metrics import EARLY_WEEK_END, UNCERTAINTY_GAP, UPSET_GAP
 from nflpi.db import REFRESH_LOCK_KEY, get_engine, session_factory
-from nflpi.ingestion import service
+from nflpi.ingestion import nflverse, service
 from nflpi.models import AppSetting, Game, ModelVersion
 from nflpi.notify import push
 from nflpi.predictions import engine
@@ -47,6 +51,40 @@ def train(session) -> ModelVersion:
 def predict(session) -> int:
     events = engine.refresh_predictions(session)
     return push.alert_prediction_changes(session, events)
+
+
+def backtest() -> None:
+    games = nflverse.parse_games(nflverse.fetch_csv("schedules/games.csv"), 2002)
+    for game in games:
+        game["home_ml"] = game.pop("_home_ml")
+        game["away_ml"] = game.pop("_away_ml")
+        game.pop("_spread")
+        game.pop("_total")
+    frame = pd.DataFrame(games).sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)
+    report = run_backtest(frame, list(range(2012, 2026)))
+    print("2012-2025 walk-forward, nflverse closing lines")
+    print(f"Upset watch: stats picks market underdog OR stats-market gap >= {UPSET_GAP:.0%}")
+    print(f"Uncertainty: week <= {EARLY_WEEK_END} raises two levels; gap >= {UNCERTAINTY_GAP:.0%} "
+          "or a starting-QB change raises one level")
+    for model in report["models"]:
+        if model["model"] in ("market", "logistic", "blend"):
+            print(f"{model['model']}: {model['accuracy']:.2%} ({model['n']} games)")
+    for period, key in (("2012-2021 train", "signals_2012_2021"),
+                        ("2022-2025 untouched check", "signals_2022_2025"),
+                        ("2012-2025 overall", "signals")):
+        signal = report[key]
+        print(f"{period}: {signal['games']} games; upset watch {signal['upset_flag_rate']:.2%} "
+              f"({signal['upset_flagged']}); flagged underdogs won "
+              f"{signal['flagged_underdog_win_rate']:.2%} "
+              f"({signal['flagged_underdog_wins']}/{signal['flagged_underdogs']}); "
+              f"unflagged underdogs won {signal['unflagged_underdog_win_rate']:.2%} "
+              f"({signal['unflagged_underdog_wins']}/{signal['unflagged_underdogs']})")
+        for grade, row in signal["grades"].items():
+            print(f"  {grade}: {row['share']:.2%} ({row['games']}); "
+                  f"blend accuracy {row['accuracy']:.2%} ({row['correct']}/{row['games']})")
+        for band, grades in signal["probability_bands"].items():
+            cells = ", ".join(f"{grade} {row['accuracy']:.2%} ({row['games']})" for grade, row in grades.items())
+            print(f"  pick probability {band}: {cells}")
 
 
 def next_interval(session, now: datetime) -> timedelta:
@@ -121,7 +159,9 @@ def loop() -> None:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["bootstrap", "ingest", "train", "predict", "backfill", "loop", "vapid"])
+    parser.add_argument(
+        "command", choices=["bootstrap", "ingest", "train", "predict", "backfill", "loop", "vapid", "backtest"]
+    )
     parser.add_argument("--no-weather", action="store_true")
     args = parser.parse_args()
     if args.command == "loop":
@@ -130,6 +170,8 @@ def main() -> None:
         public, private = push.generate_vapid_keys()
         print(f"VAPID_PUBLIC_KEY={public}\nVAPID_PRIVATE_KEY={private}")
         return None
+    if args.command == "backtest":
+        return backtest()
     with session_factory()() as session:
         if args.command == "bootstrap":
             return cycle(session)

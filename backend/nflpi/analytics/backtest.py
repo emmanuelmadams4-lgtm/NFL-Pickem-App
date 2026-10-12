@@ -9,7 +9,15 @@ mid-week input; the "blend" model inherits that advantage and is labeled so.
 import numpy as np
 import pandas as pd
 
-from nflpi.analytics.metrics import bootstrap_ci, calibration, log_loss, summarize
+from nflpi.analytics.metrics import (
+    EARLY_WEEK_END,
+    bootstrap_ci,
+    calibration,
+    log_loss,
+    summarize,
+    uncertainty_grade,
+    upset_watch,
+)
 from nflpi.predictions.elo import EloParams, run_elo
 from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features
 from nflpi.predictions.model import LogitModel
@@ -68,6 +76,56 @@ def predict_season(frames: dict[EloParams, pd.DataFrame], season: int, window: i
         test[f"p_without_{feat}"] = LogitModel.fit(train, keep).predict(test)
     test["elo_k"], test["elo_hfa"] = params.k, params.hfa
     return test
+
+
+def signal_report(preds: pd.DataFrame) -> dict:
+    """Count only games scored by all three recommendation benchmarks."""
+    flags = np.array([upset_watch(s, m) for s, m in zip(preds["p_logistic"], preds["p_market"], strict=True)])
+    market = preds["p_market"].to_numpy()
+    y = preds["home_win"].to_numpy()
+    flagged_dogs = flags & (market != 0.5)
+    unflagged_dogs = ~flags & (market != 0.5)
+    dog_wins = np.where(market < 0.5, y == 1, y == 0)
+    grades = np.array([
+        uncertainty_grade(abs(s - m), bool(h or a), w <= EARLY_WEEK_END)[0]
+        for s, m, h, a, w in zip(
+            preds["p_logistic"], preds["p_market"], preds["home_qb_change"],
+            preds["away_qb_change"], preds["week"], strict=True
+        )
+    ])
+    correct = (preds["p_blend"].to_numpy() > 0.5) == (y == 1)
+    pick_prob = np.maximum(preds["p_blend"].to_numpy(), 1 - preds["p_blend"].to_numpy())
+    n = len(preds)
+    by_grade = {}
+    for grade in ("low", "moderate", "high"):
+        mask = grades == grade
+        by_grade[grade] = {
+            "games": int(mask.sum()),
+            "share": float(mask.sum() / n),
+            "correct": int(correct[mask].sum()),
+            "accuracy": float(correct[mask].mean()) if mask.any() else None,
+        }
+    by_band = {}
+    for label, lo, hi in (("below 60%", 0.5, 0.6), ("60 to 70%", 0.6, 0.7), ("70% and above", 0.7, 1.0)):
+        band = (pick_prob >= lo) & (pick_prob < hi if hi < 1 else pick_prob <= hi)
+        by_band[label] = {
+            grade: {"games": int(mask.sum()), "accuracy": float(correct[mask].mean()) if mask.any() else None}
+            for grade in ("low", "moderate", "high")
+            for mask in [band & (grades == grade)]
+        }
+    return {
+        "games": n,
+        "upset_flagged": int(flags.sum()),
+        "upset_flag_rate": float(flags.mean()),
+        "flagged_underdogs": int(flagged_dogs.sum()),
+        "flagged_underdog_wins": int((flagged_dogs & dog_wins).sum()),
+        "flagged_underdog_win_rate": float(dog_wins[flagged_dogs].mean()) if flagged_dogs.any() else None,
+        "unflagged_underdogs": int(unflagged_dogs.sum()),
+        "unflagged_underdog_wins": int((unflagged_dogs & dog_wins).sum()),
+        "unflagged_underdog_win_rate": float(dog_wins[unflagged_dogs].mean()) if unflagged_dogs.any() else None,
+        "grades": by_grade,
+        "probability_bands": by_band,
+    }
 
 
 def run_backtest(df: pd.DataFrame, seasons: list[int], window: int = 10) -> dict:
@@ -130,5 +188,12 @@ def run_backtest(df: pd.DataFrame, seasons: list[int], window: int = 10) -> dict
         "by_season": by_season,
         "calibration": {m: calibration(preds[f"p_{m}"].to_numpy(), y) for m in ("logistic", "blend", "market")},
         "favorite_split": fav_split,
+        "signals": signal_report(preds),
+        "signals_2012_2021": signal_report(preds[preds["season"].between(2012, 2021)])
+        if any(2012 <= s <= 2021 for s in seasons)
+        else None,
+        "signals_2022_2025": signal_report(preds[preds["season"].between(2022, 2025)])
+        if any(2022 <= s <= 2025 for s in seasons)
+        else None,
         "elo_settings": sorted({(float(k), float(h)) for k, h in zip(preds["elo_k"], preds["elo_hfa"], strict=True)}),
     }

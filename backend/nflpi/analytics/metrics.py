@@ -3,6 +3,37 @@
 import numpy as np
 
 EPS = 1e-6
+UPSET_GAP = 0.12
+UNCERTAINTY_GAP = 0.08
+EARLY_WEEK_END = 4
+
+
+def uncertainty_grade(
+    disagreement: float | None, qb_change: bool, early_season: bool, stale: bool = False
+) -> tuple[str, list[str]]:
+    """Grade pre-game input reliability; return only reasons that raise the grade."""
+    if disagreement is None or np.isnan(disagreement):
+        return "high", ["missing_market"]
+    score = 0
+    reasons = []
+    for key, points, applies in (
+        ("qb_change", 1, qb_change),
+        ("disagreement", 1, disagreement >= UNCERTAINTY_GAP),
+        ("early_season", 2, early_season),
+        ("stale", 1, stale),
+    ):
+        if applies and score < 2:
+            score = min(2, score + points)
+            reasons.append(key)
+    return ("low", "moderate", "high")[score], reasons
+
+
+def upset_watch(stats_home_prob: float, market_home_prob: float | None) -> bool:
+    """A stats pick of the market underdog or a 12-point gap qualifies."""
+    if market_home_prob is None or np.isnan(market_home_prob):
+        return False
+    picks_underdog = market_home_prob != 0.5 and (stats_home_prob >= 0.5) != (market_home_prob >= 0.5)
+    return bool(picks_underdog or abs(stats_home_prob - market_home_prob) >= UPSET_GAP)
 
 
 def accuracy(p: np.ndarray, y: np.ndarray) -> float:
