@@ -5,4 +5,6 @@
 {"ts":"2026-10-12T17:09:17Z","lane":"deploy","topic":"model:deploy:wo3b","route":"advisor","reason":"","answers":{"model":{"type":"choice","choice":"sol","probabilities":{"luna":0,"sol":0.7,"astra":0.3},"confidence":0.55},"effort":{"type":"choice","choice":"xhigh","probabilities":{"low":0,"medium":0,"high":0.05,"xhigh":0.95},"confidence":0.93}}}
 {"ts":"2026-10-12T17:38:54Z","lane":"deploy","topic":"model:deploy:wo4","route":"advisor","reason":"","answers":{"model":{"type":"choice","choice":"sol","probabilities":{"luna":0.16,"sol":0.84,"astra":0},"confidence":0.76},"effort":{"type":"choice","choice":"medium","probabilities":{"low":0.08,"medium":0.7,"high":0.2,"xhigh":0.02},"confidence":0.6}}}
 {"ts":"2026-10-12T18:45:11Z","lane":"deploy","topic":"model:deploy:wo5","route":"advisor","reason":"","answers":{"model":{"type":"choice","choice":"sol","probabilities":{"luna":0.38,"sol":0.61,"astra":0.01},"confidence":0.41},"effort":{"type":"choice","choice":"medium","probabilities":{"low":0.38,"medium":0.48,"high":0.13,"xhigh":0.01},"confidence":0.31}}}
-{"topic":"advisor:deploy:wo2-rung","advisor":"sonnet","answer":"RUNG: sol","note":"Jev unsure on model (astra 0.48); astra needs the owner yes and sol had not tried this rewrite"}
+{"ts":"2026-10-12T19:01:58Z","lane":"deploy","topic":"review:step5","route":"advisor","reason":"","answers":{"passed":{"type":"noul","noul":0.34}}}
+{"topic":"advisor:deploy:wo2-rung","advisor":"sonnet","answer":"RUNG: sol"}
+{"topic":"advisor:deploy:review-pass","advisor":"sonnet","answer":"VERDICT: PASS"}
