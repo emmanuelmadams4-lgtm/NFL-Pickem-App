@@ -104,4 +104,4 @@ grep -rnE "sk-ant-|sk-or-v1|VAPID_PRIVATE" apps/web/app apps/web/components apps
 * Carried to step 4 PLANNING: design.md §§ 5/7/8 still describe the blue system.
 
 ## 6. LANDING
-Step 3 DONE on the round-4 head. Pushed to `claude/nfl-pickem-intelligence`, draft PR #1 updated; CI result recorded in STATE.
+Step 3 DONE on the round-4 head. Pushed to `claude/nfl-pickem-intelligence` (`3cd9964`), draft PR #1 updated. CI on `3cd9964`: 8/8 green (backend, web, docker, e2e; push and PR runs).

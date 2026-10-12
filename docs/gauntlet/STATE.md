@@ -5,7 +5,7 @@
 ## STATUS
 
 * **Goal:** one private app (desktop web + iPhone PWA) for weekly NFL Pick'em: evidence-based picks that match/beat the market, honest uncertainty, alerts, accuracy tracking, a model that gets better over time (D18). See [PLAN.md](PLAN.md) and the owner's decisions D1–D41 in [OWNER_DECISIONS_2026-10-12.md](OWNER_DECISIONS_2026-10-12.md).
-* **Overall step:** **step 3 of 14 DONE** (2026-10-12, cloud session; restyle to reference 06, D39–D41). Objective critic PASS and design critic PASS on round 4 (`logs/step-3.md` § 5). Roadmap is 14 steps (PLAN.md).
+* **Overall step:** **step 3 of 14 DONE** (2026-10-12, cloud session; restyle to reference 06, D39–D41). Objective critic PASS and design critic PASS on round 4 (`logs/step-3.md` § 5); CI 8/8 green on `3cd9964`. Roadmap is 14 steps (PLAN.md).
 * **Next:** **step 4, Pick sheet** (D1–D3, D7, D10–D14; PLAN.md row 4). PLANNING also rewrites design.md §§ 5/7/8 (still describe the old blue system). Polish carried to step 6 is listed in `logs/step-3.md` § 5 rounds 3–4.
 * **Phase:** between steps. Next session: `DIRECT_COORDINATOR / ONE_SHOT`.
 * **STRIKES:** none. **CONTINUATIONS:** 0.
