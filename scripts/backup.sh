@@ -1,8 +1,79 @@
-#!/usr/bin/env sh
-# Nightly-friendly database backup: ./scripts/backup.sh  (keeps the last 14)
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+keep=${BACKUP_KEEP:-14}
+if [[ ! "$keep" =~ ^[1-9][0-9]*$ ]] || (( 10#$keep < 2 )); then
+  echo "BACKUP_KEEP must be at least 2" >&2
+  exit 1
+fi
 mkdir -p backups
-file="backups/nflpi-$(date +%Y%m%d-%H%M%S).sql.gz"
-docker compose exec -T db pg_dump -U nflpi nflpi | gzip > "$file"
-ls -1t backups/*.sql.gz | tail -n +15 | xargs -r rm --
+file="backups/nflpi-$(date +%Y%m%d-%H%M%S)-$$.sql.gz"
+if [[ -e "$file" ]]; then
+  echo "backup already exists: $file" >&2
+  exit 1
+fi
+part=$(mktemp backups/.nflpi.XXXXXX)
+copy_part=''
+cleanup() {
+  local status=$?
+  rm -f "$part"
+  if [[ -n "$copy_part" ]]; then rm -f "$copy_part"; fi
+  if (( status != 0 )); then
+    echo "backup failed or was interrupted (status $status) at $(date +%FT%T)" >&2
+  fi
+}
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+trap cleanup EXIT
+mv "$part" "$part.part"
+part="$part.part"
+
+if ! docker compose exec -T db pg_dump -U nflpi nflpi | gzip > "$part"; then
+  echo "backup failed: pg_dump or gzip failed" >&2
+  exit 1
+fi
+if ! gzip -t "$part"; then
+  echo "backup failed: gzip file is corrupt" >&2
+  exit 1
+fi
+if ! gzip -dc "$part" | tail -n 20 | awk 'index($0, "PostgreSQL database dump complete") { found=1 } END { exit !found }'; then
+  echo "backup failed: dump has no completion trailer" >&2
+  exit 1
+fi
+if ! gzip -dc "$part" | awk '/^COPY public[.]games [(]/ { in_games=1; next } in_games && /^\\[.]$/ { in_games=0 } in_games { found=1 } END { exit !found }'; then
+  echo "backup failed: dump has no games rows" >&2
+  exit 1
+fi
+
+mv "$part" "$file"
+
+retain() {
+  local dir=$1 newest=$2 old count=0
+  while IFS= read -r old; do
+    [[ "$old" == "$newest" ]] && continue
+    count=$((count + 1))
+    if (( count >= keep )); then rm -f "$old"; fi
+  done < <(printf '%s\n' "$dir"/nflpi-*.sql.gz | LC_ALL=C sort -r)
+}
+
+retain backups "$file"
+
+if [[ -n "${BACKUP_COPY_DIR:-}" ]]; then
+  if [[ ! -d "$BACKUP_COPY_DIR" || ! -f "$BACKUP_COPY_DIR/.pickem-backups" ]]; then
+    echo "BACKUP_COPY_DIR is missing or has no .pickem-backups marker file (is the drive plugged in? create it once with: touch <dir>/.pickem-backups)" >&2
+    exit 1
+  fi
+  copy_file="$BACKUP_COPY_DIR/$(basename "$file")"
+  copy_part="$BACKUP_COPY_DIR/.$(basename "$file").part"
+  if ! cp "$file" "$copy_part" || ! cmp -s "$file" "$copy_part" || ! mv "$copy_part" "$copy_file"; then
+    echo "backup copy failed: $file to $BACKUP_COPY_DIR" >&2
+    exit 1
+  fi
+  copy_part=''
+fi
+
+if [[ -n "${BACKUP_COPY_DIR:-}" ]]; then retain "$BACKUP_COPY_DIR" "$copy_file"; fi
+
 echo "saved $file"

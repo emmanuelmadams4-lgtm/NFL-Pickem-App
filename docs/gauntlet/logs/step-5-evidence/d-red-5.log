@@ -1,0 +1,38 @@
+PASS D0 clean clone of dcf59e4
+PASS D1 compose ports/restart, scripts, runbook and iPhone order
+PASS D2 up from a clean clone; database ok, worker heartbeat present
+PASS D3 bootstrap; health ok
+PASS D4 page, manifest, and a non-cacheable sw.js
+service worker scope http://127.0.0.1:18000/, manifest scope http://127.0.0.1:18000/
+PASS D5 no http:// redirects behind an https proxy; service worker registers
+PASS D6 32 of 32 team logos return 200 from the server
+NOTICE:  truncate cascades to table "ai_reports"
+NOTICE:  truncate cascades to table "market_snapshots"
+NOTICE:  truncate cascades to table "predictions"
+NOTICE:  truncate cascades to table "user_picks"
+NOTICE:  truncate cascades to table "weather_forecasts"
+--- restore4.log (rc=143)
+NOTICE:  database "nflpi_restore" does not exist, skipping
+ Container nflpi-deploycheck-worker-1  Stopping
+ Container nflpi-deploycheck-worker-1  Stopped
+ Container nflpi-deploycheck-app-1  Stopping
+ Container nflpi-deploycheck-app-1  Stopped
+database names after interrupted swap:
+nflpi=exists
+nflpi_old=exists
+nflpi_restore=missing
+database swap failed; swap state is uncertain; safety copy: backups/pre-restore-20261012-143907-30297.sql.gz
+run: docker compose exec db psql -U nflpi -d postgres -c '\l' and see docs/DEPLOY.md (If a restore stops with a message about nflpi_old)
+--- containers
+NAME                         IMAGE                      COMMAND                  SERVICE   CREATED         STATUS                       PORTS
+nflpi-deploycheck-app-1      nflpi-deploycheck-app      "sh -c 'alembic upgr…"   app       6 minutes ago   Exited (137) 5 minutes ago   
+nflpi-deploycheck-db-1       postgres:17-alpine         "docker-entrypoint.s…"   db        7 minutes ago   Up 6 minutes (healthy)       127.0.0.1:15432->5432/tcp
+nflpi-deploycheck-worker-1   nflpi-deploycheck-worker   "python -m nflpi.job…"   worker    6 minutes ago   Exited (137) 5 minutes ago   
+--- databases
+nflpi
+nflpi_old
+postgres
+template0
+template1
+FAIL D7 a killed restore did not start the app and worker again by itself (exit handler)
+exit=1

@@ -1,0 +1,4 @@
+# bash -n, shellcheck on HEAD 32af9a2 (code unchanged since the last commit that touched scripts/)
+clean scripts/backup.sh
+clean scripts/restore.sh
+clean at warning level: scripts/deploy-check.sh (info notes SC2012/SC2015 remain)
