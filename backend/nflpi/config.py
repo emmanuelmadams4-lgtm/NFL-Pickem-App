@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_model: str = "typesafe/jev-1.13"
     openrouter_url: str = "https://openrouter.ai/api/v1/chat/completions"
+    openrouter_decisions_url: str = "https://openrouter.ai/api/alpha/decisions"
     ai_daily_call_limit: int = 60
     ai_max_retries: int = 2
 

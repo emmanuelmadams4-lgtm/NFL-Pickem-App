@@ -9,6 +9,7 @@ import { SeasonPicker } from "@/components/pickers";
 import { ChevronRight } from "@/components/icons";
 import { WeeklyBars } from "@/components/charts/weekly-bars";
 import { CalibrationChart } from "@/components/charts/calibration";
+import { Scorecard } from "@/components/performance/scorecard";
 import { pctOr } from "@/lib/fmt";
 
 /** One cell of the accuracy strip. Cells are divided by hairlines, not boxed (design.md § 7). */
@@ -146,6 +147,8 @@ export function PerformanceView() {
 
       {perf && (
         <>
+          <Scorecard season={season} />
+          {perf.auto.total > 0 && <p className="text-label text-text-2">Picked for you by the model: {perf.auto.correct} of {perf.auto.total} right</p>}
           {perf.model.total === 0 && perf.model_backfill.total === 0 && perf.me.total === 0 ? (
             <EmptyState title={`No finished games for ${season} yet`} hint="Accuracy appears here once games are final." />
           ) : (

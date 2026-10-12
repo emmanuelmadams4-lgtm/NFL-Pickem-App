@@ -57,6 +57,18 @@ class WeatherOut(BaseModel):
     precip_in: float | None = None
 
 
+class SheetOut(BaseModel):
+    label: str | None
+    label_hit_rate: float | None
+    app_pick: str | None
+    app_points: int | None
+    my_pick: str | None
+    my_points: int | None
+    pick_by: Literal["app", "user", "auto", "csv"]
+    points_by: Literal["app", "user"]
+    differs: bool
+
+
 class GameSummary(BaseModel):
     game_id: str
     season: int
@@ -76,6 +88,7 @@ class GameSummary(BaseModel):
     neutral_site: bool
     div_game: bool
     prediction: PredictionOut | None
+    sheet: SheetOut
     my_pick: str | None
     my_pick_correct: bool | None
     model_correct: bool | None
@@ -215,6 +228,15 @@ class PickIn(BaseModel):
     team: str
 
 
+class PointsIn(BaseModel):
+    points: int
+
+
+class RankIn(BaseModel):
+    rank: int = Field(ge=1)
+    leader_points: int | None = Field(default=None, ge=0)
+
+
 class PickOut(BaseModel):
     game_id: str
     picked_team: str
@@ -232,6 +254,8 @@ class WeekPerformance(BaseModel):
     games_final: int
     my_correct: int
     my_total: int
+    auto_correct: int
+    auto_total: int
     model_live_correct: int
     model_live_total: int
     model_backfill_correct: int
@@ -261,6 +285,7 @@ class PerformanceOut(BaseModel):
     season: int
     weeks: list[WeekPerformance]
     me: Tally
+    auto: Tally
     model: Tally = Field(description="Live predictions only: the final snapshot was made before kickoff")
     model_backfill: Tally = Field(description="Backfill predictions only: computed after the fact, labeled")
     market: Tally
@@ -292,6 +317,30 @@ class BacktestOut(BaseModel):
     by_season: list[dict]
     calibration: dict[str, list[CalibrationBucket]]
     favorite_split: list[dict]
+    labels: list[dict] = []
+
+
+class ScorecardWeek(BaseModel):
+    week: int
+    games: int
+    max_points: int
+    my_points: int
+    app_points: int
+    my_correct: int
+    app_correct: int
+    changed: int
+    changed_right: int
+    changed_wrong: int
+    auto: int
+    rank: int | None
+    leader_points: int | None
+
+
+class ScorecardOut(BaseModel):
+    season: int
+    weeks: list[ScorecardWeek]
+    totals: ScorecardWeek
+    by_label: list[dict]
 
 
 class AskIn(BaseModel):

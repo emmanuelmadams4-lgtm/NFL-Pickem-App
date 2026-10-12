@@ -486,11 +486,12 @@ def test_one_migration_builds_the_schema_with_no_drift():
         with admin.connect() as c:
             c.execute(drop)
         admin.dispose()
-    versions = list((BACKEND / "migrations" / "versions").glob("*.py"))
-    assert len(versions) == 1  # one initial migration
-    source = versions[0].read_text()
-    # The migration is a frozen record: explicit tables, never the live models (or it can never drift).
-    assert "op.create_table" in source and "create_all" not in source and "metadata" not in source
+    versions = sorted((BACKEND / "migrations" / "versions").glob("*.py"))
+    assert [v.name[:4] for v in versions] == ["0001", "0002"]  # initial schema, then the pick sheet (step 4)
+    for version in versions:
+        source = version.read_text()
+        # A migration is a frozen record: explicit tables, never the live models (or it can never drift).
+        assert "op.create_table" in source and "create_all" not in source and "metadata" not in source
 
 
 # A13 --------------------------------------------------------------------------------------------------------------

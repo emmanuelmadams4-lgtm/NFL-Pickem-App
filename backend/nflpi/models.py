@@ -162,7 +162,37 @@ class UserPick(Base):
     game_id: Mapped[str] = mapped_column(ForeignKey("games.game_id"), primary_key=True)
     picked_team: Mapped[str] = mapped_column(String(4))
     picked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    source: Mapped[str] = mapped_column(String(8), default="app")  # app | csv
+    source: Mapped[str] = mapped_column(String(8), default="app")  # app | csv | auto
+
+
+class PickPoint(Base):
+    __tablename__ = "pick_points"
+    game_id: Mapped[str] = mapped_column(ForeignKey("games.game_id"), primary_key=True)
+    points: Mapped[int] = mapped_column(Integer)
+    set_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class SheetEntry(Base):
+    __tablename__ = "sheet_entries"
+    game_id: Mapped[str] = mapped_column(ForeignKey("games.game_id"), primary_key=True)
+    app_pick: Mapped[str] = mapped_column(String(4))
+    app_prob: Mapped[float] = mapped_column(Float)
+    label: Mapped[str] = mapped_column(String(16))
+    app_points: Mapped[int | None] = mapped_column(Integer)
+    my_pick: Mapped[str] = mapped_column(String(4))
+    my_points: Mapped[int | None] = mapped_column(Integer)
+    pick_by: Mapped[str] = mapped_column(String(8))
+    points_by: Mapped[str] = mapped_column(String(8))
+    locked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class WeeklyRank(Base):
+    __tablename__ = "weekly_ranks"
+    season: Mapped[int] = mapped_column(Integer, primary_key=True)
+    week: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rank: Mapped[int] = mapped_column(Integer)
+    leader_points: Mapped[int | None] = mapped_column(Integer)
+    entered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class AIReport(Base):

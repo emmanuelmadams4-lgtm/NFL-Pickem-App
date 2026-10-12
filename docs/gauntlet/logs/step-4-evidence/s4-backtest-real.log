@@ -1,0 +1,38 @@
+2026-10-12 12:39:21,222 INFO httpx HTTP Request: GET https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv "HTTP/1.1 302 Found"
+2026-10-12 12:39:21,327 INFO httpx HTTP Request: GET https://release-assets.githubusercontent.com/github-production-release-asset/452908115/c89763ab-8b02-4433-b30f-f56ceb61eeb7?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-10-12T17%3A28%3A20Z&rscd=attachment%3B+filename%3Dgames.csv&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-10-12T16%3A28%3A08Z&ske=2026-10-12T17%3A28%3A20Z&sks=b&skv=2018-11-09&sig=OgMwfYYmFBSJ%2BQlyl%2B3rW3iC%2B3RnGH2Y031y%2Ftuzb5A%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc5MTgyMzQ2MSwibmJmIjoxNzkxODIzMTYxLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.ruS7Mob6696RwNnJ-bG3PjKMOyer2J4PLNH_GcsTk8k&response-content-disposition=attachment%3B%20filename%3Dgames.csv&response-content-type=application%2Foctet-stream "HTTP/1.1 200 OK"
+2012-2025 walk-forward, nflverse closing lines
+Upset watch: stats picks market underdog OR stats-market gap >= 12%
+Uncertainty: week <= 4 raises two levels; gap >= 8% or a starting-QB change raises one level
+logistic: 64.51% (3649 games)
+market: 66.57% (3649 games)
+blend: 66.46% (3649 games)
+2012-2021 train: 2565 games; upset watch 24.44% (627); flagged underdogs won 38.46% (240/624); unflagged underdogs won 32.35% (623/1926)
+  low: 40.90% (1049); blend accuracy 68.16% (715/1049)
+  moderate: 28.19% (723); blend accuracy 66.11% (478/723)
+  high: 30.92% (793); blend accuracy 63.05% (500/793)
+  pick probability below 60%: low 52.56% (293), moderate 55.33% (244), high 52.14% (257)
+  pick probability 60 to 70%: low 63.17% (334), moderate 64.65% (215), high 61.15% (278)
+  pick probability 70% and above: low 82.94% (422), moderate 77.27% (264), high 75.97% (258)
+  coin_flip: 14.19% (364); blend accuracy 51.37%
+  tough_matchup: 39.69% (1018); blend accuracy 58.25%
+  easy_pick: 46.12% (1183); blend accuracy 77.18%
+2022-2025 untouched check: 1084 games; upset watch 24.35% (264); flagged underdogs won 37.12% (98/264); unflagged underdogs won 30.67% (250/815)
+  low: 41.61% (451); blend accuracy 70.07% (316/451)
+  moderate: 27.31% (296); blend accuracy 68.92% (204/296)
+  high: 31.09% (337); blend accuracy 62.91% (212/337)
+  pick probability below 60%: low 61.87% (139), moderate 63.37% (101), high 51.59% (126)
+  pick probability 60 to 70%: low 67.61% (142), moderate 60.47% (86), high 65.49% (113)
+  pick probability 70% and above: low 78.82% (170), moderate 80.73% (109), high 74.49% (98)
+  coin_flip: 14.30% (155); blend accuracy 54.84%
+  tough_matchup: 42.90% (465); blend accuracy 62.58%
+  easy_pick: 42.80% (464); blend accuracy 76.72%
+2012-2025 overall: 3649 games; upset watch 24.42% (891); flagged underdogs won 38.06% (338/888); unflagged underdogs won 31.85% (873/2741)
+  low: 41.11% (1500); blend accuracy 68.73% (1031/1500)
+  moderate: 27.93% (1019); blend accuracy 66.93% (682/1019)
+  high: 30.97% (1130); blend accuracy 63.01% (712/1130)
+  pick probability below 60%: low 55.56% (432), moderate 57.68% (345), high 51.96% (383)
+  pick probability 60 to 70%: low 64.50% (476), moderate 63.46% (301), high 62.40% (391)
+  pick probability 70% and above: low 81.76% (592), moderate 78.28% (373), high 75.56% (356)
+  coin_flip: 14.22% (519); blend accuracy 52.41%
+  tough_matchup: 40.64% (1483); blend accuracy 59.61%
+  easy_pick: 45.14% (1647); blend accuracy 77.05%

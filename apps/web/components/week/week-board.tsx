@@ -10,6 +10,7 @@ import { safeGet, safeSet } from "@/lib/fmt";
 import { EmptyState, ErrorState, PageHead, SelectField, Skeleton, cx } from "@/components/ui";
 import { describeStale, feedsModel, staleList } from "@/components/freshness";
 import { KpiStrip } from "@/components/week/kpi-strip";
+import { ChevronRight } from "@/components/icons";
 import { WeekPicker } from "@/components/pickers";
 import { InstallHint } from "@/components/pwa";
 import { GameCard } from "@/components/week/game-card";
@@ -48,7 +49,7 @@ function BoardSkeleton() {
 }
 
 export function WeekBoard() {
-  const { season, week } = useSelection();
+  const { season, week, qs } = useSelection();
   const q = useWeek(season, week);
   const [sort, setSortState] = useState<SortKey>(initialSort);
   const [onlyAttention, setOnlyAttention] = useState(false);
@@ -64,6 +65,7 @@ export function WeekBoard() {
   };
 
   const data = q.data;
+  const pointsCount = data?.games.filter((g) => g.status !== "postponed").length ?? 0; // the server numbers 1..N over every game that is not postponed
   const now = useNow();
   const games = useMemo(() => {
     if (!data) return [];
@@ -110,7 +112,8 @@ export function WeekBoard() {
       />
 
       {/* Filter chips directly under the title, before any summary (design.md § 0); one scrolling row on the phone. */}
-      <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
+      <div className="flex flex-wrap items-center gap-3">
+      <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex min-w-0 items-center gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
         <div role="group" aria-label="Games shown" className="flex shrink-0 gap-2">
           {SCOPES.map((o) => (
             <button key={o.value} type="button" aria-pressed={scope === o.value} onClick={() => setScope(o.value)} className={chipClass(scope === o.value)}>
@@ -140,6 +143,10 @@ export function WeekBoard() {
             </option>
           ))}
         </SelectField>
+      </div>
+      <Link href={`/sheet/${qs}`} className="relative z-10 inline-flex min-h-11 items-center gap-1 rounded-full border border-border-strong bg-elevated px-4 text-sm font-medium text-text lg:min-h-9">
+        Yahoo sheet <ChevronRight size={16} />
+      </Link>
       </div>
 
       <WeekPicker className="lg:hidden" />
@@ -184,7 +191,7 @@ export function WeekBoard() {
                         </li>
                       )}
                       {grp.games.map((g) => (
-                        <GameCard key={g.game_id} game={g} highlight={g.game_id === nextId} />
+                        <GameCard key={g.game_id} game={g} highlight={g.game_id === nextId} pointsCount={pointsCount} />
                       ))}
                     </Fragment>
                   ))}

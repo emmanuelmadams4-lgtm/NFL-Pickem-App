@@ -56,14 +56,14 @@ function RefreshButton() {
 }
 
 const DESKTOP_NAV = [
-  { label: "Week", match: (p: string) => p === "/" || p.startsWith("/game") },
+  { label: "Week", match: (p: string) => p === "/" || p.startsWith("/game") || p.startsWith("/sheet") },
   { label: "Results", match: (p: string) => p.startsWith("/performance") },
   { label: "Backtest", match: (p: string) => p.startsWith("/backtest") },
   { label: "Settings", match: (p: string) => p.startsWith("/settings") },
 ];
 
 const TABS = [
-  { label: "Week", Icon: Calendar, match: (p: string) => p === "/" || p.startsWith("/game") },
+  { label: "Week", Icon: Calendar, match: (p: string) => p === "/" || p.startsWith("/game") || p.startsWith("/sheet") },
   { label: "Results", Icon: BarChart, match: (p: string) => p.startsWith("/performance") || p.startsWith("/backtest") },
   { label: "Settings", Icon: Gear, match: (p: string) => p.startsWith("/settings") },
 ];

@@ -1,0 +1,70 @@
+    Timeout:  2000ms
+
+    Call log:
+    [2m  - Expect "toBeDisabled" with timeout 2000ms[22m
+    [2m  - waiting for getByRole('combobox', { name: 'Points for BUF at MIA' })[22m
+    [2m    6 × locator resolved to <select aria-label="Points for BUF at MIA" class="h-12 min-w-16 rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text disabled:cursor-not-allowed disabled:opacity-60 lg:h-10">…</select>[22m
+    [2m      - unexpected value "enabled"[22m
+
+
+       99 |   await page.clock.fastForward(Date.parse(g.kickoff_utc) - Date.parse(meta.server_time) - 1_000);
+      100 |   await page.clock.runFor(4_000);
+    > 101 |   await expect(points(page, g)).toBeDisabled({ timeout: 2_000 });
+          |                                 ^
+      102 | });
+      103 |
+      104 | test("U2 copy sheet: every game in kickoff order with the winner and points, and one button copies it", async ({ page, request, context }) => {
+        at /Users/emmanueladams/Projects/NFL-Pickem-App/apps/web/e2e/sheet.spec.ts:101:33
+
+    Error Context: test-results/sheet-U1c-the-points-lock--cacee-at-kickoff-without-a-reload/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/sheet-U1c-the-points-lock--cacee-at-kickoff-without-a-reload/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/sheet-U1c-the-points-lock--cacee-at-kickoff-without-a-reload/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) e2e/sheet.spec.ts:170:5 › U4b phone (375px): the board with points and the copy sheet do not scroll sideways 
+
+    Error: /performance/ sideways scroll
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBeLessThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: <= [32m0[39m
+    Received:    [31m290[39m
+
+      176 |     await page.waitForLoadState("networkidle");
+      177 |     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    > 178 |     expect(overflow, `${path} sideways scroll`).toBeLessThanOrEqual(0);
+          |                                                 ^
+      179 |   }
+      180 | });
+      181 |
+        at /Users/emmanueladams/Projects/NFL-Pickem-App/apps/web/e2e/sheet.spec.ts:178:49
+
+    Error Context: test-results/sheet-U4b-phone-375px-the--8bad9-heet-do-not-scroll-sideways/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/sheet-U4b-phone-375px-the--8bad9-heet-do-not-scroll-sideways/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/sheet-U4b-phone-375px-the--8bad9-heet-do-not-scroll-sideways/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5 failed
+    e2e/restyle.spec.ts:222:5 › F1 smallest phone (320px): no screen scrolls sideways ──────────────
+    e2e/restyle.spec.ts:395:7 › G5 accessibility on the phone layout (dark): no serious or critical axe issues 
+    e2e/restyle.spec.ts:395:7 › G5 accessibility on the phone layout (light): no serious or critical axe issues 
+    e2e/sheet.spec.ts:91:5 › U1c the points lock on screen at kickoff, without a reload ────────────
+    e2e/sheet.spec.ts:170:5 › U4b phone (375px): the board with points and the copy sheet do not scroll sideways 
+  42 passed (1.5m)
+npm error Lifecycle script `e2e` failed with error:
+npm error code 1
+npm error path /Users/emmanueladams/Projects/NFL-Pickem-App/apps/web
+npm error workspace @nflpi/web@0.1.0
+npm error location /Users/emmanueladams/Projects/NFL-Pickem-App/apps/web
+npm error command failed
+npm error command sh -c playwright test
