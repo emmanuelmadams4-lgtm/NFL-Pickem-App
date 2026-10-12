@@ -96,3 +96,12 @@ Grep gate (empty on `8973ec4`):
 grep -rnE "#3b82f6|#2563eb|blue-[0-9]" apps/web/app apps/web/components
 grep -rnE "sk-ant-|sk-or-v1|VAPID_PRIVATE" apps/web/app apps/web/components apps/web/lib packages/shared/src
 ```
+
+## 5. VERIFICATION, round 4 (on `8973ec4`) — PASS
+* **Fresh critic (Opus): VERDICT PASS.** Gate matched: pytest 57, ruff clean, gen:api no drift, typecheck 0, web:build 0, e2e 39/39 three times. Mutants killed: round-3 `globals.css` brings back G3's red (830 vs 778); blue on the section pill or Sign in button fails G2. Own probe: Tab through every focusable on five screens at 393, 0 under the tab bar. Section jumps land below the sticky nav and set `aria-current`; no sideways scroll at 393/1440. "Locked" shown once on an in-progress game. Grep gates 0 hits.
+* **Fresh design critic (Opus): DESIGN VERDICT PASS.** No regressions against reference 06 or design.md § 0 at 393, 1440 and 320; 104 focused controls at 393, none under the tab bar.
+* Carried to step 6 (iPhone PWA): Shift+Tab can leave a pick button under the sticky top bar on the phone (pre-existing; needs top padding that does not double with `scroll-mt-32`); check iOS Safari honors `scroll-padding` on the device; section-tab row needs a right-edge fade; "next kickoff" text could drop lime; KPI captions wrap to 3 lines at 320; chips near the tab bar on a low card; plus the round 3 polish list.
+* Carried to step 4 PLANNING: design.md §§ 5/7/8 still describe the blue system.
+
+## 6. LANDING
+Step 3 DONE on the round-4 head. Pushed to `claude/nfl-pickem-intelligence`, draft PR #1 updated; CI result recorded in STATE.

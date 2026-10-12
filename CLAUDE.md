@@ -60,6 +60,8 @@ npm run web:dev
 - [x] Phase 4 Prediction engine + backtest (2012–2025: market 66.6%, stats 64.5%, blend 66.5%)
 - [x] Phase 5 AI layer (validated reports + Q&A; live calls need keys)
 - [x] Gauntlet step 1: safe backend + CI (2026-10-11; 48 tests, CI green on draft PR #1)
+- [x] Gauntlet step 2: desktop web (2026-10-12)
+- [x] Gauntlet step 3: restyle to reference 06 + owner P logo (2026-10-12; 57 backend tests, 39 browser checks)
 - [ ] Phase 6 Web dashboard (in progress)
 - [ ] Phase 7 Performance tracking UI (in progress)
 - [ ] Phase 8 iPhone PWA (in progress)
@@ -73,7 +75,7 @@ npm run web:dev
 * 2026-10-11 — Push the feature branch + open draft PRs after verification (owner said yes).
 * 2026-10-11 — Recommendation model = stats + market blend (ties market in backtest; stats-only is 2.1 pts worse).
 * 2026-10-11 — Claude default model `claude-sonnet-5-5` (cheapest capable); Opus via `ANTHROPIC_MODEL`.
-* 2026-10-12 — The model must get better over time at choosing winners (owner). Gauntlet step 8 is required: each idea is tested walk-forward first and ships only if it wins. No changes after a single loss.
+* 2026-10-12 — The model must get better over time at choosing winners (owner). Gauntlet step 14 is required: each idea is tested walk-forward first and ships only if it wins. No changes after a single loss.
 * 2026-10-12 — Team logos are shown (owner, D38), from the API's `logo_url`, cached offline, team-color fallback. Owner decisions D1-D41: `docs/gauntlet/OWNER_DECISIONS_2026-10-12.md`.
 * 2026-10-12 — Look = reference 06 (owner, D39): near-black, lime accent, condensed bold headings, pill tab bar. Replaces D17 blue. Own step after step 2.
 * 2026-10-12 — Layout = reference 06 structure with our info (D40: card per game, chips, pill tabs). App logo = owner's lime "P" (D41, `docs/design/brand/`).
