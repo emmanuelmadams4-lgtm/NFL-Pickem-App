@@ -308,8 +308,8 @@ D42 state and notes (coordinator, checked on the Mac 2026-10-12):
   OpenRouter key and the Claude sign-in token (never committed).
 * A passkey (D33) and the installed iPhone app are tied to the host name. Moving from the MacBook
   to the PC changes the address, so the phone app is re-added once and passkeys come after the move.
-* Unknown until the owner says: the PC's operating system, memory and free disk. Step 5 PLANNING
-  needs them. Windows needs Docker Desktop with WSL 2 (or a Linux install); the PC must not sleep,
+* Owner, 2026-10-12: the PC runs **Windows 11** and has "a lot of space". Memory (RAM) not yet
+  stated. Windows needs Docker Desktop with WSL 2 (or a Linux install); the PC must not sleep,
   must start Docker and Tailscale on boot, and should come back by itself after a power cut.
 * Data moves with a database dump and restore (also the first real backup-restore test for step 5).
 * The Mac's database still uses the default local password; the PC gets a real one.
