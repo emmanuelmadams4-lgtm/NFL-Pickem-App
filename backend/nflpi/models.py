@@ -42,12 +42,13 @@ class Game(Base):
     week: Mapped[int] = mapped_column(Integer)
     game_type: Mapped[str] = mapped_column(String(4))
     kickoff_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    time_tbd: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     weekday: Mapped[str] = mapped_column(String(10))
     away_team: Mapped[str] = mapped_column(String(4))
     home_team: Mapped[str] = mapped_column(String(4))
     away_score: Mapped[int | None] = mapped_column(Integer)
     home_score: Mapped[int | None] = mapped_column(Integer)
-    status: Mapped[str] = mapped_column(String(12))  # scheduled | final
+    status: Mapped[str] = mapped_column(String(12))  # scheduled | postponed | final
     neutral_site: Mapped[bool] = mapped_column(Boolean, default=False)
     div_game: Mapped[bool] = mapped_column(Boolean, default=False)
     roof: Mapped[str | None] = mapped_column(String(12))

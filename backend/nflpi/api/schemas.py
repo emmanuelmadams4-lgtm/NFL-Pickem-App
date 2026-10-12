@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Uncertainty = Literal["low", "moderate", "high"]
-GameStatus = Literal["scheduled", "in_progress", "final"]
+GameStatus = Literal["scheduled", "postponed", "in_progress", "final"]
 Provider = Literal["claude", "jev"]
 
 
@@ -78,7 +78,8 @@ class GameSummary(BaseModel):
     my_pick: str | None
     my_pick_correct: bool | None
     model_correct: bool | None
-    locked: bool = Field(description="Kickoff has passed; picks can no longer change")
+    locked: bool = Field(description="Known kickoff has passed; picks can no longer change")
+    qb_not_projected: bool
     qb_alerts: list[str]
     injury_count: int
     weather: WeatherOut | None

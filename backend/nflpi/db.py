@@ -7,6 +7,8 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from nflpi.config import get_settings
 
+REFRESH_LOCK_KEY: int = 0x4E464C5049
+
 
 class Base(DeclarativeBase):
     pass

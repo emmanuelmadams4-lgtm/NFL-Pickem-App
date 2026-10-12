@@ -130,7 +130,12 @@ def send_kickoff_reminders(session: Session, now: datetime) -> int:
     if not minutes:
         return 0
     soon = session.scalars(
-        select(Game).where(Game.kickoff_utc > now, Game.kickoff_utc <= now + timedelta(minutes=minutes))
+        select(Game).where(
+            Game.status == "scheduled",
+            Game.time_tbd.is_(False),
+            Game.kickoff_utc > now,
+            Game.kickoff_utc <= now + timedelta(minutes=minutes),
+        )
     ).all()
     picked = set(session.scalars(select(UserPick.game_id).where(UserPick.game_id.in_([g.game_id for g in soon]))))
     sent = 0
@@ -144,7 +149,8 @@ def send_kickoff_reminders(session: Session, now: datetime) -> int:
         title = f"No pick yet: {g.away_team} @ {g.home_team}"
         model = f" Model: {pred.pick} {max(pred.home_win_prob, 1 - pred.home_win_prob):.0%}." if pred else ""
         body = f"Kicks off in {mins} min.{model}"
-        if _record(session, "reminder", g.game_id, f"remind:{g.game_id}", {"title": title, "body": body}):
+        key = f"remind:{g.game_id}:{g.kickoff_utc.isoformat()}"
+        if _record(session, "reminder", g.game_id, key, {"title": title, "body": body}):
             sent += _send(session, title, body, game_url(g.game_id))
     session.commit()
     return sent

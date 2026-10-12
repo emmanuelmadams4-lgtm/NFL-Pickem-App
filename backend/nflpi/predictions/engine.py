@@ -106,16 +106,22 @@ def train(session: Session, through_season: int) -> ModelVersion:
     base = LogitModel.fit(train_rows, BASE_FEATURES)
     blend = LogitModel.fit(train_rows.dropna(subset=["market_logit"]), BLEND_FEATURES)
 
-    test_seasons = list(range(max(settings.first_season + settings.train_window_seasons, 2012), through_season + 1))
-    results = run_backtest(df, test_seasons, settings.train_window_seasons)
-    session.add(BacktestRun(config={"seasons": test_seasons, "window": settings.train_window_seasons}, results=results))
-
-    name = f"{MODEL_KIND}-v1-through-{through_season}"
-    mv = session.scalars(select(ModelVersion).where(ModelVersion.name == name)).first() or ModelVersion(name=name)
-    mv.kind = MODEL_KIND
-    mv.params = {"elo": elo.as_dict(), "base": base.as_dict(), "blend": blend.as_dict(), "train_seasons": seasons}
-    mv.trained_through_season = through_season
-    mv.metrics = {m["model"]: m for m in results["models"]}
+    params = {"elo": elo.as_dict(), "base": base.as_dict(), "blend": blend.as_dict(), "train_seasons": seasons}
+    name = f"{MODEL_KIND}-v1-through-{through_season}-{_hash(params)[:12]}"
+    mv = session.scalars(select(ModelVersion).where(ModelVersion.name == name)).first()
+    if mv is None:
+        test_seasons = list(range(max(settings.first_season + settings.train_window_seasons, 2012), through_season + 1))
+        results = run_backtest(df, test_seasons, settings.train_window_seasons)
+        session.add(
+            BacktestRun(config={"seasons": test_seasons, "window": settings.train_window_seasons}, results=results)
+        )
+        mv = ModelVersion(
+            name=name,
+            kind=MODEL_KIND,
+            params=params,
+            trained_through_season=through_season,
+            metrics={m["model"]: m for m in results["models"]},
+        )
     for other in session.scalars(select(ModelVersion).where(ModelVersion.is_active)):
         other.is_active = False
     mv.is_active = True
@@ -125,13 +131,24 @@ def train(session: Session, through_season: int) -> ModelVersion:
 
 
 def current_week(session: Session) -> tuple[int, int]:
-    season = session.scalar(select(func.max(Game.season)))
-    week = session.scalar(
-        select(func.min(Game.week)).where(Game.season == season, Game.status != "final", Game.game_type == "REG")
-    )
-    if week is None:
-        week = session.scalar(select(func.max(Game.week)).where(Game.season == season))
-    return int(season), int(week)
+    upcoming = session.execute(
+        select(Game.season, Game.week)
+        .where(
+            Game.status == "scheduled",
+            Game.time_tbd.is_(False),
+            Game.kickoff_utc > datetime.now(UTC),
+        )
+        .order_by(Game.kickoff_utc, Game.game_id)
+        .limit(1)
+    ).first()
+    if upcoming is not None:
+        return int(upcoming.season), int(upcoming.week)
+    latest = session.execute(
+        select(Game.season, Game.week).order_by(Game.season.desc(), Game.week.desc()).limit(1)
+    ).first()
+    if latest is None:
+        raise RuntimeError("no games loaded")
+    return int(latest.season), int(latest.week)
 
 
 def _qb_injuries(session: Session, season: int) -> dict[tuple[int, str], list[InjuryReport]]:

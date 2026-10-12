@@ -13,9 +13,9 @@ import logging
 import time
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
-from nflpi.db import session_factory
+from nflpi.db import REFRESH_LOCK_KEY, get_engine, session_factory
 from nflpi.ingestion import service
 from nflpi.models import Game, ModelVersion
 from nflpi.notify import push
@@ -60,14 +60,21 @@ def next_interval(session, now: datetime) -> timedelta:
 
 def cycle(session) -> None:
     """One refresh: ingest, (re)train once per season, then predict and alert."""
-    log.info("ingest %s", ingest(session))
-    season, _ = engine.current_week(session)
-    mv = engine.active_model(session)
-    if mv is None or mv.trained_through_season < season - 1:
-        train(session)
-        log.info("backfilled %s games", engine.backfill_season(session, season))
-    log.info("prediction alerts sent: %s", predict(session))
-    log.info("kickoff reminders sent: %s", push.send_kickoff_reminders(session, datetime.now(UTC)))
+    with get_engine().connect() as lock_conn:
+        acquired = lock_conn.scalar(text("select pg_try_advisory_lock(:k)"), {"k": REFRESH_LOCK_KEY})
+        try:
+            if acquired:
+                log.info("ingest %s", ingest(session))
+                season, _ = engine.current_week(session)
+                mv = engine.active_model(session)
+                if mv is None or mv.trained_through_season < season - 1:
+                    train(session)
+                    log.info("backfilled %s games", engine.backfill_season(session, season))
+                log.info("prediction alerts sent: %s", predict(session))
+        finally:
+            if acquired:
+                lock_conn.execute(text("select pg_advisory_unlock(:k)"), {"k": REFRESH_LOCK_KEY})
+            log.info("kickoff reminders sent: %s", push.send_kickoff_reminders(session, datetime.now(UTC)))
 
 
 def loop() -> None:

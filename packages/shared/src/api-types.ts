@@ -430,7 +430,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "scheduled" | "in_progress" | "final";
+            status: "scheduled" | "postponed" | "in_progress" | "final";
             away: components["schemas"]["TeamOut"];
             home: components["schemas"]["TeamOut"];
             /** Away Score */
@@ -458,9 +458,11 @@ export interface components {
             model_correct: boolean | null;
             /**
              * Locked
-             * @description Kickoff has passed; picks can no longer change
+             * @description Known kickoff has passed; picks can no longer change
              */
             locked: boolean;
+            /** Qb Not Projected */
+            qb_not_projected: boolean;
             /** Qb Alerts */
             qb_alerts: string[];
             /** Injury Count */
@@ -505,7 +507,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "scheduled" | "in_progress" | "final";
+            status: "scheduled" | "postponed" | "in_progress" | "final";
             away: components["schemas"]["TeamOut"];
             home: components["schemas"]["TeamOut"];
             /** Away Score */
@@ -533,9 +535,11 @@ export interface components {
             model_correct: boolean | null;
             /**
              * Locked
-             * @description Kickoff has passed; picks can no longer change
+             * @description Known kickoff has passed; picks can no longer change
              */
             locked: boolean;
+            /** Qb Not Projected */
+            qb_not_projected: boolean;
             /** Qb Alerts */
             qb_alerts: string[];
             /** Injury Count */

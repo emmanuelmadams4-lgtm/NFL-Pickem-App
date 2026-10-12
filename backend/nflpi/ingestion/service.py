@@ -4,7 +4,7 @@ import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -50,6 +50,17 @@ def upsert_games(session: Session, games: list[dict], observed_at: datetime) -> 
         chunk = rows[start : start + 1000]
         stmt = insert(Game).values(chunk)
         update = {c: stmt.excluded[c] for c in chunk[0] if c != "game_id"}
+        update["status"] = case(
+            (
+                and_(
+                    Game.status == "postponed",
+                    stmt.excluded.status == "scheduled",
+                    Game.kickoff_utc == stmt.excluded.kickoff_utc,
+                ),
+                Game.status,
+            ),
+            else_=stmt.excluded.status,
+        )
         session.execute(stmt.on_conflict_do_update(index_elements=["game_id"], set_=update))
 
     latest = {

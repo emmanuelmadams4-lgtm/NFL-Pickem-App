@@ -1,4 +1,4 @@
-"""Create the initial database schema."""
+"""Create the initial database schema, including the games.time_tbd flag."""
 
 from alembic import op
 

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Request,
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select, text
+from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
 from nflpi.ai import providers, research
@@ -19,7 +20,7 @@ from nflpi.ai.providers import AIError
 from nflpi.api import schemas as s
 from nflpi.api import views
 from nflpi.config import get_settings
-from nflpi.db import get_session, session_factory
+from nflpi.db import REFRESH_LOCK_KEY, get_engine, get_session, session_factory
 from nflpi.ingestion.service import freshness
 from nflpi.models import AppSetting, BacktestRun, Game, PushSubscription, UserPick
 from nflpi.notify import push
@@ -101,7 +102,7 @@ def set_pick(game_id: str, body: s.PickIn, session: DB) -> s.PickOut:
         raise HTTPException(404, "Game not found")
     if body.team not in (g.home_team, g.away_team):
         raise HTTPException(422, f"Pick must be {g.away_team} or {g.home_team}")
-    if g.kickoff_utc <= datetime.now(UTC):
+    if g.status != "postponed" and not g.time_tbd and g.kickoff_utc <= datetime.now(UTC):
         raise HTTPException(409, "Game has kicked off; pick is locked")
     pick = session.get(UserPick, game_id) or UserPick(game_id=game_id)
     pick.picked_team, pick.picked_at, pick.source = body.team, datetime.now(UTC), "app"
@@ -113,7 +114,7 @@ def set_pick(game_id: str, body: s.PickIn, session: DB) -> s.PickOut:
 @api.delete("/picks/{game_id}", status_code=204)
 def clear_pick(game_id: str, session: DB) -> Response:
     g = session.get(Game, game_id)
-    if g is not None and g.kickoff_utc <= datetime.now(UTC):
+    if g is not None and g.status != "postponed" and not g.time_tbd and g.kickoff_utc <= datetime.now(UTC):
         raise HTTPException(409, "Game has kicked off; pick is locked")
     pick = session.get(UserPick, game_id)
     if pick:
@@ -166,7 +167,11 @@ async def import_picks(request: Request, session: DB) -> s.ImportResult:
         if g is None or team not in (g.home_team, g.away_team):
             skipped.append(gid or "?")
             continue
-        pick = session.get(UserPick, gid) or UserPick(game_id=gid)
+        pick = session.get(UserPick, gid)
+        if pick is not None and g.kickoff_utc <= datetime.now(UTC) and g.status != "postponed" and not g.time_tbd:
+            skipped.append(gid)
+            continue
+        pick = pick or UserPick(game_id=gid)
         pick.picked_team, pick.picked_at, pick.source = team, datetime.now(UTC), "csv"
         session.add(pick)
         imported += 1
@@ -232,10 +237,7 @@ def update_settings(body: s.SettingsIn, session: DB) -> s.MetaOut:
     return meta(session)
 
 
-_refresh_lock = threading.Lock()
-
-
-def _refresh_job() -> None:
+def _refresh_job(lock_conn: Connection) -> None:
     from nflpi import jobs  # imported here: jobs pulls in the push module and CLI only when used
 
     try:
@@ -245,15 +247,30 @@ def _refresh_job() -> None:
     except Exception:  # noqa: BLE001 - background job; failure is logged and visible in freshness
         log.exception("manual refresh failed")
     finally:
-        _refresh_lock.release()
+        try:
+            lock_conn.execute(text("select pg_advisory_unlock(:k)"), {"k": REFRESH_LOCK_KEY})
+        finally:
+            lock_conn.close()
 
 
 @api.post("/refresh", status_code=202)
 def refresh() -> dict:
     """Start a data + prediction refresh in the background (one at a time)."""
-    if not _refresh_lock.acquire(blocking=False):
+    lock_conn = get_engine().connect()
+    try:
+        acquired = lock_conn.scalar(text("select pg_try_advisory_lock(:k)"), {"k": REFRESH_LOCK_KEY})
+    except Exception:
+        lock_conn.close()
+        raise
+    if not acquired:
+        lock_conn.close()
         return {"started": False, "reason": "A refresh is already running"}
-    threading.Thread(target=_refresh_job, daemon=True).start()
+    try:
+        threading.Thread(target=_refresh_job, args=(lock_conn,), daemon=True).start()
+    except Exception:
+        lock_conn.execute(text("select pg_advisory_unlock(:k)"), {"k": REFRESH_LOCK_KEY})
+        lock_conn.close()
+        raise
     return {"started": True}
 
 

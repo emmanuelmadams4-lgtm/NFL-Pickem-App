@@ -31,8 +31,10 @@ def now_utc() -> datetime:
 
 
 def status_of(g: Game, now: datetime) -> str:
-    if g.status == "final":
-        return "final"
+    if g.status in ("final", "postponed"):
+        return g.status
+    if g.time_tbd:
+        return "scheduled"
     return "in_progress" if g.kickoff_utc <= now else "scheduled"
 
 
@@ -193,7 +195,8 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                 my_pick=pick.picked_team if pick else None,
                 my_pick_correct=(pick.picked_team == win) if pick and win else None,
                 model_correct=(pred.pick == win) if pred and win else None,
-                locked=g.kickoff_utc <= now,
+                locked=g.status != "postponed" and not g.time_tbd and g.kickoff_utc <= now,
+                qb_not_projected=g.status != "final" and (not g.home_qb or not g.away_qb),
                 qb_alerts=qb_alerts,
                 injury_count=sum(
                     1

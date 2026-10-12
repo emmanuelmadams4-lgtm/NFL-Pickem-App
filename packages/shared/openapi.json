@@ -1299,6 +1299,7 @@
       "type": "string",
       "enum": [
        "scheduled",
+       "postponed",
        "in_progress",
        "final"
       ],
@@ -1416,7 +1417,11 @@
      "locked": {
       "type": "boolean",
       "title": "Locked",
-      "description": "Kickoff has passed; picks can no longer change"
+      "description": "Known kickoff has passed; picks can no longer change"
+     },
+     "qb_not_projected": {
+      "type": "boolean",
+      "title": "Qb Not Projected"
      },
      "qb_alerts": {
       "items": {
@@ -1544,6 +1549,7 @@
      "my_pick_correct",
      "model_correct",
      "locked",
+     "qb_not_projected",
      "qb_alerts",
      "injury_count",
      "weather",
@@ -1588,6 +1594,7 @@
       "type": "string",
       "enum": [
        "scheduled",
+       "postponed",
        "in_progress",
        "final"
       ],
@@ -1705,7 +1712,11 @@
      "locked": {
       "type": "boolean",
       "title": "Locked",
-      "description": "Kickoff has passed; picks can no longer change"
+      "description": "Known kickoff has passed; picks can no longer change"
+     },
+     "qb_not_projected": {
+      "type": "boolean",
+      "title": "Qb Not Projected"
      },
      "qb_alerts": {
       "items": {
@@ -1752,6 +1763,7 @@
      "my_pick_correct",
      "model_correct",
      "locked",
+     "qb_not_projected",
      "qb_alerts",
      "injury_count",
      "weather"
