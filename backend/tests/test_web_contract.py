@@ -68,3 +68,34 @@ def test_w3_results_headline_counts_live_predictions_only(loaded, client):
     assert perf["model"]["total"] == 1
     assert perf["model"]["correct"] == int(pick == live.home_team)
     assert perf["model_backfill"] == backfill
+
+
+def test_w3b_weekly_figures_and_calibration_keep_live_and_backfill_apart(loaded, client):
+    engine.backfill_season(loaded, CURRENT)
+    perf = client.get(f"/api/performance/{CURRENT}").json()
+    weeks = perf["weeks"]
+    assert sum(w["model_live_total"] for w in weeks) == perf["model"]["total"] == 0
+    assert sum(w["model_backfill_total"] for w in weeks) == perf["model_backfill"]["total"] > 0
+    assert sum(w["model_backfill_correct"] for w in weeks) == perf["model_backfill"]["correct"]
+    assert sum(b["n"] for b in perf["calibration"]) == 0  # calibration is live-only
+    assert sum(b["n"] for b in perf["calibration_backfill"]) == perf["model_backfill"]["total"]
+
+    live = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 4)).first()
+    live.status, live.home_score, live.away_score = "final", 30, 10
+    loaded.commit()
+    perf = client.get(f"/api/performance/{CURRENT}").json()
+    week4 = next(w for w in perf["weeks"] if w["week"] == 4)
+    assert (week4["model_live_total"], week4["model_live_correct"]) == (1, perf["model"]["correct"])
+    assert sum(b["n"] for b in perf["calibration"]) == 1
+
+
+def test_w4_week_summary_model_figures_count_live_predictions_only(loaded, client):
+    engine.backfill_season(loaded, CURRENT)
+    summary = client.get(f"/api/weeks/{CURRENT}/1").json()["summary"]
+    assert (summary["model_graded"], summary["model_correct"], summary["model_accuracy"]) == (0, 0, None)
+
+    live = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 4)).first()
+    live.status, live.home_score, live.away_score = "final", 30, 10
+    loaded.commit()
+    summary = client.get(f"/api/weeks/{CURRENT}/4").json()["summary"]
+    assert summary["model_graded"] == 1

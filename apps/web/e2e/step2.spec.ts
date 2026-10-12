@@ -102,7 +102,7 @@ test("E3 pick and clear: one tap saves to the server, a second tap clears it", a
   await expect(pickGroup(page, g).getByRole("button", { name: new RegExp(`^Pick ${g.home.name}`) })).toHaveAttribute("aria-pressed", "false");
 });
 
-test("E4 lock: a game locks on screen at kickoff, without a reload", async ({ page, request }) => {
+test("E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked", async ({ page, request }) => {
   const { meta, open } = await board(request);
   const g = open[0];
   await page.clock.install({ time: new Date(meta.server_time) });
@@ -111,9 +111,13 @@ test("E4 lock: a game locks on screen at kickoff, without a reload", async ({ pa
   await boardLoaded(page);
   const buttons = pickGroup(page, g).getByRole("button");
   await expect(buttons.first()).toBeEnabled();
-  await page.clock.fastForward(Date.parse(g.kickoff_utc) - Date.parse(meta.server_time) + 60_000);
-  await expect(buttons.first()).toBeDisabled({ timeout: 5_000 });
+  await page.clock.fastForward(Date.parse(g.kickoff_utc) - Date.parse(meta.server_time) - 1_000);
+  await expect(buttons.first()).toBeEnabled();
+  await page.clock.runFor(5_000);
+  await expect(buttons.first()).toBeDisabled({ timeout: 2_000 });
   await expect(buttons.nth(1)).toBeDisabled();
+  await expect(buttons.first().locator("svg"), "lock icon (design.md § 8)").toBeVisible();
+  await expect(gameRow(page, g)).toContainText("Locked");
 });
 
 test("E5 matchup: every section renders and kickoff is in Eastern time", async ({ page, request }) => {
@@ -128,6 +132,7 @@ test("E5 matchup: every section renders and kickoff is in Eastern time", async (
     await expect(page.locator(`#${id}`), id).toBeVisible();
   }
   await expect(page.getByText(eastern(g.kickoff_utc)).first()).toBeVisible();
+  await expect(page.locator("aside").getByRole("meter").first(), "the pick panel's probability has a bar (design.md § 2)").toBeVisible();
 });
 
 test("E6 time TBD: a game with no kickoff time says so instead of showing midnight", async ({ page, request }) => {
@@ -189,6 +194,19 @@ test("E9 weather outage: no banner on the board; Settings notes it is not a mode
   await expect(fresh).toContainText(/not a model input/i);
 });
 
+test("E9b stale model input: the board banner still shows for stale schedules", async ({ page }) => {
+  await page.route("**/api/weeks/**", async (route) => {
+    const res = await route.fetch();
+    const body = await res.json();
+    body.freshness = body.freshness.map((d: { dataset: string }) => (d.dataset === "schedules" ? { ...d, stale: true } : d));
+    await route.fulfill({ response: res, json: body });
+  });
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await expect(page.getByText(/Stale data: schedules/)).toBeVisible();
+});
+
 test("E10 design: the app renders in Geist", async ({ page }) => {
   await signIn(page);
   await page.goto("/");
@@ -196,6 +214,65 @@ test("E10 design: the app renders in Geist", async ({ page }) => {
   expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"?Geist/);
   await page.evaluate(() => document.fonts.ready);
   expect(await page.evaluate(() => [...document.fonts].some((f) => /^"?Geist/.test(f.family) && f.status === "loaded"))).toBe(true);
+});
+
+test("E10b chart colors: no purple, and every series is at least 3:1 on its surface in both themes", async ({ page }) => {
+  await signIn(page);
+  for (const scheme of ["dark", "light"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto("/");
+    await boardLoaded(page);
+    const colors = await page.evaluate(() => {
+      const probe = document.body.appendChild(document.createElement("i"));
+      const read = (v: string) => {
+        probe.style.color = `var(${v})`;
+        return getComputedStyle(probe).color; // "rgb(r, g, b)" whatever the token's format
+      };
+      const names = ["me", "model", "market", "stats", "elo", "home"];
+      const out = { surface: read("--surface"), series: names.map((n) => [n, read(`--series-${n}`)]) };
+      probe.remove();
+      return out;
+    });
+    const rgb = (c: string) => c.match(/[\d.]+/g)!.slice(0, 3).map((x) => Number(x) / 255);
+    const lum = (hex: string) => {
+      const [r, g, b] = rgb(hex).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const hue = (hex: string) => {
+      const [r, g, b] = rgb(hex);
+      const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+      if (d === 0) return -1;
+      const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return (h * 60 + 360) % 360;
+    };
+    for (const [name, hex] of colors.series) {
+      const [hi, lo] = [lum(hex), lum(colors.surface)].sort((x, y) => y - x);
+      expect((hi + 0.05) / (lo + 0.05), `${scheme} --series-${name} ${hex} contrast`).toBeGreaterThanOrEqual(3);
+      const h = hue(hex);
+      expect(h >= 250 && h <= 330, `${scheme} --series-${name} ${hex} is purple (hue ${Math.round(h)})`).toBe(false);
+    }
+  }
+});
+
+test("E12 brand and type floor: no team logo images, and no visible text under 11px", async ({ page, request }) => {
+  const { open } = await board(request);
+  const images: string[] = [];
+  page.on("request", (r) => r.resourceType() === "image" && !r.url().startsWith("data:") && images.push(r.url()));
+  await signIn(page);
+  for (const path of ["/", `/game/?id=${open[0].game_id}`, "/performance/", "/backtest/", "/settings/"]) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("main img"), `${path}: team logos are banned (PRODUCT.md)`).toHaveCount(0);
+    const small = await page.evaluate(() =>
+      [...document.querySelectorAll("body *")]
+        .filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent!.trim()))
+        .filter((el) => (el as HTMLElement).getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden")
+        .filter((el) => !el.closest(".sr-only") && parseFloat(getComputedStyle(el).fontSize) < 11)
+        .map((el) => `${el.tagName.toLowerCase()} "${el.textContent!.trim().slice(0, 20)}" ${getComputedStyle(el).fontSize}`),
+    );
+    expect(small, `${path}: text under 11px (design.md § 4)`).toEqual([]);
+  }
+  expect(images, "no image requests for team logos").toEqual([]);
 });
 
 async function axe(page: Page, name: string) {
