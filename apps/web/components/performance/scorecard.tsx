@@ -42,6 +42,7 @@ export function Scorecard({ season }: { season: number }) {
     setBusy(true);
     try {
       await api.setRank(season, selectedWeek, { rank: Number(rank), leader_points: leader === "" ? null : Number(leader) });
+      await qc.cancelQueries({ queryKey: keys.scorecard(season) });
       await qc.invalidateQueries({ queryKey: keys.scorecard(season) });
       setSaved(true);
     } catch (err) {
