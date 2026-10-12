@@ -151,6 +151,9 @@ Radius: bezel 18, group 12, control 8, chip 6, pill for pick buttons, bars, and 
 | Navigation | `components/app-shell.tsx` | Desktop: full-width sticky bar (it holds the week picker and freshness, so it stays docked). Phone: **(proposed)** floating pill tab bar, 12px above the safe area, three text tabs, 48px targets, active tab on an `elevated` pill |
 | Notice / freshness | `ui.tsx` `Notice`, `components/freshness.tsx` | Full-width banner only when a source that feeds the model is stale (schedules, lines, injuries). The header indicator turns amber for those only. Weather is a note on Settings |
 | Toast | `components/toast.tsx` | Bottom, above the tab bar. Confirms saves and sync; errors stay until dismissed |
+| Connection banner | `components/pwa.tsx` | One slim `role="status"` line under the top bar, never more than one at a time. Offline: "You're offline…". Online but no answer within 5 s: "Can't reach the server. Is Tailscale on?" plus how old the data on screen is. It goes away by itself when the server answers. Words say what is wrong and what to check; no color-only signal |
+| Update prompt | `components/pwa.tsx`, `toast.tsx` | A toast "New version ready." with one text action, "Reload". Never reloads by itself, never shows twice. The only toast with an action |
+| Waiting pick | `components/pick-buttons.tsx`, `lib/sync.ts` | Every tap is on the phone until the server has it. While it waits the selected pill is dashed with "Waiting to sync". When waiting picks go through: one toast, "N waiting pick(s) saved." Say "waiting", not "offline": the phone may never have been offline |
 | Empty / loading / error | `ui.tsx` `EmptyState`, `Skeleton`, `ErrorState` | Skeletons match the final layout. Empty states say what will appear and when. Errors are inline with a Retry |
 
 Not used: modals for confirmation, sidebars, dropdown menus, carousels, avatars.
