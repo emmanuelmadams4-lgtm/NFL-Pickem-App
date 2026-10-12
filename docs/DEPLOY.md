@@ -68,14 +68,15 @@ Run a backup by hand: `./scripts/backup.sh`. It keeps the newest 14 `nflpi-*.sql
 Copy it **off the computer** too. A folder on the same PC does not count. Point `BACKUP_COPY_DIR` at a USB drive, another computer, or a folder that syncs to a cloud drive:
 
 ```bash
+touch /path/to/other-place/.pickem-backups      # once
 BACKUP_COPY_DIR=/path/to/other-place ./scripts/backup.sh
 ```
 
-The folder must already exist (an unplugged drive makes the backup report an error instead of quietly writing to the wrong place; the local backup is still saved). The copy is made under a temporary name, compared with the original, and only then renamed. The newest 14 are kept there too. `BACKUP_KEEP` (default 14) must be 2 or more.
+The folder must already exist and hold a marker file you create once: `touch /path/to/other-place/.pickem-backups` (with the drive plugged in). If the drive is unplugged, the folder or the marker is missing and the backup reports an error instead of quietly writing to the wrong place; the local backup is still saved. The copy is made under a temporary name, compared with the original, and only then renamed. The newest 14 are kept there too. `BACKUP_KEEP` (default 14) must be 2 or more.
 
 Run it every night, and write the output to a file you can read (a failed backup is silent otherwise):
 
-Replace `/path/to/other-place` with your real off-computer folder.
+Replace `/path/to/other-place` with your real off-computer folder (with its marker file).
 
 * **Windows (UNVERIFIED):** Task Scheduler, a daily task set to "Run only when user is logged on" (the PC signs in by itself, step 6 above). In the action, Program is `wsl.exe` and Arguments is `-d Ubuntu -- bash -lc "cd ~/NFL-Pickem-App && BACKUP_COPY_DIR=/path/to/other-place ./scripts/backup.sh >> ~/pickem-backup.log 2>&1"`.
 * **Mac (UNVERIFIED as a scheduled job):** `cron` does not have `docker` on its PATH. Use a crontab line like `0 3 * * * cd ~/Projects/NFL-Pickem-App && PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin BACKUP_COPY_DIR=/path/to/other-place ./scripts/backup.sh >> ~/pickem-backup.log 2>&1`.
