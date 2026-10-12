@@ -90,7 +90,7 @@ export function useSetPick(gameId: string) {
       }
     }),
     onMutate: async (v) => {
-      queuePick(v.gameId, v.team);
+      const persisted = queuePick(v.gameId, v.team);
       const weekKey = keys.week(v.season, v.week);
       const gameKey = keys.game(v.gameId);
       await Promise.all([qc.cancelQueries({ queryKey: weekKey }), qc.cancelQueries({ queryKey: gameKey })]);
@@ -98,7 +98,7 @@ export function useSetPick(gameId: string) {
       const prevGame = qc.getQueryData<GameDetail>(gameKey);
       qc.setQueryData<Week>(weekKey, (w) => (w ? withPick(w, v.gameId, v.team) : w));
       qc.setQueryData<GameDetail>(gameKey, (g) => (g ? { ...g, my_pick: v.team } : g));
-      return { prevWeek, prevGame };
+      return { prevWeek, prevGame, persisted };
     },
     onError: (err, v, ctx) => {
       if (ctx?.prevWeek) qc.setQueryData(keys.week(v.season, v.week), ctx.prevWeek);
@@ -106,8 +106,13 @@ export function useSetPick(gameId: string) {
       if (err instanceof ApiError && err.status === 409) toast("Locked at kickoff.", "warn");
       else toast(`Pick not saved. ${errorMessage(err)}`, "bad");
     },
-    onSettled: (data, _err, v) => {
-      if (data?.queued) return; // do not refetch over a pick the server has not seen yet
+    onSettled: (data, _err, v, ctx) => {
+      if (data?.queued) {
+        if (ctx?.persisted === false && queuedPick(v.gameId) === v.team) {
+          toast("Could not save this pick on the phone. Keep the app open until it syncs.", "warn");
+        }
+        return; // do not refetch over a pick the server has not seen yet
+      }
       qc.invalidateQueries({ queryKey: keys.week(v.season, v.week) });
       qc.invalidateQueries({ queryKey: keys.game(v.gameId) });
       qc.invalidateQueries({ queryKey: ["performance"] });

@@ -85,43 +85,68 @@ const QUEUE_KEY = "nflpi_pick_queue";
 type Queue = Record<string, string | null>;
 
 let snapshot: Queue | null = null;
+let volatileQueue: Queue | null = null;
 const listeners = new Set<() => void>();
+let listeningForStorage = false;
+
+function readStoredQueue(): Queue {
+  try {
+    const parsed: unknown = JSON.parse(safeGet(QUEUE_KEY) ?? "{}");
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(Object.entries(parsed).filter(([, team]) => typeof team === "string" || team === null)) as Queue;
+  } catch {
+    return {};
+  }
+}
+
+function currentQueue(): Queue {
+  return { ...readStoredQueue(), ...volatileQueue };
+}
+
+function listenForStorage() {
+  if (listeningForStorage || typeof window === "undefined") return;
+  listeningForStorage = true;
+  window.addEventListener("storage", (event) => {
+    if (event.key !== QUEUE_KEY) return;
+    snapshot = null;
+    listeners.forEach((listener) => listener());
+  });
+}
 
 function readQueue(): Queue {
-  if (snapshot) return snapshot;
-  try {
-    snapshot = JSON.parse(safeGet(QUEUE_KEY) ?? "{}") as Queue;
-  } catch {
-    snapshot = {};
-  }
+  listenForStorage();
+  if (!snapshot) snapshot = currentQueue();
   return snapshot;
 }
 
-function writeQueue(q: Queue) {
+function writeQueue(q: Queue): boolean {
+  listenForStorage();
+  const stored = safeSet(QUEUE_KEY, JSON.stringify(q));
   snapshot = q;
-  safeSet(QUEUE_KEY, JSON.stringify(q));
+  volatileQueue = stored ? null : q;
   listeners.forEach((l) => l());
+  return stored;
 }
 
-export function queuePick(gameId: string, team: string | null) {
-  writeQueue({ ...readQueue(), [gameId]: team });
+export function queuePick(gameId: string, team: string | null): boolean {
+  return writeQueue({ ...currentQueue(), [gameId]: team });
 }
 
 export function queuedPick(gameId: string): string | null | undefined {
-  return readQueue()[gameId];
+  return currentQueue()[gameId];
 }
 
 let warnedGameId: string | null = null;
 
 export function unqueue(gameId: string) {
-  const next = { ...readQueue() };
+  const next = currentQueue();
   delete next[gameId];
   writeQueue(next);
   if (warnedGameId === gameId) warnedGameId = null;
 }
 
 export function unqueueIfCurrent(gameId: string, team: string | null): boolean {
-  const queue = readQueue();
+  const queue = currentQueue();
   if (queue[gameId] !== team) return false;
   unqueue(gameId);
   return true;
