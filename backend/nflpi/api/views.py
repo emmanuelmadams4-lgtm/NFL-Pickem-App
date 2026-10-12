@@ -477,6 +477,7 @@ def scorecard(session: Session, season: int) -> s.ScorecardOut:
         app_correct = win is not None and e.app_pick == win
         row["my_correct"] += my_correct
         row["app_correct"] += app_correct
+        row["max_points"] += e.my_points or 0
         row["my_points"] += (e.my_points or 0) if my_correct else 0
         row["app_points"] += (e.app_points or 0) if app_correct else 0
         changed = e.my_pick != e.app_pick
@@ -490,7 +491,6 @@ def scorecard(session: Session, season: int) -> s.ScorecardOut:
     output = []
     for week in sorted(weeks.keys() | ranks.keys()):
         row = weeks[week]
-        row["max_points"] = row["games"] * (row["games"] + 1) // 2
         rank = ranks.get(week)
         output.append(s.ScorecardWeek(week=week, **{k: row[k] for k in keys},
                                       rank=rank.rank if rank else None,

@@ -1,6 +1,7 @@
 """Compute open pick sheets and freeze each game at kickoff."""
 
 import logging
+import math
 from datetime import datetime
 from typing import NamedTuple
 
@@ -30,6 +31,16 @@ class Ranked(NamedTuple):
 class Evidence(NamedTuple):
     score: float
     confidence: float
+
+
+def _number(value: object) -> float | None:
+    """A finite number from stored or received JSON, else None."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    try:
+        return float(value) if math.isfinite(value) else None
+    except OverflowError:
+        return None
 
 
 def _chance(p: Prediction, g: Game, team: str) -> float:
@@ -101,12 +112,16 @@ def recommendations(session: Session, games: list[Game]) -> dict[str, Prediction
 
 def _evidence(session: Session, season: int, week: int, preds: dict[str, Prediction]) -> dict[str, Evidence]:
     row = session.get(AppSetting, f"jev_tiebreak_{season}_{week}")
-    cached = row.value if row else {}
-    return {
-        gid: Evidence(float(value["score"]), float(value["confidence"]))
-        for gid, p in preds.items()
-        if (value := cached.get(gid)) and value.get("hash") == p.inputs_hash
-    }
+    cached = row.value if row and isinstance(row.value, dict) else {}
+    evidence = {}
+    for gid, p in preds.items():
+        value = cached.get(gid)
+        if not isinstance(value, dict) or value.get("hash") != p.inputs_hash:
+            continue
+        score, confidence = _number(value.get("score")), _number(value.get("confidence"))
+        if score is not None and confidence is not None:
+            evidence[gid] = Evidence(score, confidence)
+    return evidence
 
 
 def compute_week(
@@ -143,7 +158,8 @@ def compute_week(
             available_my.remove(number)
     remaining = [g for g in eligible if rows[g.game_id]["my_points"] is None]
     ranked = [Ranked(g.game_id, _chance(preds[g.game_id], g, rows[g.game_id]["my_pick"])) for g in remaining]
-    for gid, number in zip(order(ranked, evidence), sorted(available_my, reverse=True), strict=False):
+    my_evidence = {gid: value for gid, value in evidence.items() if rows[gid]["my_pick"] == rows[gid]["app_pick"]}
+    for gid, number in zip(order(ranked, my_evidence), sorted(available_my, reverse=True), strict=False):
         rows[gid]["my_points"] = number
     for gid, row in rows.items():
         row["differs"] = gid not in history and (row["my_pick"] != row["app_pick"]
@@ -154,8 +170,10 @@ def compute_week(
 def finalize(session: Session, now: datetime) -> int:
     setting = session.get(AppSetting, "sheet_start")
     if setting is None:
-        setting = AppSetting(key="sheet_start", value={"at": now.isoformat()})
-        session.add(setting)
+        session.execute(insert(AppSetting).values(key="sheet_start", value={"at": now.isoformat()})
+                        .on_conflict_do_nothing(index_elements=["key"]))
+        session.flush()
+        setting = session.get(AppSetting, "sheet_start")
     start = datetime.fromisoformat(setting.value["at"])
     has_prediction = select(Prediction.id).where(Prediction.game_id == Game.game_id).exists()
     games = session.scalars(
@@ -169,7 +187,7 @@ def finalize(session: Session, now: datetime) -> int:
     written = 0
     for i, g in enumerate(games):
         prediction = preds.get(g.game_id)
-        if prediction is None:
+        if prediction is None or prediction.kind == "backfill":
             continue
         writing = frozenset(game.game_id for game in games[i:])
         row = compute_week(session, g.season, g.week, now, writing=writing)[g.game_id]
@@ -198,6 +216,8 @@ def refresh_tiebreaks(session: Session, season: int, week: int) -> None:
 
     games = session.scalars(select(Game).where(Game.season == season, Game.week == week)).all()
     games = [g for g in games if g.status != "postponed" and not is_locked(g, now_utc())]
+    if not jev.configured():
+        return
     preds = recommendations(session, games)
     ranked = sorted([Ranked(g.game_id, _chance(preds[g.game_id], g, preds[g.game_id].pick))
                      for g in games if g.game_id in preds],
@@ -207,16 +227,24 @@ def refresh_tiebreaks(session: Session, season: int, week: int) -> None:
     key = f"jev_tiebreak_{season}_{week}"
     setting = session.get(AppSetting, key)
     cached = dict(setting.value) if setting else {}
-    if all(cached.get(gid, {}).get("hash") == p.inputs_hash for gid, p in preds.items()):
+    asked = [item for item in ranked
+             if not (isinstance(cached.get(item.game_id), dict)
+                     and cached[item.game_id].get("hash") == preds[item.game_id].inputs_hash)]
+    if not asked:
         return
-    state, questions = _jev_request(games, preds, ranked)
+    state, questions = _jev_request(games, preds, asked)
     try:
         research._reserve_call(session)
         answers = jev.decide(state, questions)
-        for gid, answer in answers.items():
-            if gid in preds:
-                cached[gid] = {"hash": preds[gid].inputs_hash, "score": answer["score"],
-                               "confidence": answer["confidence"]}
+        for item in asked:
+            gid = item.game_id
+            answer = answers.get(gid)
+            value = {"hash": preds[gid].inputs_hash}
+            answer = answer if isinstance(answer, dict) else {}
+            score, confidence = _number(answer.get("score")), _number(answer.get("confidence"))
+            if score is not None and confidence is not None:
+                value.update(score=score, confidence=confidence)
+            cached[gid] = value
         if setting is None:
             session.add(AppSetting(key=key, value=cached))
         else:

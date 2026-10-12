@@ -214,7 +214,7 @@ def export_picks(season: int, session: DB) -> Response:
                 g.week,
                 g.away_team,
                 g.home_team,
-                sm.my_pick or "",
+                "" if sm.sheet.pick_by == "auto" else (sm.my_pick or ""),
                 p.pick if p else "",
                 f"{max(p.home_win_prob, p.away_win_prob):.3f}" if p else "",
                 p.kind if p else "",

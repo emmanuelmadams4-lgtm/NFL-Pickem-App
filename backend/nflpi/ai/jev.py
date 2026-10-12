@@ -6,6 +6,10 @@ from nflpi.ai.providers import AIError
 from nflpi.config import get_settings
 
 
+def configured() -> bool:
+    return bool(get_settings().openrouter_api_key)
+
+
 def decide(state: str, questions: dict) -> dict:
     settings = get_settings()
     if not settings.openrouter_api_key:
