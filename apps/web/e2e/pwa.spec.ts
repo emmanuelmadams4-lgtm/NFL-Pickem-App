@@ -322,6 +322,30 @@ test("P16 the app is closed while a tapped pick is still being sent: the pick is
   }
 });
 
+test("P17 a second tap while the first is still being sent is on the phone at once, and survives the app closing", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const g = open[0];
+  const serverPick = async () => (await board(request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+  const { seen: sending } = await holdFirstSave(context, g.game_id, 2_000);
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    await pickGroup(page, g).getByRole("button", { name: `Pick ${g.away.name}` }).click(); // first tap: being sent
+    await sending;
+    await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click(); // second tap: waits its turn
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}")), { message: "the second tap is on the phone before its turn to send", timeout: 1_000 }).toEqual({ [g.game_id]: g.home.abbr });
+    await expect(pickGroup(page, g).getByRole("button", { name: `${g.home.name} picked` }), "and the button shows it").toBeVisible();
+    await page.reload(); // both requests die with the page, as when iOS closes the app
+    await boardLoaded(page);
+    await expect.poll(serverPick, { message: "the last tap is sent on the next open", timeout: 10_000 }).toBe(g.home.abbr);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue"))).toBe("{}");
+  } finally {
+    await context.unrouteAll({ behavior: "ignoreErrors" });
+    expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
 test("P15 one queued pick the server keeps refusing does not hold back the others", async ({ page, context, request }) => {
   const { open } = await board(request);
   expect(open.length, "needs two open games").toBeGreaterThanOrEqual(2);
