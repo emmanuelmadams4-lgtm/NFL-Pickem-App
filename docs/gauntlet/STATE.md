@@ -6,8 +6,8 @@
 
 * **Goal:** one private app (desktop web + iPhone PWA) for weekly NFL Pick'em: evidence-based picks that match/beat the market, honest uncertainty, alerts, accuracy tracking. See [PLAN.md](PLAN.md).
 * **Overall step:** **step 1 of 8 — Safe backend + CI + first landing**, in progress (ONE_SHOT session started 2026-10-11). Step log: `docs/gauntlet/logs/step-1.md`.
-* **DONE THIS STEP:** `a107074` design docs; `3c8c499` PLANNING + frozen criteria; `223d169` red tests (22 failed / 24 passed); `4fe9701` WO-A (deploy path, one migration, CI, cache headers; 20 failed / 26 passed, docker build ok).
-* **RESUMING AT:** IMPLEMENTATION: Codex WO-B is running (`s1-wo-b.md`, gpt-6-sol high, try 1 of 2; log `s1-wo-b-codex.log`, last message `s1-wo-b-last.md`). When it ends: inspect the diff, rerun pytest/ruff/alembic check/gen:api/typecheck, commit. Then WO-C (`s1-wo-c.md`, sol high), WO-D (`s1-wo-d.md`, sol high). Never re-dispatch a running Codex job.
+* **DONE THIS STEP:** `a107074` design docs; `3c8c499` PLANNING + frozen criteria; `223d169` red tests; `4fe9701` WO-A; `b582630` WO-B (36 passed / 10 red for C, D); A12 test strengthened (red).
+* **RESUMING AT:** IMPLEMENTATION: Codex WO-A correction is running (`s1-wo-a2.md`, gpt-6-luna high, try 2 of 2: explicit migration instead of `create_all`). When it ends: read the migration, run pytest, `alembic upgrade head` + `alembic check` + `downgrade base` on a scratch DB, commit. Then WO-C (`s1-wo-c.md`, sol high), WO-D (`s1-wo-d.md`, sol high). Launch Codex with `-c sandbox_workspace_write.network_access=true`. Never re-dispatch a running Codex job.
 * **STRIKES:** none. **CONTINUATIONS:** 0.
 * **JEVGREP:** ready. **HEADROOM:** not-routed (desktop app).
 * **Phase:** ONE_SHOT, checkpoint SPECIFICATION.

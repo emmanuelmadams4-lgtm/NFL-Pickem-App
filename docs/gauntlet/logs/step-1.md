@@ -91,6 +91,12 @@ Provider: Codex (`CODEX_POLICY: CODEX_FIRST`). Work orders live in the logs fold
 | WO | Scope | Rung | Commit | Proof rerun by the coordinator |
 |---|---|---|---|---|
 | A | S1, S6, S8 (A13), S10, S16 (A12), S18 | gpt-6-luna medium, try 1 | `4fe9701` | `npm ci` exit 0 (147 packages) · `alembic upgrade head` + `alembic check` exit 0, "No new upgrade operations detected" · pytest with CI's `DATABASE_URL`: 20 failed, 26 passed (A12 and A13 now green; the 20 belong to B, C, D) · ruff exit 0 · `npm run gen:api` no drift · `npm run typecheck` exit 0 · `docker build .` exit 0, image 796MB · logs `s1-woa-*.log` |
+| B | A1, A2, A3, A7, A8, A9 (A4 guard) | gpt-6-sol high, try 1 | `b582630` | pytest 10 failed, 36 passed (the 10 belong to C and D) · ruff exit 0 · `npm run gen:api` regenerated (new `qb_not_projected`, `postponed`) · `npm run typecheck` exit 0 · full diff read by the coordinator · logs `s1-wob-*.log` |
+| A, correction | A12 again | gpt-6-luna high, try 2 of 2 | pending | pending |
+
+WO-A defect found while reviewing WO-B: the squashed migration called `Base.metadata.create_all`, so it tracked the live models and `alembic check` could never fail. The coordinator had not opened that file in the WO-A review (coordinator miss). A12's test now also requires explicit `op.create_table` and no `create_all`/`metadata` (red, committed), and Codex got a narrow correction (`s1-wo-a2.md`). `CLIMBS:` none; effort raised luna medium → high for try 2 (try rule).
+
+Carried observation (unmapped, not a gate item): `current_week` now follows the next kickoff, as the plan asked. During the last game of a week (Monday night) the default week therefore moves to the next week once that game kicks off. Owner question for step 2, where the Week board is verified.
 
 WO-A review note: Codex removed `EXPOSE 8000` from the Dockerfile because the coordinator's own grep (`expo`, case-insensitive) matched it. The gate was wrong, not the line: restored, and O1's grep is now `apps/mobile|react-native|"expo|expo-`.
 
