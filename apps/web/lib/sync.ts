@@ -107,6 +107,10 @@ export function queuePick(gameId: string, team: string | null) {
   writeQueue({ ...readQueue(), [gameId]: team });
 }
 
+export function queuedPick(gameId: string): string | null | undefined {
+  return readQueue()[gameId];
+}
+
 let warnedGameId: string | null = null;
 
 export function unqueue(gameId: string) {

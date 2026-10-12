@@ -5,7 +5,7 @@ import { ApiError, keys, type GameDetail, type Provider, type Week } from "@nflp
 import { useApi } from "@/lib/api";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { isNetworkError, isServerReachable, orderedPickSend, queuePick, unqueueIfCurrent } from "@/lib/sync";
+import { isNetworkError, isServerReachable, orderedPickSend, queuePick, queuedPick, unqueueIfCurrent } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
 
@@ -72,12 +72,11 @@ export function useSetPick(gameId: string) {
     scope: { id: `pick:${gameId}` },
     // Offline: keep the optimistic choice, queue it, and report success. The queue flushes when we are back online.
     mutationFn: (v: PickVars): Promise<{ queued: boolean }> => orderedPickSend(v.gameId, async () => {
+      if (queuedPick(v.gameId) !== v.team) return { queued: true };
       if (!navigator.onLine || !isServerReachable()) {
-        queuePick(v.gameId, v.team);
         return { queued: true };
       }
       try {
-        queuePick(v.gameId, v.team);
         if (v.team) await api.setPick(v.gameId, v.team);
         else await api.clearPick(v.gameId);
         unqueueIfCurrent(v.gameId, v.team);
@@ -91,6 +90,7 @@ export function useSetPick(gameId: string) {
       }
     }),
     onMutate: async (v) => {
+      queuePick(v.gameId, v.team);
       const weekKey = keys.week(v.season, v.week);
       const gameKey = keys.game(v.gameId);
       await Promise.all([qc.cancelQueries({ queryKey: weekKey }), qc.cancelQueries({ queryKey: gameKey })]);
