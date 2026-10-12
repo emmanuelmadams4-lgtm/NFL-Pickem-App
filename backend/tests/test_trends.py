@@ -4,10 +4,10 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from nflpi.analytics.trends import MIN_GAMES, game_trends
 from sqlalchemy import func, select
 
 from nflpi.ai import research
+from nflpi.analytics.trends import MIN_GAMES, game_trends
 from nflpi.models import Game, Prediction
 from tests.conftest import CURRENT
 
