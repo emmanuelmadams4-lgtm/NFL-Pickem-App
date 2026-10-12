@@ -1,0 +1,43 @@
+# Step 3 of 14 — Restyle: reference 06 look and layout, owner logo (T2)
+
+Session 2026-10-12, cloud sandbox, coordinator on Opus 5.5. `DIRECT_COORDINATOR / ONE_SHOT`. Owner said "Go build and complete it". Evidence: `docs/gauntlet/logs/step-3-evidence/`.
+
+## What this step builds, in plain words
+* **Builds:** the app looks like the owner's reference 06: near-black, lime, big condensed titles, a card per game with logos and "VS", split win-chance tiles, a floating pill tab bar on the phone, pill section tabs; his P logo as the app icon. Plus the seven items step 2's reviewers left (what changed, differs from model, the weather outage reason, backfill guards, CSV prediction kind, client-lock tests).
+* **Is not:** the pick sheet (step 4), deploy (step 5), offline polish (step 6).
+
+## 1. PLANNING
+* Roadmap re-planned: PLAN.md now has 14 numbered steps folding owner decisions D1–D41 (this is step 3; old steps 3–8 moved to 5, 6, 7, 11, 13, 14).
+* Base: `94a9eda` (step 2 landed, CI 8/8). Baseline: pytest 55, e2e 17, typecheck, build — all green at start (rerun below as part of the red run).
+* Environment: Docker + Postgres restarted after a session restart; Codex not installed → `IMPLEMENTATION_PROVIDER: CLAUDE (limit hit)`; Jev unavailable → `JEV: unavailable`; 21st.dev: themes/search free, 2 code retrievals a day.
+* Skills: repo lookups by grep (graft equivalent); `/tdd` rules (red first); `/ponytail` rules in every work order; `harness-engineering` N/A (no new runner).
+
+### Product Mode (T2)
+1. **Problem:** the owner's chosen look (reference 06) and layout are not the app's; it still wears the blue system and a table board.
+2. **Why now:** he asked for it ("the styling of the image is what I like the best"; "Go build and complete it"); the pick sheet (step 4) should be built once, in the new look.
+3. **Scope:** D39 tokens and type, D40 layout, D41 icon, dark-variant team logos, R1–R7. **Cut:** pick sheet features, offline/push polish, any soccer elements, a theme switch (D37's "themes" stays the existing system light/dark).
+4. **Success metric:** the gate below green; a fresh design critic picks ours as matching reference 06's structure with our information, blind side by side.
+5. **Reversibility:** two-way (UI); CSV export gains one column (additive).
+
+Assumptions: Barlow Condensed is an acceptable condensed display face for "LEAGUES"-style titles (assumed; reference face unknown) · `@fontsource/barlow-condensed` is a justified new dependency (offline PWA, design.md § 0) · ESPN `/500-dark/` logo variants exist for most teams (unknown here: ESPN blocked in this sandbox; fallback to the regular logo covers it).
+
+## 2. SPECIFICATION
+design.md § 0 written first (frozen tokens, type, layout, icon, logo rules).
+
+| ID | Criterion (test) |
+|---|---|
+| S1 | One `game-card` per game with both teams and a "VS" badge (`restyle.spec.ts`) |
+| S2 | `--bg` #0a0a0a, `--accent` #c6f135, `--accent-ink` #0a0a0a; h1 in Barlow Condensed, uppercase |
+| S3 | Phone 393×852: fixed `nav[Primary]`, one active tab with a visible label, inactive tabs icon-only with names, no sideways scroll |
+| S4 | `/icons/*.png` byte-equal to `docs/design/brand/app-icon/*`; manifest theme/background `#0a0a0a` |
+| S5 | Matchup `win-split` tiles: both teams, percents summing to 100, "Model pick"; `nav[Sections]` with 8 pill links that jump |
+| R1 | A change note shows on the card and in the pick panel |
+| R2 | Picking against the model shows "Differs from model" on the card; clearing removes it |
+| R3 | Weather outage: Conditions says the weather source is down, never "No forecast yet" |
+| R4 | Backfill never reads as live: week-1 KPI `kpi-model` "–"; Results week-1 Model cell "–" + "backfilled"; weekly chart and calibration `aria-label`s state live vs backfilled; backfilled matchup panel and history never say "Live"; pytest `season_model_accuracy` live-only |
+| R5 | CSV export has `model_pick_kind` (live/backfill) (pytest) |
+| R6 | Client lock: TBD or postponed games stay open after their placeholder time; E4 now unlocks-within bound runs kickoff−1 s + 4 s |
+| R7 | Every en dash has a reason where one is known (design critic) |
+| K | E1–E14, W1–W5 stay green; axe 0 serious/critical both themes; design critic PASS vs reference 06 (393×852 and 1440×900) |
+
+Red run (before any production change): pytest R5 failed (`KeyError: 'model_pick_kind'`), R4 season guard green (code already right; guard only). Playwright: 17 step-2 checks green; all 10 new checks red (no `game-card`, `win-split`, tab bar, tokens, icons, R1–R3, R6 cards).

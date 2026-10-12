@@ -1,5 +1,6 @@
 """Step 2 backend criteria W1-W3 (docs/gauntlet/logs/step-2.md)."""
-
+import csv
+import io
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -107,3 +108,15 @@ def test_w5_no_api_field_mixes_live_and_backfill(loaded, client):
     assert "model_first" not in perf
     mixed = {"model_correct", "model_total", "model_first_correct", "model_first_total"}
     assert all(not mixed & w.keys() for w in perf["weeks"])
+
+
+def test_r4_week_summary_season_model_accuracy_is_live_only(loaded, client):
+    engine.backfill_season(loaded, CURRENT)
+    assert client.get(f"/api/weeks/{CURRENT}/4").json()["summary"]["season_model_accuracy"] is None
+
+
+def test_r5_csv_export_labels_each_model_pick_with_its_kind(loaded, client):
+    engine.backfill_season(loaded, CURRENT)
+    rows = list(csv.DictReader(io.StringIO(client.get(f"/api/picks/export.csv?season={CURRENT}").text)))
+    kinds = {r["game_id"].split("_")[1]: r["model_pick_kind"] for r in rows if r["model_pick"]}
+    assert kinds["01"] == "backfill" and kinds["04"] == "live"

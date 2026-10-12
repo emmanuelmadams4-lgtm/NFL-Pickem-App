@@ -113,7 +113,7 @@ test("E4 lock: a game locks on screen within 5 s of kickoff, without a reload, a
   await expect(buttons.first()).toBeEnabled();
   await page.clock.fastForward(Date.parse(g.kickoff_utc) - Date.parse(meta.server_time) - 1_000);
   await expect(buttons.first()).toBeEnabled();
-  await page.clock.runFor(5_000);
+  await page.clock.runFor(4_000);
   await expect(buttons.first()).toBeDisabled({ timeout: 2_000 });
   await expect(buttons.nth(1)).toBeDisabled();
   await expect(buttons.first().locator("svg"), "lock icon (design.md § 8)").toBeVisible();
@@ -273,7 +273,9 @@ test("E12 logos and type floor: team logos come only from the API's logo_url, an
     expect(small, `${path}: text under 11px (design.md § 4)`).toEqual([]);
   }
   expect(images.length, "the board shows team logos (owner decision 2026-10-12)").toBeGreaterThan(0);
-  expect(images.filter((u) => !logos.has(u)), "only team logos from the API are fetched as images").toEqual([]);
+  const own = (u: string) => new URL(u).origin === new URL(page.url()).origin && new URL(u).pathname.startsWith("/icons/");
+  const darkVariant = (u: string) => [...logos].some((l) => l.includes("/500/") && u === l.replace("/500/", "/500-dark/"));
+  expect(images.filter((u) => !logos.has(u) && !own(u) && !darkVariant(u)), "only team logos (or their dark variants) and the app icon are fetched as images").toEqual([]);
 });
 
 test("E13 backfill stays labeled: week rows, the Results table and the weekly chart", async ({ page, request }) => {

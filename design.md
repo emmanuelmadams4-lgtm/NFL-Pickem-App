@@ -5,6 +5,44 @@
 >
 > Runtime tokens live in `apps/web/app/globals.css`. `docs/design/design-tokens.json` mirrors them and marks each group `landed` or `proposed`. `docs/design/design-preview.html` renders them. A rule tagged **(proposed)** is decided here but not yet in the app.
 
+## 0. Direction 2026-10-12 (owner D39, D40, D41): supersedes the sections below where they differ
+
+The look and layout follow reference 06 (`docs/design/references/06-concept-dark-lime.jpg`) with this app's own information. Nothing from soccer. Never copied pixel for pixel. Where a later section says blue, Geist-only titles, "no uppercase", "a game is never its own card" or "no glow", this section wins.
+
+**Color (tokens, frozen for step 3).** One accent: lime. Lime means "me / interactive / selected" (the job blue had). Text on lime is near-black. Lime never colors the model or the market.
+
+| Token | Dark | Light | Role |
+|---|---|---|---|
+| `bg` | `#0a0a0a` | `#f4f5f0` | Page |
+| `surface` | `#151515` | `#ffffff` | Cards, groups |
+| `elevated` | `#1f1f1f` | `#ecede6` | Controls, chips, tab bar |
+| `border` | `#2a2a2a` | `#d9dbd2` | Hairlines |
+| `border-strong` | `#6b6b6b` | `#7d8076` | Control boundaries (3:1) |
+| `text` / `text-2` | `#f5f5f5` / `#a8a8a8` | `#141414` / `#52554c` | Ink |
+| `accent` (fill) | `#c6f135` | `#c6f135` | Selected pill, active tab, primary button, my series fill |
+| `accent-ink` | `#0a0a0a` | `#0a0a0a` | Text and icons on lime |
+| `accent-text` | `#c6f135` | `#4d6b00` | Links, focus ring, lime text on a page background (4.5:1) |
+| `good` | `#38bdf8` | `#0369a1` | Correct (sky, so it is never confused with lime); always with ✓ icon and a word |
+| `warn` / `bad` | `#fbbf24` / `#f87171` | `#92400e` / `#b91c1c` | Moderate, stale, questionable / incorrect, high, out |
+
+Chart series stay fixed by entity: me = lime, model = orange, market = teal; stats/elo/home pick values that are ≥ 3:1 on `surface`, not purple, and at least 30° of hue away from lime.
+
+**Type.** Display face: **Barlow Condensed 700**, self-hosted from `@fontsource/barlow-condensed` (offline PWA), UPPERCASE, used for page titles, the big kickoff time on a card, final scores and the big win-chance figures. A small sentence-case kicker in Geist sits above a title ("Picks" over "WEEK 6"), as in the reference. Everything else stays Geist (body) and Geist Mono (machine values). Nothing under 11px. Uppercase is allowed only in the display face.
+
+**Layout (D40).**
+* Page head: kicker + huge condensed title; filter chips (pills) under it, horizontally scrollable on the phone.
+* Week board: **one card per game** (24px radius `surface`), a grid of 2–3 columns on desktop, one column on the phone. Card top: away logo + name left, a round "VS" badge center, home logo + name right. Card middle: day and kickoff time large in the display face ("Time TBD" when unknown), model pick with win chance and its bar, uncertainty chip. Card bottom: the two pick pills; status chips (Backfilled, Upset watch, Locked, what changed, differs from model). The next game to kick off may be the one lime-filled card (one highlight per board).
+* Matchup: header like the reference's detail screen (logos, names, VS or the final score in the display face); **split win-chance tiles** (away % and home %, the model's side filled lime, labeled "Model pick"); the pick panel; **pill section tabs** (Factors, Teams, Injuries, Conditions, Market, AI, History, Meetings) that jump to each section.
+* Shell: desktop keeps a top bar (owner's P logo, nav, week picker) with nav items as pills (active = lime fill). Phone: a **floating pill tab bar** 12px above the safe area; the active tab is a lime pill with icon + label, the others icon-only circles with accessible names.
+* Results, Backtest, Settings: same page head and chips; summaries in rounded cards; charts unchanged in meaning.
+* Radius: card 24, control 12, chip/pill full. Soft lime glow allowed only behind the page head on the phone.
+
+**Team logos (D38).** In dark mode use ESPN's dark-background variant (`/500-dark/` path) and fall back to the regular `logo_url` if it fails, then to the team-color mark.
+
+**App icon (D41).** The owner's lime P (`docs/design/brand/app-icon/`) for the manifest, apple-touch-icon and favicon; `theme_color` and `background_color` `#0a0a0a`.
+
+**Carried rules (still binding):** probability and uncertainty never share a visual; missing = en dash + reason; backfill always labeled and never in a live figure; one tap to pick; tap again to clear; locked = no outline + lock icon + 60% ink + the word "Locked"; a "differs from model" state is visible as a chip with words; what changed shows on the card and in the pick panel.
+
 ## 1. Product Design Philosophy
 
 A private instrument for one person making sixteen decisions a week. It should feel like a well-made scoreboard: dark, quiet, exact. Numbers are the content. One surface per screen is allowed to feel like machined hardware (the pick); everything else recedes to type, alignment and hairlines.
