@@ -48,14 +48,37 @@ on_exit() {
   trap - EXIT
   if [[ -n "$safety_part" ]]; then rm -f "$safety_part" || cleanup_ok=0; fi
   if (( status != 0 && swap_uncertain )); then
+    sleep 3
     if names=$(docker compose exec -T db psql -U nflpi -d postgres -v ON_ERROR_STOP=1 -At -c "SELECT dbname || '=' || CASE WHEN EXISTS (SELECT 1 FROM pg_database WHERE datname = dbname) THEN 'exists' ELSE 'missing' END FROM (VALUES ('nflpi'), ('nflpi_old'), ('nflpi_restore')) AS dbs(dbname)"); then
       echo "database names after interrupted swap:" >&2
       echo "$names" >&2
     else
       echo "could not check database names after interrupted swap" >&2
+      names=''
     fi
-    echo "$failure; swap state is uncertain; $safety_note" >&2
-    echo "run: docker compose exec db psql -U nflpi -d postgres -c '\l' and see docs/DEPLOY.md (If a restore stops with a message about nflpi_old)" >&2
+    if [[ "$names" == $'nflpi=exists\nnflpi_old=missing\nnflpi_restore=exists' ]]; then
+      if ! docker compose exec -T db psql -U nflpi -d postgres -v ON_ERROR_STOP=1 -c 'DROP DATABASE IF EXISTS nflpi_restore WITH (FORCE)' >/dev/null; then
+        echo "could not remove scratch database nflpi_restore" >&2
+        cleanup_ok=0
+      fi
+      if ! docker compose up -d app worker; then
+        echo "could not restart app and worker" >&2
+        cleanup_ok=0
+      fi
+      if (( cleanup_ok )); then
+        echo "$failure; live data was not replaced; restart requested for app and worker" >&2
+      else
+        echo "$failure; check scratch database and app state" >&2
+      fi
+    elif [[ "$names" == $'nflpi=exists\nnflpi_old=exists\nnflpi_restore=missing' ]]; then
+      if ! docker compose up -d app worker; then
+        echo "could not restart app and worker" >&2
+      fi
+      echo "$failure; the swap finished before the stop; the restored data is live; old data is kept in nflpi_old; $safety_note; run docker compose ps and check health" >&2
+    else
+      echo "$failure; swap state is uncertain; $safety_note" >&2
+      echo "run: docker compose exec db psql -U nflpi -d postgres -c '\l' and see docs/DEPLOY.md (If a restore stops with a message about nflpi_old)" >&2
+    fi
   elif (( status != 0 && swap_done )); then
     echo "$failure" >&2
     if (( current_exists )); then
