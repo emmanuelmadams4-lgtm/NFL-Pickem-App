@@ -5,7 +5,7 @@ Launch (prompt on stdin, never as an argument): `codex exec -m gpt-6-sol -c 'mod
 
 GOAL: make the five red tests in `apps/web/e2e/pwa.spec.ts` (P2, P4, P6, P9 kept, P9 not kept) pass without breaking the six that pass today or any other browser test.
 
-BASELINE: worktree `/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-pwa`, branch `lane/pwa`, commit `__RED_SHA__` (the red spec). Never work in any other checkout.
+BASELINE: worktree `/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-pwa`, branch `lane/pwa`, commit `ddffa5e` (the red spec). Never work in any other checkout.
 
 ALLOWED SCOPE (edit only these; ask before touching anything else):
 - `apps/web/public/sw.js`
