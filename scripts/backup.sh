@@ -3,8 +3,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 keep=${BACKUP_KEEP:-14}
-if [[ ! "$keep" =~ ^[1-9][0-9]*$ ]]; then
-  echo "BACKUP_KEEP must be a positive number" >&2
+if [[ ! "$keep" =~ ^[1-9][0-9]*$ ]] || (( 10#$keep < 2 )); then
+  echo "BACKUP_KEEP must be at least 2" >&2
   exit 1
 fi
 mkdir -p backups
@@ -22,6 +22,9 @@ cleanup() {
   if [[ -n "$copy_part" ]]; then rm -f "$copy_part"; fi
   if (( status != 0 && finalized == 0 )); then rm -f "$file"; fi
 }
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 trap cleanup EXIT
 mv "$part" "$part.part"
 part="$part.part"
@@ -52,20 +55,25 @@ retain() {
     [[ "$old" == "$newest" ]] && continue
     count=$((count + 1))
     if (( count >= keep )); then rm -f "$old"; fi
-  done < <(ls -1t "$dir"/nflpi-*.sql.gz)
+  done < <(printf '%s\n' "$dir"/nflpi-*.sql.gz | LC_ALL=C sort -r)
 }
 
+retain backups "$file"
+
 if [[ -n "${BACKUP_COPY_DIR:-}" ]]; then
+  if [[ ! -d "$BACKUP_COPY_DIR" ]]; then
+    echo "BACKUP_COPY_DIR does not exist (is the drive plugged in?)" >&2
+    exit 1
+  fi
   copy_file="$BACKUP_COPY_DIR/$(basename "$file")"
   copy_part="$BACKUP_COPY_DIR/.$(basename "$file").part"
-  if ! mkdir -p "$BACKUP_COPY_DIR" || ! cp "$file" "$copy_part" || ! cmp -s "$file" "$copy_part" || ! mv "$copy_part" "$copy_file"; then
+  if ! cp "$file" "$copy_part" || ! cmp -s "$file" "$copy_part" || ! mv "$copy_part" "$copy_file"; then
     echo "backup copy failed: $file to $BACKUP_COPY_DIR" >&2
     exit 1
   fi
   copy_part=''
 fi
 
-retain backups "$file"
 if [[ -n "${BACKUP_COPY_DIR:-}" ]]; then retain "$BACKUP_COPY_DIR" "$copy_file"; fi
 
 echo "saved $file"
