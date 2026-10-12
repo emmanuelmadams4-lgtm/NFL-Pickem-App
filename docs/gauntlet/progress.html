@@ -43,6 +43,8 @@ p { margin: 0; }
 .yd.next { background: var(--turf-soft); box-shadow: inset 0 3px 0 var(--turf); }
 .yd.next .n { color: var(--turf); }
 .yd.opt .n { color: var(--muted); }
+.yd.done { box-shadow: inset 0 3px 0 var(--turf); }
+.yd.done .t::after { content: " · done"; color: var(--turf); font-weight: 600; }
 @media (max-width: 620px) { .field { grid-template-columns: repeat(4, 1fr); } .yd:nth-child(5) { border-left: 0; } .yd:nth-child(n+5) { border-top: 1px dashed var(--line); } }
 
 .waiting { border: 1px solid var(--amber); background: var(--amber-soft); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; }
@@ -80,16 +82,16 @@ footer { color: var(--muted); font-size: 13px; }
   </header>
 
   <div class="headline">
-    <div class="big">0<small> / 8 steps landed</small></div>
+    <div class="big">1<small> / 8 steps landed</small></div>
     <div class="now">
-      <p><b>Finished:</b> plan, two independent reviews (30 findings, all assigned), real-data backend and web app, saved to GitHub as a draft PR.</p>
-      <p><b>Next:</b> step 1 of 8, a safe backend plus automatic checks on every push, added to the draft PR. Goal: a usable app on your phone before Thursday's week 6 opener.</p>
+      <p><b>Finished:</b> step 1, a safe backend. 48 tests pass, automatic checks run on every push (all green), and a fresh reviewer passed it twice.</p>
+      <p><b>Now:</b> step 2 of 8, the desktop web app. A robot test clicks through every screen; it passes 4 of 12 checks today. Builders are fixing the rest: honest Results, "Time TBD", lock at kickoff on screen, the new look.</p>
     </div>
   </div>
 
   <div class="field" role="list" aria-label="Roadmap steps">
-    <div class="yd next" role="listitem"><span class="n">1</span><span class="t">Safe backend + CI</span></div>
-    <div class="yd" role="listitem"><span class="n">2</span><span class="t">Desktop web</span></div>
+    <div class="yd done" role="listitem"><span class="n">1</span><span class="t">Safe backend + CI</span></div>
+    <div class="yd next" role="listitem"><span class="n">2</span><span class="t">Desktop web</span></div>
     <div class="yd" role="listitem"><span class="n">3</span><span class="t">Deploy + first iPhone install</span></div>
     <div class="yd" role="listitem"><span class="n">4</span><span class="t">iPhone PWA polish</span></div>
     <div class="yd" role="listitem"><span class="n">5</span><span class="t">Alerts</span></div>
@@ -113,8 +115,8 @@ footer { color: var(--muted); font-size: 13px; }
       <table>
         <thead><tr><th>#</th><th>Step</th><th>Proof it must pass</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td class="num">1</td><td>Safe backend + CI + first landing<span class="sub">Docker fix, refresh lock, picks locked after kickoff, reminders that can't get lost, worker heartbeat, no guessed kickoff times</span></td><td>All tests (incl. daylight-saving and London kickoffs), migrations on an empty DB, cold start to live picks, CI green on the PR</td><td><span class="pill next">Next</span></td></tr>
-          <tr><td class="num">2</td><td>Desktop web app<span class="sub">Built, not yet reviewed; honest Results headline</span></td><td>Browser flow tests with a fixed test clock, typecheck, build, 0 serious accessibility issues, side by side with ESPN</td><td><span class="pill wait">Needs screenshots</span></td></tr>
+          <tr><td class="num">1</td><td>Safe backend + CI + first landing<span class="sub">Docker fix, refresh lock, picks locked after kickoff, reminders that can't get lost, worker heartbeat, no guessed kickoff times</span></td><td>All tests (incl. daylight-saving and London kickoffs), migrations on an empty DB, cold start to live picks, CI green on the PR</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">2</td><td>Desktop web app<span class="sub">Honest Results headline, "Time TBD", lock at kickoff on screen, new design system</span></td><td>12 browser checks in Eastern time, typecheck, build, 0 serious accessibility issues; ESPN side by side waits on your screenshots</td><td><span class="pill next">In progress</span></td></tr>
           <tr><td class="num">3</td><td>Deploy + your first iPhone install<span class="sub">Docker, Tailscale HTTPS, backups off the machine</span></td><td>Clean clone to a running app; real HTTPS path checked; a backup restores with matching counts</td><td><span class="pill todo">To do</span></td></tr>
           <tr><td class="num">4</td><td>iPhone PWA polish<span class="sub">Offline, "can't reach server", app updates</span></td><td>Opens offline with saved data; buttons lock at kickoff offline; new version activates</td><td><span class="pill wait">Needs screenshots</span></td></tr>
           <tr><td class="num">5</td><td>Alerts end to end<span class="sub">Flips, QB news, "no pick yet", test-alert button</span></td><td>Signed push delivered to a test push service; the notification opens the game</td><td><span class="pill todo">To do</span></td></tr>
@@ -150,5 +152,5 @@ footer { color: var(--muted); font-size: 13px; }
     </div>
   </div>
 
-  <footer>Updated 2026-10-11 · Plan complete · Branch claude/nfl-pickem-intelligence · draft PR #1 open</footer>
+  <footer>Updated 2026-10-12 · Step 1 landed (CI green) · Step 2 building · Branch claude/nfl-pickem-intelligence · draft PR #1 open, not merged</footer>
 </div>
