@@ -1,0 +1,296 @@
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { expect, test, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
+
+/**
+ * Step 6 gate (docs/gauntlet/logs/step-6.md): the iPhone app. Production export at 393x852 with the
+ * service worker on. Seeded by backend/tests/e2e_seed.py; one worker, so each test leaves the data
+ * as the others expect.
+ */
+test.use({ viewport: { width: 393, height: 852 }, hasTouch: true });
+
+const TOKEN = "e2e-token";
+const AUTH = { Authorization: `Bearer ${TOKEN}` };
+const SW_FILE = path.resolve(__dirname, "../out/sw.js");
+
+type Team = { abbr: string; name: string };
+type Game = { game_id: string; kickoff_utc: string; status: string; locked: boolean; time_tbd?: boolean; my_pick: string | null; away: Team; home: Team };
+type Meta = { current_season: number; current_week: number; server_time: string };
+
+async function api<T>(request: APIRequestContext, p: string): Promise<T> {
+  const res = await request.get(`/api${p}`, { headers: AUTH });
+  expect(res.ok(), p).toBeTruthy();
+  return res.json() as Promise<T>;
+}
+
+async function board(request: APIRequestContext) {
+  const meta = await api<Meta>(request, "/meta");
+  const week = await api<{ games: Game[] }>(request, `/weeks/${meta.current_season}/${meta.current_week}`);
+  const games = [...week.games].sort((a, b) => a.kickoff_utc.localeCompare(b.kickoff_utc));
+  const open = games.filter((g) => !g.time_tbd && !g.locked && g.status === "scheduled");
+  return { meta, games, open };
+}
+
+async function signIn(page: Page) {
+  await page.addInitScript((t) => localStorage.setItem("nflpi_token", t), TOKEN);
+}
+
+const pickGroup = (page: Page, g: Game) => page.getByRole("group", { name: `Your pick: ${g.away.abbr} at ${g.home.abbr}` });
+
+/** 15 s: the first signed-in load on a cold server takes longer than the default 5 s. */
+async function boardLoaded(page: Page) {
+  await expect(page.getByRole("link", { name: /^Open matchup:/ }).first()).toBeVisible({ timeout: 15_000 });
+}
+
+/** The worker is installed (shell and static files cached) and controls this page. */
+async function workerControls(page: Page) {
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 20_000 }).toBe(true);
+}
+
+/** The week on screen has reached the persisted query cache (it is saved about a second after it loads). */
+async function weekPersisted(page: Page) {
+  await expect.poll(() => page.evaluate(() => (localStorage.getItem("nflpi_cache") ?? "").includes('"week"')), { timeout: 10_000 }).toBe(true);
+}
+
+const cacheNames = (page: Page) => page.evaluate(() => caches.keys());
+const cachedUrls = (page: Page) =>
+  page.evaluate(async () => {
+    const urls: string[] = [];
+    for (const name of await caches.keys()) for (const req of await (await caches.open(name)).keys()) urls.push(req.url);
+    return urls;
+  });
+
+/** Chunk and module load failures, from page errors and the console. */
+function chunkErrors(page: Page): string[] {
+  const seen: string[] = [];
+  const bad = /ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module|Failed to load chunk/i;
+  page.on("pageerror", (e) => bad.test(String(e)) && seen.push(String(e)));
+  page.on("console", (m) => m.type() === "error" && bad.test(m.text()) && seen.push(m.text()));
+  return seen;
+}
+
+/** The API is up but never answers: every call hangs 30 s, then fails. The phone still says it is online. */
+async function serverUnreachable(context: BrowserContext) {
+  await context.route("**/api/**", async (route) => {
+    await new Promise((r) => setTimeout(r, 30_000));
+    await route.abort().catch(() => undefined);
+  });
+  return () => context.unrouteAll({ behavior: "ignoreErrors" });
+}
+
+test("P1 manifest: installable, standalone, the owner's icons all load", async ({ page, request }) => {
+  const res = await request.get("/manifest.webmanifest");
+  expect(res.ok()).toBeTruthy();
+  const m = (await res.json()) as { name: string; short_name: string; start_url: string; scope: string; display: string; icons: { src: string; sizes: string; purpose?: string }[] };
+  expect(m).toMatchObject({ start_url: "/", scope: "/", display: "standalone" });
+  expect(m.name && m.short_name).toBeTruthy();
+  expect(m.icons.some((i) => i.sizes === "192x192")).toBe(true);
+  expect(m.icons.some((i) => i.sizes === "512x512" && i.purpose === "any")).toBe(true);
+  expect(m.icons.some((i) => i.sizes === "512x512" && i.purpose === "maskable")).toBe(true);
+  for (const icon of m.icons) {
+    const img = await request.get(icon.src);
+    expect(img.ok(), icon.src).toBeTruthy();
+    expect(img.headers()["content-type"], icon.src).toContain("image/png");
+  }
+  await page.goto("/");
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", /manifest\.webmanifest/);
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1);
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute("content", /viewport-fit=cover/);
+});
+
+test("P2 one offline layer (S17): the worker controls the page and caches the shell and static files, never API data", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await workerControls(page);
+  await page.reload(); // every request on this load can go through the worker
+  await boardLoaded(page);
+  // An API call from the controlled page must reach the network without the worker answering it.
+  const [apiCall] = await Promise.all([
+    page.waitForResponse((r) => new URL(r.url()).pathname === "/api/health"),
+    page.evaluate(() => fetch("/api/health").then((r) => r.ok)),
+  ]);
+  expect(apiCall.fromServiceWorker(), "the worker leaves API calls alone").toBe(false);
+  await page.waitForLoadState("networkidle");
+  expect(await cacheNames(page), "no API cache").not.toContainEqual(expect.stringMatching(/api/i));
+  const urls = await cachedUrls(page);
+  expect(urls.length, "shell and static files are cached").toBeGreaterThan(5);
+  expect(urls.filter((u) => new URL(u).pathname.startsWith("/api/")), "API responses in the worker's caches").toEqual([]);
+});
+
+test("P3 offline reload: the saved week opens and a banner says the phone is offline", async ({ page, context }) => {
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await workerControls(page);
+  await weekPersisted(page);
+  await context.setOffline(true);
+  await page.reload();
+  await boardLoaded(page);
+  await expect(page.getByRole("status").filter({ hasText: /offline/i })).toBeVisible();
+});
+
+test("P4 server unreachable while online (B4): saved data and a 'can't reach the server' banner within 6 s; a pick stays queued, then syncs", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const g = open[0];
+  const serverPick = async () => (await board(request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+  expect(await serverPick(), "starts with no pick").toBeNull();
+
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await workerControls(page);
+  await weekPersisted(page);
+
+  const restore = await serverUnreachable(context);
+  try {
+    await page.reload();
+    await boardLoaded(page);
+    const banner = page.getByRole("status").filter({ hasText: /can.t reach the server/i });
+    await expect(banner).toBeVisible({ timeout: 6_000 });
+    await expect(banner).toContainText(/Tailscale/);
+    await expect(banner, "says how old the data on screen is").toContainText(/showing data from/i);
+
+    await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click();
+    await expect(page.getByText("Waiting to sync")).toBeVisible({ timeout: 6_000 });
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}")), "queued on the phone").toEqual({ [g.game_id]: g.home.abbr });
+    expect(await serverPick(), "not on the server yet").toBeNull();
+  } finally {
+    await restore();
+  }
+
+  // The server answers again: opening the app sends the queued pick and the banner goes away.
+  await page.reload();
+  await boardLoaded(page);
+  await expect.poll(serverPick, { timeout: 10_000 }).toBe(g.home.abbr);
+  await expect(page.getByText("Waiting to sync")).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: /can.t reach the server/i })).toHaveCount(0);
+
+  const cleared = await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH });
+  expect(cleared.ok()).toBeTruthy();
+});
+
+test("P5 kickoff passes while offline: the pick buttons lock from the saved kickoff time", async ({ page, context, request }) => {
+  const { meta, open } = await board(request);
+  const g = open[0];
+  await page.clock.install({ time: new Date(meta.server_time) });
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await workerControls(page);
+  await page.clock.runFor(2_000); // let the debounced save run
+  await weekPersisted(page);
+  await context.setOffline(true);
+  await page.reload();
+  await boardLoaded(page);
+  const buttons = pickGroup(page, g).getByRole("button");
+  await expect(buttons.first()).toBeEnabled();
+  await page.clock.fastForward(Date.parse(g.kickoff_utc) - Date.parse(meta.server_time) + 1_000);
+  await page.clock.runFor(4_000);
+  await expect(buttons.first()).toBeDisabled({ timeout: 2_000 });
+  await expect(buttons.nth(1)).toBeDisabled();
+});
+
+test("P6 new build (B11): sw.js carries the build ID; coming back to the app finds build B, offers Reload, and B takes over", async ({ page }) => {
+  const original = await readFile(SW_FILE, "utf8");
+  const idA = /const BUILD_ID = "([^"]+)"/.exec(original)?.[1];
+  expect(idA, 'out/sw.js has `const BUILD_ID = "<id>"` stamped by the build').toMatch(/^[A-Za-z0-9._-]{6,}$/);
+  expect(idA).not.toContain("__");
+  const idB = `${idA}-b`;
+
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await workerControls(page);
+  expect((await cacheNames(page)).filter((n) => n.includes(idA!)).length, "cache names carry build A").toBeGreaterThan(0);
+
+  try {
+    await writeFile(SW_FILE, original.replaceAll(idA!, idB)); // build B is deployed
+    // He switches back to the app. No navigation: only reg.update() on visibilitychange can find build B.
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    const reload = page.getByRole("button", { name: /reload/i });
+    await expect(reload).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/new version/i)).toBeVisible();
+    expect((await cacheNames(page)).some((n) => n.includes(idA!)), "build A keeps serving until he reloads").toBe(true);
+
+    await Promise.all([page.waitForEvent("load"), reload.click()]);
+    await boardLoaded(page);
+    await expect.poll(async () => (await cacheNames(page)).filter((n) => n.startsWith("nflpi-")).every((n) => n.includes(idB)), { timeout: 15_000 }).toBe(true);
+    expect((await cacheNames(page)).filter((n) => n.startsWith("nflpi-")).length).toBeGreaterThan(0);
+  } finally {
+    await writeFile(SW_FILE, original);
+  }
+});
+
+test("P7 every tab opens offline: no chunk fails to load, by tapping and by opening each page directly", async ({ page, context, request }) => {
+  const { games } = await board(request);
+  const errors = chunkErrors(page);
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await workerControls(page);
+  await weekPersisted(page);
+  await context.setOffline(true);
+
+  const tabs = page.getByRole("navigation", { name: "Primary" }).last();
+  for (const [tab, heading] of [["Results", /results/i], ["Settings", /settings/i], ["Week", /week/i]] as const) {
+    await tabs.getByRole("link", { name: tab }).click();
+    await expect(page.getByRole("heading", { level: 1, name: heading }), `${tab} tab`).toBeVisible();
+  }
+  for (const url of ["/", "/sheet/", "/performance/", "/backtest/", "/settings/", `/game/?id=${games[0].game_id}`]) {
+    await page.goto(url);
+    await expect(page.getByRole("heading", { level: 1 }).first(), url).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: /offline/i }), url).toBeVisible();
+  }
+  expect(errors).toEqual([]);
+});
+
+for (const [granted, text, never] of [[true, /protected from/i, /may clear/i], [false, /may clear/i, /protected from/i]] as const) {
+  test(`P9 storage (B5): the app asks the browser to keep its data and Settings says the answer (${granted ? "kept" : "not kept"})`, async ({ page }) => {
+    await page.addInitScript((ok) => {
+      const w = window as unknown as { __persistAsked: boolean };
+      w.__persistAsked = false;
+      Object.defineProperty(navigator, "storage", {
+        configurable: true,
+        value: { persisted: async () => false, persist: async () => ((w.__persistAsked = true), ok), estimate: async () => ({ usage: 0, quota: 0 }) },
+      });
+    }, granted);
+    await signIn(page);
+    await page.goto("/settings/");
+    const offline = page.locator("#offline");
+    await expect(offline.getByText(/storage/i).first()).toBeVisible();
+    await expect(offline.getByText(text)).toBeVisible();
+    await expect(offline.getByText(never)).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { __persistAsked: boolean }).__persistAsked)).toBe(true);
+  });
+}
+
+test.describe(() => {
+  test.use({ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1" });
+  test("P8 installed app, first open: standalone with empty storage shows the sign-in card, and it works", async ({ page }) => {
+    // iOS reports an app opened from the Home Screen through navigator.standalone.
+    await page.addInitScript(() => Object.defineProperty(navigator, "standalone", { configurable: true, value: true }));
+    await page.goto("/");
+    expect(await page.evaluate(() => (navigator as Navigator & { standalone?: boolean }).standalone)).toBe(true);
+    expect(await page.evaluate(() => localStorage.length), "a new install starts with empty storage").toBe(0);
+    const token = page.getByLabel(/token/i);
+    await expect(token).toBeVisible();
+    await token.fill(TOKEN);
+    await page.getByRole("button", { name: /sign in/i }).click();
+    await boardLoaded(page);
+    await expect(page.getByText("Install on your iPhone")).toHaveCount(0);
+  });
+
+  test("P10 install hint: iPhone Safari shows how to add it to the Home Screen until dismissed", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/");
+    await boardLoaded(page);
+    await expect(page.getByText("Install on your iPhone")).toBeVisible();
+    await expect(page.getByText(/Add to Home Screen/)).toBeVisible();
+    await page.getByRole("button", { name: "Dismiss" }).click();
+    await expect(page.getByText("Install on your iPhone")).toHaveCount(0);
+    await page.reload();
+    await boardLoaded(page);
+    await expect(page.getByText("Install on your iPhone")).toHaveCount(0);
+  });
+});
