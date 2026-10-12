@@ -29,6 +29,7 @@ Reading (coordinator's, not yet confirmed by the owner):
 | `04-yahoo-tiebreakers.png` | same | An open pick is tinted blue. **Tie breakers: a predicted score for each team in two games**, plus "who will score the MOST points this week" and "the LEAST". |
 | `05-concept-light-match-list.jpg` | Dribbble concept (soccer) | Card per match: date and venue, crest - score - crest, two quiet actions. Detail screen with tabs and a split bar. |
 | `06-concept-dark-lime.jpg` | Dribbble concept (soccer) | Near-black with one loud accent, big condensed display type, floating pill tab bar, segmented control at the bottom of a detail screen, win-share tiles. |
+| `07-concept-dark-teal-scores.png` | Dribbble concept ("Scorify"), received later on 2026-10-12 | Near-black with a soft green-teal glow at the top of the screen. One game per card: kickoff time in a notched tab at the top, logo and team-name pill each side, score in the middle. Floating pill tab bar where the active tab is a filled teal pill showing icon and label, the others icon only. League filter chips under the title. Pick'em list rows: logo, small caption, title, one action on the right. |
 
 ## What this changes
 
@@ -39,5 +40,10 @@ Reading (coordinator's, not yet confirmed by the owner):
 2. Pick row: the two-pill row in image 01 matches `design.md` (pick pills, 48px on the phone).
    Add what ESPN shows and we do not: record under the team, and a sticky "N of M picked" bar.
 3. Results: image 03 is the model for the review screen (right/wrong per pick, without colour alone).
-4. Images 05 and 06 agree with `design.md` (dark first, one accent, floating pill tab bar).
-   Nothing to change; do not add the photo backgrounds or the lime.
+4. Images 05, 06 and 07 agree with `design.md` (dark first, one accent, floating pill tab bar).
+   Do not add the photo backgrounds or the lime.
+5. Image 07 is the third dark concept in a row with a filled, labelled active tab and a card per
+   game, so treat those two as the owner's taste: active tab = filled pill with icon and label;
+   on the phone, one card per game with the kickoff time on top. OPEN (owner): the teal accent.
+   In `design.md` teal already means "market" and blue means "me / interactive"; a teal accent
+   would need the market colour to move.
