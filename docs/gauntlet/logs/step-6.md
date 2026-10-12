@@ -233,3 +233,27 @@ A separate, scope-locked refactor pass after the last review fix, by a fresh rea
 | `sw.js`, `stamp-sw.mjs`, `persist.ts`, update flow in `pwa.tsx` | No change | No dead code, debug output or false comments; the removed API cache and `replay` helper have no references left. |
 
 Proof after the edit: the `wo5` gate above ran on the tree that contains R1 (77 browser tests passed).
+
+Work order 6 below came after this pass. It changed 9 lines in `useSetPick` and added one four-line export; I read the diff and saw nothing to simplify; the VERIFICATION reviewers read it fresh.
+
+## 3b. IMPLEMENTATION, continued after the cleanup pass (review round 4)
+
+### Rebase on main `3d87fa0`
+
+Step 12 landed on main while this step was in review, so god asked for a rebase before verification and released the integration lock for it once. 17 lane commits replayed with no conflict. **Every commit id above this heading is from before the rebase**; `step-6-evidence/pre-rebase-commits.txt` lists them with their subjects, which are unchanged. `lane-guard.py check … pwa 3d87fa0`: `OK`.
+
+First gate on the rebased branch (`rebased-*.log`): pytest **115 passed** (main added 16) · ruff clean · gen:api no drift · typecheck 0 · e2e **void**: the Mac went to sleep during the run (the power log shows a wake from deep idle at 18:15; three tests took 6 to 17 minutes against a 30 s limit). Browser runs since then use `caffeinate -i`.
+
+### Review round 4 (fresh reviewer on the queue code after work order 5) — `reviews/r4-implementation.md`
+
+Verdict FAIL on one Medium, R1: a tap was written to the queue only when its turn to send came. A second tap made while the first was in flight was in memory only, and lost with no message if iOS closed the app. Mapped to a failing test first: P17 (two taps, the first held; within 1 s the queue and the button must show the second; the page is reloaded mid-request; the next open must send the second). `red-r4-findings.log`: P17 red at the intended check. Four other tests in that run timed out with the machine's load average at 18 to 26; all four pass in the `wo6` gate below.
+
+Low findings deferred with the others: R3 ("Waiting to sync" shows briefly on every online tap, which is true but new), R4 (same as F3), R5 (a 404 in the flush is worded as "locked at kickoff"), R6.
+
+### Work order 6, try 1 (Ryan, Codex gpt-6-sol, effort high) — `step-6-evidence/wo-6.md`
+
+Model pick: Jev `model:pwa:wo-6` → sol 0.98, effort high 1.0 (follow). Diff inspected: 2 files, both in scope, 6 lines added and 3 removed. The choice is queued as the first statement of `onMutate`; a send whose value a newer tap has replaced is skipped. Ryan read the installed TanStack Query source: `onMutate` runs before a mutation waits on its `scope`; P17 proves it in the browser.
+
+Gate `gate.sh wo6` under `caffeinate -i` (logs `wo6-*.log`): pytest **115 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **78 passed, 0 failed** (2.6 min). Committed as `9aa5990`.
+
+Work orders in this step: six, seven tries in all (work order 1 took two; no other used its second try). No climb above gpt-6-sol.
