@@ -1,5 +1,7 @@
 # Putting Pick'em Intel on your iPhone (PWA)
 
+> The steps below are written from Apple's and Tailscale's docs and have not been run on your phone yet (UNVERIFIED). Your first install is the test; tell me what you see.
+
 The web app is also the iPhone app. You add it to your Home Screen from Safari. It opens full screen like a normal app, works offline, and can send alerts.
 
 No App Store, no TestFlight, no $99 Apple account, nothing that expires.

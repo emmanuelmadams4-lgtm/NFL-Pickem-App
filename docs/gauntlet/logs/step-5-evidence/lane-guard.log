@@ -1,2 +1,5 @@
+# lane-guard at HEAD a223eaa, base 0bb10c2
+$ lane-guard.py overlap lanes.md --repo .
 OK
+$ lane-guard.py check lanes.md deploy 0bb10c2 --repo .
 OK

@@ -2,9 +2,9 @@
 
 One computer at home runs three containers (`db`, `app`, `worker`) from `docker-compose.yml`. Your phone and laptop reach it through Tailscale, so it is never on the public internet. Your always-on computer is the old Windows 11 PC (decision D42). Until it is set up, the Mac runs the app.
 
-Everything here was run and checked on the Mac by `scripts/deploy-check.sh`. Anything marked **UNVERIFIED** is written from the vendors' docs and has not been run on your PC yet. Tell me what you see and I will fix the page.
+`scripts/deploy-check.sh` ran these on the Mac from a clean copy: the install, bootstrap, the https-proxy checks, backup, restore (and refusing bad files), and token rotation. It did not test the Windows PC, real Tailscale HTTPS, an iPhone, a scheduled backup, a reboot, or updating an existing install. Anything marked **UNVERIFIED** is written from the vendors' docs and has not been run on your PC yet. Tell me what you see and I will fix the page.
 
-Commands run in a terminal on the server. On Windows, the Docker, git and script commands run in the **Ubuntu (WSL 2) terminal**. The `tailscale` commands run in **Windows PowerShell**, because Tailscale is a Windows app. The scripts need bash.
+Commands run in a terminal on the server. On Windows, the Docker, git and script commands run in the **Ubuntu (WSL 2) terminal**, and the `tailscale` commands run in **Windows PowerShell**, because Tailscale is a Windows app (UNVERIFIED). The scripts need bash.
 
 ## 1. First install (any computer)
 
@@ -14,9 +14,9 @@ cd NFL-Pickem-App
 cp .env.example .env
 ```
 
-Edit `.env`:
+Edit `.env` (for example `nano .env`):
 
-* `POSTGRES_PASSWORD`: make one with `python3 -c "import secrets; print(secrets.token_urlsafe(24))"`. Put the same value inside `DATABASE_URL`. Use this command and not a password you made up: characters like `@ / : # %` break the address.
+* `POSTGRES_PASSWORD`: choose it **once** and never change it. The database only reads it the first time it is created; if it later differs from the password inside `DATABASE_URL`, the app cannot log in. Make one with `python3 -c "import secrets; print(secrets.token_urlsafe(24))"`. Put the same value inside `DATABASE_URL`. Use this command and not a password you made up: characters like `@ / : # %` break the address.
 * `APP_ACCESS_TOKEN`: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
 * Keys for the AI and alerts are optional and can wait.
 
@@ -41,7 +41,7 @@ Goal: the PC starts by itself after a power cut and keeps the app running. Do th
 7. **Windows Update:** set Active hours so it restarts at night, not on a game day.
 8. **Tailscale:** install the Windows app, sign in with the same account as your phone, and choose "Run unattended" so it runs before anyone signs in.
 9. **HTTPS address (PowerShell):** `tailscale serve --bg 8000`. If it says Serve is not enabled, open the link it prints and enable it. Check `tailscale serve status`. Leave **Funnel off** (never run `tailscale funnel`); Funnel puts the app on the public internet.
-10. Follow section 1 in Ubuntu, then add the phone with `docs/IPHONE_PWA.md`.
+10. Do section 1 in Ubuntu **once**. If you are moving from the Mac, do section 3 instead of a separate section 1: it tells you where section 1 fits. Then add the phone with `docs/IPHONE_PWA.md`.
 
 Test it once: restart the PC, sign in, wait a few minutes, then run `docker compose ps` and the health URL. All three containers should be back. The gate does not prove this part; it checks only that the restart setting is in the file.
 
@@ -55,14 +55,14 @@ The address changes when the computer changes, so the iPhone app is added again 
    ./scripts/backup.sh
    ```
    The newest file in `backups/` has everything. Copy it to the PC (a USB stick or a Tailscale file copy, not email). Inside Ubuntu a file on the Windows side is under `/mnt/c/Users/<your name>/`.
-2. **On the PC:** do section 1 with its own new `POSTGRES_PASSWORD`. Copy only the keys you want to keep from the Mac's `.env` (access token, AI keys, VAPID keys). You can skip the bootstrap, the restore brings the data.
+2. **On the PC:** do section 1 once, up to and including `docker compose up -d --build`, with its own new `POSTGRES_PASSWORD`. Do not run `cp .env.example .env` a second time: it erases your password, and the database already uses it. Copy only the keys you want to keep from the Mac's `.env` (access token, AI keys, VAPID keys). Skip the bootstrap; the restore brings the data.
 3. **Restore** the file (section 5).
 4. **On the iPhone:** delete the old Pick'em icon, add the new address to the Home Screen (`docs/IPHONE_PWA.md`), sign in, and turn alerts on again. Each phone subscribes again from the new address, with or without the same VAPID keys. Keep the same keys anyway so nothing else changes.
 5. **When the PC looks right,** on the Mac run `docker compose down` so two servers never send alerts. Keep the backup file.
 
 ## 4. Backups
 
-Run a backup by hand: `./scripts/backup.sh`. It keeps the newest 14 in `backups/`. It saves nothing and exits with an error if the dump is incomplete, the database has no games, or anything fails. A failed run leaves no half file and never deletes an older good backup. Do not run a backup while a restore is running.
+Run a backup by hand: `./scripts/backup.sh`. It keeps the newest 14 `nflpi-*.sql.gz` files in `backups/`. It saves nothing and exits with an error if the dump is incomplete, the database has no games, or anything fails. A failed run leaves no half file and never deletes an older good backup. Do not run a backup while a restore is running.
 
 Copy it **off the computer** too. A folder on the same PC does not count. Point `BACKUP_COPY_DIR` at a USB drive, another computer, or a folder that syncs to a cloud drive:
 
@@ -74,22 +74,32 @@ The copy is made under a temporary name, compared with the original, and only th
 
 Run it every night, and write the output to a file you can read (a failed backup is silent otherwise):
 
-* **Windows (UNVERIFIED):** Task Scheduler, a daily task set to "Run only when user is logged on" (the PC signs in by itself, step 6 above), action `wsl.exe -d Ubuntu -- bash -lc "cd ~/NFL-Pickem-App && ./scripts/backup.sh >> ~/pickem-backup.log 2>&1"`.
-* **Mac:** `cron` does not have `docker` on its PATH. Use a crontab line like `0 3 * * * cd ~/Projects/NFL-Pickem-App && PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin ./scripts/backup.sh >> ~/pickem-backup.log 2>&1`.
+Replace `/path/to/other-place` with your real off-computer folder.
 
-Once a week, look at the date of the newest file in `backups/` and the last lines of the log.
+* **Windows (UNVERIFIED):** Task Scheduler, a daily task set to "Run only when user is logged on" (the PC signs in by itself, step 6 above). In the action, Program is `wsl.exe` and Arguments is `-d Ubuntu -- bash -lc "cd ~/NFL-Pickem-App && BACKUP_COPY_DIR=/path/to/other-place ./scripts/backup.sh >> ~/pickem-backup.log 2>&1"`.
+* **Mac (UNVERIFIED as a scheduled job):** `cron` does not have `docker` on its PATH. Use a crontab line like `0 3 * * * cd ~/Projects/NFL-Pickem-App && PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin BACKUP_COPY_DIR=/path/to/other-place ./scripts/backup.sh >> ~/pickem-backup.log 2>&1`.
+
+Once a week, look at the date of the newest file in `backups/` (`ls -t backups | head -3`) and the last lines of the log. `pre-restore-*` files (made by a restore) are never deleted by the script; remove old ones by hand.
 
 **Keep the secrets safe too.** `.env` is not in git and not in the database dump. Put a copy of `.env` (token, AI keys, VAPID private key) in your password manager. Without the VAPID private key, alerts stop until every phone subscribes again.
 
 ## 5. Restore
 
 ```bash
-./scripts/restore.sh backups/nflpi-YYYYMMDD-HHMMSS.sql.gz --yes
+ls -t backups | head                      # pick a file; names look like nflpi-20261012-031500-4242.sql.gz
+./scripts/restore.sh backups/<that file> --yes
 ```
 
 This replaces the data with the backup. It first checks the file is a complete backup with games in it, loads it into a scratch copy while the app keeps running, saves the current data as `backups/pre-restore-<time>.sql.gz`, then swaps the two and restarts the app. If anything fails before the swap, nothing changes and the app stays up. After it prints `restored`, check `curl http://127.0.0.1:8000/api/health`.
 
 If the app is not running after a problem, `docker compose up -d` starts it.
+
+**If a restore stops with a message about `nflpi_old`:** the swap happened (or may have), the old data is still there as a database called `nflpi_old`, and the safety copy named in the message is a file in `backups/`. Look: `docker compose exec db psql -U nflpi -d postgres -c '\l'`. Then pick one:
+
+* The app is healthy and shows the restored data: remove the old copy with `docker compose exec -T db psql -U nflpi -d postgres -c 'DROP DATABASE nflpi_old WITH (FORCE)'`. A later restore is refused until `nflpi_old` is gone.
+* You want the old data back: remove `nflpi_old` the same way only after you have checked the safety copy with `gzip -t backups/pre-restore-<time>.sql.gz`, then run `./scripts/restore.sh backups/pre-restore-<time>.sql.gz --yes`.
+
+The same file is how you **undo a restore**: restore the `pre-restore-*` file the previous restore made.
 
 ## 6. Rotate the access token
 

@@ -1,3 +1,8 @@
+# live app containers after the gate runs (2026-10-12T17:03:33Z)
 nfl-pickem-app-worker-1 Up About an hour
 nfl-pickem-app-app-1 Up About an hour (healthy)
 nfl-pickem-app-db-1 Up 13 hours (healthy)
+# leftovers from the gate (must be 0 each)
+containers: 0
+volumes: 0
+images: 0

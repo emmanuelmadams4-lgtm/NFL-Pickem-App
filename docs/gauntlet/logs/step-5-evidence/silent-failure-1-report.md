@@ -1,0 +1,5 @@
+# Silent-failure reviewer, round 1 (commit 57b2b65) — condensed by the coordinator
+BLOCKING B1 restore deletes the live database before proving the file is a complete backup (empty gzip passes `gzip -t`).
+BLOCKING B2 on any restore failure the app and worker stay stopped, and `unless-stopped` will not restart them after a reboot.
+BLOCKING B3 backup never checks the dump holds data; an empty database is backed up nightly and retention deletes the good backups.
+ADVISORY A1-A17: `[[ -s ]]` never fails; retention could delete the file just written (clock skew); interrupt during retention deletes the new backup; off-host copy in place and unverified; no lock shared with restore; unseen scheduled failures; DROP not atomic with connection kill; restore did not wait for health; weak password check; healthcheck passes with the database down; Docker Desktop starts only after sign-in; gate: D6 can pass with empty logo URLs, asserts skipped under PYTHONOPTIMIZE, no bind-address check, doc checks are keyword smoke tests, D7 weaker than its PASS line, no FAIL line on `set -e` exits, leftover volume from a killed run.
