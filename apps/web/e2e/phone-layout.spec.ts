@@ -72,6 +72,8 @@ test("L4 lime means mine: the 'next kickoff' note is not lime", async ({ page })
   const note = page.getByText(/next kickoff/).first();
   await expect(note).toBeVisible();
   expect(await note.evaluate((e) => getComputedStyle(e).color)).not.toBe(LIME);
+  // It sits on the dark card body beside the date, so it reads like the date (critic round 1: it was near-black on dark).
+  expect(await note.evaluate((e) => getComputedStyle(e).color), "same ink as the date beside it").toBe(await note.evaluate((e) => getComputedStyle(e.parentElement!).color));
 });
 
 test("L5 disabled is not lime: no disabled button on the game page keeps the lime fill", async ({ page }) => {
@@ -110,4 +112,43 @@ test("L7 keyboard, backwards: Shift+Tab never leaves a focused pick button under
   }
   expect(seen, "pick buttons reached with Shift+Tab").toBeGreaterThan(0);
   expect(hidden).toEqual([]);
+});
+
+for (const [w, h] of [[393, 852], [320, 568]] as const) {
+  test(`L8 week arrows at ${w}: previous and next week are real 44px bordered buttons`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await openWeek(page);
+    for (const name of ["Previous week", "Next week"]) {
+      const b = page.getByRole("button", { name }).locator("visible=true");
+      await expect(b, name).toHaveCount(1);
+      const m = await b.evaluate((e) => ({ w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height, border: parseFloat(getComputedStyle(e).borderTopWidth), color: getComputedStyle(e).borderTopColor }));
+      expect(Math.min(m.w, m.h), `${name} ${m.w}x${m.h}`).toBeGreaterThanOrEqual(44);
+      expect(m.border, `${name} border`).toBeGreaterThanOrEqual(1);
+      expect(m.color, `${name} border color`).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
+    }
+  });
+
+  test(`L9 first screen at ${w}: the Yahoo sheet link and the data's age are visible without scrolling either way`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await openWeek(page);
+    const bar = await tabBarTop(page);
+    for (const item of [page.getByRole("link", { name: /Yahoo sheet/ }), page.getByText(/^Updated /)]) {
+      const visible = item.locator("visible=true");
+      await expect(visible).toHaveCount(1);
+      const r = await visible.evaluate((e) => e.getBoundingClientRect().toJSON());
+      expect(r.left, "inside the left edge").toBeGreaterThanOrEqual(0);
+      expect(r.right, "inside the right edge").toBeLessThanOrEqual(w);
+      expect(r.bottom, "above the tab bar").toBeLessThanOrEqual(bar);
+    }
+  });
+}
+
+test("L10 section tabs, scrolled to the end: the last tab is clear of the fade", async ({ page }) => {
+  await openGame(page);
+  const row = page.getByRole("navigation", { name: "Sections" }).getByRole("list");
+  const gap = await row.evaluate((ul) => {
+    ul.scrollLeft = ul.scrollWidth;
+    return ul.getBoundingClientRect().right - ul.lastElementChild!.getBoundingClientRect().right;
+  });
+  expect(gap, "space between the last tab and the row's right edge").toBeGreaterThanOrEqual(40);
 });

@@ -189,6 +189,52 @@ test("P4 server unreachable while online (B4): saved data and a 'can't reach the
   expect(cleared.ok()).toBeTruthy();
 });
 
+test("P11 a newer pick wins: sending a pick directly clears that game's older queued pick", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const g = open[0];
+  const serverPick = async () => (await board(request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+  // An older choice (away) is still queued, and the health check hangs, so nothing flushes it yet.
+  await page.addInitScript(([id, team]) => localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team })), [g.game_id, g.away.abbr]);
+  await context.route("**/api/health", async (route) => {
+    await new Promise((r) => setTimeout(r, 30_000));
+    await route.abort().catch(() => undefined);
+  });
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click(); // the server is still thought reachable: sent directly
+    await expect.poll(serverPick, { timeout: 4_000 }).toBe(g.home.abbr);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue")), { message: "the older queued pick is gone" }).toBe("{}");
+  } finally {
+    await context.unrouteAll({ behavior: "ignoreErrors" });
+  }
+  // The server answers health again; whatever is flushed must not bring the older pick back.
+  await expect(page.getByRole("status").filter({ hasText: /can.t reach the server/i })).toHaveCount(0, { timeout: 30_000 });
+  expect(await serverPick()).toBe(g.home.abbr);
+  expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+});
+
+test("P12 a queued pick the server refuses with an error: he is told, the pick stays queued, and it is sent again", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const g = open[0];
+  const serverPick = async () => (await board(request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+  await page.addInitScript(([id, team]) => localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team })), [g.game_id, g.home.abbr]);
+  await context.route("**/api/picks/**", (route) => route.fulfill({ status: 500, contentType: "application/json", body: '{"detail":"boom"}' }));
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    await expect(page.getByText(/not saved yet/i)).toBeVisible({ timeout: 8_000 });
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}")), "still queued").toEqual({ [g.game_id]: g.home.abbr });
+  } finally {
+    await context.unrouteAll({ behavior: "ignoreErrors" });
+  }
+  await expect.poll(serverPick, { message: "sent again without him doing anything", timeout: 25_000 }).toBe(g.home.abbr);
+  await expect(page.getByText("Waiting to sync")).toHaveCount(0);
+  expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+});
+
 test("P5 kickoff passes while offline: the pick buttons lock from the saved kickoff time", async ({ page, request }) => {
   const { meta, open } = await board(request);
   const g = open[0];

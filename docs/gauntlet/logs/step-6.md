@@ -165,3 +165,18 @@ Model pick: Jev `model:pwa:wo-2` → sol 0.97 (follow), effort high 0.71 (adviso
 Gate `gate.sh wo2` (logs `wo2-*.log`): pytest **99 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **65 passed, 0 failed** (L1 to L7 green, P1 to P10 green, 47 older tests green). After screenshots: `step-6-evidence/shots/after-*.png`. At 393x852 the first card, with its pick buttons, is now whole on the first screen.
 
 Coordinator's notes for the critics: on the phone the previous/next week arrows render small and faint beside the week picker; "Yahoo sheet" and "Updated" are two copies each, one per breakpoint (cleanup candidate); the "Changed:" strip is written twice (cleanup candidate).
+
+### Review round 1 (fresh critics on `7611d89`) — reports in `step-6-evidence/reviews/`
+
+| Critic | Verdict | Blocking findings |
+|---|---|---|
+| Blind A/B vs ESPN (`r1-blind-ab.md`) | **WIN** for this app (X = ours by coin flip) | none; ESPN is denser and more legible per row |
+| UX (`r1-ux.md`) | FAIL | U1 Critical, U2 to U4 Structural |
+| Visual and anti-slop (`r1-visual.md`) | FAIL | V1, V2 Critical, V3, V4 Structural |
+| Implementation (`r1-implementation.md`) | FAIL | F1 to F3 High |
+
+The three agree on: an unreadable "next kickoff" note (my L4 only checked "not lime"), week arrows that render as faint 36px glyphs, and the Yahoo sheet link and data age pushed into an unmarked sideways scroll. F1 was confirmed in the code: a direct send never clears that game's older queued pick, so a later flush can put the old pick back.
+
+Mapped to failing tests before any fix (`red-r1-findings.log`, **8 failed, 17 passed**): P11 (older queued pick must go), P12 (a refused queued pick is reported, kept and retried), L4 strengthened (same ink as the date), L8 at 393 and 320 (44px bordered arrows), L9 at 393 and 320 (Yahoo sheet and "Updated" on the first screen), L10 (last tab clear of the fade). Work order 3 (`wo-3.md`) also carries F4 to F8, V4, U9 and F10 as reviewed requirements.
+
+Deferred, Visual or Polish, none blocks the step: V5 (uncertainty and upset chips on every seeded card: seed data, not layout), V6 and U11 (label wording, pinned by step 4 tests), V7 (tab pill over a lime header), V8 (game page first screen, not changed in this step), V9, V10, U5 to U8, U10, U12, U13, F9, F11. Listed for the dashboard step with the step 4 items.
