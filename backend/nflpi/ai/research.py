@@ -13,6 +13,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from nflpi.ai.providers import AIError, AIProvider, get_provider
+from nflpi.analytics.trends import MIN_GAMES, game_trends
 from nflpi.api import schemas as s
 from nflpi.api.views import ai_report_out, game_detail
 from nflpi.config import get_settings
@@ -23,6 +24,7 @@ Use ONLY the evidence pack you are given. Do not add injuries, stats, quotes, ne
 numbers that are not in it. If something important is missing, say so in
 data_quality_warnings. The win probability comes from a statistical model in the pack;
 repeat it exactly and never invent a different one. Never call a game a lock or guaranteed.
+Trends are historical records for context; quote their sample size and seasons, and never let them change the pick.
 Write short, plain sentences."""
 
 REPORT_SCHEMA = {
@@ -108,6 +110,18 @@ def evidence_pack(session: Session, game_id: str) -> dict:
         "injuries": [i.model_dump(mode="json") for i in d.injuries if i.report_status],
         "weather": d.weather.model_dump(mode="json") if d.weather else None,
         "recent_meetings": [m.model_dump() for m in d.meetings],
+        "trends": {
+            "min_games": MIN_GAMES,
+            "note": (
+                f"These historical records are for context only, are not model inputs, and did not change the pick. "
+                f"Records with fewer than {MIN_GAMES} games are left out. "
+                "'last_5_seasons' means the five finished seasons before this game's season. "
+                "Regular season and playoff games both count. QB and coach records are matched by name, "
+                "and an upcoming game's QB is a projection. "
+                "Play caller records appear only where a sourced play caller is on file."
+            ),
+            "records": game_trends(session, game_id),
+        },
         "data_freshness": p.data_freshness if p else {},
         "model_track_record": None
         if bt is None

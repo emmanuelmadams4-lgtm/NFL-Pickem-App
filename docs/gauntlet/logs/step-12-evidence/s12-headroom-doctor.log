@@ -1,0 +1,29 @@
+[1mHeadroom Doctor[0m [2mv0.[0m[1;2;36m39.1[0m[2m · port [0m[1;2;36m8787[0m
+
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃[1m [0m[1mcheck         [0m[1m [0m┃[1m [0m[1mstatus[0m[1m [0m┃[1m [0m[1msummary                                           [0m[1m [0m┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ proxy          │ [31m✗ fail[0m │ not reachable at http://127.0.0.1:8787             │
+│ version        │ [2m· skip[0m │ proxy not reachable                                │
+│ claude         │ [33m⚠ warn[0m │ not routed (no ANTHROPIC_BASE_URL in settings env) │
+│ wrap_marker    │ [2m· skip[0m │ no wrap marker found                               │
+│ codex          │ [33m⚠ warn[0m │ not routed (no active provider base_url in         │
+│                │        │ config.toml)                                       │
+│ shell env      │ [33m⚠ warn[0m │ ANTHROPIC_BASE_URL / OPENAI_BASE_URL unset — this  │
+│                │        │ shell bypasses the proxy                           │
+│ kompress       │ [2m· skip[0m │ proxy health endpoint not reachable                │
+│ savings        │ [33m⚠ warn[0m │ no savings recorded yet                            │
+│ budget         │ [2m· skip[0m │ proxy not reachable                                │
+│ claude desktop │ [33m⚠ warn[0m │ agent sessions bypass the proxy (Desktop           │
+│                │        │ overwrites ANTHROPIC_BASE_URL)                     │
+└────────────────┴────────┴────────────────────────────────────────────────────┘
+[2mproxy:[0m start it with: headroom proxy
+[2mclaude:[0m wrap it: headroom wrap claude
+[2mcodex:[0m wrap it: headroom wrap codex
+[2mshell env:[0m export [33mANTHROPIC_BASE_URL[0m=[4;94mhttp[0m[4;94m://127.0.0.1:8787[0m [1m([0mor launch via 
+headroom wrap[1m)[0m
+[2msavings:[0m route a client through the proxy and make a request
+[2mclaude desktop:[0m Desktop routing is not supported yet [1m([0msee #[1;36m869[0m[1m)[0m; use the 
+terminal Claude Code CLI for proxy-routed sessions.
+
+[1;36m1[0m[1m [0m[1;35mfailure[0m[1m([0m[1ms[0m[1m)[0m[1m, [0m[1;36m5[0m[1m [0m[1;35mwarning[0m[1m([0m[1ms[0m[1m)[0m
