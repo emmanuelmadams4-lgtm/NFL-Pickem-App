@@ -1,7 +1,7 @@
-PASS D0 clean clone of 84a28ed
+PASS D0 clean clone of 32af9a2
 PASS D1 compose ports/restart, scripts, runbook and iPhone order
-PASS D2 up from a clean clone; database ok, worker heartbeat fresh
-PASS D3 bootstrap; health ok (ok)
+PASS D2 up from a clean clone; database ok, worker heartbeat present
+PASS D3 bootstrap; health ok
 PASS D4 page, manifest, and a non-cacheable sw.js
 service worker scope http://127.0.0.1:18000/, manifest scope http://127.0.0.1:18000/
 PASS D5 no http:// redirects behind an https proxy; service worker registers
@@ -11,7 +11,7 @@ NOTICE:  truncate cascades to table "market_snapshots"
 NOTICE:  truncate cascades to table "predictions"
 NOTICE:  truncate cascades to table "user_picks"
 NOTICE:  truncate cascades to table "weather_forecasts"
-PASS D7 backup restored with matching counts (1,93,6771); safety copy kept; 3 bad files refused with data intact; failed backup fails loudly; off-host copy made
+PASS D7 backup restored with matching counts (1,93,6771); safety copy kept; 4 bad files refused with data intact; killed restore recovers; failed backup fails loudly; off-host copy made
 PASS D8 token rotation: old token 401, new token 200
-ALL PASS deploy-check (84a28ed)
+ALL PASS deploy-check (32af9a2)
 exit=0
