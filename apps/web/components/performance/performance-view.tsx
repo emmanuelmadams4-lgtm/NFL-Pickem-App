@@ -148,7 +148,7 @@ export function PerformanceView() {
       {perf && (
         <>
           <Scorecard season={season} />
-          {perf.auto.total > 0 && <p className="text-label text-text-2">Auto picks: {perf.auto.correct} of {perf.auto.total}</p>}
+          {perf.auto.total > 0 && <p className="text-label text-text-2">Picked for you by the model: {perf.auto.correct} of {perf.auto.total} right</p>}
           {perf.model.total === 0 && perf.model_backfill.total === 0 && perf.me.total === 0 ? (
             <EmptyState title={`No finished games for ${season} yet`} hint="Accuracy appears here once games are final." />
           ) : (

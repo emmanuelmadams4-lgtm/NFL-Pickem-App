@@ -10,6 +10,7 @@ import { safeGet, safeSet } from "@/lib/fmt";
 import { EmptyState, ErrorState, PageHead, SelectField, Skeleton, cx } from "@/components/ui";
 import { describeStale, feedsModel, staleList } from "@/components/freshness";
 import { KpiStrip } from "@/components/week/kpi-strip";
+import { ChevronRight } from "@/components/icons";
 import { WeekPicker } from "@/components/pickers";
 import { InstallHint } from "@/components/pwa";
 import { GameCard } from "@/components/week/game-card";
@@ -143,8 +144,8 @@ export function WeekBoard() {
           ))}
         </SelectField>
       </div>
-      <Link href={`/sheet/${qs}`} aria-label="Copy to Yahoo" className="relative z-10 inline-flex min-h-11 items-center rounded-full border border-border-strong bg-elevated px-4 text-sm font-medium text-text lg:min-h-9">
-        Copy to Yahoo
+      <Link href={`/sheet/${qs}`} className="relative z-10 inline-flex min-h-11 items-center gap-1 rounded-full border border-border-strong bg-elevated px-4 text-sm font-medium text-text lg:min-h-9">
+        Yahoo sheet <ChevronRight size={16} />
       </Link>
       </div>
 

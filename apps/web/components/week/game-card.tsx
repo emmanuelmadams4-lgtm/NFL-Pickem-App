@@ -47,7 +47,7 @@ function statusTone(status: string): "bad" | "warn" | "warn-soft" {
  * The whole card opens the matchup; the pills and tooltips sit above that link. `highlight` fills the top band lime
  * (the next game to kick off; at most one per board).
  */
-const labelWords = { easy_pick: "Easy pick", tough_matchup: "Tough matchup", coin_flip: "Coin flip" } as const;
+const labelWords = { easy_pick: ["Easy pick", "Easy picks"], tough_matchup: ["Tough matchup", "Tough matchups"], coin_flip: ["Coin flip", "Coin flips"] } as const;
 
 export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; highlight?: boolean; pointsCount: number }) {
   const p = game.prediction;
@@ -124,16 +124,16 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
         {p && prob !== null ? (
           <div>
             <ProbBar value={prob} fromRight={p.pick === game.home.abbr} label={`${p.pick} win probability`} />
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <div className="mt-2">
               {game.sheet.label && game.sheet.label in labelWords && (
-                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <Chip><span data-testid="pick-label">{labelWords[game.sheet.label as keyof typeof labelWords]}</span></Chip>
+                <p className="text-sm font-medium text-text">
+                  <span data-testid="pick-label">{labelWords[game.sheet.label as keyof typeof labelWords][0]}</span>
                   {game.sheet.label_hit_rate !== null && (
-                    <span className="text-label text-text-2">Won {pct(game.sheet.label_hit_rate)} of the time, 2012–2025</span>
+                    <span className="font-normal text-text-2"> · {labelWords[game.sheet.label as keyof typeof labelWords][1]} have won {pct(game.sheet.label_hit_rate)} since 2012</span>
                   )}
-                </span>
+                </p>
               )}
-              <span className="flex items-center gap-1.5 text-label text-subtle">
+              <span className="mt-1 flex items-center gap-1.5 text-label text-subtle">
                 Uncertainty <UncertaintyChip prediction={p} />
               </span>
             </div>
@@ -197,10 +197,10 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
         <PointsControl game={game} count={pointsCount} />
 
         <div className="mt-auto pt-1">
-          {game.sheet.pick_by === "app" && !locked && (
-            <p className="mb-2 text-label text-text-2">App pick: {game.sheet.app_pick}. Tap a team to make it yours.</p>
+          {game.sheet.pick_by === "app" && !locked && game.sheet.app_pick && (
+            <p className="mb-2 text-label text-text-2">Counts as {game.sheet.app_pick}, the model&apos;s pick, unless you tap a team.</p>
           )}
-          {game.sheet.pick_by === "auto" && <p className="mb-2"><Chip>Auto pick</Chip></p>}
+          {game.sheet.pick_by === "auto" && <p className="mb-2"><Chip>Model picked {game.sheet.my_pick} for you</Chip></p>}
           <PickButtons game={game} />
           {final && (
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5">

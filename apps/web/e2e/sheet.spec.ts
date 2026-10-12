@@ -59,11 +59,11 @@ test("U1 every open game shows its label, its points and whose pick it is", asyn
     await expect(card(page, g).getByTestId("pick-label")).toHaveText(LABELS);
     await expect(points(page, g)).toHaveValue(String(g.sheet.my_points));
     await expect(points(page, g).locator("option")).toHaveCount(open.length);
-    await expect(card(page, g)).toContainText("App pick");
+    if (g.sheet.pick_by === "app") await expect(card(page, g)).toContainText(`Counts as ${g.sheet.app_pick}, the model's pick`);
   }
 });
 
-test("U1b changing a game's points swaps with the game that had them, and the app's number can be taken back", async ({ page, request }) => {
+test("U1b changing a game's points swaps with the game that had them, says so, and the model's number can be taken back", async ({ page, request }) => {
   const { open } = await board(request);
   const low = open.reduce((a, b) => (a.sheet.my_points! < b.sheet.my_points! ? a : b));
   const high = open.reduce((a, b) => (a.sheet.my_points! > b.sheet.my_points! ? a : b));
@@ -79,11 +79,12 @@ test("U1b changing a game's points swaps with the game that had them, and the ap
 
   await expect.poll(serverPoints).toEqual([high.sheet.my_points, low.sheet.my_points]);
   await expect(points(page, high)).toHaveValue(String(low.sheet.my_points));
+  await expect(page.getByText(`${high.away.abbr} @ ${high.home.abbr} is now ${low.sheet.my_points}`)).toBeVisible();
   await expect(card(page, low)).toContainText("Your number");
-  await expect(card(page, low)).toContainText(`App says ${low.sheet.app_points}`);
+  await expect(card(page, low)).toContainText(`Model says ${low.sheet.app_points}`);
 
-  await card(page, low).getByRole("button", { name: /Use the app's number/ }).click();
-  await card(page, high).getByRole("button", { name: /Use the app's number/ }).click();
+  await card(page, low).getByRole("button", { name: /Use the model's number/ }).click();
+  await card(page, high).getByRole("button", { name: /Use the model's number/ }).click();
   await expect.poll(serverPoints).toEqual([low.sheet.my_points, high.sheet.my_points]);
   await expect(card(page, low)).not.toContainText("Your number");
 });
@@ -109,7 +110,7 @@ test("U2 copy sheet: every game in kickoff order with the winner and points, and
   await page.goto("/");
   await boardLoaded(page);
 
-  await page.getByRole("link", { name: "Copy to Yahoo" }).click();
+  await page.getByRole("link", { name: "Yahoo sheet" }).click();
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/copy sheet/i);
   const rows = page.getByTestId("sheet-row");
@@ -140,6 +141,7 @@ test("U3 results: he enters his Yahoo rank for a week and the scorecard shows it
   await form.getByLabel("Leader's points").fill("61");
   await form.getByRole("button", { name: "Save rank" }).click();
 
+  await expect(page.getByText("Rank saved")).toBeVisible();
   const card = await expect
     .poll(async () => {
       const weeks = (await api<{ weeks: { week: number; rank: number | null; leader_points: number | null }[] }>(request, `/scorecard/${meta.current_season}`)).weeks;
@@ -148,7 +150,7 @@ test("U3 results: he enters his Yahoo rank for a week and the scorecard shows it
     .toMatchObject({ rank: 4, leader_points: 61 });
   void card;
   const table = page.getByRole("table", { name: "Scorecard" });
-  for (const head of ["Week", "You", "App", "Rank"]) await expect(table.getByRole("columnheader", { name: head, exact: true })).toBeVisible();
+  for (const head of ["Week", "You", "Model", "Rank"]) await expect(table.getByRole("columnheader", { name: head, exact: true })).toBeVisible();
   await expect(table.getByRole("row").filter({ hasText: `Week ${meta.current_week}` })).toContainText("4");
 });
 

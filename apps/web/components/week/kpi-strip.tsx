@@ -1,7 +1,6 @@
 "use client";
 
 import type { Week } from "@nflpi/shared";
-import { isLocked, useNow } from "@/lib/clock";
 import { BigDash, cx } from "@/components/ui";
 import { pctOr } from "@/lib/fmt";
 
@@ -12,8 +11,7 @@ import { pctOr } from "@/lib/fmt";
  */
 export function KpiStrip({ week }: { week: Week }) {
   const s = week.summary;
-  const now = useNow();
-  const open = week.games.filter((g) => !isLocked(g, now) && !g.my_pick).length;
+  const modelOpen = week.games.filter((g) => g.sheet.pick_by === "app" && g.sheet.my_pick).length;
   const hasLeader = s.league_leader_accuracy !== null && s.league_leader_accuracy !== undefined;
 
   const cells = [
@@ -27,7 +25,7 @@ export function KpiStrip({ week }: { week: Week }) {
       label: "My picks",
       short: "Picked",
       value: `${s.picks_made}/${s.games_total}`,
-      sub: open > 0 ? `${open} still open to pick` : "No open games left to pick",
+      sub: `${s.picks_made} yours, ${modelOpen} model picks`,
     },
     {
       label: "My accuracy, week",
