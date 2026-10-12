@@ -346,6 +346,108 @@ test("P17 a second tap while the first is still being sent is on the phone at on
   }
 });
 
+for (const stored of ["null", "[1]", "7", '{"x":5}', "{not json"]) {
+  test(`P18 a damaged saved queue (${stored}) does not break the app: the board opens and a pick still saves`, async ({ page, request }) => {
+    const { open } = await board(request);
+    const g = open[0];
+    const serverPick = async () => (await board(request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(String(e)));
+    await page.addInitScript((v) => {
+      if (!sessionStorage.getItem("seeded")) localStorage.setItem("nflpi_pick_queue", v);
+      sessionStorage.setItem("seeded", "1");
+    }, stored);
+    await signIn(page);
+    await page.goto("/");
+    await boardLoaded(page);
+    try {
+      await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click();
+      await expect.poll(serverPick, { timeout: 8_000 }).toBe(g.home.abbr);
+      await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue"))).toBe("{}");
+      expect(errors, "no script error").toEqual([]);
+    } finally {
+      expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+    }
+  });
+}
+
+test("P19 the phone cannot store a waiting pick (storage full): he is told to keep the app open", async ({ page, context }) => {
+  const { open } = await board(page.request);
+  const g = open[0];
+  await page.addInitScript(() => {
+    const real = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k: string, v: string) {
+      if (k === "nflpi_pick_queue") throw new DOMException("full", "QuotaExceededError");
+      return real.call(this, k, v);
+    };
+  });
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    await context.setOffline(true);
+    await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click();
+    await expect(page.getByText(/keep the app open/i)).toBeVisible();
+    await expect(page.getByText("Waiting to sync")).toBeVisible();
+  } finally {
+    await context.setOffline(false);
+  }
+});
+
+test("P20 two open copies of the app (Home Screen and a Safari tab) do not overwrite each other's waiting picks", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  test.setTimeout(90_000); // two page loads, then a wait for the timer that sends waiting picks
+  expect(open.length, "needs two open games").toBeGreaterThanOrEqual(2);
+  const [g0, g1] = open;
+  const serverPick = async (id: string) => (await board(request)).games.find((x) => x.game_id === id)!.my_pick;
+  const other = await context.newPage();
+  for (const p of [page, other]) {
+    await signIn(p);
+    await p.goto("/");
+    await boardLoaded(p);
+  }
+  try {
+    await context.setOffline(true);
+    await page.getByRole("group", { name: `Your pick: ${g0.away.abbr} at ${g0.home.abbr}` }).getByRole("button", { name: `Pick ${g0.home.name}` }).click();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue"))).toContain(g0.game_id);
+    await pickGroup(other, g1).getByRole("button", { name: `Pick ${g1.home.name}` }).click();
+    await expect
+      .poll(() => other.evaluate(() => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}")), { message: "both picks are still waiting" })
+      .toEqual({ [g0.game_id]: g0.home.abbr, [g1.game_id]: g1.home.abbr });
+    await expect(pickGroup(page, g1).getByRole("button", { name: `${g1.home.name} picked` }), "the first copy shows the pick made in the second").toBeVisible();
+    await context.setOffline(false);
+    for (const g of [g0, g1]) await expect.poll(() => serverPick(g.game_id), { timeout: 25_000 }).toBe(g.home.abbr);
+  } finally {
+    await context.setOffline(false);
+    await other.close();
+    for (const g of [g0, g1]) expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
+test("P21 a waiting pick the server refuses as locked (409): it is dropped, he is told, and it is not sent again", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const g = open[0];
+  let sends = 0;
+  await page.addInitScript(([id, team]) => localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team })), [g.game_id, g.home.abbr]);
+  await context.route(`**/api/picks/${g.game_id}`, (route) => {
+    sends++;
+    return route.fulfill({ status: 409, contentType: "application/json", body: '{"detail":"Game has kicked off"}' });
+  });
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    await expect(page.getByText(/not saved: locked at kickoff/i)).toBeVisible({ timeout: 8_000 });
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue"))).toBe("{}");
+    await expect(page.getByText("Waiting to sync")).toHaveCount(0);
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange"))); // a later flush has nothing to send
+    await page.waitForLoadState("networkidle");
+    expect(sends, "sent once").toBe(1);
+  } finally {
+    await context.unrouteAll({ behavior: "ignoreErrors" });
+  }
+});
+
 test("P15 one queued pick the server keeps refusing does not hold back the others", async ({ page, context, request }) => {
   const { open } = await board(request);
   expect(open.length, "needs two open games").toBeGreaterThanOrEqual(2);

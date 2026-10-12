@@ -131,6 +131,23 @@ test("U2 copy sheet: every game in kickoff order with the winner and points, and
   await expect(page.getByRole("status")).toContainText(/copied/i);
 });
 
+test("U3b results: a rank typed before the scorecard has loaded is not wiped when it arrives", async ({ page }) => {
+  await page.route("**/api/scorecard/**", async (route) => {
+    await new Promise((r) => setTimeout(r, 1_500));
+    await route.continue().catch(() => undefined);
+  });
+  await signIn(page);
+  const scorecard = page.waitForResponse((r) => r.url().includes("/api/scorecard/"));
+  await page.goto("/performance/");
+  const form = page.getByRole("group", { name: "Your Yahoo rank" });
+  await form.getByLabel("Your rank").fill("9");
+  await form.getByLabel("Leader's points").fill("77");
+  await scorecard;
+  await page.waitForLoadState("networkidle");
+  await expect(form.getByLabel("Your rank")).toHaveValue("9");
+  await expect(form.getByLabel("Leader's points")).toHaveValue("77");
+});
+
 test("U3 results: he enters his Yahoo rank for a week and the scorecard shows it", async ({ page, request }) => {
   const { meta } = await board(request);
   await signIn(page);
