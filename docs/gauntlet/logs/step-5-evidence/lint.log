@@ -1,0 +1,4 @@
+# bash -n, shellcheck on HEAD c0d9e56
+clean scripts/backup.sh
+clean scripts/restore.sh
+clean at warning level: scripts/deploy-check.sh (info notes SC2012/SC2015 remain: ls and A&&B||C are intended in a test script)

@@ -22,28 +22,33 @@ Gate: `scripts/deploy-check.sh` (+ `scripts/deploy-check-sw.mjs`), committed red
 | D4 | Page 200, manifest, `sw.js` JavaScript and not cacheable | user-facing |
 | D5 | No `http://` redirect behind an https proxy; service worker registers inside the manifest scope | user-facing |
 | D6 | 32 of 32 team logos return 200 from the server's network | user-facing |
-| D7 | Backup, wipe, restore: picks, predictions, games counts match; a backup with the database stopped exits non-zero and leaves no file; `BACKUP_COPY_DIR` makes an off-host copy | operational |
+| D7 | Backup, wipe, restore: picks, predictions, games counts match; restore keeps a safety copy; a non-dump, an empty gzip, a broken dump and a truncated dump are refused with the data intact and the app running; two backups started together are both good with no half files; a backup with the database stopped, or of a database with no games, exits non-zero and changes nothing in `backups/`; restore recovers from an emptied database; `BACKUP_COPY_DIR` makes an identical off-host copy | operational |
 | D8 | Rotating `APP_ACCESS_TOKEN`: old token 401, new token 200 | operational |
 
-Red evidence: `step-5-evidence/d-red.log` ("app ports ['8000'] do not follow 18000"), right reason.
-Gate amendment after the freeze (environment, not the check): the pinned `playwright-core` wanted a Chromium build that is not installed, so D5 failed on launch. The script now falls back to the newest installed headless shell. Nothing it asserts changed.
+Red evidence: `step-5-evidence/d-red.log` ("app ports ['8000'] do not follow 18000"), then after review `d-red-2.log` (D7: "restore.sh did not keep a safety copy"). Both right reasons.
+Gate changes after the freeze: (1) environment: the pinned `playwright-core` wanted a Chromium build that is not installed, so D5 failed on launch; the script falls back to the newest installed headless shell. (2) After the first critic's FAIL the coordinator added the D7 cases above, a `127.0.0.1` bind check, a non-empty logo URL check, an ERR trap, a pre-run clean-up of a leftover project, `--rmi local` on clean-up and `python3 -E`. (3) A count comparison that failed on macOS `wc -l` padding was fixed. None of these loosen a check.
 
 ## 3. IMPLEMENTATION
-* WO-1 (Codex `gpt-6-sol`, medium, try 1 of 2): `docker-compose.yml`, `.env.example`, `scripts/backup.sh`, `scripts/restore.sh`. First try passed; no climb, no correction.
-* Coordinator wrote `docs/DEPLOY.md` and the `docs/IPHONE_PWA.md` order change (docs, not code).
-* Coordinator review of the Codex diff: in scope; `bash -n` and `shellcheck` clean; backup writes a `.part`, checks gzip and removes it on any failure; restore refuses without `--yes`.
-* Commits: `21403ad` red gate, red evidence, `d03051f` deploy files, `3d110b1` gate environment fix.
+* WO-1 (Codex `gpt-6-sol`, medium, try 1 of 2): `docker-compose.yml`, `.env.example`, `scripts/backup.sh`, `scripts/restore.sh`. Passed the first gate on try 1.
+* The first critic and the silent-failure reviewer then found data-loss paths the gate did not test (below). The gate was the weak part, not the builder, so no ladder try was spent.
+* WO-2 (Codex `gpt-6-sol`, xhigh, try 1 of 2; `JEV: model:deploy:wo2 -> astra 0.48 (unsure), effort xhigh 0.95`; advisor (Sonnet) -> sol; astra needs the owner's yes and was not asked): `scripts/backup.sh`, `scripts/restore.sh`, app healthcheck in `docker-compose.yml`. Restore now validates the file, loads a scratch database while the app runs, saves `pre-restore-*` safety copy, swaps database names, restarts the app and polls health, and restarts the app if anything fails before the swap. Backup verifies the dump trailer and a games row, never deletes the file it just wrote, uses unique names, and copies off-host through a temp name plus `cmp`.
+* Coordinator also wrote `docs/DEPLOY.md` and the `docs/IPHONE_PWA.md` order change (docs, not code), then revised DEPLOY.md after review.
+* Coordinator review of each Codex diff: in scope, `bash -n` and `shellcheck` clean (`step-5-evidence/lint.log`). restore.sh is long because each failure point has its own recovery; this was accepted over a shorter script that can leave the app down.
 
 ## 4. CLEANUP
-Scope-locked read of the touched files with `/ponytail` in mind. No change needed: backup.sh is 39 lines with no helpers, restore.sh 21, compose diff is 3 lines. `/refactor` found nothing to remove; the one extra loop in backup.sh (waits a second if the file name exists) is kept because two backups in one second would overwrite each other.
+Scope-locked read of the touched files with `/ponytail` in mind. No further change: no helper scripts or config files were added, and the extra branches in restore.sh each map to a data-loss state a reviewer found.
 
 ## 5. VERIFICATION
-Gate on committed HEAD `3d110b1`: ALL PASS D0-D8 (`step-5-evidence/d-green.log`). Counts after restore equal before: `1,93,6771` (picks, predictions, games). Live stack checked untouched afterwards (`nfl-pickem-app-*` up, ports 8000/5432 unchanged). lane-guard check: see § 6.
-Fresh critic and Jev verdict: recorded below when run.
+Round 1 (commit `57b2b65`): the gate was ALL PASS (`critic-1-gate-run.log`) but the fresh critic returned FAIL, and the silent-failure reviewer found the same two restore problems. Blocking: (1) restore dropped the live database before proving the file was a real backup, took no safety copy, and left the app stopped on failure; (2) the Mac-to-PC steps lost picks made after the backup and contradicted themselves about the VAPID keys. Also blocking from the second reviewer: backup could save an empty database and rotate real backups out. All fixed above; the Windows/WSL contradictions, the off-host copy and the other advisories were fixed in the same pass (the ones not fixed are listed under "Known limits").
+Round 2 (commit `c0d9e56`, the committed HEAD before this log): gate ALL PASS, counts after restore equal before (`1,93,6771`), `step-5-evidence/d-green.log`. lane-guard overlap and check: `lane-guard.log` (OK, OK). Live stack: `live-stack.log` (the three `nfl-pickem-app-*` containers up; the gate's own images and volume are removed). Fresh critic round 2 and Jev verdict: recorded below when run.
 
 ## 6. LANDING
 Recorded below when done.
 
-## Not proven here
-* The Windows 11 PC steps (`docs/DEPLOY.md` § 2) are written, not run. Owner check PENDING.
-* Real TLS: tested with forwarded headers and localhost (a secure context); the real https address comes from Tailscale Serve on the owner's machine. Owner iPhone install check PENDING.
+## Known limits (not proven or not fixed here)
+* The Windows 11 PC steps (`docs/DEPLOY.md` §§ 2, 3, 4) are written, not run. Owner check PENDING.
+* Real TLS: tested with forwarded headers on localhost (a secure context); the real https address comes from Tailscale Serve on the owner's machine. Owner iPhone install check PENDING.
+* "Restarts by itself" is a config check only; no process is killed and no reboot is simulated.
+* The gate builds with a warm Docker layer cache, depends on outside logo hosts (D6), and compares row counts of three tables in D7.
+* A backup started while a restore is running is not blocked; DEPLOY.md says not to.
+* The app healthcheck now needs the database, but Docker does not restart an unhealthy container by itself.
