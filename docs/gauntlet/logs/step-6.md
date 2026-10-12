@@ -95,7 +95,13 @@ Functional (the gate):
 | P8 | Standalone with empty storage → the sign-in card works; no install hint | P8 |
 | P9 | B5: the app calls `navigator.storage.persist()` and Settings › Offline says whether storage is protected | P9 (two cases) |
 | P10 | Install hint on iPhone Safari until dismissed | P10 |
-| L* | Phone layout items from the brief: scripted checks written red before work order 2 | to be added |
+| L1 | 393x852: the first game's pick buttons are on the first screen (above the tab bar, no scroll) and no game card is taller than 400px | phone-layout L1 |
+| L2 | 320x568: no week-summary caption wraps past two lines; no sideways scroll | L2 |
+| L3 | Game page section tabs fade at the right edge while more tabs are off screen | L3 |
+| L4 | "next kickoff" is not lime (lime means mine) | L4 |
+| L5 | No disabled button on the game page keeps the lime fill | L5 |
+| L6 | A changed pick reads "What changed:" once (the engine's note already starts "Changed:") | L6 |
+| L7 | Shift+Tab never leaves a focused pick button under the top bar | L7 |
 | G | Whole gate: `gate.sh` (pytest, ruff, gen:api no drift, typecheck, build + every e2e spec), e2e twice in a row | gate.sh |
 
 User-facing: on the phone layout he opens the week with no connection, taps a pick, reconnects, and the pick is on the server (P3 + P4 end to end). Blind compare against ESPN at 393x852 is a win or a tie, and no Critical or Structural design finding is open.
@@ -121,3 +127,13 @@ Spec faults found and fixed before this run (first full run, `red-e2e.log`: 52 p
 * P8 emulated `display-mode` through the browser's debug protocol, which Playwright overwrites, and without an iPhone user agent the "no install hint" check could never fail. It now runs with the iPhone user agent and `navigator.standalone = true`, the signal iOS itself gives.
 
 Baseline e2e on untouched code: run 1 had 3 failures (U3, E3, E4), run 2 passed all 47 old tests (`baseline-e2e.log`, `red-e2e.log`). Same cold-start slowness as the P2 fault; watched in every later gate run.
+
+### Phone layout: before evidence and red run
+
+Before screenshots (untouched `9d41cb0` build, seeded data): `step-6-evidence/shots/before-*.png` at 393x852 and 320x568 (week, game, sheet, results, settings), taken by `apps/web/e2e/shots.spec.ts` (`SHOT_TAG=before`; skipped in the gate).
+
+Measured before: at 393x852 the first game card starts at y 534 and cards are 494 to 534px tall, so the first pick buttons end at y 1011, 233px below the tab bar (778). "No live picks graded" wraps to 3 lines at 320. The section-tab row is 745px wide in a 361px row with no fade. "next kickoff" and two disabled AI buttons are lime.
+
+Red run: `npx playwright test e2e/phone-layout.spec.ts`, log `step-6-evidence/red-phone-layout.log`: **7 failed, 0 passed**, each for the measured reason (L1 1011 > 778; L2 two captions at 3 lines; L3 mask "none"; L4 color is lime; L5 "Claude" and "Ask Claude" lime while disabled; L6 "What changed: Changed:"; L7 "Pick LV Team top 41 < bar 53").
+
+Not scripted, judged by the design critics: a tooltip or chip sitting under the tab bar on a low card (the seed has no upset flag to open one); the 2px sideways scroll at 320 on a final game (not reproducible: 0px on the seeded game page).
