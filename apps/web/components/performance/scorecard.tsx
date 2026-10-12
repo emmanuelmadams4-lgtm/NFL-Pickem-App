@@ -57,8 +57,8 @@ export function Scorecard({ season }: { season: number }) {
 
   return (
     <Section id="scorecard" title="Scorecard" note="Your points beside the app's untouched sheet.">
-      <form onSubmit={(e) => void save(e)} className="mb-5 rounded-card border border-border bg-surface p-4">
-        <fieldset className="space-y-3">
+      <form onSubmit={(e) => void save(e)} className="mb-5 min-w-0 rounded-card border border-border bg-surface p-4">
+        <fieldset className="min-w-0 space-y-3">
           <legend className="text-sm font-semibold text-text">Your Yahoo rank</legend>
           <p className="text-label text-text-2">From your Yahoo league&apos;s standings.</p>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -81,7 +81,7 @@ export function Scorecard({ season }: { season: number }) {
       {q.isPending && <Skeleton className="h-48 rounded-card" />}
       {q.isError && !q.data && <ErrorState title="Could not load scorecard" error={q.error} onRetry={() => q.refetch()} />}
       {q.data && (
-        <div className="max-w-full overflow-x-auto rounded-card border border-border bg-surface">
+        <div tabIndex={0} role="region" aria-label="Scorecard table, scrolls sideways" className="relative w-full min-w-0 overflow-x-auto rounded-card border border-border bg-surface">
           <table aria-label="Scorecard" className="min-w-[660px] w-full text-sm text-text">
             <thead><tr className="border-b border-border text-label text-text-2">
               {["Week", "You", "App", "Max", "Changed", "Auto", "Rank"].map((h) => (

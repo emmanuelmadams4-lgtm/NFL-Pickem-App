@@ -90,7 +90,7 @@ test("U1b changing a game's points swaps with the game that had them, and the ap
 
 test("U1c the points lock on screen at kickoff, without a reload", async ({ page, request }) => {
   const { meta, open } = await board(request);
-  const g = open[0];
+  const g = open.filter((x) => !x.time_tbd)[0]; // a game with no kickoff time never locks from its placeholder
   await page.clock.install({ time: new Date(meta.server_time) });
   await signIn(page);
   await page.goto("/");
