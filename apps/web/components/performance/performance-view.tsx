@@ -82,7 +82,7 @@ function WeeklyTable({ perf }: { perf: Performance }) {
   );
   return (
     <table className="w-full text-sm">
-      <caption className="caption-bottom pt-3 text-left text-label text-subtle">– means no graded games that week for that column.</caption>
+      <caption className="caption-bottom pt-3 text-left text-label text-subtle">– means no live graded games that week for that column (the Model column shows backfilled counts separately).</caption>
       <thead>
         <tr className="border-b border-border text-[11px] text-subtle">
           <th scope="col" className="py-1.5 pr-2 text-left font-medium">Week</th>

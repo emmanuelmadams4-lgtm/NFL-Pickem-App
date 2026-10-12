@@ -33,24 +33,33 @@ function qbCell(f: TeamForm) {
   );
 }
 
+const NO_GAMES = <span className="text-subtle">No games yet</span>;
+const NOT_LISTED = <span className="text-subtle">Not listed</span>;
+
+/** A value, or the reason it is missing. Never a bare dash. */
+function show(v: number | null, fmt: (n: number | null) => string, none: React.ReactNode): React.ReactNode {
+  return v === null ? none : fmt(v);
+}
+
 export function TeamCompare({ game }: { game: GameDetail }) {
   const a = game.away_form;
   const h = game.home_form;
+  // points_for_pg is null only when the team has no earlier game this season (views._form); the form figures are then missing too.
+  const gp = (f: TeamForm, v: number | null, fmt: (n: number | null) => string) => show(v, fmt, f.points_for_pg === null ? NO_GAMES : NOT_LISTED);
   const rows: Row[] = [
     { label: "Record", away: a.record, home: h.record },
     { label: "Home record", away: a.home_record, home: h.home_record },
     { label: "Away record", away: a.away_record, home: h.away_record },
-    { label: "Points for / game", away: num(a.points_for_pg), home: num(h.points_for_pg), awayN: a.points_for_pg, homeN: h.points_for_pg, better: "high" },
-    { label: "Points against / game", away: num(a.points_against_pg), home: num(h.points_against_pg), awayN: a.points_against_pg, homeN: h.points_against_pg, better: "low" },
-    { label: "Last 3 avg margin", away: signed(a.last3_margin), home: signed(h.last3_margin), awayN: a.last3_margin, homeN: h.last3_margin, better: "high" },
-    { label: "Last 5 avg margin", away: signed(a.last5_margin), home: signed(h.last5_margin), awayN: a.last5_margin, homeN: h.last5_margin, better: "high" },
-    { label: "Elo", away: num(a.elo, 0), home: num(h.elo, 0), awayN: a.elo, homeN: h.elo, better: "high" },
+    { label: "Points for / game", away: gp(a, a.points_for_pg, num), home: gp(h, h.points_for_pg, num), awayN: a.points_for_pg, homeN: h.points_for_pg, better: "high" },
+    { label: "Points against / game", away: gp(a, a.points_against_pg, num), home: gp(h, h.points_against_pg, num), awayN: a.points_against_pg, homeN: h.points_against_pg, better: "low" },
+    { label: "Last 3 avg margin", away: gp(a, a.last3_margin, signed), home: gp(h, h.last3_margin, signed), awayN: a.last3_margin, homeN: h.last3_margin, better: "high" },
+    { label: "Last 5 avg margin", away: gp(a, a.last5_margin, signed), home: gp(h, h.last5_margin, signed), awayN: a.last5_margin, homeN: h.last5_margin, better: "high" },
+    { label: "Elo", away: show(a.elo, (n) => num(n, 0), NOT_LISTED), home: show(h.elo, (n) => num(n, 0), NOT_LISTED), awayN: a.elo, homeN: h.elo, better: "high" },
     { label: "Quarterback", away: qbCell(a), home: qbCell(h) },
-    { label: "Rest days", away: a.rest_days ?? "–", home: h.rest_days ?? "–", note: "Rest days showed no proven effect in testing." },
-    { label: "Head coach", away: a.coach ?? "–", home: h.coach ?? "–" },
+    { label: "Rest days", away: a.rest_days ?? NOT_LISTED, home: h.rest_days ?? NOT_LISTED, note: "Rest days showed no proven effect in testing." },
+    { label: "Head coach", away: a.coach ?? NOT_LISTED, home: h.coach ?? NOT_LISTED },
   ];
 
-  // points_for_pg is null only when the team has no earlier game this season (views._form).
   const noGames = [a, h].filter((f) => f.points_for_pg === null).map((f) => f.team);
 
   return (

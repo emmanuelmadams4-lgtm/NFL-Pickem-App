@@ -238,6 +238,7 @@ export function SelectField({
         <span className={hideLabel ? "sr-only" : labelClassName}>{label}</span>
         <select
           id={id}
+          aria-label={label}
           {...rest}
           className={cx("h-10 rounded-full border border-border-strong bg-elevated px-3 text-base text-text hover:border-text-2 lg:h-9 lg:text-sm", grow && "min-w-0 flex-1")}
         >

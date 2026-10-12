@@ -6,7 +6,7 @@ import { Chip, Mark, Tip, cx } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
 import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-bits";
 import { PickButtons } from "@/components/pick-buttons";
-import { Lock, Refresh } from "@/components/icons";
+import { Refresh } from "@/components/icons";
 import { useLocked } from "@/lib/clock";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { kickoffClock, scoreTone, shortDate, type ScoreTone } from "@/lib/fmt";
@@ -100,6 +100,8 @@ export function GameCard({ game, highlight }: { game: GameSummary; highlight?: b
                   <span className="ml-1 font-sans text-sm">{game.home.abbr}</span>
                 </span>
               </p>
+            ) : game.status === "postponed" ? (
+              <p className="py-1.5"><Chip tone="warn">Postponed</Chip></p>
             ) : (
               <p className="font-display text-[32px] leading-9 text-text">{kickoffClock(game)}</p>
             )}
@@ -118,7 +120,7 @@ export function GameCard({ game, highlight }: { game: GameSummary; highlight?: b
 
         {p && prob !== null ? (
           <div>
-            <ProbBar value={prob} label={`${p.pick} win probability`} />
+            <ProbBar value={prob} fromRight={p.pick === game.home.abbr} label={`${p.pick} win probability`} />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <p className="text-label text-text-2">{strengthLabel(prob)}</p>
               <span className="flex items-center gap-1.5 text-label text-subtle">
@@ -141,12 +143,6 @@ export function GameCard({ game, highlight }: { game: GameSummary; highlight?: b
         </p>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          {locked && game.status === "scheduled" && (
-            <Chip>
-              <Lock size={12} />
-              Locked
-            </Chip>
-          )}
           {game.status === "in_progress" && <Chip>In progress</Chip>}
           {final && <Chip>Final</Chip>}
           {p?.kind === "backfill" && <BackfillChip />}

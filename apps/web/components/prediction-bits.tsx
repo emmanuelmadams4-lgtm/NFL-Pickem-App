@@ -3,7 +3,8 @@
 import { UNCERTAINTY, type Prediction } from "@nflpi/shared";
 import { Chip, Tip, cx } from "@/components/ui";
 
-export function ProbBar({ value, className, label }: { value: number; className?: string; label?: string }) {
+/** `fromRight`: the picked team is the home team, which sits on the right of the VS layout, so the fill grows from the right. */
+export function ProbBar({ value, className, label, fromRight }: { value: number; className?: string; label?: string; fromRight?: boolean }) {
   const w = Math.max(0, Math.min(1, value)) * 100;
   return (
     <div
@@ -15,7 +16,7 @@ export function ProbBar({ value, className, label }: { value: number; className?
       className={cx("relative h-1 w-full rounded-full bg-border", className)}
     >
       {/* The model's probability is not "me", so the fill is ink, never accent blue (design.md § 5). */}
-      <div className="absolute inset-y-0 left-0 rounded-full bg-text-2" style={{ width: `${w}%` }} />
+      <div className={cx("absolute inset-y-0 rounded-full bg-text-2", fromRight ? "right-0" : "left-0")} style={{ width: `${w}%` }} />
       {/* 50% reference tick */}
       <div aria-hidden className="absolute -top-0.5 -bottom-0.5 left-1/2 w-px bg-text" />
     </div>

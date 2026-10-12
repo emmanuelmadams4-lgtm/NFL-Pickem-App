@@ -16,9 +16,9 @@ export function Factors({ game }: { game: GameDetail }) {
         <p className="text-sm text-text-2">No factors recorded for this prediction.</p>
       ) : (
         <>
-          <div className="hidden items-end gap-4 pb-2 text-[11px] font-medium text-subtle sm:grid sm:grid-cols-[minmax(0,1fr)_260px_44px]">
+          <div className="hidden items-end gap-4 pb-2 text-[11px] font-medium text-subtle sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,260px)_44px]">
             <span>Factor</span>
-            <span className="grid grid-cols-2">
+            <span className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <span className="pr-3 text-right">Favors {game.away.abbr}</span>
               <span className="pl-3">Favors {game.home.abbr}</span>
             </span>
@@ -30,20 +30,20 @@ export function Factors({ game }: { game: GameDetail }) {
               const team = side === "away" ? game.away : side === "home" ? game.home : null;
               const width = `${(Math.abs(f.weight) / max) * 100}%`;
               return (
-                <li key={f.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_260px_44px]">
+                <li key={f.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,260px)_44px]">
                   <div className="col-span-2 min-w-0 sm:col-span-1">
                     <p className="text-sm font-medium text-text">{f.label}</p>
                     <p className="mt-0.5 text-xs text-text-2">{f.detail}</p>
                     {team && <p className="mt-0.5 text-[11px] text-subtle sm:hidden">Favors {team.abbr}</p>}
                   </div>
-                  <div className="grid grid-cols-2 sm:w-auto" role="img" aria-label={team ? `${f.label} favors ${team.abbr}, weight ${Math.abs(f.weight).toFixed(2)}` : `${f.label}, no side`}>
-                    <div className="flex justify-end border-r border-border pr-0">
+                  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" role="img" aria-label={team ? `${f.label} favors ${team.abbr}, weight ${Math.abs(f.weight).toFixed(2)}` : `${f.label}, no side`}>
+                    <div className="flex min-w-0 justify-end border-r border-border pr-0">
                       {side === "away" && team && (
-                        <span style={{ ...teamAccent(team), width }} className="team-accent block h-2 rounded-l-full" />
+                        <span style={{ ...teamAccent(team), width }} className="team-accent block h-2 max-w-full rounded-l-full" />
                       )}
                     </div>
-                    <div className="flex justify-start">
-                      {side === "home" && team && <span style={{ ...teamAccent(team), width }} className="team-accent block h-2 rounded-r-full" />}
+                    <div className="flex min-w-0 justify-start">
+                      {side === "home" && team && <span style={{ ...teamAccent(team), width }} className="team-accent block h-2 max-w-full rounded-r-full" />}
                     </div>
                   </div>
                   <p className={cx("text-xs sm:text-right", team ? "text-text-2" : "text-subtle")}>

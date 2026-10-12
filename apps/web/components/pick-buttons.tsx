@@ -39,7 +39,9 @@ export function PickButtons({ game, size = "sm", className }: { game: PickGame; 
             className={cx(
               "relative z-10 inline-flex items-center justify-center gap-1.5 rounded-full border font-semibold transition-[transform,background-color,border-color,opacity] active:translate-y-px",
               size === "sm" ? "h-12 min-w-[68px] flex-1 px-2 text-base lg:h-10 lg:text-sm" : "h-12 flex-1 px-3 text-base lg:h-11 lg:text-sm",
-              selected
+              selected && waiting
+                ? "border-dashed border-accent-text bg-transparent text-accent-text"
+                : selected
                 ? "border-transparent bg-accent text-accent-ink"
                 : locked
                   ? "border-transparent bg-elevated text-text"
@@ -55,6 +57,12 @@ export function PickButtons({ game, size = "sm", className }: { game: PickGame; 
         );
       })}
     </div>
+    {locked && (
+      <p className="mt-1.5 flex items-center gap-1.5 text-label text-text-2">
+        <Lock size={12} className="shrink-0" />
+        Locked
+      </p>
+    )}
     {waiting && (
       <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-warn" role="status">
         <span className="rounded-chip border border-warn/40 bg-warn/12 px-1.5 py-px font-medium">Waiting to sync</span>

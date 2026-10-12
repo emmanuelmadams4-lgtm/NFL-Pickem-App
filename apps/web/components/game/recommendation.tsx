@@ -43,7 +43,6 @@ export function Recommendation({ game }: { game: GameDetail }) {
           {differs && <Chip tone="accent">Differs from model</Chip>}
         </div>
         <PickButtons game={game} size="lg" />
-        {locked && game.status === "scheduled" && <p className="mt-2 text-xs text-text-2">Locked at kickoff.</p>}
         {locked && game.status !== "final" && game.status !== "scheduled" && <p className="mt-2 text-xs text-text-2">Locked. The game has started.</p>}
         {!locked && !game.my_pick && <p className="mt-2 text-xs text-subtle">Tap a team to pick. Tap again to clear.</p>}
         {game.status === "final" && (
@@ -80,7 +79,7 @@ export function Recommendation({ game }: { game: GameDetail }) {
               <p className="mt-1 text-xs text-text-2">{strengthLabel(pickProb(p))}</p>
             </div>
           </div>
-          <ProbBar value={pickProb(p)} className="mt-3" label={`${p.pick} win probability`} />
+          <ProbBar value={pickProb(p)} fromRight={pickIsHome} className="mt-3" label={`${p.pick} win probability`} />
           {p.change_note && (
             <p className="mt-3 flex items-start gap-1.5 text-xs text-text-2">
               <Refresh size={14} className="mt-px shrink-0" />

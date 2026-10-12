@@ -61,6 +61,7 @@ export function GameHeader({ game }: { game: GameDetail }) {
           {game.status === "in_progress" && <Chip>In progress</Chip>}
           {final && <Chip>Final</Chip>}
           {game.status === "scheduled" && <Chip>{locked ? "Locked" : "Scheduled"}</Chip>}
+          {game.status === "postponed" && <Chip tone="warn">Postponed</Chip>}
         </div>
       </div>
 
@@ -88,7 +89,7 @@ export function GameHeader({ game }: { game: GameDetail }) {
         <TeamBlock team={game.home} side="Home" record={game.home_record} split={`Home ${game.home_form.home_record}`} />
       </div>
       <p className="mt-4 text-center text-sm text-text">
-        {kickoffWhen(game)}
+        {game.status === "postponed" ? "New time to be announced" : kickoffWhen(game)}
         <span className="block text-xs text-text-2 sm:ml-2 sm:inline">
           {game.stadium ?? "Venue to be confirmed"}
           {", "}

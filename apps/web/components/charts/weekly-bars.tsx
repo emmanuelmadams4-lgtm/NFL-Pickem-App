@@ -33,11 +33,9 @@ export function WeeklyBars({ weeks, leader }: { weeks: WeekPerformance[]; leader
     } as Record<string, string>,
   }));
   const keys = Object.keys(SERIES) as (keyof typeof SERIES)[];
-  // The chart's text alternative lists every week; live and backfilled model figures stay apart (en dash = none graded).
-  const whole = (c: number, t: number) => (t > 0 ? `${Math.round((c / t) * 100)}%` : "–");
-  const described = weeks
-    .map((w) => `W${w.week}: me ${whole(w.my_correct, w.my_total)}, model live ${whole(w.model_live_correct, w.model_live_total)}, model backfilled ${whole(w.model_backfill_correct, w.model_backfill_total)}, market ${whole(w.market_correct, w.market_total)}`)
-    .join("; ");
+  // The chart's text alternative is built from the same `data` the bars render (en dash = none graded), so they cannot disagree.
+  const whole = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
+  const described = data.map((d) => `${d.week}: me ${whole(d.me)}, model live ${whole(d.model)}, model backfilled ${whole(d.modelBackfill)}, market ${whole(d.market)}`).join("; ");
 
   return (
     <div>
