@@ -214,6 +214,52 @@ D34 record:
 * This is about the app's own AI answers. It does not change which models build the app (the
   Build Ladder in the gauntlet skill).
 
+## Ask Jev (2026-10-12)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D35 | Owner, his words: "we have a ask jev feature and I want to make sure that we ask jev properly through its documentation". The app's Jev feature must follow TypeSafe's documented way of calling Jev. | two-way | Jev's API changes |
+
+D35 findings (docs read 2026-10-12: `docs.typesafe.ai/llms.txt`, `/introduction/quickstart.md`,
+`/introduction/coding-agents.md`, `/cookbooks/citation_check.md`; code read in the repo):
+
+* **The app asks Jev the wrong way today.** `ai/providers.py:OpenRouterProvider` posts a chat
+  completion (system + user message) to `typesafe/jev-1.13` at
+  `openrouter.ai/api/v1/chat/completions` (`config.py:36`) and expects prose or a JSON report
+  back. The docs say Jev "does not generate text, write code, or hold a conversation". Never run
+  live, so the failure has not been seen yet.
+* **The documented way:** send one `state` plus typed `questions` (`choice` with options, `score`
+  with ordered levels, `noul` for yes/no) and read `answers` (choice + probabilities + confidence,
+  score, or a 0-1 noul). Direct: `POST https://api.typesafe.ai/v1/systemone` with a TypeSafe key,
+  or the `typesafe-sdk` Python package. Through the owner's OpenRouter key (D31): the decisions
+  endpoint `https://openrouter.ai/api/alpha/decisions`, model `typesafe/jev-1.13`, which the
+  owner's helper `~/.claude/bin/jev.sh` already uses successfully. Note it is an "alpha" path.
+* **So "Ask Jev" cannot be a free-text chat.** Proposal (coordinator's, awaiting the owner):
+  1. *Ask Jev a yes/no question about a game.* He types a yes/no question; the app sends the
+     game's evidence pack as `state` and one `noul`; the screen shows "Jev: 72% yes" and nothing
+     invented. Vague questions hover near 50%, and the screen says that means "unsure".
+  2. *Jev checks Claude.* After Claude writes a "why this pick" answer, one Jev request judges
+     each claim against the evidence pack (the docs' citation-check pattern: supports /
+     contradicts / says nothing, gated on confidence). A claim that fails is flagged on screen.
+     This serves the "never invent data" rule directly.
+  3. *Jev routes the chat question* (which evidence the question needs) so Claude gets a smaller,
+     relevant pack. Optional.
+* Rules from the docs and the owner's jev skill that the build must follow: one property per
+  question; exact condition in the instructions; state holds only what the questions need, with
+  numbers turned into words or named buckets; counting, sums and date maths in code; all questions
+  on one state in one request; every action gated on confidence; fixed answer options.
+* Jev written reports (`generate_report` with provider `jev`) must be removed or made Claude-only.
+| D36 | Owner, his words: "we can just really ask claude and claude can pull jevs answer". One chat: he asks Claude. Claude gets Jev's structured answer and uses it in its reply. No separate "Ask Jev" box, no Claude/Jev picker. Replaces the three-option proposal under D35. | two-way | he wants to question Jev directly |
+
+D36 notes (coordinator's reading): Jev is still called the documented way (D35): the server sends
+the game's evidence as `state` with typed questions to the decisions endpoint and hands the
+`answers` (choices, scores, yes/no probabilities, confidence) to Claude as part of the evidence
+pack, labelled as Jev's. Claude reports them as Jev's view and never restates them as fact. The
+provider picker in `apps/web/components/game/ask.tsx` and the Jev written-report path go away.
+OPEN: which fixed questions Jev is asked per game (to settle at SPECIFICATION with the jev skill's
+rules), and whether Jev is asked on every chat question or once per evidence change (once per
+change is cheaper and enough).
+
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
 * New step right after the desktop web app: **Pick sheet** = label (D2), points with re-rank and
