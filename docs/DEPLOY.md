@@ -2,7 +2,9 @@
 
 One computer at home runs three containers (`db`, `app`, `worker`) from `docker-compose.yml`. Your phone and laptop reach it through Tailscale, so it is never on the public internet. Your always-on computer is the old Windows 11 PC (decision D42). Until it is set up, the Mac runs the app.
 
-The commands below run in a terminal on the server (on Windows: the WSL 2 Ubuntu terminal). The scripts need bash.
+Everything here was run and checked on the Mac by `scripts/deploy-check.sh`. Anything marked **UNVERIFIED** is written from the vendors' docs and has not been run on your PC yet. Tell me what you see and I will fix the page.
+
+Commands run in a terminal on the server. On Windows, the Docker, git and script commands run in the **Ubuntu (WSL 2) terminal**. The `tailscale` commands run in **Windows PowerShell**, because Tailscale is a Windows app. The scripts need bash.
 
 ## 1. First install (any computer)
 
@@ -14,7 +16,7 @@ cp .env.example .env
 
 Edit `.env`:
 
-* `POSTGRES_PASSWORD`: a long random password. Use the same one inside `DATABASE_URL`.
+* `POSTGRES_PASSWORD`: make one with `python3 -c "import secrets; print(secrets.token_urlsafe(24))"`. Put the same value inside `DATABASE_URL`. Use this command and not a password you made up: characters like `@ / : # %` break the address.
 * `APP_ACCESS_TOKEN`: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
 * Keys for the AI and alerts are optional and can wait.
 
@@ -24,43 +26,58 @@ docker compose exec app python -m nflpi.jobs bootstrap   # loads data, trains, p
 curl http://127.0.0.1:8000/api/health                    # "status":"ok" and a fresh worker_heartbeat
 ```
 
-To prove the install works from a clean copy, run `./scripts/deploy-check.sh` from a clean git tree. It uses its own project name and ports (18000 and 15432), so it never touches a running app.
+To prove an install works from a clean copy, commit your changes and run `./scripts/deploy-check.sh`. It needs `node`, `npm ci` and a Playwright Chromium on the machine you run it from, and a few minutes. It uses its own project name and ports (18000 and 15432), so it never touches a running app. You do not need it to run the app.
 
-## 2. Set up the Windows 11 PC (UNVERIFIED: written from the vendors' docs, not yet run on your PC)
+## 2. Set up the Windows 11 PC (UNVERIFIED)
 
-Goal: the PC starts by itself after a power cut and keeps the app running.
+Goal: the PC starts by itself after a power cut and keeps the app running. Do these in order.
 
-1. **Docker:** install Docker Desktop with the WSL 2 backend. In its settings turn on "Start Docker Desktop when you sign in to Windows" and, under Resources, WSL integration for your Ubuntu distro.
-2. **Linux terminal:** install Ubuntu from the Microsoft Store (`wsl --install -d Ubuntu`). Clone the repo inside Ubuntu's own folders (`~/NFL-Pickem-App`), not under `C:\`. It is much faster.
-3. **Never sleep:** Settings, System, Power. Set "Screen and sleep" to Never when plugged in.
-4. **Power comes back:** in the PC's BIOS set "Restore on AC power loss" (the name varies) to Power On.
-5. **Sign in by itself:** Docker Desktop starts after a Windows sign-in, so turn on automatic sign-in for your account (Microsoft's `netplwiz` tool, or the "Sign-in options" page). The PC lives at home, so this is a fair trade.
-6. **Windows Update:** set Active hours so it restarts at night, not on a game day.
-7. **Tailscale:** install it, sign in with the same account as your phone, and choose "Run unattended" so it runs before anyone signs in.
-8. **HTTPS address:** `tailscale serve --bg 8000`. If it says Serve is not enabled, open the link it prints and enable it. Check `tailscale serve status`. Leave **Funnel off** (never run `tailscale funnel`); Funnel puts the app on the public internet.
-9. Follow section 1, then add the phone with `docs/IPHONE_PWA.md`.
+1. **Ubuntu:** open PowerShell as administrator, run `wsl --install -d Ubuntu`, and restart when it asks. Open Ubuntu once to create your user.
+2. **Docker:** install Docker Desktop with the WSL 2 backend. In its settings turn on "Start Docker Desktop when you sign in to Windows" and, under Resources, WSL integration for Ubuntu.
+3. **Where the code lives:** clone the repo inside Ubuntu's own folders (`~/NFL-Pickem-App`), not under `C:\`. It is much faster.
+4. **Never sleep:** Settings, System, Power. Set "Screen and sleep" to Never when plugged in.
+5. **Power comes back:** in the PC's BIOS set "Restore on AC power loss" (the name varies) to Power On.
+6. **Sign in by itself:** Docker Desktop starts only after a Windows sign-in, so after a power cut nothing runs until someone signs in. Turn on automatic sign-in for your account (Microsoft's `netplwiz` tool, or the "Sign-in options" page). The PC lives at home, so this is a fair trade.
+7. **Windows Update:** set Active hours so it restarts at night, not on a game day.
+8. **Tailscale:** install the Windows app, sign in with the same account as your phone, and choose "Run unattended" so it runs before anyone signs in.
+9. **HTTPS address (PowerShell):** `tailscale serve --bg 8000`. If it says Serve is not enabled, open the link it prints and enable it. Check `tailscale serve status`. Leave **Funnel off** (never run `tailscale funnel`); Funnel puts the app on the public internet.
+10. Follow section 1 in Ubuntu, then add the phone with `docs/IPHONE_PWA.md`.
 
-After a reboot test, all three containers should be back within a few minutes. Check with `docker compose ps` and the health URL.
+Test it once: restart the PC, sign in, wait a few minutes, then run `docker compose ps` and the health URL. All three containers should be back. The gate does not prove this part; it checks only that the restart setting is in the file.
 
-## 3. Move from the Mac to the PC
+## 3. Move from the Mac to the PC (UNVERIFIED on the PC side)
 
-The address changes when the computer changes, so the iPhone app is added again once. Passkeys (step 10) come after the move.
+The address changes when the computer changes, so the iPhone app is added again once. Passkeys (step 10) come after the move. Do not make picks while you move: the Mac stops taking them at step 1, and the PC does not have them until step 5.
 
-1. On the Mac: `./scripts/backup.sh`. Copy the new file in `backups/` to the PC (a USB stick or Tailscale file copy, not email).
-2. On the PC: install (section 1) with its own new `POSTGRES_PASSWORD`. Copy only the keys you want to keep from the Mac's `.env` (access token, AI keys, VAPID keys). Keep the VAPID keys, or every phone has to subscribe again.
-3. Restore (section 5).
+1. **On the Mac, stop the app and take the last backup:**
+   ```bash
+   docker compose stop app worker
+   ./scripts/backup.sh
+   ```
+   The newest file in `backups/` has everything. Copy it to the PC (a USB stick or a Tailscale file copy, not email). Inside Ubuntu a file on the Windows side is under `/mnt/c/Users/<your name>/`.
+2. **On the PC:** do section 1 with its own new `POSTGRES_PASSWORD`. Copy only the keys you want to keep from the Mac's `.env` (access token, AI keys, VAPID keys). You can skip the bootstrap, the restore brings the data.
+3. **Restore** the file (section 5).
+4. **On the iPhone:** delete the old Pick'em icon, add the new address to the Home Screen (`docs/IPHONE_PWA.md`), sign in, and turn alerts on again. Each phone subscribes again from the new address, with or without the same VAPID keys. Keep the same keys anyway so nothing else changes.
+5. **When the PC looks right,** on the Mac run `docker compose down` so two servers never send alerts. Keep the backup file.
 
 ## 4. Backups
 
-Run a backup by hand: `./scripts/backup.sh`. It keeps the newest 14 in `backups/`, checks the file is a good gzip, and exits with an error (leaving no half file) if anything fails.
+Run a backup by hand: `./scripts/backup.sh`. It keeps the newest 14 in `backups/`. It saves nothing and exits with an error if the dump is incomplete, the database has no games, or anything fails. A failed run leaves no half file and never deletes an older good backup. Do not run a backup while a restore is running.
 
-Copy it off the computer too. Point `BACKUP_COPY_DIR` at another disk or a folder that syncs to a cloud drive:
+Copy it **off the computer** too. A folder on the same PC does not count. Point `BACKUP_COPY_DIR` at a USB drive, another computer, or a folder that syncs to a cloud drive:
 
 ```bash
-BACKUP_COPY_DIR=/mnt/d/pickem-backups ./scripts/backup.sh
+BACKUP_COPY_DIR=/path/to/other-place ./scripts/backup.sh
 ```
 
-Run it every night. On Windows use Task Scheduler with the action `wsl.exe -d Ubuntu -- bash -lc "cd ~/NFL-Pickem-App && BACKUP_COPY_DIR=/mnt/d/pickem-backups ./scripts/backup.sh"`. On the Mac use `cron` or `launchd`.
+The copy is made under a temporary name, compared with the original, and only then renamed. The newest 14 are kept there too.
+
+Run it every night, and write the output to a file you can read (a failed backup is silent otherwise):
+
+* **Windows (UNVERIFIED):** Task Scheduler, a daily task set to "Run only when user is logged on" (the PC signs in by itself, step 6 above), action `wsl.exe -d Ubuntu -- bash -lc "cd ~/NFL-Pickem-App && ./scripts/backup.sh >> ~/pickem-backup.log 2>&1"`.
+* **Mac:** `cron` does not have `docker` on its PATH. Use a crontab line like `0 3 * * * cd ~/Projects/NFL-Pickem-App && PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin ./scripts/backup.sh >> ~/pickem-backup.log 2>&1`.
+
+Once a week, look at the date of the newest file in `backups/` and the last lines of the log.
 
 **Keep the secrets safe too.** `.env` is not in git and not in the database dump. Put a copy of `.env` (token, AI keys, VAPID private key) in your password manager. Without the VAPID private key, alerts stop until every phone subscribes again.
 
@@ -70,7 +87,9 @@ Run it every night. On Windows use Task Scheduler with the action `wsl.exe -d Ub
 ./scripts/restore.sh backups/nflpi-YYYYMMDD-HHMMSS.sql.gz --yes
 ```
 
-This replaces everything in the database with the backup. It stops the app and worker, rebuilds the database, loads the file, and starts them again. Then check `curl http://127.0.0.1:8000/api/health`. Your picks and predictions are back as of the backup time.
+This replaces the data with the backup. It first checks the file is a complete backup with games in it, loads it into a scratch copy while the app keeps running, saves the current data as `backups/pre-restore-<time>.sql.gz`, then swaps the two and restarts the app. If anything fails before the swap, nothing changes and the app stays up. After it prints `restored`, check `curl http://127.0.0.1:8000/api/health`.
+
+If the app is not running after a problem, `docker compose up -d` starts it.
 
 ## 6. Rotate the access token
 
@@ -83,9 +102,11 @@ Do this if the token leaked or a phone was lost.
 
 ## 7. Update the app
 
+Take a backup first (section 4), then:
+
 ```bash
 git pull
 docker compose up -d --build
 ```
 
-Database changes run by themselves when the app starts. Take a backup first.
+Database changes run by themselves when the app starts.
