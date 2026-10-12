@@ -1,0 +1,138 @@
+{
+  "$description": "Spec mirror of the design tokens for NFL Pick'em Intelligence. Runtime source is apps/web/app/globals.css. status: landed = already in globals.css, proposed = decided in design.md, not yet in the app.",
+  "reviewed": "2026-10-11",
+  "color": {
+    "status": "landed",
+    "dark": {
+      "bg": "#0b0f14",
+      "surface": "#11161d",
+      "elevated": "#171e27",
+      "border": "#232c38",
+      "text": "#e6edf3",
+      "text-2": "#9aa7b4",
+      "muted": "#6b7785",
+      "subtle": "color-mix(in srgb, #6b7785 70%, #9aa7b4)",
+      "accent": "#3b82f6",
+      "accent-solid": "#2563eb",
+      "good": "#3fb950",
+      "warn": "#d29922",
+      "bad": "#f85149"
+    },
+    "light": {
+      "bg": "#f6f8fa",
+      "surface": "#ffffff",
+      "elevated": "#f0f3f6",
+      "border": "#d8dee4",
+      "text": "#1f2328",
+      "text-2": "#57606a",
+      "muted": "#6e7781",
+      "subtle": "color-mix(in srgb, #6e7781 70%, #57606a)",
+      "accent": "#0969da",
+      "accent-solid": "#0969da",
+      "good": "#1a7f37",
+      "warn": "#9a6700",
+      "bad": "#cf222e"
+    }
+  },
+  "color-proposed": {
+    "status": "proposed",
+    "dark": { "border-strong": "#64707f" },
+    "light": { "border-strong": "#818b95", "series-model": "#c9501c", "series-market": "#168a61" }
+  },
+  "series": {
+    "status": "landed",
+    "dark": { "me": "#3987e5", "model": "#d95926", "market": "#199e70", "stats": "#9085e9", "elo": "#d55181", "home": "#6b7785" },
+    "light": { "me": "#2a78d6", "model": "#eb6834", "market": "#1baf7a", "stats": "#6250d6", "elo": "#e87ba4", "home": "#8c959f" }
+  },
+  "contrast-measured": {
+    "$description": "WCAG 2 ratios computed 2026-10-11 from the hex values above. subtle resolves to #798593 dark, #67707a light.",
+    "dark": {
+      "text/surface": 15.37,
+      "text-2/surface": 7.4,
+      "text-2/elevated": 6.84,
+      "subtle/surface": 4.83,
+      "subtle/bg": 5.12,
+      "subtle/elevated": 4.47,
+      "accent/surface": 4.94,
+      "white/accent-solid": 5.17,
+      "good/surface": 7.15,
+      "warn/surface": 7.2,
+      "bad/surface": 5.42,
+      "border/surface": 1.29,
+      "border-strong/surface": 3.6,
+      "border-strong/elevated": 3.33,
+      "series-me/surface": 4.99,
+      "series-model/surface": 4.68,
+      "series-market/surface": 5.33
+    },
+    "light": {
+      "text/surface": 15.8,
+      "text-2/surface": 6.39,
+      "text-2/elevated": 5.74,
+      "subtle/surface": 5.03,
+      "subtle/bg": 4.72,
+      "subtle/elevated": 4.52,
+      "accent/surface": 5.19,
+      "white/accent-solid": 5.19,
+      "good/surface": 5.08,
+      "warn/surface": 4.87,
+      "bad/surface": 5.36,
+      "border/surface": 1.36,
+      "border-strong/elevated": 3.11,
+      "border-strong/bg": 3.25,
+      "series-me/surface": 4.42,
+      "series-model/surface (landed #eb6834)": 3.2,
+      "series-market/surface (landed #1baf7a)": 2.82,
+      "series-model/surface (proposed #c9501c)": 4.52,
+      "series-market/surface (proposed #168a61)": 4.34
+    }
+  },
+  "font": {
+    "status": "proposed",
+    "sans": "\"Geist\", ui-sans-serif, -apple-system, \"SF Pro Text\", \"Segoe UI\", sans-serif",
+    "mono": "\"Geist Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+    "weights": [400, 500, 600],
+    "source": "npm package geist, self-hosted (offline PWA)"
+  },
+  "type": {
+    "status": "proposed",
+    "display": { "size": 40, "line": 44, "weight": 600, "tracking": "-0.02em" },
+    "stat": { "size": 24, "line": 32, "weight": 600, "tracking": "-0.02em" },
+    "title": { "size": 22, "line": 28, "weight": 600, "tracking": "-0.01em" },
+    "row-lead": { "size": 16, "line": 22, "weight": 600, "tracking": "0" },
+    "heading": { "size": 14, "line": 20, "weight": 600, "tracking": "0" },
+    "body": { "size": 14, "line": 21, "weight": 400, "tracking": "0" },
+    "label": { "size": 12, "line": 16, "weight": 400, "tracking": "0" },
+    "micro": { "size": 11, "line": 16, "weight": 500, "tracking": "0" }
+  },
+  "space": { "status": "landed", "grid": 4, "scale": [4, 8, 12, 16, 20, 24, 32, 48] },
+  "layout": {
+    "status": "landed",
+    "max-width": 1360,
+    "gutter": { "phone": 16, "desktop": 20 },
+    "breakpoints": { "tablet": 768, "desktop": 1024 },
+    "header-height": { "phone": "52px + safe-area-inset-top", "desktop": 57 },
+    "tab-bar-clearance": "88px + safe-area-inset-bottom"
+  },
+  "radius": {
+    "landed": { "card": 12, "ctl": 8, "chip": 6 },
+    "proposed": { "bezel": 18, "bezel-padding": 6, "pill": 9999 }
+  },
+  "shadow": {
+    "landed": {
+      "pop": { "dark": "0 8px 24px rgb(0 0 0 / 0.45)", "light": "0 8px 24px rgb(31 35 40 / 0.16)" }
+    },
+    "proposed": {
+      "float": { "dark": "0 12px 32px -12px rgb(0 0 0 / 0.6)", "light": "0 16px 40px -16px rgb(31 35 40 / 0.18)" },
+      "inset-highlight": { "dark": "inset 0 1px 0 rgb(255 255 255 / 0.06)", "light": "inset 0 1px 0 rgb(255 255 255 / 0.8)" }
+    }
+  },
+  "motion": {
+    "status": "proposed",
+    "duration": { "press": 120, "state": 200, "enter": 320 },
+    "ease-out": "cubic-bezier(0.32, 0.72, 0, 1)",
+    "reduced-motion": "no transforms; opacity changes at most 120ms"
+  },
+  "target": { "status": "landed", "phone-min": 44, "pick-pill-phone": 48, "pick-pill-desktop-row": 32, "pick-pill-desktop-panel": 44, "desktop-min": 24 },
+  "z": { "status": "landed", "header": 30, "tab-bar": 30, "tooltip": 40, "toast": 50 }
+}
