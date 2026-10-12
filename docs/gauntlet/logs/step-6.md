@@ -280,7 +280,7 @@ Both runs: pytest **115 passed** · ruff clean · gen:api no drift · typecheck 
 
 | Blocking finding | What | Outcome |
 |---|---|---|
-| A1 (High) | The rank form's effect wipes what he typed when the scorecard arrives, so U3 fails now and then. Older than this step, but in the lane's files and it makes the gate red. | Red test U3b, fixed in work order 7 |
+| A1 (High) | The rank form's effect wipes what he typed when the scorecard arrives, so U3 fails now and then. Older than this step, but in the lane's files and it makes the gate red. | Red test U3b, fixed in work order 7 **Correction:** U3 had a second cause, found by the third critic and fixed in work order 9 (below). |
 | B1 (Medium), same as Dwight D2 | A failed storage write leaves a waiting pick in memory only, shown as waiting, lost on reload. | Red test P19, fixed in work order 7 |
 | B2 (Medium), same as Dwight D8 | Two open copies of the app overwrite each other's waiting picks. | Red test P20, fixed in work order 7 |
 | A2 | No VERIFICATION section. | This section |
@@ -324,7 +324,29 @@ Work orders in this step: eight, ten tries in all (work orders 1 and 8 used two)
 
 Not fixed from these two reviews (Low unless marked; for the integrator to schedule): Dwight R2 to R6; Angela F6 (**Medium**: "showing data from" is the time of the last good reply of any kind, not the age of what is on screen; closest to the never-invent-data rule, schedule early), F2 to F5, F7, F8, S4.
 
+### Dwight's confirmation of R1 (on `9670cdf`, HEAD `3de3036`) — `reviews/security-dwight-3.md`
+
+**PASS for landing on security.** No Critical, no High. R1 closed within one app session. Read-only; he ran no tests. New, not blocking: R7 (Medium, older than this fix: the same wrong-pick outcome survives an app restart if storage refused every write until the app closed) and R8 (Low: P22 does not assert that a write was refused).
+
+### Third fresh critic, Angela (on `3de3036`) — `reviews/critic-angela-3.md`
+
+**FAIL.** Her gate run a: e2e 88 passed, 0 failed, 2 skipped. Run b: **87 passed, 1 failed** (U3, `sheet.spec.ts:151`), 2 skipped (logs `critic3-angela-a-*.log`, `critic3-angela-b-*.log`). A gate must be green twice. She confirms the work order 8 fix is correct, P22 fails on the old code, and no test was weakened.
+
+Blocking, F-1 (High): if he saves his rank while the page's first scorecard request is still in flight, `invalidateQueries` reuses that request, so "Rank saved" appears beside the scorecard from before the save. A second cause of the U3 flake; the first (typed input wiped) was fixed in work order 7. Advisory: F-2 and F-3 (Low, queue with refused writes; F-3 is Dwight's R7), F-4 (this log said A1 was fixed; corrected above).
+
+### Work order 9, try 1 (Ryan, Codex gpt-6-sol, effort medium) — `step-6-evidence/wo-9.md`
+
+Red test U3c first, commit `5ea3b2f` (`red-critic3.log`): **1 failed**, at "the scorecard shows what was just saved, not the answer from before the save" (expected "Leader 55 points", the row showed "Leader 61 points"); U3 and U3b passed in the same run. The test holds the first scorecard answer until the save has returned, so it does not depend on timing.
+
+Model pick: Jev `model:pwa:wo-9` → sol 0.98, effort medium 0.92 (follow). Diff inspected: one line in `apps/web/components/performance/scorecard.tsx`, in scope (`await qc.cancelQueries(...)` before `invalidateQueries`). Commit `7a90207`.
+
+Gate on `7a90207`, twice in a row under `caffeinate -i` (logs `wo9-*.log`, `final4-*.log`): pytest **115 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **89 passed, 0 failed, 2 skipped**, both times. `lane-guard.py check … pwa 3d87fa0`: `OK`.
+
+Work orders in this step: nine, eleven tries in all (work orders 1 and 8 used two).
+
+Added to the not-fixed list for the integrator: Dwight R7 (**Medium**, same as Angela F-3; his fix sketch: on a refused write, remove the key and write once more; add a reload step to P22), R8; Angela F-2.
+
 ### Pending, not PASS
 
-* Dwight's confirmation that R1 is fixed, and a new fresh critic, both on the commit that adds this text: results are appended below when they arrive.
+* A new fresh critic on the commit that adds this text: the result is appended below when it arrives. Dwight is not asked again: the only code change since his PASS is the one line in `scorecard.tsx`, which touches no auth, input handling, storage or request path.
 * The owner's check on his iPhone (Add to Home Screen, open offline, update prompt, a pick with Tailscale off): **PENDING**. It needs the live app rebuilt from this branch, which god does after landing. Angela asks him to watch app launch with Tailscale off (C1).
