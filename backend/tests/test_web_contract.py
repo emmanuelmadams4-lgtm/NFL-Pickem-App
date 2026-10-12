@@ -99,3 +99,11 @@ def test_w4_week_summary_model_figures_count_live_predictions_only(loaded, clien
     loaded.commit()
     summary = client.get(f"/api/weeks/{CURRENT}/4").json()["summary"]
     assert summary["model_graded"] == 1
+
+
+def test_w5_no_api_field_mixes_live_and_backfill(loaded, client):
+    engine.backfill_season(loaded, CURRENT)
+    perf = client.get(f"/api/performance/{CURRENT}").json()
+    assert "model_first" not in perf
+    mixed = {"model_correct", "model_total", "model_first_correct", "model_first_total"}
+    assert all(not mixed & w.keys() for w in perf["weeks"])

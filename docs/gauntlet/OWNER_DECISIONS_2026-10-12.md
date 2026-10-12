@@ -260,6 +260,12 @@ OPEN: which fixed questions Jev is asked per game (to settle at SPECIFICATION wi
 rules), and whether Jev is asked on every chat question or once per evidence change (once per
 change is cheaper and enough).
 
+## Team logos (2026-10-12, asked in the cloud step 2 session)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D37 | Owner chose "Bring logos back" when shown that every reference (01-07) uses real team logos while `PRODUCT.md` said "no NFL or team logos". Team logos come from the API's `logo_url` (nflverse's ESPN links), are cached by the service worker for offline use, and fall back to the team-color mark when a logo cannot load. Replaces the "no logos" brand commitment. | two-way | logos fail to load often, or a use beyond this private app |
+
 ## Facts looked up 2026-10-12 (research subagent, web; not owner decisions)
 
 Paraphrased from the linked pages. "Inferred" marks a reading, not a statement on the page.

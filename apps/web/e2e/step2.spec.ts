@@ -10,7 +10,7 @@ import AxeBuilder from "@axe-core/playwright";
 const TOKEN = "e2e-token";
 const AUTH = { Authorization: `Bearer ${TOKEN}` };
 
-type Team = { abbr: string; name: string };
+type Team = { abbr: string; name: string; logo_url: string };
 type Game = {
   game_id: string;
   kickoff_utc: string;
@@ -254,15 +254,15 @@ test("E10b chart colors: no purple, and every series is at least 3:1 on its surf
   }
 });
 
-test("E12 brand and type floor: no team logo images, and no visible text under 11px", async ({ page, request }) => {
-  const { open } = await board(request);
+test("E12 logos and type floor: team logos come only from the API's logo_url, and no visible text under 11px", async ({ page, request }) => {
+  const { games, open } = await board(request);
+  const logos = new Set(games.flatMap((g) => [g.away.logo_url, g.home.logo_url]));
   const images: string[] = [];
   page.on("request", (r) => r.resourceType() === "image" && !r.url().startsWith("data:") && images.push(r.url()));
   await signIn(page);
   for (const path of ["/", `/game/?id=${open[0].game_id}`, "/performance/", "/backtest/", "/settings/"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
-    await expect(page.locator("main img"), `${path}: team logos are banned (PRODUCT.md)`).toHaveCount(0);
     const small = await page.evaluate(() =>
       [...document.querySelectorAll("body *")]
         .filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent!.trim()))
@@ -272,7 +272,36 @@ test("E12 brand and type floor: no team logo images, and no visible text under 1
     );
     expect(small, `${path}: text under 11px (design.md § 4)`).toEqual([]);
   }
-  expect(images, "no image requests for team logos").toEqual([]);
+  expect(images.length, "the board shows team logos (owner decision 2026-10-12)").toBeGreaterThan(0);
+  expect(images.filter((u) => !logos.has(u)), "only team logos from the API are fetched as images").toEqual([]);
+});
+
+test("E13 backfill stays labeled: week rows, the Results table and the weekly chart", async ({ page, request }) => {
+  const { meta } = await board(request);
+  const season = meta.current_season;
+  const week1 = (await api<{ games: (Game & { prediction: { kind: string } | null })[] }>(request, `/weeks/${season}/1`)).games;
+  expect(week1.every((g) => g.prediction?.kind === "backfill"), "seed: week 1 is all backfill").toBe(true);
+  await signIn(page);
+  await page.goto(`/?season=${season}&week=1`);
+  await boardLoaded(page);
+  for (const g of week1) await expect(gameRow(page, g), g.game_id).toContainText("Backfilled");
+  await page.goto("/performance/");
+  const row1 = page.locator("tr").filter({ has: page.locator("th[scope=row]", { hasText: /^1$/ }) });
+  await expect(row1, "week 1 Model cell: no live figure, backfill noted").toContainText("backfilled");
+  await expect(page.getByText("Model, backfilled").first()).toBeVisible();
+});
+
+test("E14 missing is drawn as missing: an en dash, never a bare hyphen", async ({ page, request }) => {
+  const { open } = await board(request);
+  await signIn(page);
+  for (const path of ["/", `/game/?id=${open[0].game_id}`, "/performance/", "/settings/"]) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    const bare = await page.evaluate(() =>
+      [...document.querySelectorAll("main *")].filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent!.trim() === "-")).length,
+    );
+    expect(bare, `${path}: bare "-" used for a missing value (design.md § 2.5)`).toBe(0);
+  }
 });
 
 async function axe(page: Page, name: string) {
