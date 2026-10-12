@@ -13,7 +13,7 @@ from sqlalchemy import func, select, update
 from nflpi import jobs
 from nflpi.analytics import metrics
 from nflpi.ingestion import service
-from nflpi.models import AppSetting, Game, Prediction, UserPick
+from nflpi.models import AppSetting, Game, Prediction, SheetEntry, UserPick
 from nflpi.predictions import engine, sheet
 from tests.conftest import CURRENT, schedule_rows
 from tests.test_hardening import moneylines
@@ -381,6 +381,7 @@ def test_jev_is_asked_once_per_change_and_never_blocks_the_sheet(loaded, client,
         return {key: {"type": "score", "score": 1.0, "confidence": 0.9} for key in questions}
 
     monkeypatch.setattr(sheet, "TIE_BAND", 1.0)  # every game counts as a near-tie in this test
+    monkeypatch.setattr("nflpi.ai.jev.configured", lambda: True)
     monkeypatch.setattr("nflpi.ai.jev.decide", decide)
     before = by_points(client)
 
@@ -405,3 +406,117 @@ def test_jev_is_not_asked_when_no_two_games_are_nearly_equal(loaded, client, mon
     monkeypatch.setattr(sheet, "TIE_BAND", 0.0)
     monkeypatch.setattr("nflpi.ai.jev.decide", lambda state, questions: pytest.fail("Jev was asked"))
     sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
+
+
+# Amendment A5 (objective critic round 1): bad replies, the daily cap, evidence on the real sheet ----------------------
+
+
+def near_ties(monkeypatch, decide) -> list:
+    """Every game counts as a near-tie and Jev answers with `decide`. Returns the list of calls made."""
+    calls = []
+
+    def asked(state, questions):
+        calls.append(questions)
+        return decide(questions)
+
+    monkeypatch.setattr(sheet, "TIE_BAND", 1.0)
+    monkeypatch.setattr("nflpi.ai.jev.configured", lambda: True)
+    monkeypatch.setattr("nflpi.ai.jev.decide", asked)
+    return calls
+
+
+def test_a_malformed_jev_answer_is_ignored_and_the_sheet_still_loads(loaded, client, monkeypatch):
+    before = by_points(client)
+    bad = [{"score": None, "confidence": 0.9}, {"score": "n/a", "confidence": 0.9}, {"confidence": 0.9}]
+    near_ties(monkeypatch, lambda questions: dict(zip(questions, bad, strict=True)))
+
+    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
+
+    assert client.get(f"/api/weeks/{CURRENT}/{WEEK}").status_code == 200
+    assert by_points(client) == before
+
+
+def test_jev_does_not_use_up_the_daily_ai_cap_when_it_is_not_configured(loaded, monkeypatch):
+    monkeypatch.setattr(sheet, "TIE_BAND", 1.0)  # the test environment has no OpenRouter key
+
+    for _ in range(3):
+        sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
+
+    assert loaded.scalars(select(AppSetting).where(AppSetting.key.like("ai_attempts_%"))).all() == []
+
+
+def test_games_jev_left_out_of_its_answer_are_not_asked_again(loaded, client, monkeypatch):
+    def first_only(questions):
+        return {next(iter(questions)): {"score": 1.0, "confidence": 0.9}}
+
+    calls = near_ties(monkeypatch, first_only)
+
+    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
+    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
+
+    assert len(calls) == 1
+
+
+def test_jev_evidence_reorders_near_ties_on_the_sheet_until_the_prediction_changes(loaded, client, monkeypatch):
+    high, mid, low = by_points(client)
+    scores = {high: 0.0, mid: 3.0, low: 0.0}
+    near_ties(monkeypatch, lambda questions: {gid: {"score": scores[gid], "confidence": 0.9} for gid in questions})
+
+    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
+
+    assert by_points(client) == [mid, high, low]  # clearly stronger evidence lifts the near-tied neighbour
+    assert sheets(client)[mid]["app_points"] == 3
+
+    row = loaded.get(AppSetting, f"jev_tiebreak_{CURRENT}_{WEEK}")
+    row.value = {gid: answer | {"hash": "an earlier prediction"} for gid, answer in row.value.items()}
+    loaded.commit()
+    assert by_points(client) == [high, mid, low]  # evidence about an older prediction is not used
+
+
+def test_jev_evidence_for_the_models_side_is_not_used_where_he_picked_the_other_side(loaded, client, monkeypatch):
+    high, mid, low = by_points(client)
+    game = week(client)[high]
+    underdog = game["home"]["abbr"] if game["sheet"]["app_pick"] == game["away"]["abbr"] else game["away"]["abbr"]
+    client.put(f"/api/picks/{high}", json={"team": underdog})
+    assert by_points(client) == [mid, low, high]
+    scores = {high: 3.0, mid: 0.0, low: 0.0}  # strong evidence, but for the side he did not pick
+    near_ties(monkeypatch, lambda questions: {gid: {"score": scores[gid], "confidence": 0.9} for gid in questions})
+
+    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
+
+    assert by_points(client) == [mid, low, high]
+
+
+def test_best_possible_points_for_a_week_in_progress_count_only_finished_games(loaded, client, schedule):
+    high, mid, low = by_points(client)
+    schedule.kick_off(high)
+    week(client)
+    schedule.finish(high, home=30, away=10)
+
+    row = next(w for w in client.get(f"/api/scorecard/{CURRENT}").json()["weeks"] if w["week"] == WEEK)
+
+    assert (row["games"], row["max_points"]) == (1, 3)  # the points he had on the one finished game
+
+
+def test_the_export_leaves_a_game_the_model_picked_for_him_blank(loaded, client, schedule):
+    high, mid, low = by_points(client)
+    schedule.kick_off(high)
+    assert sheets(client)[high]["pick_by"] == "auto"
+
+    lines = client.get(f"/api/picks/export.csv?season={CURRENT}").text.splitlines()
+
+    header = lines[0].split(",")
+    row = next(line.split(",") for line in lines if line.startswith(high + ","))
+    assert row[header.index("my_pick")] == ""  # he did not pick it; a re-import must not make it his
+
+
+def test_a_game_with_only_an_after_the_fact_prediction_is_not_written_down(loaded, client, schedule):
+    high, mid, low = by_points(client)
+    loaded.execute(update(Prediction).where(Prediction.game_id == high).values(kind="backfill"))
+    loaded.commit()
+
+    schedule.kick_off(high)
+    week(client)
+
+    assert loaded.get(SheetEntry, high) is None  # no live pick existed before kickoff
+    assert loaded.get(UserPick, high) is None
