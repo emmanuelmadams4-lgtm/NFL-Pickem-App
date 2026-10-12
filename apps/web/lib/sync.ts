@@ -100,7 +100,7 @@ function readStoredQueue(): Queue {
 }
 
 function currentQueue(): Queue {
-  return { ...readStoredQueue(), ...volatileQueue };
+  return volatileQueue ?? readStoredQueue();
 }
 
 function listenForStorage() {
@@ -139,7 +139,7 @@ export function queuedPick(gameId: string): string | null | undefined {
 let warnedGameId: string | null = null;
 
 export function unqueue(gameId: string) {
-  const next = currentQueue();
+  const next = { ...currentQueue() };
   delete next[gameId];
   writeQueue(next);
   if (warnedGameId === gameId) warnedGameId = null;
