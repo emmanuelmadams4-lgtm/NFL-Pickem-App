@@ -1,0 +1,12 @@
+PASS D0 clean clone of 3d110b1
+PASS D1 compose ports/restart, scripts, runbook and iPhone order
+PASS D2 up from a clean clone; database ok, worker heartbeat fresh
+PASS D3 bootstrap; health ok (ok)
+PASS D4 page, manifest, and a non-cacheable sw.js
+service worker scope http://127.0.0.1:18000/, manifest scope http://127.0.0.1:18000/
+PASS D5 no http:// redirects behind an https proxy; service worker registers
+PASS D6 32 of 32 team logos return 200 from the server
+PASS D7 backup restored with matching counts (1,93,6771); a failed backup fails loudly; off-host copy made
+PASS D8 token rotation: old token 401, new token 200
+ALL PASS deploy-check (3d110b1)
+exit=0
