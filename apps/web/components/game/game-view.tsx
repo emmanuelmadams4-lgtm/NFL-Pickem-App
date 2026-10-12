@@ -79,7 +79,7 @@ function SectionNav() {
 
   return (
     <nav aria-label="Sections" className="sticky top-[var(--header-h)] z-20 -mx-4 bg-bg px-4 lg:mx-0 lg:px-0">
-      <ul className="no-scrollbar flex gap-1.5 overflow-x-auto py-2">
+      <ul className="no-scrollbar flex gap-1.5 overflow-x-auto py-2 max-lg:[mask-image:linear-gradient(to_right,black_85%,transparent)]">
         {SECTIONS.map((s) => (
           <li key={s.id} className="shrink-0">
             <a

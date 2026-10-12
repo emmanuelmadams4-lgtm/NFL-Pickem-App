@@ -41,7 +41,7 @@ export function WeekPicker({ className }: { className?: string }) {
         ))}
       </SelectField>
       <div className="flex items-center gap-1">
-        <Button size="sm" variant="ghost" aria-label="Previous week" disabled={idx <= 0} onClick={() => step(-1)} className="w-9 px-0 max-lg:h-10 max-lg:w-11 max-lg:border-border max-lg:bg-elevated">
+        <Button size="sm" variant="ghost" aria-label="Previous week" disabled={idx <= 0} onClick={() => step(-1)} className="hidden w-9 px-0 lg:inline-flex">
           <ChevronLeft size={20} />
         </Button>
         <SelectField label="Week" value={week} onChange={(e) => setWeek(Number(e.target.value))} hideLabel>
@@ -51,7 +51,7 @@ export function WeekPicker({ className }: { className?: string }) {
             </option>
           ))}
         </SelectField>
-        <Button size="sm" variant="ghost" aria-label="Next week" disabled={idx >= weeks.length - 1} onClick={() => step(1)} className="w-9 px-0 max-lg:h-10 max-lg:w-11 max-lg:border-border max-lg:bg-elevated">
+        <Button size="sm" variant="ghost" aria-label="Next week" disabled={idx >= weeks.length - 1} onClick={() => step(1)} className="hidden w-9 px-0 lg:inline-flex">
           <ChevronRight size={20} />
         </Button>
       </div>

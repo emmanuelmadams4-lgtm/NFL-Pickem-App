@@ -157,3 +157,11 @@ A type error in the coordinator's own `phone-layout.spec.ts` (`reducedMotion` be
 One file changed (`apps/web/components/pwa.tsx`): a health check when the signed-in app opens, comes back to the foreground or comes online; a failed check raises the banner, a good one sends queued picks.
 
 Gate `gate.sh wo1b` (logs `wo1b-*.log`): pytest **99 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **58 passed, 7 failed**, the seven being the phone-layout tests of work order 2. All 11 `pwa.spec.ts` tests pass (P1 to P10), all 47 older tests pass. `lane-guard check`: OK. Work order 1 closed in two tries.
+
+### Work order 2, try 1 (Ryan, Codex gpt-6-sol, effort high) — `step-6-evidence/wo-2.md`
+
+Model pick: Jev `model:pwa:wo-2` → sol 0.97 (follow), effort high 0.71 (advisor); Sonnet advisor → high. Diff inspected: 9 files, all in the allowed scope, 80 lines added and 59 removed.
+
+Gate `gate.sh wo2` (logs `wo2-*.log`): pytest **99 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **65 passed, 0 failed** (L1 to L7 green, P1 to P10 green, 47 older tests green). After screenshots: `step-6-evidence/shots/after-*.png`. At 393x852 the first card, with its pick buttons, is now whole on the first screen.
+
+Coordinator's notes for the critics: on the phone the previous/next week arrows render small and faint beside the week picker; "Yahoo sheet" and "Updated" are two copies each, one per breakpoint (cleanup candidate); the "Changed:" strip is written twice (cleanup candidate).

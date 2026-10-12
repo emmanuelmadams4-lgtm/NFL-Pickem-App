@@ -60,7 +60,7 @@ export function Section({
 }) {
   const headingId = useId();
   return (
-    <section id={id} aria-labelledby={headingId} className={cx("scroll-mt-32", className)}>
+    <section id={id} aria-labelledby={headingId} className={cx("scroll-mt-16 lg:scroll-mt-32", className)}>
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
         <div className="min-w-0">
           <h2 id={headingId} className="text-heading text-text">
@@ -181,7 +181,7 @@ export function Tip({ content, children, className, align = "left" }: { content:
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 const variantClass: Record<Variant, string> = {
-  primary: "bg-accent text-accent-ink border-transparent hover:brightness-105",
+  primary: "bg-accent text-accent-ink border-transparent hover:brightness-105 disabled:bg-elevated disabled:text-text-2 disabled:hover:brightness-100",
   secondary: "bg-elevated text-text border-border hover:border-border-strong",
   ghost: "bg-transparent text-text-2 border-transparent hover:bg-elevated hover:text-text",
   danger: "bg-transparent text-bad border-bad/40 hover:bg-bad/10",
@@ -240,7 +240,7 @@ export function SelectField({
           id={id}
           aria-label={label}
           {...rest}
-          className={cx("h-10 rounded-full border border-border-strong bg-elevated px-3 text-base text-text hover:border-text-2 lg:h-9 lg:text-sm", grow && "min-w-0 flex-1")}
+          className={cx("h-11 rounded-full border border-border-strong bg-elevated px-3 text-base text-text hover:border-text-2 lg:h-9 lg:text-sm", grow && "min-w-0 flex-1")}
         >
           {children}
         </select>
@@ -275,6 +275,7 @@ export function Segmented<T extends string>({
             className={cx(
               "h-9 rounded-full px-3.5 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-45 lg:h-8",
               active ? "bg-accent text-accent-ink" : "text-text-2 hover:text-text",
+              "disabled:bg-elevated disabled:text-text-2",
             )}
           >
             {o.label}

@@ -83,7 +83,7 @@ export function Recommendation({ game }: { game: GameDetail }) {
             <p className="mt-3 flex items-start gap-1.5 text-xs text-text-2">
               <Refresh size={14} className="mt-px shrink-0" />
               <span>
-                <span className="font-medium text-text">What changed:</span> {p.change_note}
+                <span className="font-medium text-text">What changed:</span> {p.change_note.replace(/^Changed:\s*/i, "")}
               </span>
             </p>
           )}
