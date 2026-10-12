@@ -1,0 +1,5 @@
+PASS D0 clean clone of 21403ad
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+AssertionError: app ports ['8000'] do not follow 18000: a second stack would collide with a live one
+FAIL D1 compose file: ports must follow APP_PORT/DB_PORT and every service restart: unless-stopped
