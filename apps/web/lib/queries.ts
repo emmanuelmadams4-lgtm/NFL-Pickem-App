@@ -62,12 +62,14 @@ function withPick(week: Week, gameId: string, team: string | null): Week {
 }
 
 /** One-tap pick with an optimistic update. 409 means the game has kicked off. */
-export function useSetPick() {
+export function useSetPick(gameId: string) {
   const api = useApi();
   const qc = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
+    // One game's taps reach the server in order, so a quick pick-then-clear can't land as pick.
+    scope: { id: `pick:${gameId}` },
     // Offline: keep the optimistic choice, queue it, and report success. The queue flushes when we are back online.
     mutationFn: async (v: PickVars): Promise<{ queued: boolean }> => {
       try {

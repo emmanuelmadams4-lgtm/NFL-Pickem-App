@@ -105,3 +105,6 @@ grep -rnE "sk-ant-|sk-or-v1|VAPID_PRIVATE" apps/web/app apps/web/components apps
 
 ## 6. LANDING
 Step 3 DONE on the round-4 head. Pushed to `claude/nfl-pickem-intelligence` (`3cd9964`), draft PR #1 updated. CI on `3cd9964`: 8/8 green (backend, web, docker, e2e; push and PR runs).
+
+### After landing: CI e2e red on `d74a342` (docs-only push)
+E4 failed: the first pick button on MIA at LV showed a check and a lock (two icons), so the test found a pick left behind. Root cause: R2 and F2 pick then clear with two quick taps, and the app sent both requests at once, so the clear could reach the server first and the pick stayed. Fix: picks for one game go out in order (`useSetPick` mutation `scope` per game, `lib/queries.ts`); R2, F2 and G2 now wait until the server shows no pick. Proof (`step-3-evidence/coord-r5-*.log`): typecheck 0, web:build 0, `npm run e2e` 39 passed twice, R2/F2/G2/E4 repeated 5 times: 20 passed.

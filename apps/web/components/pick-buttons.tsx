@@ -15,7 +15,7 @@ type PickGame = Pick<GameSummary, "game_id" | "season" | "week" | "away" | "home
  * Tapping the selected team clears the pick. Disabled once the game has kicked off.
  */
 export function PickButtons({ game, size = "sm", className }: { game: PickGame; size?: "sm" | "lg"; className?: string }) {
-  const mutation = useSetPick();
+  const mutation = useSetPick(game.game_id);
   const locked = useLocked(game);
   const pending = usePendingPicks();
   const { pick, waiting } = effectivePick(pending, game.game_id, game.my_pick);

@@ -20,6 +20,11 @@ async function api<T>(request: APIRequestContext, path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** The server has no pick for this game, so no test leaves a pick behind for the next one. */
+async function expectServerCleared(request: APIRequestContext, g: Game) {
+  await expect.poll(async () => (await api<{ my_pick: string | null }>(request, `/games/${g.game_id}`)).my_pick, `${g.game_id} pick cleared on the server`).toBeNull();
+}
+
 async function board(request: APIRequestContext) {
   const meta = await api<Meta>(request, "/meta");
   const week = await api<{ games: Game[] }>(request, `/weeks/${meta.current_season}/${meta.current_week}`);
@@ -158,6 +163,7 @@ test("R2 a pick against the model shows 'Differs from model' on the card", async
   await expect(c).toContainText("Differs from model");
   await c.getByRole("button", { name: new RegExp(`^${against.name} picked`) }).click();
   await expect(c).not.toContainText("Differs from model");
+  await expectServerCleared(request, g);
 });
 
 test("R3 weather outage: the matchup says the weather source is down, not 'No forecast yet'", async ({ page, request }) => {
@@ -238,6 +244,7 @@ test("F2 matchup: a pick against the model says 'Differs from model' in the pick
   await expect(panel).toContainText("Differs from model");
   await panel.getByRole("button", { name: new RegExp(`^${against.name} picked`) }).click();
   await expect(panel).not.toContainText("Differs from model");
+  await expectServerCleared(request, g);
 });
 
 test("F3 win split: lime is mine, never the model's tile; no check mark on it; backfill says so", async ({ page, request }) => {
@@ -336,6 +343,7 @@ test("G2 lime paints what is mine: a picked pill, the selected chip, the primary
     await expect.poll(() => picked.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(LIME);
   } finally {
     await picked.click();
+    await expectServerCleared(request, g);
   }
 });
 
