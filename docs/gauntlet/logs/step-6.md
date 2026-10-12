@@ -186,3 +186,18 @@ Deferred, Visual or Polish, none blocks the step: V5 (uncertainty and upset chip
 Model pick: Jev `model:pwa:wo-3` → sol 0.98, effort high 0.89 (follow). Diff inspected: 10 files, all in the allowed scope, 55 lines added and 40 removed.
 
 Gate `gate.sh wo3` (logs `wo3-*.log`): pytest **99 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **72 passed, 0 failed** (the 8 red tests green, nothing else broken). After screenshots retaken (`shots/after-*.png`): Yahoo sheet, the data's age and 44px week arrows are on the first screen at 393, and the first card with its pick buttons still ends above the tab bar.
+
+Committed as `d0d7b9e`.
+
+### Review round 2 (fresh critics on `d0d7b9e`) — reports in `step-6-evidence/reviews/`
+
+| Critic | Verdict | Blocking findings |
+|---|---|---|
+| Design, UX and visual in one (`r2-design.md`) | **PASS** | none; no Critical or Structural finding (Design Gauntlet stop rule met) |
+| Implementation (`r2-implementation.md`) | FAIL | N1 High, N2 and N3 Medium, all in the pick queue |
+
+The implementation reviewer confirmed F1 to F7 fixed and found what remains of F1: a flush that finishes can delete a newer pick queued for the same game while it was in flight (N1); a tap and a flush can have two requests for one game in flight, so the older can land last (N2); one game that keeps returning 500 blocks every other queued pick (N3). The design critic's C1 is a false statement about the data (the phone says the model has "No live picks" while every card shows one), so it is fixed now despite its Visual grade.
+
+Mapped to failing tests before any fix (`red-r2-findings.log`, **4 failed, 25 passed**, commit `dd66d0e`): P13 (N1), P14 (N2), P15 (N3), L11 (C1). Work order 4: `wo-4.md` (`55bed45`).
+
+Deferred, Low, Visual or Polish, none blocks the step: N4 (a second, different failure on the same queued game is not announced again), N5 and C6 (the update toast has no "Later"), N6 and C2 (the fade is 15% of the row, not a fixed width), N7 (section tabs and the points clear button are 40px), C3 and C4 (320-wide footer and first screen), C5, C7 to C9. Listed for the dashboard step with the round 1 items.
