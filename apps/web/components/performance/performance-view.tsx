@@ -71,11 +71,11 @@ function WeeklyTable({ perf }: { perf: Performance }) {
           <span className="block text-[11px] text-subtle">
             {c}/{t}
           </span>
-          {note && <span className="block text-[11px] text-subtle">{note}</span>}
         </>
       ) : (
         <span className="text-subtle">-</span>
       )}
+      {note && <span className="block text-[11px] text-subtle">{note}</span>}
     </td>
   );
   return (
@@ -96,7 +96,7 @@ function WeeklyTable({ perf }: { perf: Performance }) {
             <th scope="row" className="py-2 pr-2 text-left align-top font-medium text-text">{w.week}</th>
             <td className="hidden py-2 pr-2 text-right align-top text-text-2 sm:table-cell">{w.games_final}</td>
             {cell(w.my_correct, w.my_total)}
-            {cell(w.model_correct, w.model_total, w.model_backfill_total > 0 ? `incl. ${w.model_backfill_total} backfilled` : undefined)}
+            {cell(w.model_live_correct, w.model_live_total, w.model_backfill_total > 0 ? `${w.model_backfill_correct}/${w.model_backfill_total} backfilled` : undefined)}
             {cell(w.market_correct, w.market_total)}
             <td className="py-2 text-right align-top">
               {w.home_total > 0 ? (
@@ -187,7 +187,7 @@ export function PerformanceView() {
               </Section>
 
               <Section id="calibration" title="Calibration" note="When the model says 70%, do those teams win about 70% of the time?">
-                <CalibrationChart buckets={perf.calibration} color="var(--series-model)" name="Model" leader={null} />
+                <CalibrationChart buckets={perf.calibration} backfill={perf.calibration_backfill} color="var(--series-model)" name="Model, live" backfillName="Model, backfilled" leader={null} />
                 {leader !== null && (
                   <p className="mt-3 text-xs text-text-2">
                     League leader reference: <span className={cx("font-medium text-text")}>{pctOr(leader, 1)}</span> season accuracy (shown as a line on the weekly chart).

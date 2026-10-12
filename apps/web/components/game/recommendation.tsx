@@ -4,7 +4,7 @@ import { UNCERTAINTY, ago, pct, pickProb, strengthLabel, type GameDetail, type P
 import { Bezel, Chip, Mark } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
 import { PickButtons } from "@/components/pick-buttons";
-import { BackfillChip, UncertaintyChip } from "@/components/prediction-bits";
+import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-bits";
 import { useLocked } from "@/lib/clock";
 import { pctOr } from "@/lib/fmt";
 
@@ -58,6 +58,7 @@ export function Recommendation({ game }: { game: GameDetail }) {
               <p className="mt-1 text-xs text-text-2">{strengthLabel(pickProb(p))}</p>
             </div>
           </div>
+          <ProbBar value={pickProb(p)} className="mt-3" label={`${p.pick} win probability`} />
 
           <Divider />
 

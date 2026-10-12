@@ -129,7 +129,7 @@ function ModelsTable({ data }: { data: Backtest }) {
               {pctOr(r.accuracy_ci[0], 1)} to {pctOr(r.accuracy_ci[1], 1)}
             </td>
             <td className={cx("py-2 pr-3 text-right align-top", lead(r.brier === best.brier))}>{r.brier.toFixed(4)}</td>
-            <td className={cx("py-2 pr-3 text-right align-top", lead(r.log_loss === best.log_loss))}>{r.log_loss.toFixed(4)}</td>
+            <td className={cx("py-2 pr-3 text-right align-top", lead(r.log_loss === best.log_loss))}>{r.log_loss.toFixed(3)}</td>
             <td className="hidden py-2 text-right align-top text-text-2 sm:table-cell">{r.n.toLocaleString()}</td>
           </tr>
         ))}
@@ -198,7 +198,7 @@ export function BacktestView() {
                       <span className="font-medium text-text">{feature(a.feature)}</span>{" "}
                       <span className="text-text-2">
                         {a.log_loss_gain >= 0 ? "improves" : "worsens"} log loss by{" "}
-                        <span className="num-display font-semibold text-text">{Math.abs(a.log_loss_gain).toFixed(4)}</span> ({a.log_loss_without.toFixed(4)} without it).
+                        <span className="num-display font-semibold text-text">{Math.abs(a.log_loss_gain).toFixed(3)}</span> ({a.log_loss_without.toFixed(3)} without it).
                       </span>
                     </li>
                   ))}

@@ -9,7 +9,7 @@ export function staleList(data: Freshness[] | undefined): Freshness[] {
   return (data ?? []).filter((d) => d.stale);
 }
 
-/** Datasets the model reads. Lines arrive with schedules. Weather and teams are context only. */
+/** Datasets that can change a pick or its flags: schedules carry the lines and starting QBs, injuries drive QB alerts. Weather and teams are context only. */
 const MODEL_INPUTS = new Set(["schedules", "injuries"]);
 
 export function feedsModel(d: Freshness): boolean {

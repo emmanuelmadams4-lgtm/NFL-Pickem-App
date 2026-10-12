@@ -22,11 +22,11 @@
   --warn: #d29922;
   --bad: #f85149;
 
-  /* chart series, validated for the dark surface; entity colors stay fixed across charts */
+  /* chart series: every one is at least 3:1 on --surface in both themes and none is purple (design.md § 5, § 15); entity colors stay fixed across charts */
   --series-me: #3987e5;
   --series-model: #d95926;
   --series-market: #199e70;
-  --series-stats: #9085e9;
+  --series-stats: #d9ae2e;
   --series-elo: #d55181;
   --series-home: #6b7785;
 
@@ -60,9 +60,9 @@
     --series-me: #2a78d6;
     --series-model: #c9501c;
     --series-market: #168a61;
-    --series-stats: #6250d6;
-    --series-elo: #e87ba4;
-    --series-home: #8c959f;
+    --series-stats: #957100;
+    --series-elo: #c93673;
+    --series-home: #727c87;
 
     --shadow-pop: 0 8px 24px rgb(31 35 40 / 0.16);
     --shadow-float: 0 16px 40px -16px rgb(31 35 40 / 0.18);

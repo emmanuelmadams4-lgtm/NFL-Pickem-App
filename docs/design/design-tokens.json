@@ -42,8 +42,8 @@
   },
   "series": {
     "status": "landed",
-    "dark": { "me": "#3987e5", "model": "#d95926", "market": "#199e70", "stats": "#9085e9", "elo": "#d55181", "home": "#6b7785" },
-    "light": { "me": "#2a78d6", "model": "#c9501c", "market": "#168a61", "stats": "#6250d6", "elo": "#e87ba4", "home": "#8c959f" }
+    "dark": { "me": "#3987e5", "model": "#d95926", "market": "#199e70", "stats": "#d9ae2e", "elo": "#d55181", "home": "#6b7785" },
+    "light": { "me": "#2a78d6", "model": "#c9501c", "market": "#168a61", "stats": "#957100", "elo": "#c93673", "home": "#727c87" }
   },
   "contrast-measured": {
     "$description": "WCAG 2 ratios computed 2026-10-11 (light semantic inks re-measured 2026-10-12) from the hex values above. subtle resolves to #798593 dark, #67707a light. 'tint' is the chip background: the ink at 14% over the named surface.",
@@ -64,7 +64,11 @@
       "border-strong/elevated": 3.33,
       "series-me/surface": 4.99,
       "series-model/surface": 4.68,
-      "series-market/surface": 5.33
+      "series-market/surface": 5.33,
+      "series-stats/surface": 8.69,
+      "series-elo/surface": 4.6,
+      "series-home/surface": 3.98,
+      "$replaced": "2026-10-12: series-stats #9085e9 (purple, banned by design.md § 15)"
     },
     "light": {
       "text/surface": 15.8,
@@ -91,15 +95,18 @@
       "series-me/surface": 4.42,
       "series-model/surface": 4.52,
       "series-market/surface": 4.34,
-      "$replaced": "2026-10-12: good #1a7f37, warn #9a6700, bad #cf222e (under 4.5:1 on elevated or on their own chip tint); series-model #eb6834 (3.2), series-market #1baf7a (2.82)"
+      "series-stats/surface": 4.53,
+      "series-elo/surface": 4.93,
+      "series-home/surface": 4.24,
+      "$replaced": "2026-10-12: good #1a7f37, warn #9a6700, bad #cf222e (under 4.5:1 on elevated or on their own chip tint); series-model #eb6834 (3.2), series-market #1baf7a (2.82); series-stats #6250d6 (purple, banned by design.md § 15), series-elo #e87ba4 (2.69), series-home #8c959f (3.04)"
     }
   },
   "font": {
     "status": "landed",
-    "sans": "\"Geist\", ui-sans-serif, -apple-system, \"SF Pro Text\", \"Segoe UI\", sans-serif",
-    "mono": "\"Geist Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+    "sans": "\"GeistSans\", ui-sans-serif, -apple-system, \"SF Pro Text\", \"Segoe UI\", sans-serif",
+    "mono": "\"GeistMono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
     "weights": [400, 500, 600],
-    "source": "npm package geist, self-hosted with next/font/local in apps/web/app/fonts.ts (offline PWA); variable woff2, families named Geist / Geist Mono"
+    "source": "npm package geist, self-hosted (offline PWA); apps/web/app/layout.tsx uses its GeistSans / GeistMono exports, families named GeistSans / GeistMono"
   },
   "type": {
     "status": "landed",

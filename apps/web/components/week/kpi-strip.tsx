@@ -2,6 +2,7 @@
 
 import type { Week } from "@nflpi/shared";
 import { isLocked, useNow } from "@/lib/clock";
+import { cx } from "@/components/ui";
 import { pctOr } from "@/lib/fmt";
 
 /**
@@ -38,12 +39,13 @@ export function KpiStrip({ week }: { week: Week }) {
       label: "Model accuracy, week",
       short: "Model",
       value: pctOr(s.model_accuracy),
-      sub: `Season ${pctOr(s.season_model_accuracy)}`,
+      sub: s.model_graded > 0 ? `Season ${pctOr(s.season_model_accuracy)}` : "No live picks graded",
+      missing: s.model_graded === 0, // the reason is shown at every width, not only on desktop
     },
   ];
 
   const mine = s.picks_correct + s.picks_incorrect > 0 ? `Me: ${s.picks_correct} right, ${s.picks_incorrect} wrong this week.` : "No graded picks this week.";
-  const model = s.model_graded > 0 ? `Model: ${s.model_correct} of ${s.model_graded} graded this week.` : "No graded games this week.";
+  const model = s.model_graded > 0 ? `Model: ${s.model_correct} of ${s.model_graded} graded this week.` : "No live picks graded this week.";
 
   return (
     <section aria-label="Week summary" className="flex items-center gap-8">
@@ -55,7 +57,7 @@ export function KpiStrip({ week }: { week: Week }) {
               <span className="hidden lg:inline">{c.label}</span>
             </dt>
             <dd className="num-display text-xl/7 font-semibold text-text lg:mt-1 lg:text-stat">{c.value}</dd>
-            <dd className="mt-0.5 hidden text-label text-text-2 lg:block">{c.sub}</dd>
+            <dd className={cx("mt-0.5 text-label text-text-2", c.missing ? "order-3 lg:order-none" : "hidden lg:block")}>{c.sub}</dd>
           </div>
         ))}
       </dl>

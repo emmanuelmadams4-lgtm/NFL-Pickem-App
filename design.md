@@ -30,7 +30,7 @@ Per game the reading order is fixed: matchup → model pick and probability → 
 
 ## 4. Typography
 
-Geist for text, Geist Mono for machine values. Self-hosted through the `geist` npm package, loaded in `apps/web/app/fonts.ts` (reason for the dependency: the PWA must render offline, and both chosen presets ban a default system/Inter stack). Fallback: `ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", sans-serif`. No serif anywhere.
+Geist for text, Geist Mono for machine values. Self-hosted through the `geist` npm package: `apps/web/app/layout.tsx` uses its `GeistSans` and `GeistMono` exports, so the CSS family names are "GeistSans" and "GeistMono" (reason for the dependency: the PWA must render offline, and both chosen presets ban a default system/Inter stack). Fallback: `ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", sans-serif`. No serif anywhere.
 
 | Role | Size / line | Weight | Tracking | Used for |
 |---|---|---|---|---|
@@ -64,6 +64,7 @@ Hex, dark-first, light follows the system setting. Values and measured contrast 
 | `accent` / `accent-solid` | `#3b82f6` / `#2563eb` | `#0969da` | Me, and anything I can act on |
 | `good` / `warn` / `bad` | `#3fb950` / `#d29922` / `#f85149` | `#166f31` / `#855700` / `#b91c25` | Correct or low uncertainty / moderate, stale, questionable / incorrect, high, out. Light values clear 4.5:1 on `elevated` and on their own chip tint |
 | `series-me` / `-model` / `-market` | `#3987e5` / `#d95926` / `#199e70` | `#2a78d6` / `#c9501c` / `#168a61` | Fixed identity colors |
+| `series-stats` / `-elo` / `-home` | `#d9ae2e` / `#d55181` / `#6b7785` | `#957100` / `#c93673` / `#727c87` | Backtest models. Every series is at least 3:1 on `surface` in both themes and none is purple (§ 15) |
 
 Rules:
 

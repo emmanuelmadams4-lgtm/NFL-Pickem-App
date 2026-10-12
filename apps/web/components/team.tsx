@@ -1,53 +1,28 @@
 "use client";
 
-import { useState } from "react";
 import type { Team } from "@nflpi/shared";
 import { teamAccent } from "@/lib/team";
 import { cx } from "@/components/ui";
 
 /**
- * Team logo from team.logo_url. A monogram ring in the team color stands in while the image loads
- * (so there is never a blank gap, even on a slow or offline connection) and if it never loads.
+ * Team identity (PRODUCT.md: no logos): the abbreviation as a monogram inside a team-color ring.
+ * Nothing is smaller than 11px (design.md § 4), so a ring too small for 11px text is drawn without text;
+ * every caller prints the abbreviation or name beside it. Decorative either way.
  */
 export function TeamLogo({ team, size = 24, className }: { team: Team; size?: number; className?: string }) {
-  const [status, setStatus] = useState<"loading" | "loaded" | "failed">("loading");
-  const monogram = (
+  const fontSize = Math.round(size * 0.34);
+  return (
     <span
-      role={status === "failed" ? "img" : undefined}
-      aria-label={status === "failed" ? `${team.name} logo` : undefined}
-      aria-hidden={status === "failed" ? undefined : true}
-      style={{ width: size, height: size, fontSize: Math.max(8, Math.round(size * 0.34)), ...teamAccent(team) }}
+      aria-hidden
+      style={{ width: size, height: size, fontSize, ...teamAccent(team) }}
       className={cx(
         "inline-flex shrink-0 items-center justify-center rounded-full border-2 font-semibold tracking-tight text-text-2",
         "[border-color:var(--tc-dark)] light-ring",
         className,
       )}
     >
-      {team.abbr}
+      {fontSize >= 11 ? team.abbr : null}
     </span>
-  );
-  return (
-    <>
-      {status !== "loaded" && monogram}
-      {status !== "failed" && (
-        // eslint-disable-next-line @next/next/no-img-element -- static export, remote logo CDN
-        <img
-          ref={(el) => {
-            if (el && el.complete && el.naturalWidth > 0) setStatus("loaded");
-          }}
-          src={team.logo_url}
-          alt={`${team.name} logo`}
-          width={size}
-          height={size}
-          loading="lazy"
-          decoding="async"
-          onLoad={() => setStatus("loaded")}
-          onError={() => setStatus("failed")}
-          style={status === "loaded" ? { width: size, height: size } : { position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
-          className={cx("shrink-0 object-contain", className)}
-        />
-      )}
-    </>
   );
 }
 

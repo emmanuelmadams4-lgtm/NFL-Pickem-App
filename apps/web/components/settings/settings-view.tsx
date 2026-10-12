@@ -79,7 +79,7 @@ function AccessSection() {
               onChange={(e) => setNext(e.target.value)}
               placeholder="New access token"
               aria-invalid={!!error}
-              className="h-11 w-full rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text placeholder:text-subtle hover:border-text-2 lg:h-9 lg:text-sm"
+              className="h-11 w-full rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text placeholder:text-text-2 hover:border-text-2 lg:h-9 lg:text-sm"
             />
             {error && (
               <p role="alert" className="mt-1.5 text-sm text-bad">
@@ -149,7 +149,7 @@ function LeaderSection({ meta }: { meta: Meta }) {
                   onChange={(e) => setValue(e.target.value)}
                   placeholder="e.g. 68.5"
                   aria-invalid={!!error}
-                  className="h-11 w-32 rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text placeholder:text-subtle hover:border-text-2 lg:h-9 lg:text-sm"
+                  className="h-11 w-32 rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text placeholder:text-text-2 hover:border-text-2 lg:h-9 lg:text-sm"
                 />
                 <span className="text-sm text-text-2">%</span>
               </div>

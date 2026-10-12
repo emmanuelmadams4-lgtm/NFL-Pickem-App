@@ -727,8 +727,16 @@ export interface components {
             model_live_games: number;
             /** Model Backfill Games */
             model_backfill_games: number;
-            /** Calibration */
+            /**
+             * Calibration
+             * @description Live predictions only
+             */
             calibration: components["schemas"]["CalibrationBucket"][];
+            /**
+             * Calibration Backfill
+             * @description Backfill predictions only: labeled
+             */
+            calibration_backfill: components["schemas"]["CalibrationBucket"][];
             /** League Leader Accuracy */
             league_leader_accuracy: number | null;
         };
@@ -950,6 +958,12 @@ export interface components {
             model_first_correct: number;
             /** Model First Total */
             model_first_total: number;
+            /** Model Live Correct */
+            model_live_correct: number;
+            /** Model Live Total */
+            model_live_total: number;
+            /** Model Backfill Correct */
+            model_backfill_correct: number;
             /** Model Backfill Total */
             model_backfill_total: number;
             /** Market Correct */

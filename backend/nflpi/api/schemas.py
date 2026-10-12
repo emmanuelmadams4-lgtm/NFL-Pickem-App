@@ -236,6 +236,9 @@ class WeekPerformance(BaseModel):
     model_total: int
     model_first_correct: int
     model_first_total: int
+    model_live_correct: int
+    model_live_total: int
+    model_backfill_correct: int
     model_backfill_total: int
     market_correct: int
     market_total: int
@@ -269,7 +272,8 @@ class PerformanceOut(BaseModel):
     home: Tally
     model_live_games: int
     model_backfill_games: int
-    calibration: list[CalibrationBucket]
+    calibration: list[CalibrationBucket] = Field(description="Live predictions only")
+    calibration_backfill: list[CalibrationBucket] = Field(description="Backfill predictions only: labeled")
     league_leader_accuracy: float | None
 
 

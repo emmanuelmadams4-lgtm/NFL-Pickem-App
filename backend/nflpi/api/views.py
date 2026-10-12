@@ -223,7 +223,7 @@ def week_view(session: Session, season: int, week: int) -> s.WeekOut:
     items = summaries(session, games, now)
     perf = performance(session, season)
     graded = [g for g in items if g.my_pick_correct is not None]
-    mgraded = [g for g in items if g.model_correct is not None]
+    mgraded = [g for g in items if g.model_correct is not None and g.prediction and g.prediction.kind == "live"]
     attention = sum(
         1
         for g in items
@@ -387,7 +387,7 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
     closing = _latest_by_game(session, MarketSnapshot, ids)
 
     weeks: dict[int, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    probs, outcomes = [], []
+    cal: dict[str, tuple[list[float], list[float]]] = {"live": ([], []), "backfill": ([], [])}
     live = backfill = 0
     for g in games:
         win = winner(g)
@@ -405,8 +405,8 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
             w["model_correct"] += final.pick == win
             w["model_first_total"] += 1
             w["model_first_correct"] += first.pick == win
-            probs.append(final.home_win_prob)
-            outcomes.append(1.0 if win == g.home_team else 0.0)
+            cal[final.kind][0].append(final.home_win_prob)
+            cal[final.kind][1].append(1.0 if win == g.home_team else 0.0)
             live += final.kind == "live"
             backfill += final.kind == "backfill"
             w[f"model_{final.kind}_total"] += 1
@@ -430,6 +430,9 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         "model_total",
         "model_first_correct",
         "model_first_total",
+        "model_live_correct",
+        "model_live_total",
+        "model_backfill_correct",
         "model_backfill_total",
         "market_correct",
         "market_total",
@@ -447,6 +450,7 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         home=total("home"),
         model_live_games=live,
         model_backfill_games=backfill,
-        calibration=calibration(np.array(probs), np.array(outcomes)) if probs else [],
+        calibration=calibration(*map(np.array, cal["live"])) if cal["live"][0] else [],
+        calibration_backfill=calibration(*map(np.array, cal["backfill"])) if cal["backfill"][0] else [],
         league_leader_accuracy=get_setting(session, "league_leader_accuracy"),
     )

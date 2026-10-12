@@ -5,7 +5,7 @@ import { useLocked } from "@/lib/clock";
 import { useSetPick } from "@/lib/queries";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { TeamLogo } from "@/components/team";
-import { Check } from "@/components/icons";
+import { Check, Lock } from "@/components/icons";
 import { cx } from "@/components/ui";
 
 type PickGame = Pick<GameSummary, "game_id" | "season" | "week" | "away" | "home" | "my_pick" | "locked" | "kickoff_utc" | "time_tbd" | "status">;
@@ -41,15 +41,16 @@ export function PickButtons({ game, size = "sm", className }: { game: PickGame; 
               size === "sm" ? "h-12 min-w-[68px] flex-1 px-2 text-base lg:h-8 lg:text-xs" : "h-12 flex-1 px-3 text-base lg:h-11 lg:text-sm",
               selected
                 ? "border-transparent bg-accent-solid text-white"
-                : "border-border-strong bg-elevated text-text hover:border-accent",
-              locked && "cursor-not-allowed active:translate-y-0",
-              locked && !selected && "opacity-55 hover:border-border-strong",
-              locked && selected && "opacity-80",
+                : locked
+                  ? "border-transparent bg-elevated text-text"
+                  : "border-border-strong bg-elevated text-text hover:border-accent",
+              locked && "cursor-not-allowed opacity-60 active:translate-y-0",
             )}
           >
             {size === "lg" && <TeamLogo team={t} size={22} className={selected ? "rounded-full bg-white/90 p-0.5" : undefined} />}
             <span>{t.abbr}</span>
             {selected && <Check size={size === "lg" ? 16 : 14} />}
+            {locked && <Lock size={size === "lg" ? 16 : 14} />}
           </button>
         );
       })}

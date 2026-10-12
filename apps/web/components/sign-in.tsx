@@ -60,7 +60,7 @@ export function SignIn({ notice }: { notice?: string | null }) {
               onChange={(e) => setValue(e.target.value)}
               aria-invalid={!!error}
               aria-describedby={error ? "token-error" : "token-help"}
-              className="mt-1.5 h-11 w-full rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text placeholder:text-subtle hover:border-text-2"
+              className="mt-1.5 h-11 w-full rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text placeholder:text-text-2 hover:border-text-2"
             />
             {error ? (
               <p id="token-error" role="alert" className="mt-1.5 text-sm text-bad">
