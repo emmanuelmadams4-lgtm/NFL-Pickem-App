@@ -6,8 +6,8 @@
 
 * **Goal:** one private app (desktop web + iPhone PWA) for weekly NFL Pick'em: evidence-based picks that match/beat the market, honest uncertainty, alerts, accuracy tracking. See [PLAN.md](PLAN.md).
 * **Overall step:** **step 1 of 8 — Safe backend + CI + first landing**, in progress (ONE_SHOT session started 2026-10-11). Step log: `docs/gauntlet/logs/step-1.md`.
-* **DONE THIS STEP:** `a107074` design docs (outside the step's scope, committed to keep the tree clean). PLANNING recorded; acceptance criteria frozen (A1–A14, G1–G2, O1–O7).
-* **RESUMING AT:** SPECIFICATION: write the failing tests for A1–A14 and commit them red, then Codex work orders.
+* **DONE THIS STEP:** `a107074` design docs; `3c8c499` PLANNING + frozen criteria; SPECIFICATION red tests committed (`backend/tests/test_hardening.py`, 22 failed / 24 passed).
+* **RESUMING AT:** IMPLEMENTATION: Codex work order A (`~/.claude/plans/nfl-pickem-intelligence-logs/s1-wo-a.md`, gpt-6-luna medium), then B, C (sol high), D (sol high). `BUILD_RUNG: gpt-6-luna (try 1 of 2)`.
 * **STRIKES:** none. **CONTINUATIONS:** 0.
 * **JEVGREP:** ready. **HEADROOM:** not-routed (desktop app).
 * **Phase:** ONE_SHOT, checkpoint SPECIFICATION.

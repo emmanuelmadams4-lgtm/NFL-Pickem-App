@@ -75,6 +75,15 @@ User-facing layer: `npm run gen:api` leaves no drift, `npm run typecheck` and `n
 
 Gate command: `cd backend && uv run pytest && uvx ruff check nflpi tests && uv run alembic check`, plus O1–O7 and G1–G2.
 
+### Red evidence (SPECIFICATION done)
+
+* Tests: `backend/tests/test_hardening.py`, written by a fresh Opus spec author (not the builder), one extra A7 case added by the coordinator. `uv run pytest -q` → **22 failed, 24 passed**, exit 1 (`s1-spec-red-pytest-final.log`). Each failure is a missing behavior or a missing new name, checked per test. `ruff` clean.
+* A4 cannot be red: `views.summaries` already picks the last snapshot before kickoff. The test stands as a regression guard. The DST and London conversions in A7 also already work; they are pinned in the same test as the TBD row.
+* A7 clarified before any production code: a game with `time_tbd` is stored at the start of its game day in US Eastern (no made-up clock time), and it is **not locked and not reminded** until it has a real time.
+* New contract names the builder must use: `nflpi.db.REFRESH_LOCK_KEY` (single-bigint `pg_try_advisory_lock`), `nflpi.jobs.tick(session, now)`, `jobs.TICK_SECONDS` (≤ 300), `jobs.HEARTBEAT_STALE_SECONDS`, `Game.time_tbd`, `Game.status == "postponed"` survives re-ingest, `GameSummary.qb_not_projected`.
+* Not pinned by tests (builder follows the criterion's words): how a game becomes postponed (nflverse has no status column), and the reminder's stop at kickoff (already holds).
+* Rungs. `JEV: model/effort` → WO-A luna 0.43 / medium 0.87; WO-B sol 0.97 / high 0.53; WO-C sol 0.97 / high 0.89; WO-D sol 0.58 / medium 0.65. Unsure picks went to the advisor: `ADVISOR: sonnet` → A luna, B high, D sol high. `EFFORT:` coordinator high for PLANNING/SPECIFICATION.
+
 ## 3. IMPLEMENTATION
 
 (filled as work orders land)
