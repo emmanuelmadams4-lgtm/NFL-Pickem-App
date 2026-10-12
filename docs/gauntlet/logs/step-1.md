@@ -141,3 +141,8 @@ Owner, in chat, 2026-10-11: "once the Monday night football game ends jump to th
 ## 6. LANDING
 
 Pushed `182da96`..`48a9dc6` on 2026-10-11 (owner consent 2026-10-11: push the feature branch and update the draft PR after a step verifies). Draft PR #1 updated. **O5 CI green** on that push: backend pass, web pass, docker pass (both the push and pull_request runs), `gh pr checks 1`. Not merged, not deployed. The current-week commit is pushed after its own critic passes; CI must be green again on it.
+
+Second critic (ecc:code-reviewer, fresh) on the current-week commit `6876e31`: **VERDICT: PASS** (its own gate: pytest 48 passed, ruff clean; rule checked at `engine.py:135-167`; no wrong-week case found). Pushed `91d7987`. **CI green on `91d7987`** (the PR head): backend pass, web pass, docker pass, both runs. Merged: nothing. Deployed: nothing.
+
+**Step 1 of 8: DONE (2026-10-11).** Not done in this step and owed: the progress page was not republished (next session, in place).
+

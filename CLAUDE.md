@@ -59,6 +59,7 @@ npm run web:dev
 - [x] Phase 3 Data pipeline (schedules, lines, teams, injuries; weather adapter untested live here: host blocked in build sandbox)
 - [x] Phase 4 Prediction engine + backtest (2012–2025: market 66.6%, stats 64.5%, blend 66.5%)
 - [x] Phase 5 AI layer (validated reports + Q&A; live calls need keys)
+- [x] Gauntlet step 1: safe backend + CI (2026-10-11; 48 tests, CI green on draft PR #1)
 - [ ] Phase 6 Web dashboard (in progress)
 - [ ] Phase 7 Performance tracking UI (in progress)
 - [ ] Phase 8 iPhone PWA (in progress)

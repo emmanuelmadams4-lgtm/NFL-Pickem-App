@@ -5,11 +5,10 @@
 ## STATUS
 
 * **Goal:** one private app (desktop web + iPhone PWA) for weekly NFL Pick'em: evidence-based picks that match/beat the market, honest uncertainty, alerts, accuracy tracking. See [PLAN.md](PLAN.md).
-* **Overall step:** **step 1 of 8 — Safe backend + CI + first landing**, in progress (ONE_SHOT session started 2026-10-11). Step log: `docs/gauntlet/logs/step-1.md`.
-* **DONE THIS STEP:** `223d169` red tests; `4fe9701` WO-A; `b582630` WO-B; `b08d179` explicit migration; `1794a56` WO-C; `c1ba844` WO-D; `68bb90c` WO-E (review fixes + cleanup). PLANNING, SPECIFICATION, IMPLEMENTATION, CLEANUP done. Coordinator validation green on `68bb90c`: 47 tests passed twice, ruff, alembic check, backtest, gen:api, typecheck, web build; live checks O2 O3 O4 O6 O7 pass. Evidence copied into `docs/gauntlet/logs/step-1-evidence/`.
-* **RESUMING AT:** LANDING for step 1, last mile. CI was green on the first push (backend, web, docker). The owner's current-week decision is built and committed locally (48 tests pass, ruff clean) and a fresh critic is reviewing that one commit. NEXT: on critic PASS, `git push`, confirm CI green again (`gh pr checks 1`), then mark step 1 DONE, write the step 2 ONE_SHOT handoff into `## 0`, republish the progress page in place. On critic FAIL: fix through the build ladder, new critic. Step 2 picks up the first critic's A7 follow-ups (expose `time_tbd` in the API and UI; skip TBD/postponed in weather ingest and backfill).
-* **OWNER DECISION 2026-10-11 (in chat):** "once the Monday night football game ends jump to the next week; each week is Thursday-Monday." So the current week stays on a week until its last game is FINAL, then moves to the next. Today's code (`engine.current_week`) moves when the last game KICKS OFF: fix it. Rule to build: if a game has kicked off, is not final, not postponed, not time_tbd, and kicked off within the last 12 hours, the current week is that game's week; otherwise the week of the next upcoming kickoff; an old never-scored game must still not pin the week (A9). Reversibility: two-way. Revisit trigger: owner asks. STATUS: built and committed 2026-10-11 (red test first, Codex work order F).
-* **OWNER REQUEST 2026-10-11:** finish the remaining steps in the cloud. The cloud sandbox has no Codex, Jev, jg or Docker: there `IMPLEMENTATION_PROVIDER: CLAUDE (limit hit: Codex not installed)`, Sonnet/Opus subagents build, the coordinator verifies. Gates that need the owner's Mac, iPhone or keys (step 3 deploy and install, step 5 real alert, step 6 go-live) stay `PENDING` with a checklist for him; never mark them PASS from the cloud. New UI work follows `design.md` and `PRODUCT.md` at the repo root (Design Gauntlet applies from step 2).
+* **Overall step:** **step 1 of 8 DONE** (2026-10-11; pushed `91d7987`, CI green, critic PASS twice). Next: **step 2 of 8 — Desktop web app**. Step log: `docs/gauntlet/logs/step-1.md`.
+* **Phase:** between steps. Next session: `DIRECT_COORDINATOR / ONE_SHOT`, step 2.
+* **DONE THIS STEP:** n/a (step 2 not started).
+* **RESUMING AT:** first, republish the progress page in place with "step 2 of 8" (it was not updated at the end of step 1). Then step 2 PLANNING.
 * **STRIKES:** none. **CONTINUATIONS:** 0.
 * **JEVGREP:** ready. **HEADROOM:** not-routed (desktop app).
 * **Phase:** ONE_SHOT, checkpoint VERIFICATION.
@@ -41,36 +40,33 @@ See PLAN.md § Owner decisions (each has reversibility + revisit trigger).
 ```text
 GAUNTLET_MODE: DIRECT_COORDINATOR
 GAUNTLET_PHASE: ONE_SHOT
-STATE FILE: /Users/emmanueladams/Projects/NFL-Pickem-App/docs/gauntlet/STATE.md
+STATE FILE: /Users/emmanueladams/Projects/NFL-Pickem-App/docs/gauntlet/STATE.md  (in a cloud checkout: docs/gauntlet/STATE.md at the repo root)
 
-This is a Gauntlet Loop handoff for a fresh session. Before doing substantive work, load/re-read the
-gauntlet-loop skill, then read the STATE FILE (STATUS, "## 0. Next handoff", user constraints, owner
-decisions). The mode and phase markers are authoritative. If the STATE FILE disagrees with this
-handoff, stop and report the mismatch before acting. Do not generate another generic Gauntlet prompt.
-Do not restart completed phases. Do not rely on prior conversation context. Before emitting the next
-handoff, update the STATE FILE's STATUS and "## 0. Next handoff".
+This is a Gauntlet Loop handoff for a fresh session. Load/re-read the gauntlet-loop skill, then read the
+STATE FILE. Do not re-plan. Do not restart step 1. Execute only step 2.
 
-OVERALL STEP: step 1 of 8 — Safe backend + CI + first landing (T3)
-GOAL: the backend is safe to rely on this season, and CI proves it on every push.
-SCOPE + FROZEN GATE: docs/gauntlet/PLAN.md, roadmap row 1 (findings S1–S6, S8–S10, S13, S15, S16, S18,
-  B1, B2, B7, B8-QB-flag; details in docs/gauntlet/STRUCTURE_REVIEW.md and PLAN.md § Blindspot review).
-BASELINE: branch claude/nfl-pickem-intelligence (draft PR #1); backend tests 23/23 green at dbad5f9.
-  Docker daemon is down after a container restart: start `dockerd`, then a postgres:17-alpine
-  container `nflpi-db` (user/pass/db nflpi, port 5432); `cd backend && uv run pytest`.
-CHECKPOINTS: PLANNING → SPECIFICATION (freeze criteria, first failing test) → IMPLEMENTATION (one
-  red→green slice at a time, minimum diff) → CLEANUP (scope-locked refactor of touched code) →
-  VERIFICATION (fresh Opus subagent critic re-runs the gate on the committed HEAD) → LANDING (push
-  branch, open/update the draft PR, CI green). Record each in docs/gauntlet/logs/step-1.md.
-DONE WHEN: every gate item in PLAN row 1 is green with its own numbers, critic PASS, pushed, CI green.
-STOP WHEN: three straight failures of the same command (escalate), or a one-way door needs the owner.
-OPEN OWNER QUESTIONS: none for step 1.
-IMPLEMENTATION_PROVIDER: CLAUDE (limit hit: Codex not installed)
+OVERALL STEP: step 2 of 8 — Desktop web app (T2). Scope and frozen gate: docs/gauntlet/PLAN.md roadmap row 2
+  (C3, C4, B3, B9, verify and fix the pre-built apps/web).
+ALSO IN SCOPE (carried from step 1, see docs/gauntlet/logs/step-1.md):
+  - expose `time_tbd` in the API contract and show "time TBD" in the UI; skip TBD/postponed games in weather
+    ingest and backfill (critic finding on A7);
+  - Design Gauntlet applies: PRODUCT.md and design.md at the repo root are the source of truth; land the
+    `proposed` tokens (docs/design/design-tokens.json) and fix the audit findings in design.md section 15.
+BASELINE: branch claude/nfl-pickem-intelligence at 91d7987 (draft PR #1, CI green). Backend: 48 tests pass,
+  ruff clean. Gate commands: cd backend && uv run pytest -q && uvx ruff check nflpi tests migrations;
+  npm run gen:api (no drift) && npm run typecheck && npm run web:build; plus row 2's Playwright e2e and axe.
+DONE WHEN: every gate item in PLAN row 2 is green with its own numbers, design critic and fresh critic PASS,
+  pushed, CI green.
+STOP WHEN: three straight failures of the same command, or a one-way door needs the owner.
+OPEN OWNER QUESTIONS: Yahoo tie rule; add a "submitted in Yahoo" mark?; ESPN reference screenshots (visual
+  verdict stays PENDING until they arrive).
+IMPLEMENTATION_PROVIDER: CODEX on the owner's Mac (Codex works there; launch with
+  -c sandbox_workspace_write.network_access=true). In a cloud sandbox: CLAUDE (limit hit: Codex not installed).
 CODEX_POLICY: CODEX_FIRST
-BUILD_RUNG: opus (try 1 of 2)   — JEV: unavailable; coordinator picked opus (multi-file, concurrency, migrations)
+BUILD_RUNG: decide per work order with Jev (Mac) or the advisor (cloud); try 1 of 2
 CLIMBS: none
 STRIKES: none
-PROGRESS PAGE: https://claude.ai/artifact/6U5zCcvZijcXVMuH6Hbnvd (source docs/gauntlet/progress.html)
-REQUIRED SKILLS: /graft, /tdd, /ponytail, /refactor and harness-engineering are not installed here —
-  apply their behavioral rules and say so in the step log. claude-api skill before touching ai/.
-CONSTRAINTS: see STATE FILE § User constraints. Do not touch apps/web in this step except CI wiring.
+PROGRESS PAGE: https://claude.ai/artifact/6U5zCcvZijcXVMuH6Hbnvd (source docs/gauntlet/progress.html); republish
+  in place, it still shows step 1.
+CONSTRAINTS: STATE FILE § User constraints. Owner-only gates (deploy, real iPhone, keys) stay PENDING.
 ```
