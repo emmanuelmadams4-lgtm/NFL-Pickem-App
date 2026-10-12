@@ -6,8 +6,8 @@
 
 * **Goal:** one private app (desktop web + iPhone PWA) for weekly NFL Pick'em: evidence-based picks that match/beat the market, honest uncertainty, alerts, accuracy tracking. See [PLAN.md](PLAN.md).
 * **Overall step:** **step 1 of 8 — Safe backend + CI + first landing**, in progress (ONE_SHOT session started 2026-10-11). Step log: `docs/gauntlet/logs/step-1.md`.
-* **DONE THIS STEP:** `a107074` design docs; `3c8c499` PLANNING + frozen criteria; SPECIFICATION red tests committed (`backend/tests/test_hardening.py`, 22 failed / 24 passed).
-* **RESUMING AT:** IMPLEMENTATION: Codex work order A (`~/.claude/plans/nfl-pickem-intelligence-logs/s1-wo-a.md`, gpt-6-luna medium), then B, C (sol high), D (sol high). `BUILD_RUNG: gpt-6-luna (try 1 of 2)`.
+* **DONE THIS STEP:** `a107074` design docs; `3c8c499` PLANNING + frozen criteria; `223d169` red tests (22 failed / 24 passed); `4fe9701` WO-A (deploy path, one migration, CI, cache headers; 20 failed / 26 passed, docker build ok).
+* **RESUMING AT:** IMPLEMENTATION: Codex WO-B is running (`s1-wo-b.md`, gpt-6-sol high, try 1 of 2; log `s1-wo-b-codex.log`, last message `s1-wo-b-last.md`). When it ends: inspect the diff, rerun pytest/ruff/alembic check/gen:api/typecheck, commit. Then WO-C (`s1-wo-c.md`, sol high), WO-D (`s1-wo-d.md`, sol high). Never re-dispatch a running Codex job.
 * **STRIKES:** none. **CONTINUATIONS:** 0.
 * **JEVGREP:** ready. **HEADROOM:** not-routed (desktop app).
 * **Phase:** ONE_SHOT, checkpoint SPECIFICATION.

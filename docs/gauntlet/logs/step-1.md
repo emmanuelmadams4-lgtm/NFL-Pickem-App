@@ -86,7 +86,13 @@ Gate command: `cd backend && uv run pytest && uvx ruff check nflpi tests && uv r
 
 ## 3. IMPLEMENTATION
 
-(filled as work orders land)
+Provider: Codex (`CODEX_POLICY: CODEX_FIRST`). Work orders live in the logs folder (`s1-wo-*.md`), each with its Codex log and last message. Codex's sandbox cannot reach Postgres or PyPI by default, so from work order B on it runs with `sandbox_workspace_write.network_access=true`; the coordinator still reruns every proof.
+
+| WO | Scope | Rung | Commit | Proof rerun by the coordinator |
+|---|---|---|---|---|
+| A | S1, S6, S8 (A13), S10, S16 (A12), S18 | gpt-6-luna medium, try 1 | `4fe9701` | `npm ci` exit 0 (147 packages) · `alembic upgrade head` + `alembic check` exit 0, "No new upgrade operations detected" · pytest with CI's `DATABASE_URL`: 20 failed, 26 passed (A12 and A13 now green; the 20 belong to B, C, D) · ruff exit 0 · `npm run gen:api` no drift · `npm run typecheck` exit 0 · `docker build .` exit 0, image 796MB · logs `s1-woa-*.log` |
+
+WO-A review note: Codex removed `EXPOSE 8000` from the Dockerfile because the coordinator's own grep (`expo`, case-insensitive) matched it. The gate was wrong, not the line: restored, and O1's grep is now `apps/mobile|react-native|"expo|expo-`.
 
 ## 4. CLEANUP
 
