@@ -151,3 +151,9 @@ Two findings:
 * **Product gap, back to Ryan (try 2).** P4: with a fresh saved week the app makes no API call when it opens, so it never learns the server is unreachable and shows no banner. Needed: a health check when the app opens and when it comes back to the foreground.
 
 A type error in the coordinator's own `phone-layout.spec.ts` (`reducedMotion` belongs under `contextOptions` in this Playwright version) was found by Ryan's typecheck and fixed.
+
+### Work order 1, try 2 (Ryan, gpt-6-sol medium)
+
+One file changed (`apps/web/components/pwa.tsx`): a health check when the signed-in app opens, comes back to the foreground or comes online; a failed check raises the banner, a good one sends queued picks.
+
+Gate `gate.sh wo1b` (logs `wo1b-*.log`): pytest **99 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **58 passed, 7 failed**, the seven being the phone-layout tests of work order 2. All 11 `pwa.spec.ts` tests pass (P1 to P10), all 47 older tests pass. `lane-guard check`: OK. Work order 1 closed in two tries.

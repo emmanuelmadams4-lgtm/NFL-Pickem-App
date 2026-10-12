@@ -5,7 +5,7 @@ Launch (prompt on stdin, never as an argument): `codex exec -m gpt-6-sol -c 'mod
 
 GOAL: make the seven red tests in `apps/web/e2e/phone-layout.spec.ts` (L1 to L7) pass without breaking any other browser test (`pwa.spec.ts`, `restyle.spec.ts`, `sheet.spec.ts`, `step2.spec.ts`).
 
-BASELINE: worktree `/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-pwa`, branch `lane/pwa`, commit `__WO1_SHA__` (work order 1 landed). Never work in any other checkout.
+BASELINE: worktree `/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-pwa`, branch `lane/pwa`, commit `ef02a66` (work order 1 landed). Never work in any other checkout.
 
 ALLOWED SCOPE (edit only these; ask before touching anything else):
 - `apps/web/components/week/week-board.tsx`, `game-card.tsx`, `kpi-strip.tsx`, `points-control.tsx`
