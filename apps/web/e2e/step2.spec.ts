@@ -194,7 +194,8 @@ test("E10 design: the app renders in Geist", async ({ page }) => {
   await page.goto("/");
   await boardLoaded(page);
   expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"?Geist/);
-  expect(await page.evaluate(() => document.fonts.check('16px "Geist"'))).toBe(true);
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => [...document.fonts].some((f) => /^"?Geist/.test(f.family) && f.status === "loaded"))).toBe(true);
 });
 
 async function axe(page: Page, name: string) {

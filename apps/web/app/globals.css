@@ -86,9 +86,9 @@
   --color-warn: var(--warn);
   --color-bad: var(--bad);
 
-  /* Geist and Geist Mono are self-hosted by app/fonts.ts (geist npm package) so the PWA renders offline. */
-  --font-sans: "Geist", ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Geist and Geist Mono are self-hosted by the geist package's GeistSans / GeistMono exports (app/layout.tsx), so the PWA renders offline. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --radius-bezel: 18px;
   --radius-card: 12px;

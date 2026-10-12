@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useGame, useMeta } from "@/lib/queries";
-import { Card, EmptyState, ErrorState, Skeleton, cx } from "@/components/ui";
+import { EmptyState, ErrorState, Skeleton, cx } from "@/components/ui";
 import { GameHeader } from "@/components/game/game-header";
 import { Recommendation } from "@/components/game/recommendation";
 import { Factors } from "@/components/game/factors";
