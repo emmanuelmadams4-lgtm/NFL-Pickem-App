@@ -1,6 +1,6 @@
 """Historical matchup and situation records for game context."""
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from nflpi.models import Game
@@ -24,7 +24,9 @@ def _matches(g: Game, kind: str, team: str, opponent: str, person: str | None, t
     if kind == "team_at_stadium":
         return g.stadium_id == target.stadium_id
     if kind == "team_at_site":
-        return (g.stadium_id is not None and g.stadium_id.startswith(target.stadium_id[:3])) or g.stadium in sites
+        return g.neutral_site and (
+            (g.stadium_id and g.stadium_id.startswith(target.stadium_id[:3])) or g.stadium in sites
+        )
     return g.weekday == target.weekday
 
 
@@ -53,12 +55,19 @@ def game_trends(session: Session, game_id: str) -> list[dict]:
     target = session.get(Game, game_id)
     if target is None:
         raise LookupError(game_id)
-    historical = and_(Game.status == "final", Game.kickoff_utc < target.kickoff_utc)
+    historical = (
+        Game.status == "final",
+        Game.home_score.is_not(None),
+        Game.away_score.is_not(None),
+        Game.kickoff_utc < target.kickoff_utc,
+    )
     prefix = target.stadium_id[:3] if target.neutral_site and target.stadium_id else None
-    condition = or_(historical, Game.stadium_id.startswith(prefix)) if prefix else historical
-    candidates = session.scalars(select(Game).where(condition)).all()
-    games = [g for g in candidates if g.status == "final" and g.kickoff_utc < target.kickoff_utc]
-    sites = {g.stadium for g in candidates if prefix and g.stadium_id and g.stadium_id.startswith(prefix) and g.stadium}
+    games = session.scalars(select(Game).where(*historical)).all()
+    sites = {
+        g.stadium
+        for g in games
+        if prefix and g.neutral_site and g.stadium_id and g.stadium_id.startswith(prefix) and g.stadium
+    }
     if target.stadium:
         sites.add(target.stadium)
 
@@ -68,11 +77,11 @@ def game_trends(session: Session, game_id: str) -> list[dict]:
         (target.away_team, target.home_team, target.away_qb, target.away_coach),
     ):
         kinds = [("team_vs_team", None, opponent), ("team_on_weekday", None, target.weekday)]
-        if qb is not None:
+        if qb:
             kinds.append(("qb_vs_team", qb, opponent))
-        if coach is not None:
+        if coach:
             kinds.append(("coach_vs_team", coach, opponent))
-        if target.stadium_id is not None:
+        if target.stadium_id:
             kinds.append(("team_at_stadium", None, target.stadium))
         if prefix:
             kinds.append(("team_at_site", None, ", ".join(sorted(sites))))
