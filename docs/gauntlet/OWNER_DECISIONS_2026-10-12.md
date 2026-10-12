@@ -151,6 +151,26 @@ D31 notes (coordinator's reading, checked on the Mac 2026-10-12, values never pr
   structured second opinion (agree / disagree, how sure) beside Claude's written answer.
 * Still owner-gated: the first real paid call, and putting the key into the server's `.env`
   (the coordinator does not copy keys).
+| D32 | Owner, his words: "lets do a Claude code login so I don't have to use an api key I want to use the sdk". Claude is reached through the Claude Agent SDK using his Claude Code sign-in, not an Anthropic API key and not OpenRouter. Replaces the "Claude through OpenRouter" part of D31. OpenRouter stays for Jev. | two-way | sign-in use is disallowed for this, or subscription limits get in the way |
+
+D32 notes (coordinator's reading, checked on the Mac 2026-10-12):
+
+* Claude Code CLI 2.1.278 is installed (`~/.local/bin/claude`) and has `claude auth login` and
+  `claude setup-token` ("long-lived authentication token"). `claude auth status` says
+  `loggedIn: false`: the desktop app's sign-in is separate from the CLI's. The owner must sign in
+  himself; the coordinator cannot.
+* Build: a third provider in `ai/providers.py` that calls the Claude Agent SDK (Python package
+  `claude-agent-sdk`, which runs the `claude` CLI) with no tools, one turn, the same system prompt
+  and JSON-schema check as today. New dependency, justified by this decision.
+* Where it runs. On the Mac outside Docker it uses the CLI's sign-in directly. Inside the Docker
+  `app` image it needs the CLI installed in the image plus the token from `claude setup-token`
+  passed as an environment variable. That token is a secret like a key: server `.env` only, never
+  committed, never in web code.
+* Limits to state honestly: calls count against his Claude plan's usage limits, not a per-call
+  bill; a spawned CLI is slower than a direct API call (seconds); if the sign-in expires the AI
+  features stop until he signs in again, and the app must say so plainly.
+* OPEN (owner to confirm, coordinator has not verified): that his plan's terms allow using the
+  sign-in for his own private app. Single user, not offered to anyone else.
 
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
