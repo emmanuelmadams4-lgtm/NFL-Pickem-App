@@ -134,6 +134,10 @@ Fresh critic (Opus, no transcript) on `182da96`: **VERDICT: PASS**. Its own gate
 Critic's largest weakness, carried to step 2 (not a regression, outside the frozen wording): A7 is half real. Nothing sets `postponed` in production; `time_tbd` is not in the API contract, so the client sees midnight Eastern as a real kickoff; `ingest_weather` and `backfill_season` do not skip TBD/postponed games. Also: the frozen table still says "10 points" for A14 while the rule is 12 (amended in the WO-D notes above, by `JEV: tighten_rule 0.98`).
 `JEV: passed → 0.69` (grey zone; the only un-run item is CI, which runs at landing). `ADVISOR: sonnet → PASS`, proceed to landing and keep the step open until CI is green.
 
+### After the first critic: owner decision on the current week
+
+Owner, in chat, 2026-10-11: "once the Monday night football game ends jump to the next week; each week is Thursday-Monday." A9 amended: the current week is the week of a game that kicked off within the last 12 hours and is not final (not postponed, not TBD); otherwise the week of the next kickoff; an old never-scored game still does not pin it. Red test `test_current_week_stays_until_its_last_game_is_final` committed first, then Codex work order F (gpt-6-sol medium) plus one import correction (gpt-6-luna low). Coordinator rerun: pytest 48 passed, ruff exit 0 (`s1-wof2-*.log`). Because code changed after the critic, a new fresh critic reviews this commit before it is pushed.
+
 ## 6. LANDING
 
-Not yet. Push + PR #1 update + CI are approved by the owner (2026-10-11) once the step verifies.
+Pushed `182da96`..`48a9dc6` on 2026-10-11 (owner consent 2026-10-11: push the feature branch and update the draft PR after a step verifies). Draft PR #1 updated. **O5 CI green** on that push: backend pass, web pass, docker pass (both the push and pull_request runs), `gh pr checks 1`. Not merged, not deployed. The current-week commit is pushed after its own critic passes; CI must be green again on it.
