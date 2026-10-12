@@ -129,7 +129,10 @@ Scope-locked to code touched in this step, items picked by the coordinator from 
 ## 5. VERIFICATION
 
 Coordinator, on `68bb90c`: gate green (see WO-E row). Operational: O1 `docker build .` on the final code: see STATE (rerun in progress when this was written; it passed on `4fe9701`) · O2 compose `127.0.0.1:8000:8000`, uvicorn `--proxy-headers --forwarded-allow-ips="*"` · O3 worker command `python -m nflpi.jobs loop` · O4 leftover grep empty · O6 cold start on an empty DB: `alembic upgrade head` exit 0, `jobs bootstrap` exit 0, 6771 games, 15 live + 78 backfill predictions, schedules/teams/injuries/weather all ok (`s1-o6-bootstrap.log`) · O7 running API with no worker: `http 200 status=degraded worker_heartbeat=None`; after one `jobs.tick`: `status=ok`; `/api/meta` without a token: 401 · O5 CI: PENDING until pushed.
-Fresh critic: NOT YET RUN. Jev Job 4: NOT YET RUN.
+O1 on the final code: `docker build .` exit 0 (`s1-final-docker-build.log`, on the Mac).
+Fresh critic (Opus, no transcript) on `182da96`: **VERDICT: PASS**. Its own gate: pytest 47 passed / 0 failed, ruff clean, scratch-DB `alembic upgrade head` + `alembic check` clean, backtest matches. PASS for A1-A14, G1, G2; all stage commits exist; nothing planned marked as passed.
+Critic's largest weakness, carried to step 2 (not a regression, outside the frozen wording): A7 is half real. Nothing sets `postponed` in production; `time_tbd` is not in the API contract, so the client sees midnight Eastern as a real kickoff; `ingest_weather` and `backfill_season` do not skip TBD/postponed games. Also: the frozen table still says "10 points" for A14 while the rule is 12 (amended in the WO-D notes above, by `JEV: tighten_rule 0.98`).
+`JEV: passed → 0.69` (grey zone; the only un-run item is CI, which runs at landing). `ADVISOR: sonnet → PASS`, proceed to landing and keep the step open until CI is green.
 
 ## 6. LANDING
 
