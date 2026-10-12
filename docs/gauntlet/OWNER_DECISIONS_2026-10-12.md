@@ -249,6 +249,16 @@ D35 findings (docs read 2026-10-12: `docs.typesafe.ai/llms.txt`, `/introduction/
   numbers turned into words or named buckets; counting, sums and date maths in code; all questions
   on one state in one request; every action gated on confidence; fixed answer options.
 * Jev written reports (`generate_report` with provider `jev`) must be removed or made Claude-only.
+| D36 | Owner, his words: "we can just really ask claude and claude can pull jevs answer". One chat: he asks Claude. Claude gets Jev's structured answer and uses it in its reply. No separate "Ask Jev" box, no Claude/Jev picker. Replaces the three-option proposal under D35. | two-way | he wants to question Jev directly |
+
+D36 notes (coordinator's reading): Jev is still called the documented way (D35): the server sends
+the game's evidence as `state` with typed questions to the decisions endpoint and hands the
+`answers` (choices, scores, yes/no probabilities, confidence) to Claude as part of the evidence
+pack, labelled as Jev's. Claude reports them as Jev's view and never restates them as fact. The
+provider picker in `apps/web/components/game/ask.tsx` and the Jev written-report path go away.
+OPEN: which fixed questions Jev is asked per game (to settle at SPECIFICATION with the jev skill's
+rules), and whether Jev is asked on every chat question or once per evidence change (once per
+change is cheaper and enough).
 
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
