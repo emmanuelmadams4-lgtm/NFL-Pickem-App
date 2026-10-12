@@ -8,7 +8,7 @@ when the inputs change; earlier rows are never edited.
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -128,13 +128,30 @@ def train(session: Session, through_season: int) -> ModelVersion:
     return mv
 
 
+LIVE_GAME_WINDOW_HOURS = 12  # A game ends well within this window; data refresh marks it final.
+
+
 def current_week(session: Session) -> tuple[int, int]:
+    now = datetime.now(UTC)
+    live = session.execute(
+        select(Game.season, Game.week)
+        .where(
+            Game.status.not_in(("final", "postponed")),
+            Game.time_tbd.is_(False),
+            Game.kickoff_utc <= now,
+            Game.kickoff_utc >= now - timedelta(hours=LIVE_GAME_WINDOW_HOURS),
+        )
+        .order_by(Game.kickoff_utc, Game.game_id)
+        .limit(1)
+    ).first()
+    if live is not None:
+        return int(live.season), int(live.week)
     upcoming = session.execute(
         select(Game.season, Game.week)
         .where(
             Game.status == "scheduled",
             Game.time_tbd.is_(False),
-            Game.kickoff_utc > datetime.now(UTC),
+            Game.kickoff_utc > now,
         )
         .order_by(Game.kickoff_utc, Game.game_id)
         .limit(1)
