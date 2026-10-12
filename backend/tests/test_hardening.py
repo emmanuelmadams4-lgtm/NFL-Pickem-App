@@ -371,6 +371,14 @@ def test_current_week_is_the_week_of_the_next_kickoff(session):
     assert engine.current_week(session) == (CURRENT, 4)
 
 
+def test_current_week_stays_until_its_last_game_is_final(session):
+    live = week_rows(3)[0]["game_id"]  # kicked off an hour ago, no final score yet
+    started = (datetime.now(UTC) - timedelta(hours=1)).astimezone(EASTERN)
+    in_progress = {"home_score": "", "away_score": "", "gameday": f"{started:%Y-%m-%d}", "gametime": f"{started:%H:%M}"}
+    reingest(session, {live: in_progress})
+    assert engine.current_week(session) == (CURRENT, 3)
+
+
 # A10 --------------------------------------------------------------------------------------------------------------
 
 
