@@ -6,10 +6,19 @@ import { AXIS_LINE, AXIS_TICK, ChartTooltip, GRID_STROKE } from "@/components/ch
 export interface TimePoint {
   t: number;
   v: number;
+  /** A backfilled point is drawn hollow, a live one solid (design.md § 13). */
+  hollow?: boolean;
 }
 
 const fmtTime = (t: number) => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const fmtAxis = (t: number) => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric" });
+
+/** Solid dot, or an outlined surface-filled one for a hollow point (same drawing as the calibration chart). */
+const pointDot =
+  (color: string, r: number) =>
+  ({ cx, cy, payload }: { cx?: number; cy?: number; payload?: TimePoint }) => (
+    <circle cx={cx} cy={cy} r={r} fill={payload?.hollow ? "var(--surface)" : color} stroke={payload?.hollow ? color : "var(--surface)"} strokeWidth={2} />
+  );
 
 /** One-series probability over time. Shown only when there are at least two points. */
 export function TimeLine({
@@ -44,8 +53,8 @@ export function TimeLine({
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
-            dot={{ r: 4, fill: color, stroke: "var(--surface)", strokeWidth: 2 }}
-            activeDot={{ r: 5, fill: color, stroke: "var(--surface)", strokeWidth: 2 }}
+            dot={pointDot(color, 4)}
+            activeDot={pointDot(color, 5)}
             isAnimationActive={false}
           />
         </LineChart>

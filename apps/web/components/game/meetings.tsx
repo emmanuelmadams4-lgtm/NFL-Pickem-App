@@ -20,11 +20,11 @@ export function Meetings({ game }: { game: GameDetail }) {
                 </span>
                 <span className="text-sm text-text-2">
                   <span className={cx(awayWon && "font-semibold text-text")}>
-                    {m.away_team} {m.away_score ?? "-"}
+                    {m.away_team} {m.away_score ?? "–"}
                   </span>
                   <span className="mx-2 text-subtle">at</span>
                   <span className={cx(homeWon && "font-semibold text-text")}>
-                    {m.home_team} {m.home_score ?? "-"}
+                    {m.home_team} {m.home_score ?? "–"}
                   </span>
                 </span>
               </li>

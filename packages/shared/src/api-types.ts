@@ -720,7 +720,6 @@ export interface components {
             model: components["schemas"]["Tally"];
             /** @description Backfill predictions only: computed after the fact, labeled */
             model_backfill: components["schemas"]["Tally"];
-            model_first: components["schemas"]["Tally"];
             market: components["schemas"]["Tally"];
             home: components["schemas"]["Tally"];
             /** Model Live Games */
@@ -950,14 +949,6 @@ export interface components {
             my_correct: number;
             /** My Total */
             my_total: number;
-            /** Model Correct */
-            model_correct: number;
-            /** Model Total */
-            model_total: number;
-            /** Model First Correct */
-            model_first_correct: number;
-            /** Model First Total */
-            model_first_total: number;
             /** Model Live Correct */
             model_live_correct: number;
             /** Model Live Total */

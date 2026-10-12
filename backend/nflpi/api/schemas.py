@@ -232,10 +232,6 @@ class WeekPerformance(BaseModel):
     games_final: int
     my_correct: int
     my_total: int
-    model_correct: int
-    model_total: int
-    model_first_correct: int
-    model_first_total: int
     model_live_correct: int
     model_live_total: int
     model_backfill_correct: int
@@ -267,7 +263,6 @@ class PerformanceOut(BaseModel):
     me: Tally
     model: Tally = Field(description="Live predictions only: the final snapshot was made before kickoff")
     model_backfill: Tally = Field(description="Backfill predictions only: computed after the fact, labeled")
-    model_first: Tally
     market: Tally
     home: Tally
     model_live_games: int

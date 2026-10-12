@@ -46,12 +46,19 @@ export function TeamCompare({ game }: { game: GameDetail }) {
     { label: "Last 5 avg margin", away: signed(a.last5_margin), home: signed(h.last5_margin), awayN: a.last5_margin, homeN: h.last5_margin, better: "high" },
     { label: "Elo", away: num(a.elo, 0), home: num(h.elo, 0), awayN: a.elo, homeN: h.elo, better: "high" },
     { label: "Quarterback", away: qbCell(a), home: qbCell(h) },
-    { label: "Rest days", away: a.rest_days ?? "-", home: h.rest_days ?? "-", note: "Rest days showed no proven effect in testing." },
-    { label: "Head coach", away: a.coach ?? "-", home: h.coach ?? "-" },
+    { label: "Rest days", away: a.rest_days ?? "–", home: h.rest_days ?? "–", note: "Rest days showed no proven effect in testing." },
+    { label: "Head coach", away: a.coach ?? "–", home: h.coach ?? "–" },
   ];
 
+  // points_for_pg is null only when the team has no earlier game this season (views._form).
+  const noGames = [a, h].filter((f) => f.points_for_pg === null).map((f) => f.team);
+
   return (
-    <Section id="teams" title="Team comparison" note="Form going into this game. The leader on each measure is brighter.">
+    <Section
+      id="teams"
+      title="Team comparison"
+      note={`Form going into this game. The leader on each measure is brighter.${noGames.length ? ` ${noGames.join(" and ")}: no games played yet this season.` : ""}`}
+    >
       <div className="mb-3 grid grid-cols-[1fr_1fr] items-center gap-4 sm:grid-cols-[1fr_168px_1fr]">
         <div className="flex items-center gap-2">
           <TeamLogo team={game.away} size={24} />

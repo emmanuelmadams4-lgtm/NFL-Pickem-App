@@ -54,7 +54,7 @@ function RefreshButton() {
 
 const DESKTOP_NAV = [
   { label: "Week", match: (p: string) => p === "/" || p.startsWith("/game") },
-  { label: "Performance", match: (p: string) => p.startsWith("/performance") },
+  { label: "Results", match: (p: string) => p.startsWith("/performance") },
   { label: "Backtest", match: (p: string) => p.startsWith("/backtest") },
   { label: "Settings", match: (p: string) => p.startsWith("/settings") },
 ];
@@ -73,7 +73,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const hrefs: Record<string, string> = {
     Week: `/${qs}`,
-    Performance: `/performance/?season=${season}`,
     Results: `/performance/?season=${season}`,
     Backtest: "/backtest/",
     Settings: "/settings/",

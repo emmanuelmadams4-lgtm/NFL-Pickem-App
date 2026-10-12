@@ -33,7 +33,8 @@ export function KpiStrip({ week }: { week: Week }) {
       label: "My accuracy, week",
       short: "Me",
       value: pctOr(s.my_accuracy),
-      sub: `Season ${pctOr(s.season_my_accuracy)}`,
+      sub: s.my_accuracy === null ? "No graded picks yet" : `Season ${pctOr(s.season_my_accuracy)}`,
+      missing: s.my_accuracy === null, // the reason is shown at every width, not only on desktop
     },
     {
       label: "Model accuracy, week",

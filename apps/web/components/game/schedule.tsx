@@ -52,7 +52,7 @@ export function Schedule({ game }: { game: GameDetail }) {
           {[game.roof ? cap(game.roof) : "Roof unknown", game.surface ? cap(game.surface) : "surface unknown"].join(", ")}
         </Fact>
         <Fact label="Rest days">
-          {game.away.abbr} {a.rest_days ?? "-"}, {game.home.abbr} {h.rest_days ?? "-"}
+          {game.away.abbr} {a.rest_days ?? "–"}, {game.home.abbr} {h.rest_days ?? "–"}
           <span className="mt-0.5 block text-[11px] text-subtle">Rest days showed no proven effect in testing.</span>
         </Fact>
         <Fact label="Weather">

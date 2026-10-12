@@ -33,7 +33,7 @@ function TallyCell({ testId, label, tally, color, empty, note }: { testId: strin
         </>
       ) : (
         <>
-          <p className="num-display mt-2 text-stat text-subtle">-</p>
+          <p className="num-display mt-2 text-stat text-subtle">–</p>
           <p className="mt-1 text-label text-text-2">{empty ?? "No graded games yet"}</p>
         </>
       )}
@@ -73,13 +73,14 @@ function WeeklyTable({ perf }: { perf: Performance }) {
           </span>
         </>
       ) : (
-        <span className="text-subtle">-</span>
+        <span className="text-subtle">–</span>
       )}
       {note && <span className="block text-[11px] text-subtle">{note}</span>}
     </td>
   );
   return (
     <table className="w-full text-sm">
+      <caption className="caption-bottom pt-3 text-left text-label text-subtle">– means no graded games that week for that column.</caption>
       <thead>
         <tr className="border-b border-border text-[11px] text-subtle">
           <th scope="col" className="py-1.5 pr-2 text-left font-medium">Week</th>
@@ -107,7 +108,7 @@ function WeeklyTable({ perf }: { perf: Performance }) {
                   </span>
                 </>
               ) : (
-                <span className="text-subtle">-</span>
+                <span className="text-subtle">–</span>
               )}
             </td>
           </tr>
@@ -138,7 +139,7 @@ export function PerformanceView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-title">Performance</h1>
+          <h1 className="text-title">Results</h1>
           <p className="mt-0.5 text-sm text-text-2">{season} season. Finished games only.</p>
         </div>
         <SeasonPicker className="inline-flex lg:hidden" />

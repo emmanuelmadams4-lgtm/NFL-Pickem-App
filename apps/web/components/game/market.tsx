@@ -7,7 +7,7 @@ import { dateTime } from "@/lib/fmt";
 
 /** spread_line > 0 means the home team is favored by that many points. */
 function spreadText(m: Market, game: GameDetail): string {
-  if (m.spread_line === null || m.spread_line === undefined) return "-";
+  if (m.spread_line === null || m.spread_line === undefined) return "–";
   if (m.spread_line === 0) return "Pick'em";
   const fav = m.spread_line > 0 ? game.home.abbr : game.away.abbr;
   return `${fav} -${Math.abs(m.spread_line)}`;
@@ -42,10 +42,10 @@ export function MarketSection({ game }: { game: GameDetail }) {
                 <span className="block text-sm font-medium text-text-2">{game.home.abbr} {moneyline(latest.home_moneyline)}</span>
               </Fact>
               <Fact label="Spread">{spreadText(latest, game)}</Fact>
-              <Fact label="Total">{latest.total_line ?? "-"}</Fact>
+              <Fact label="Total">{latest.total_line ?? "–"}</Fact>
               <Fact label="Implied, no-vig">
                 {latest.home_prob === null ? (
-                  "-"
+                  "–"
                 ) : (
                   <>
                     <span className="block text-sm font-medium text-text-2">{game.home.abbr} {pct(latest.home_prob, 1)}</span>
@@ -89,8 +89,8 @@ export function MarketSection({ game }: { game: GameDetail }) {
                     <td className="py-1.5 pr-3">{moneyline(m.home_moneyline)}</td>
                     <td className="hidden py-1.5 pr-3 sm:table-cell">{moneyline(m.away_moneyline)}</td>
                     <td className="py-1.5 pr-3">{spreadText(m, game)}</td>
-                    <td className="hidden py-1.5 pr-3 sm:table-cell">{m.total_line ?? "-"}</td>
-                    <td className="py-1.5 text-right">{m.home_prob === null ? "-" : pct(m.home_prob, 1)}</td>
+                    <td className="hidden py-1.5 pr-3 sm:table-cell">{m.total_line ?? "–"}</td>
+                    <td className="py-1.5 text-right">{m.home_prob === null ? "–" : pct(m.home_prob, 1)}</td>
                   </tr>
                 ))}
               </tbody>

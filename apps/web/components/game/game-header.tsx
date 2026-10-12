@@ -30,7 +30,7 @@ function TeamBlock({ team, record, split, side, score, winner }: { team: Team; r
         </p>
       </div>
       {score !== null && (
-        <p className={cx("num-display mx-2 text-5xl leading-none font-semibold", winner ? "text-text" : "text-text-2")}>{score}</p>
+        <p className={cx("num-display mx-2 text-stat", winner ? "text-text" : "text-text-2")}>{score}</p>
       )}
     </div>
   );
@@ -56,7 +56,7 @@ export function GameHeader({ game }: { game: GameDetail }) {
           {game.game_type !== "REG" && <Chip>{game.game_type}</Chip>}
           {game.status === "in_progress" && <Chip>Live</Chip>}
           {final && <Chip>Final</Chip>}
-          {game.status === "scheduled" && <Chip tone={locked ? "warn-soft" : "neutral"}>{locked ? "Locked" : "Scheduled"}</Chip>}
+          {game.status === "scheduled" && <Chip>{locked ? "Locked" : "Scheduled"}</Chip>}
         </div>
       </div>
 

@@ -400,11 +400,7 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
             w["my_correct"] += picks[g.game_id] == win
         valid = [p for p in preds[g.game_id] if p.created_at < g.kickoff_utc or p.kind == "backfill"]
         if valid:
-            final, first = valid[-1], valid[0]
-            w["model_total"] += 1
-            w["model_correct"] += final.pick == win
-            w["model_first_total"] += 1
-            w["model_first_correct"] += first.pick == win
+            final = valid[-1]
             cal[final.kind][0].append(final.home_win_prob)
             cal[final.kind][1].append(1.0 if win == g.home_team else 0.0)
             live += final.kind == "live"
@@ -426,10 +422,6 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         "games_final",
         "my_correct",
         "my_total",
-        "model_correct",
-        "model_total",
-        "model_first_correct",
-        "model_first_total",
         "model_live_correct",
         "model_live_total",
         "model_backfill_correct",
@@ -445,7 +437,6 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         me=total("my"),
         model=total("model_live"),
         model_backfill=total("model_backfill"),
-        model_first=total("model_first"),
         market=total("market"),
         home=total("home"),
         model_live_games=live,

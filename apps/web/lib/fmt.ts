@@ -1,15 +1,15 @@
 import { kickoffLabel, kickoffTime, pct } from "@nflpi/shared";
 
-/** pct() from shared, with a plain hyphen for missing values. */
-export function pctOr(p: number | null | undefined, digits = 0, empty = "-"): string {
+/** pct() from shared, with an en dash for missing values (design.md § 2.5). */
+export function pctOr(p: number | null | undefined, digits = 0, empty = "–"): string {
   return p === null || p === undefined || Number.isNaN(p) ? empty : pct(p, digits);
 }
 
-export function num(n: number | null | undefined, digits = 1, empty = "-"): string {
+export function num(n: number | null | undefined, digits = 1, empty = "–"): string {
   return n === null || n === undefined || Number.isNaN(n) ? empty : n.toFixed(digits);
 }
 
-export function signed(n: number | null | undefined, digits = 1, empty = "-"): string {
+export function signed(n: number | null | undefined, digits = 1, empty = "–"): string {
   if (n === null || n === undefined || Number.isNaN(n)) return empty;
   const s = Math.abs(n).toFixed(digits);
   return n < 0 ? `-${s}` : `+${s}`;

@@ -102,7 +102,7 @@ export function GameRow({ game }: { game: GameSummary }) {
       </Cell>
 
       <Cell label="Uncertainty" inline>
-        {p ? <UncertaintyChip prediction={p} /> : <span className="text-sm text-subtle">-</span>}
+        {p ? <UncertaintyChip prediction={p} /> : <span className="text-sm text-subtle">–</span>}
       </Cell>
 
       <Cell label="Market" inline>

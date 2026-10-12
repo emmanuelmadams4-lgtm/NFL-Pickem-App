@@ -7,7 +7,7 @@ import { dateTime } from "@/lib/fmt";
 
 export function History({ game }: { game: GameDetail }) {
   const snaps = [...game.prediction_history].sort((a, b) => b.created_at.localeCompare(a.created_at));
-  const chart = [...snaps].reverse().map((p) => ({ t: new Date(p.created_at).getTime(), v: p.home_win_prob }));
+  const chart = [...snaps].reverse().map((p) => ({ t: new Date(p.created_at).getTime(), v: p.home_win_prob, hollow: p.kind === "backfill" }));
 
   return (
     <Section id="history" title="Prediction history" note="Every snapshot of the model for this game, newest first.">
@@ -25,7 +25,10 @@ export function History({ game }: { game: GameDetail }) {
             {snaps.map((p, i) => (
               <li key={p.id} className="relative flex gap-4 pb-5 last:pb-0">
                 <span aria-hidden className="absolute top-2 bottom-0 left-[3px] w-px bg-border last:hidden" />
-                <span aria-hidden className={`relative mt-1.5 size-[7px] shrink-0 rounded-full ${i === 0 ? "bg-text-2" : "bg-muted"}`} />
+                <span
+                  aria-hidden
+                  className={`relative mt-1.5 size-[7px] shrink-0 rounded-full ${p.kind === "backfill" ? "border-2 border-text-2 bg-bg" : i === 0 ? "bg-text-2" : "bg-muted"}`}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <p className="text-sm font-semibold text-text">

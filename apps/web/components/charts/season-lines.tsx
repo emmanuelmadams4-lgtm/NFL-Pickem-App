@@ -74,7 +74,7 @@ export function SeasonLines({ rows }: { rows: SeasonRow[] }) {
                 <th scope="row" className="py-1.5 text-left font-medium">{r.season}</th>
                 {keys.map((k) => (
                   <td key={k} className="py-1.5 text-right">
-                    {typeof r[k] === "number" ? `${(r[k] * 100).toFixed(1)}%` : "-"}
+                    {typeof r[k] === "number" ? `${(r[k] * 100).toFixed(1)}%` : "–"}
                   </td>
                 ))}
               </tr>

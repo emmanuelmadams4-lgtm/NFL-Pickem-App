@@ -2318,9 +2318,6 @@
       "$ref": "#/components/schemas/Tally",
       "description": "Backfill predictions only: computed after the fact, labeled"
      },
-     "model_first": {
-      "$ref": "#/components/schemas/Tally"
-     },
      "market": {
       "$ref": "#/components/schemas/Tally"
      },
@@ -2370,7 +2367,6 @@
      "me",
      "model",
      "model_backfill",
-     "model_first",
      "market",
      "home",
      "model_live_games",
@@ -3059,22 +3055,6 @@
       "type": "integer",
       "title": "My Total"
      },
-     "model_correct": {
-      "type": "integer",
-      "title": "Model Correct"
-     },
-     "model_total": {
-      "type": "integer",
-      "title": "Model Total"
-     },
-     "model_first_correct": {
-      "type": "integer",
-      "title": "Model First Correct"
-     },
-     "model_first_total": {
-      "type": "integer",
-      "title": "Model First Total"
-     },
      "model_live_correct": {
       "type": "integer",
       "title": "Model Live Correct"
@@ -3114,10 +3094,6 @@
      "games_final",
      "my_correct",
      "my_total",
-     "model_correct",
-     "model_total",
-     "model_first_correct",
-     "model_first_total",
      "model_live_correct",
      "model_live_total",
      "model_backfill_correct",

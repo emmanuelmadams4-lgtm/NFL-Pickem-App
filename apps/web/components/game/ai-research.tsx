@@ -105,7 +105,7 @@ export function AiResearch({ game, ai }: { game: GameDetail; ai: Meta["ai_provid
             <Button
               key={p}
               size="sm"
-              variant={p === "claude" ? "primary" : "secondary"}
+              variant="secondary"
               disabled={!ai[p]}
               loading={gen.isPending && gen.variables === p}
               title={ai[p] ? undefined : PROVIDER_HINT[p]}
