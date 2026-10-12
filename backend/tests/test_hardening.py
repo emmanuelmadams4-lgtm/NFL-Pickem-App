@@ -27,7 +27,7 @@ from nflpi.api.main import create_app
 from nflpi.config import get_settings
 from nflpi.db import get_engine
 from nflpi.ingestion import nflverse, service, weather
-from nflpi.models import Game, ModelVersion, Prediction, PushSubscription, UserPick
+from nflpi.models import AppSetting, Game, ModelVersion, Prediction, PushSubscription, UserPick
 from nflpi.notify import push
 from nflpi.predictions import engine
 from tests.conftest import CURRENT, schedule_rows
@@ -257,6 +257,21 @@ def test_reminder_tick_sends_reminders_without_network_ingest(reminder_game, pus
     assert jobs.TICK_SECONDS <= 5 * 60
 
 
+def test_one_broken_subscription_does_not_stop_reminders_or_the_heartbeat(reminder_game, pushes, monkeypatch):
+    subscribe(reminder_game, "broken")
+    subscribe(reminder_game, "good")
+
+    def flaky(info, *args, **kwargs):
+        if info["endpoint"].endswith("broken"):
+            raise ValueError("bad subscription key")
+        return pushes(info, *args, **kwargs)
+
+    monkeypatch.setattr(push, "webpush", flaky)
+    jobs.tick(reminder_game, HALF_HOUR_BEFORE)
+    assert pushes.titles() == ["No pick yet: MIA @ BUF"]
+    assert reminder_game.get(AppSetting, jobs.HEARTBEAT_KEY) is not None
+
+
 def test_ingest_failure_in_the_cycle_does_not_skip_reminders(session, client, pushes, monkeypatch):
     soon = (datetime.now(UTC) + timedelta(minutes=30)).astimezone(EASTERN)  # cycle reads the real clock
     service.ingest_schedules(session, [game_row(soon.date().isoformat(), soon.strftime("%H:%M"))])
@@ -331,6 +346,10 @@ def test_time_tbd_game_is_not_locked_or_reminded_from_its_placeholder_time(sessi
     assert push.send_kickoff_reminders(session, game.kickoff_utc - timedelta(minutes=30)) == 0
     assert pushes.calls == []
     assert client.get(f"/api/games/{game.game_id}").json()["locked"] is False
+
+    game.status = "final"  # once the result is in, a missing clock time must not leave the pick open
+    session.commit()
+    assert client.get(f"/api/games/{game.game_id}").json()["locked"] is True
 
 
 # A8 ---------------------------------------------------------------------------------------------------------------
@@ -496,7 +515,7 @@ def moneylines(home_prob: float) -> dict[str, str]:
     return {"home_moneyline": str(home), "away_moneyline": str(away)}
 
 
-def test_upset_watch_needs_an_underdog_pick_or_a_ten_point_gap(loaded, client):
+def test_upset_watch_needs_an_underdog_pick_or_a_twelve_point_gap(loaded, client):
     def week() -> dict[str, dict]:
         return {g["game_id"]: g["prediction"] for g in client.get(f"/api/weeks/{CURRENT}/4").json()["games"]}
 
@@ -506,8 +525,8 @@ def test_upset_watch_needs_an_underdog_pick_or_a_ten_point_gap(loaded, client):
     reingest(
         loaded,
         {
-            close: moneylines(stats[close] + 0.09 * side[close]),  # same favorite, 9 points apart
-            apart: moneylines(stats[apart] + 0.12 * side[apart]),  # same favorite, 12 points apart
+            close: moneylines(stats[close] + 0.11 * side[close]),  # same favorite, 11 points apart
+            apart: moneylines(stats[apart] + 0.14 * side[apart]),  # same favorite, 14 points apart
             underdog: moneylines(0.5 - 0.05 * side[underdog]),  # market favors the other team
         },
     )
