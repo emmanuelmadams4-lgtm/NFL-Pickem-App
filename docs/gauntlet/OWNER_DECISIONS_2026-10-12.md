@@ -260,6 +260,16 @@ OPEN: which fixed questions Jev is asked per game (to settle at SPECIFICATION wi
 rules), and whether Jev is asked on every chat question or once per evidence change (once per
 change is cheaper and enough).
 
+## Design build (2026-10-12)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D37 | Owner, his words: "update components using the design.md file and ... use 21st.dev mcp to build out whats in the design md file and build out themes and logos for this app". Components are rebuilt to `design.md`, using 21st.dev components as the starting point where a good one exists; the app gets a theme switch and a real logo. | two-way | - |
+
+D37 notes: the map, the 21st account limits (2 code retrievals a day, no hosted generation) and
+the three logo options are in `docs/design/COMPONENT_SOURCES.md` and `docs/design/brand/`.
+OPEN (owner): which logo; whether to pay for 21st to lift the retrieval limit.
+
 ## Facts looked up 2026-10-12 (research subagent, web; not owner decisions)
 
 Paraphrased from the linked pages. "Inferred" marks a reading, not a statement on the page.
