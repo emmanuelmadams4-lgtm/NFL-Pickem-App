@@ -1,0 +1,70 @@
+  ✓  47 e2e/step2.spec.ts:323:7 › E11 accessibility (light): no serious or critical axe issues on any screen (3.5s)
+
+
+  1) e2e/restyle.spec.ts:222:5 › F1 smallest phone (320px): no screen scrolls sideways ─────────────
+
+    Error: /performance/
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBeLessThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: <= [32m320[39m
+    Received:    [31m665[39m
+
+      229 |     await page.goto(path);
+      230 |     await page.waitForLoadState("networkidle");
+    > 231 |     expect(await page.evaluate(() => document.documentElement.scrollWidth), path).toBeLessThanOrEqual(320);
+          |                                                                                   ^
+      232 |   }
+      233 | });});
+      234 |
+        at /Users/emmanueladams/Projects/NFL-Pickem-App/apps/web/e2e/restyle.spec.ts:231:83
+
+    Error Context: test-results/restyle-F1-smallest-phone-320px-no-screen-scrolls-sideways/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/restyle-F1-smallest-phone-320px-no-screen-scrolls-sideways/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/restyle-F1-smallest-phone-320px-no-screen-scrolls-sideways/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) e2e/sheet.spec.ts:170:5 › U4b phone (375px): the board with points and the copy sheet do not scroll sideways 
+
+    Error: /performance/ sideways scroll
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBeLessThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: <= [32m0[39m
+    Received:    [31m290[39m
+
+      176 |     await page.waitForLoadState("networkidle");
+      177 |     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    > 178 |     expect(overflow, `${path} sideways scroll`).toBeLessThanOrEqual(0);
+          |                                                 ^
+      179 |   }
+      180 | });
+      181 |
+        at /Users/emmanueladams/Projects/NFL-Pickem-App/apps/web/e2e/sheet.spec.ts:178:49
+
+    Error Context: test-results/sheet-U4b-phone-375px-the--8bad9-heet-do-not-scroll-sideways/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/sheet-U4b-phone-375px-the--8bad9-heet-do-not-scroll-sideways/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/sheet-U4b-phone-375px-the--8bad9-heet-do-not-scroll-sideways/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    e2e/restyle.spec.ts:222:5 › F1 smallest phone (320px): no screen scrolls sideways ──────────────
+    e2e/sheet.spec.ts:170:5 › U4b phone (375px): the board with points and the copy sheet do not scroll sideways 
+  45 passed (1.2m)
+npm error Lifecycle script `e2e` failed with error:
+npm error code 1
+npm error path /Users/emmanueladams/Projects/NFL-Pickem-App/apps/web
+npm error workspace @nflpi/web@0.1.0
+npm error location /Users/emmanueladams/Projects/NFL-Pickem-App/apps/web
+npm error command failed
+npm error command sh -c playwright test

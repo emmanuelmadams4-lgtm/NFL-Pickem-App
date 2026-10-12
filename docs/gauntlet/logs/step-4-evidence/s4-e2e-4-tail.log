@@ -1,0 +1,70 @@
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /backtest
+├ ○ /game
+├ ○ /manifest.webmanifest
+├ ○ /performance
+├ ○ /settings
+└ ○ /sheet
+
+
+○  (Static)  prerendered as static content
+
+
+> @nflpi/web@0.1.0 e2e
+> playwright test
+
+
+Running 47 tests using 1 worker
+
+  ✓   1 e2e/restyle.spec.ts:49:5 › S1 week board: one card per game with both teams and a VS badge (844ms)
+  ✓   2 e2e/restyle.spec.ts:63:5 › S2 tokens and type: near-black page, lime accent, condensed uppercase titles (257ms)
+  ✓   3 e2e/restyle.spec.ts:85:5 › S3 phone: floating pill tab bar, active tab is a labeled pill, no sideways scroll (255ms)
+  ✓   4 e2e/restyle.spec.ts:103:5 › S4 app icon and manifest use the owner's P logo (13ms)
+  ✓   5 e2e/restyle.spec.ts:113:5 › S5 matchup: split win-chance tiles, the model's side labeled, pill section tabs jump to sections (1.0s)
+  ✓   6 e2e/restyle.spec.ts:135:5 › R1 what changed shows on the game card and in the pick panel (444ms)
+  ✓   7 e2e/restyle.spec.ts:153:5 › R2 a pick against the model shows 'Differs from model' on the card (564ms)
+  ✓   8 e2e/restyle.spec.ts:169:5 › R3 weather outage: the matchup says the weather source is down, not 'No forecast yet' (246ms)
+  ✓   9 e2e/restyle.spec.ts:178:5 › R4 backfill never reads as live: Week KPI, Results table, chart labels, matchup panel and history (574ms)
+  ✓  10 e2e/restyle.spec.ts:201:5 › R6 the client lock follows the server rule: a TBD or postponed game stays open after its placeholder time (508ms)
+  ✓  11 e2e/restyle.spec.ts:222:5 › F1 smallest phone (320px): no screen scrolls sideways (7.1s)
+  ✓  12 e2e/restyle.spec.ts:236:5 › F2 matchup: a pick against the model says 'Differs from model' in the pick panel (2.8s)
+  ✓  13 e2e/restyle.spec.ts:250:5 › F3 win split: lime is mine, never the model's tile; no check mark on it; backfill says so (966ms)
+  ✓  14 e2e/restyle.spec.ts:271:5 › F4 week board: filter chips sit right under the title, above the summary and the cards, all visible on a phone (526ms)
+  ✓  15 e2e/restyle.spec.ts:284:5 › F5 matchup: my pick buttons are on screen without scrolling (phone and desktop) (701ms)
+  ✓  16 e2e/restyle.spec.ts:295:5 › F6 section tabs: the tab you jump to is the one marked current (1.6s)
+  ✓  17 e2e/restyle.spec.ts:307:5 › G1 week-1 matchup: every en dash in Teams has a reason (no games played yet) (538ms)
+  ✓  18 e2e/restyle.spec.ts:318:5 › G2 lime paints what is mine: a picked pill, the selected chip, the primary button, active tabs (1.6s)
+  ✓  19 e2e/restyle.spec.ts:350:5 › G3 keyboard focus is visible and never hidden under the tab bar (phone, real Tab key) (640ms)
+  ✓  20 e2e/restyle.spec.ts:379:7 › G4 stale weather with no logged error never claims the source is down (266ms)
+  ✓  21 e2e/restyle.spec.ts:395:7 › G5 accessibility on the phone layout (dark): no serious or critical axe issues (6.4s)
+  ✓  22 e2e/restyle.spec.ts:395:7 › G5 accessibility on the phone layout (light): no serious or critical axe issues (5.6s)
+  ✓  23 e2e/sheet.spec.ts:52:5 › U1 every open game shows its label, its points and whose pick it is (316ms)
+  ✓  24 e2e/sheet.spec.ts:66:5 › U1b changing a game's points swaps with the game that had them, and the app's number can be taken back (572ms)
+  ✓  25 e2e/sheet.spec.ts:91:5 › U1c the points lock on screen at kickoff, without a reload (352ms)
+  ✓  26 e2e/sheet.spec.ts:104:5 › U2 copy sheet: every game in kickoff order with the winner and points, and one button copies it (692ms)
+  ✓  27 e2e/sheet.spec.ts:133:5 › U3 results: he enters his Yahoo rank for a week and the scorecard shows it (397ms)
+  ✓  28 e2e/sheet.spec.ts:156:7 › U4 accessibility (dark): no serious or critical axe issues on the board, the copy sheet and Results (3.3s)
+  ✓  29 e2e/sheet.spec.ts:156:7 › U4 accessibility (light): no serious or critical axe issues on the board, the copy sheet and Results (3.3s)
+  ✓  30 e2e/sheet.spec.ts:170:5 › U4b phone (375px): the board with points and the copy sheet do not scroll sideways (2.0s)
+  ✓  31 e2e/step2.spec.ts:56:5 › E1 sign in: a wrong token is refused, the right one opens the current week (850ms)
+  ✓  32 e2e/step2.spec.ts:67:5 › E2 sort: the chosen order is applied and kept after a reload (706ms)
+  ✓  33 e2e/step2.spec.ts:84:5 › E3 pick and clear: one tap saves to the server, a second tap clears it (933ms)
+  ✓  34 e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked (730ms)
+  ✓  35 e2e/step2.spec.ts:123:5 › E5 matchup: every section renders and kickoff is in Eastern time (689ms)
+  ✓  36 e2e/step2.spec.ts:138:5 › E6 time TBD: a game with no kickoff time says so instead of showing midnight (438ms)
+  ✓  37 e2e/step2.spec.ts:153:5 › E7 results: the model headline counts live picks only; backfill is shown apart (293ms)
+  ✓  38 e2e/step2.spec.ts:166:5 › E8 CSV: import a past pick, export it back, and Results counts it (541ms)
+  ✓  39 e2e/step2.spec.ts:186:5 › E9 weather outage: no banner on the board; Settings notes it is not a model input (608ms)
+  ✓  40 e2e/step2.spec.ts:199:7 › E9b stale model input: the board banner still shows for stale schedules (571ms)
+  ✓  41 e2e/step2.spec.ts:214:5 › E10 design: the app renders in Geist (485ms)
+  ✓  42 e2e/step2.spec.ts:223:5 › E10b chart colors: no purple, and every series is at least 3:1 on its surface in both themes (690ms)
+  ✓  43 e2e/step2.spec.ts:261:5 › E12 logos and type floor: team logos come only from the API's logo_url, and no visible text under 11px (3.8s)
+  ✓  44 e2e/step2.spec.ts:285:5 › E13 backfill stays labeled: week rows, the Results table and the weekly chart (712ms)
+  ✓  45 e2e/step2.spec.ts:300:5 › E14 missing is drawn as missing: an en dash, never a bare hyphen (2.6s)
+  ✓  46 e2e/step2.spec.ts:323:7 › E11 accessibility (dark): no serious or critical axe issues on any screen (3.4s)
+  ✓  47 e2e/step2.spec.ts:323:7 › E11 accessibility (light): no serious or critical axe issues on any screen (3.3s)
+
+  47 passed (1.2m)

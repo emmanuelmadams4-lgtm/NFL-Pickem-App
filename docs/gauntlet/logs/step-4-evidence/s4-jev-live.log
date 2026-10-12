@@ -1,0 +1,2 @@
+{"G1": {"type": "score", "score": 2.91, "confidence": 0.92}, "G2": {"type": "score", "score": 0.15, "confidence": 0.85}}
+order with G2 0.705 above G1 0.700: ['G1', 'G2']

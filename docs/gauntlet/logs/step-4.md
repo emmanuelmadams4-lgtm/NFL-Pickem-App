@@ -100,8 +100,10 @@ owner's yes, so sol at high is the only allowed start. `CLIMBS: none`.
 |---|---|---|---|
 | S4-A | Backend: labels, tables + migration 0002, sheet module, Jev client, points / rank / scorecard API, auto picks in Results | gpt-6-sol / high, try 1 | 87 passed, ruff clean (`s4-wo-a-pytest.log`). Review found A1, A2, A4 above |
 | S4-A2 | Corrections A1-A3 | gpt-6-sol / high | 90 passed, ruff clean (`s4-wo-a2-pytest.log`) |
-| S4-A3 | Correction A4 | gpt-6-sol / high | see below |
-| S4-B | Web: label, points control, whose pick, copy sheet page, rank entry, scorecard | gpt-6-sol / medium | see below |
+| S4-A3 | Correction A4 | gpt-6-sol / high | 91 passed, ruff clean (`s4-impl-pytest.log`) |
+| S4-B | Web: label, points control, whose pick, copy sheet page, rank entry, scorecard | gpt-6-sol / medium | typecheck and build pass; Codex could not launch a browser. Coordinator's e2e: 42 of 47 (`s4-e2e-2.log`) |
+| S4-B2 | Scorecard table: phone overflow, keyboard-reachable scroll region | gpt-6-luna / low | e2e 45 of 47 (`s4-e2e-3.log`) |
+| S4-B3 | One class: the scroll region contains its screen-reader-only spans (cause found with a browser probe) | gpt-6-luna / low | e2e **47 of 47** (`s4-e2e-4.log`) |
 
 Live Jev check (one real call through `nflpi.ai.jev.decide`, `s4-jev-live.log`): a clean 71% pick scored 2.91
 (confidence 0.92), a 70% pick with a QB change and stats/line disagreement scored 0.15 (0.85). Request and
@@ -116,3 +118,26 @@ The label replaces the old "Strong favorite / Toss-up" words (one vocabulary, hi
 colour alone; lime stays "mine", so an untouched game shows no lime pill and names the app's team in text.
 States covered: open, his number, locked, auto pick, no points (postponed / old game), loading, error, offline.
 "Before" evidence: step 3's screenshots in `docs/gauntlet/logs/step-3-evidence/`.
+
+Browser gate notes. The test browser was not on this Mac (the cloud session had its own); the owner said yes
+to downloading Playwright's Chromium build 1194 (81.7 MiB). First real run: 42 of 47. The five failures:
+four were the scorecard table on the phone (builder's, fixed in B2/B3); one was the coordinator's spec
+(U1c picked the game with no kickoff time, which by rule never locks from its placeholder), fixed in the spec.
+`gen:api`: no drift. `npm run typecheck`: pass.
+
+## 4. CLEANUP
+
+Scope-locked `/refactor` pass through Codex (WO S4-C, gpt-6-luna / medium), no behaviour change:
+
+* one `_chance` helper replaces five copies of "win chance of a side";
+* `compute_week` 59 -> 42 lines, `refresh_tiebreaks` 50 -> 31 (Jev request text and criteria moved out);
+* `set_points` reuses the rows it already has for N;
+* the label and its hit rate no longer run together on the card: the label is a chip, the hit rate is its own text.
+
+Left as is, with reasons: `sheet` imports `is_locked` from `api.views` inside functions (a module-level import
+would be circular; moving `is_locked` is step 13's layering work). `finalize` is 42 lines (under the 50 limit).
+
+After cleanup, on commit `29b14b4`: pytest 91 passed (`s4-cleanup-pytest.log`), ruff clean, typecheck pass,
+e2e 47 passed (`s4-e2e-5.log`). Real-data backtest (`s4-backtest-real.log`, 3,649 games): coin flip 14.2% of
+games, 52.4% right; tough matchup 40.6%, 59.6%; easy pick 45.1%, 77.1%; same order in 2012-2021
+(51.4 / 58.3 / 77.2) and 2022-2025 (54.8 / 62.6 / 76.7). Market 66.57%, blend 66.46%: unchanged from step 1.
