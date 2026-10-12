@@ -60,6 +60,25 @@ const cachedUrls = (page: Page) =>
     return urls;
   });
 
+/**
+ * Really offline. Playwright's setOffline does not reach the service worker's own requests, so the
+ * worker is cut off too, through the browser's debug protocol. Proven by a request the worker cannot have cached.
+ */
+async function goOffline(page: Page) {
+  const context = page.context();
+  await context.setOffline(true);
+  const cdp = await context.browser()!.newBrowserCDPSession();
+  const { targetInfos } = await cdp.send("Target.getTargets");
+  for (const t of targetInfos.filter((x) => x.type === "service_worker")) {
+    const { sessionId } = await cdp.send("Target.attachToTarget", { targetId: t.targetId, flatten: false });
+    const tell = (id: number, method: string, params = {}) => cdp.send("Target.sendMessageToTarget", { sessionId, message: JSON.stringify({ id, method, params }) });
+    await tell(1, "Network.enable");
+    await tell(2, "Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  }
+  const reached = await page.evaluate(() => fetch(`/_next/static/offline-probe-${Date.now()}.js`).then(() => true, () => false));
+  expect(reached, "the worker cannot reach the network either").toBe(false);
+}
+
 /** Chunk and module load failures, from page errors and the console. */
 function chunkErrors(page: Page): string[] {
   const seen: string[] = [];
@@ -118,13 +137,13 @@ test("P2 one offline layer (S17): the worker controls the page and caches the sh
   expect(urls.filter((u) => new URL(u).pathname.startsWith("/api/")), "API responses in the worker's caches").toEqual([]);
 });
 
-test("P3 offline reload: the saved week opens and a banner says the phone is offline", async ({ page, context }) => {
+test("P3 offline reload: the saved week opens and a banner says the phone is offline", async ({ page }) => {
   await signIn(page);
   await page.goto("/");
   await boardLoaded(page);
   await workerControls(page);
   await weekPersisted(page);
-  await context.setOffline(true);
+  await goOffline(page);
   await page.reload();
   await boardLoaded(page);
   await expect(page.getByRole("status").filter({ hasText: /offline/i })).toBeVisible();
@@ -170,7 +189,7 @@ test("P4 server unreachable while online (B4): saved data and a 'can't reach the
   expect(cleared.ok()).toBeTruthy();
 });
 
-test("P5 kickoff passes while offline: the pick buttons lock from the saved kickoff time", async ({ page, context, request }) => {
+test("P5 kickoff passes while offline: the pick buttons lock from the saved kickoff time", async ({ page, request }) => {
   const { meta, open } = await board(request);
   const g = open[0];
   await page.clock.install({ time: new Date(meta.server_time) });
@@ -180,7 +199,7 @@ test("P5 kickoff passes while offline: the pick buttons lock from the saved kick
   await workerControls(page);
   await page.clock.runFor(2_000); // let the debounced save run
   await weekPersisted(page);
-  await context.setOffline(true);
+  await goOffline(page);
   await page.reload();
   await boardLoaded(page);
   const buttons = pickGroup(page, g).getByRole("button");
@@ -222,7 +241,7 @@ test("P6 new build (B11): sw.js carries the build ID; coming back to the app fin
   }
 });
 
-test("P7 every tab opens offline: no chunk fails to load, by tapping and by opening each page directly", async ({ page, context, request }) => {
+test("P7 every tab opens offline: no chunk fails to load, by tapping and by opening each page directly", async ({ page, request }) => {
   const { games } = await board(request);
   const errors = chunkErrors(page);
   await signIn(page);
@@ -230,7 +249,13 @@ test("P7 every tab opens offline: no chunk fails to load, by tapping and by open
   await boardLoaded(page);
   await workerControls(page);
   await weekPersisted(page);
-  await context.setOffline(true);
+  // A matchup he opened while online is saved with the rest; one he never opened has nothing to show.
+  await page.goto(`/game/?id=${games[0].game_id}`);
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await expect.poll(() => page.evaluate((id) => (localStorage.getItem("nflpi_cache") ?? "").includes(`"game","${id}"`), games[0].game_id), { timeout: 10_000 }).toBe(true);
+  await page.goto("/");
+  await boardLoaded(page);
+  await goOffline(page);
 
   const tabs = page.getByRole("navigation", { name: "Primary" }).last();
   for (const [tab, heading] of [["Results", /results/i], ["Settings", /settings/i], ["Week", /week/i]] as const) {

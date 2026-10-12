@@ -137,3 +137,17 @@ Measured before: at 393x852 the first game card starts at y 534 and cards are 49
 Red run: `npx playwright test e2e/phone-layout.spec.ts`, log `step-6-evidence/red-phone-layout.log`: **7 failed, 0 passed**, each for the measured reason (L1 1011 > 778; L2 two captions at 3 lines; L3 mask "none"; L4 color is lime; L5 "Claude" and "Ask Claude" lime while disabled; L6 "What changed: Changed:"; L7 "Pick LV Team top 41 < bar 53").
 
 Not scripted, judged by the design critics: a tooltip or chip sitting under the tab bar on a low card (the seed has no upset flag to open one); the 2px sideways scroll at 320 on a final game (not reproducible: 0px on the seeded game page).
+
+## 3. IMPLEMENTATION
+
+### Work order 1, try 1 (Ryan, Codex gpt-6-sol, effort medium) — `step-6-evidence/wo-1.md`
+
+Diff inspected by the coordinator: 10 changed files and 1 new (`apps/web/scripts/stamp-sw.mjs`), all inside the allowed scope. Ryan could not bind ports, so his own proof stopped at syntax checks; the coordinator ran the gate.
+
+Gate `gate.sh wo1` (logs `step-6-evidence/wo1-*.log`): pytest **99 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **56 passed, 9 failed**: the 7 phone-layout tests (work order 2, expected), P4 and P7. `out/sw.js` carries `const BUILD_ID = "kC3Bq2uFdDU5bgBsCrYbD"`, no placeholder left. P2, P6 and both P9 are green.
+
+Two findings:
+* **Spec fault, fixed by the coordinator.** P7 failed on the game page. The server log shows why the old build passed: Playwright's offline switch does not reach the service worker's own requests, so the old worker fetched `/api/games/…` from the live server while the page was "offline". Every offline test was softer than it read. `pwa.spec.ts` now cuts the worker off too (`goOffline`, through the browser's debug protocol, proven in each test by a request that must fail), and P7 opens the matchup online first, since a matchup he never opened has nothing saved. Rerun on Ryan's build (`wo1-pwa-spec-2.log`): **10 passed, 1 failed (P4)**. P3, P5 and P7 pass with the worker truly offline.
+* **Product gap, back to Ryan (try 2).** P4: with a fresh saved week the app makes no API call when it opens, so it never learns the server is unreachable and shows no banner. Needed: a health check when the app opens and when it comes back to the foreground.
+
+A type error in the coordinator's own `phone-layout.spec.ts` (`reducedMotion` belongs under `contextOptions` in this Playwright version) was found by Ryan's typecheck and fixed.

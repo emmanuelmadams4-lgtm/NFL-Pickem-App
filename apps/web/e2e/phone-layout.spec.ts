@@ -4,7 +4,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
  * Step 6 gate, phone layout (docs/gauntlet/logs/step-6.md, L1-L7): the polish carried from step 3,
  * measured at the owner's iPhone size (393x852) and the smallest phone (320x568).
  */
-test.use({ viewport: { width: 393, height: 852 }, hasTouch: true, serviceWorkers: "block", reducedMotion: "reduce" });
+test.use({ viewport: { width: 393, height: 852 }, hasTouch: true, serviceWorkers: "block", contextOptions: { reducedMotion: "reduce" } });
 
 const TOKEN = "e2e-token";
 const AUTH = { Authorization: `Bearer ${TOKEN}` };
