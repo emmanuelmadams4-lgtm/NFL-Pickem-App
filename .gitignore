@@ -13,7 +13,3 @@ apps/web/.next/
 apps/web/out/
 apps/web/next-env.d.ts
 *.tsbuildinfo
-
-# Owner reference screenshots: third-party app images, kept local (public repo)
-docs/design/references/*.png
-docs/design/references/*.jpg
