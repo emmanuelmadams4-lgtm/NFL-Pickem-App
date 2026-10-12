@@ -304,7 +304,27 @@ Work orders in this step: seven, eight tries in all.
 
 None of these was judged blocking by Dwight, Angela or the five fresh reviewers. Angela: T2 (test for a 401 during a flush), T3 (sign-out test; the queue is not cleared on sign-out), T4 (two games offline), T5 and T6 (fixed sleeps and 30 s holds in my tests), C1 (no timeout on the worker's page fetch: watch in the owner's iPhone check), C2 (opaque image cache cap), C3 (cache version is a constant), C4, C6 to C8. Dwight: D3 (a non-JSON 200 counts as saved), D4 (a 401 during a flush does not sign out and retries every 15 s), D5 (404 and 422 worded as "locked at kickoff"), D6 (queue kept across sign-out), D7 (a "not saved" toast can be pushed out by a newer one), D9 to D15. Earlier rounds: listed under each round above.
 
+### Re-review, Dwight (on `f2c9af8`) — `reviews/security-dwight-2.md`
+
+**PASS for security**, no Critical or High. One Medium he asked to be fixed before landing, R1: while the phone keeps refusing to store the queue, the in-memory copy was laid over the stored copy, and a merge cannot record a removal. An older stored pick for a game could come back after the newer one was sent, and the next flush sent it over the newer one. Five Low (R2 to R6), listed below as not fixed.
+
+### Second fresh critic, Angela (on `f2c9af8`) — `reviews/critic-angela-2.md`
+
+**PASS.** Her own gate, twice (logs `critic2-angela-a-*.log`, `critic2-angela-b-*.log`): pytest 115 passed · ruff clean · gen:api no drift · typecheck 0 · e2e 87 passed, 0 failed, 2 skipped (the 2 skips are `shots.spec.ts`, screenshots only). Lane guard OK. All criteria and all checkpoints through VERIFICATION pass; no test weakened. She found the same bug as Dwight's R1 (her F1) and rated it advisory. Security review decides (owner's rule 4), so it is fixed in this step. Her note: the e2e counts above leave out "2 skipped"; that is true of every count in this log.
+
+### Work order 8, two tries (Ryan, Codex gpt-6-sol, effort high) — `step-6-evidence/wo-8.md`
+
+Red test P22 first, commit `f5862f1` (`red-r1-dwight.log`): **1 failed**, at "the older stored pick was not sent over the newer one" (expected `LV`, received `MIA`); P19 and P20 passed in the same run.
+
+Model pick: Jev `model:pwa:wo-8` → sol 1.0, effort high 1.0 (follow). Try 1: one line in `apps/web/lib/sync.ts` (`currentQueue()` returns the in-memory queue when one exists, otherwise storage). Gate `wo8` green (88 passed), but reading the diff I found `unqueue` then edited that object in place, against the work order's immutable-updates constraint, so the screen might not refresh. No failing test for that; it is a code-reading finding. Try 2: `unqueue` copies before removing. Final diff: 2 lines changed, one file, in scope. Commit `9670cdf`.
+
+Gate on `9670cdf`, twice in a row under `caffeinate -i` (logs `wo8b-*.log`, `final3-*.log`): pytest **115 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **88 passed, 0 failed, 2 skipped**, both times. `lane-guard.py check … pwa 3d87fa0`: `OK`.
+
+Work orders in this step: eight, ten tries in all (work orders 1 and 8 used two).
+
+Not fixed from these two reviews (Low unless marked; for the integrator to schedule): Dwight R2 to R6; Angela F6 (**Medium**: "showing data from" is the time of the last good reply of any kind, not the age of what is on screen; closest to the never-invent-data rule, schedule early), F2 to F5, F7, F8, S4.
+
 ### Pending, not PASS
 
-* Second critic by Angela and a re-review by Dwight on the commit that adds this section: results are appended below when they arrive.
-* The owner's check on his iPhone (Add to Home Screen, open offline, update prompt, a pick with Tailscale off): **PENDING**. It needs the live app rebuilt from this branch, which god does after landing.
+* Dwight's confirmation that R1 is fixed, and a new fresh critic, both on the commit that adds this text: results are appended below when they arrive.
+* The owner's check on his iPhone (Add to Home Screen, open offline, update prompt, a pick with Tailscale off): **PENDING**. It needs the live app rebuilt from this branch, which god does after landing. Angela asks him to watch app launch with Tailscale off (C1).
