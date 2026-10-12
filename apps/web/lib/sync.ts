@@ -107,10 +107,13 @@ export function queuePick(gameId: string, team: string | null) {
   writeQueue({ ...readQueue(), [gameId]: team });
 }
 
-function unqueue(gameId: string) {
+let warnedGameId: string | null = null;
+
+export function unqueue(gameId: string) {
   const next = { ...readQueue() };
   delete next[gameId];
   writeQueue(next);
+  if (warnedGameId === gameId) warnedGameId = null;
 }
 
 export function pendingCount(): number {
@@ -148,6 +151,7 @@ export async function flushPicks(api: Api, qc: QueryClient, notify: (message: st
   let locked = 0;
   try {
     for (const [gameId, team] of entries) {
+      if (!(gameId in readQueue()) || readQueue()[gameId] !== team) continue;
       try {
         if (team) await api.setPick(gameId, team);
         else await api.clearPick(gameId);
@@ -160,7 +164,9 @@ export async function flushPicks(api: Api, qc: QueryClient, notify: (message: st
         } else if (isNetworkError(e)) {
           break;
         } else {
-          throw e;
+          if (warnedGameId !== gameId) notify("Pick not saved yet. Will retry.", "warn");
+          warnedGameId = gameId;
+          break;
         }
       }
     }
@@ -171,7 +177,7 @@ export async function flushPicks(api: Api, qc: QueryClient, notify: (message: st
       qc.invalidateQueries({ queryKey: ["game"] });
       qc.invalidateQueries({ queryKey: ["performance"] });
     }
-    if (locked > 0) notify(`${locked} offline ${locked === 1 ? "pick was" : "picks were"} not saved: locked at kickoff.`, "warn");
-    else if (synced > 0) notify(`${synced} offline ${synced === 1 ? "pick" : "picks"} synced.`, "good");
+    if (locked > 0) notify(`${locked} waiting ${locked === 1 ? "pick was" : "picks were"} not saved: locked at kickoff.`, "warn");
+    else if (synced > 0) notify(`${synced} waiting ${synced === 1 ? "pick" : "picks"} saved.`, "good");
   }
 }

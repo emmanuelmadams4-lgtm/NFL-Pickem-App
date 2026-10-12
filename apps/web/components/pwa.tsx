@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ago } from "@nflpi/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
-import { flushPicks, isServerReachable, lastNetworkSync, useOnline, useServerReachable } from "@/lib/sync";
+import { flushPicks, isServerReachable, lastNetworkSync, pendingCount, useOnline, useServerReachable } from "@/lib/sync";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { useToast } from "@/components/toast";
 import { Button, Card } from "@/components/ui";
@@ -16,13 +16,19 @@ export function ServiceWorkerRegister() {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
     let registration: ServiceWorkerRegistration | undefined;
     let installed: ServiceWorker | null = null;
+    let updateOffered = false;
     const offerUpdate = (reg: ServiceWorkerRegistration) => {
-      if (!navigator.serviceWorker.controller || !reg.waiting) return;
+      if (updateOffered || !navigator.serviceWorker.controller || !reg.waiting) return;
+      updateOffered = true;
       toast("New version ready.", "info", {
         label: "Reload",
         onClick: () => {
+          if (!reg.waiting) {
+            location.reload();
+            return;
+          }
           navigator.serviceWorker.addEventListener("controllerchange", () => location.reload(), { once: true });
-          reg.waiting?.postMessage("SKIP_WAITING");
+          reg.waiting.postMessage("SKIP_WAITING");
         },
       });
     };
@@ -44,6 +50,7 @@ export function ServiceWorkerRegister() {
         .then((reg) => {
           registration = reg;
           reg.addEventListener("updatefound", onUpdateFound);
+          if (reg.installing) onUpdateFound();
           offerUpdate(reg);
           document.addEventListener("visibilitychange", onVisible);
           // Hand the worker everything this page already loaded so a first-run offline reload works.
@@ -116,7 +123,7 @@ export function PickSync() {
     window.addEventListener("online", run);
     document.addEventListener("visibilitychange", run);
     const timer = window.setInterval(() => {
-      if (!isServerReachable()) run();
+      if (!isServerReachable() || pendingCount() > 0) run();
     }, 15_000);
     return () => {
       window.clearInterval(timer);

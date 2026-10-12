@@ -5,7 +5,7 @@ import { ApiError, keys, type GameDetail, type Provider, type Week } from "@nflp
 import { useApi } from "@/lib/api";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { isNetworkError, isServerReachable, queuePick } from "@/lib/sync";
+import { isNetworkError, isServerReachable, queuePick, unqueue } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
 
@@ -79,6 +79,7 @@ export function useSetPick(gameId: string) {
       try {
         if (v.team) await api.setPick(v.gameId, v.team);
         else await api.clearPick(v.gameId);
+        unqueue(v.gameId);
         return { queued: false };
       } catch (e) {
         if (isNetworkError(e)) {

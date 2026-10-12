@@ -11,6 +11,9 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
 export function errorMessage(e: unknown): string {
   if (e instanceof ApiError) return e.message;
   if (e instanceof TypeError) return "Could not reach the API. Check that the server is running.";
+  if (e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError")) {
+    return "Could not reach the API. Check that the server is running.";
+  }
   if (e instanceof Error) return e.message;
   return "Something went wrong.";
 }

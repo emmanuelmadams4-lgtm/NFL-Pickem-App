@@ -96,27 +96,26 @@ export function WeekBoard() {
   const stale = staleList(data?.freshness).filter(feedsModel);
 
   return (
-    <div className="space-y-3 lg:space-y-5">
+    <div className="space-y-2 lg:space-y-5">
       <PageHead
         kicker="Picks"
         title={`Week ${week}`}
-        sub={`${season} season${data ? `, ${data.summary.games_total} games` : ""}`}
-        aside={
+        sub={
           <>
-            <WeekPicker className="lg:hidden" />
-            {data && (
-              <p className="hidden text-xs text-subtle lg:block">
-                Updated {ago(data.generated_at)}
-                {q.isFetching && !q.isPending ? ", refreshing" : ""}
-              </p>
-            )}
+            <span className="lg:hidden">{season}{data ? ` · ${data.summary.games_total} games` : ""}</span>
+            <span className="hidden lg:inline">{season} season{data ? `, ${data.summary.games_total} games` : ""}</span>
+            {data && <span className="ml-2 text-xs text-subtle">Updated {ago(data.generated_at)}{q.isFetching && !q.isPending ? ", refreshing" : ""}</span>}
           </>
+        }
+        aside={
+          <Link href={`/sheet/${qs}`} className="relative z-10 inline-flex min-h-11 items-center gap-1 rounded-full border border-border-strong bg-elevated px-3 text-sm font-medium text-text lg:min-h-9 lg:px-4">
+            Yahoo sheet <ChevronRight size={16} />
+          </Link>
         }
       />
 
       {/* Filter chips directly under the title, before any summary (design.md § 0); one scrolling row on the phone. */}
-      <div className="flex flex-wrap items-center gap-3">
-      <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex min-w-0 items-center gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
+      <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex min-w-0 items-center gap-2 overflow-x-auto pl-4 pr-12 max-lg:[mask-image:linear-gradient(to_right,black_85%,transparent)] lg:mx-0 lg:flex-wrap lg:px-0">
         <div role="group" aria-label="Games shown" className="flex shrink-0 gap-2">
           {SCOPES.map((o) => (
             <button key={o.value} type="button" aria-pressed={scope === o.value} onClick={() => setScope(o.value)} className={chipClass(scope === o.value)}>
@@ -146,15 +145,9 @@ export function WeekBoard() {
             </option>
           ))}
         </SelectField>
-        <Link href={`/sheet/${qs}`} className="relative z-10 inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border-strong bg-elevated px-4 text-sm font-medium text-text lg:hidden">
-          Yahoo sheet <ChevronRight size={16} />
-        </Link>
-        {data && <span className="shrink-0 text-xs text-subtle lg:hidden">Updated {ago(data.generated_at)}</span>}
       </div>
-      <Link href={`/sheet/${qs}`} className="relative z-10 hidden min-h-9 items-center gap-1 rounded-full border border-border-strong bg-elevated px-4 text-sm font-medium text-text lg:inline-flex">
-        Yahoo sheet <ChevronRight size={16} />
-      </Link>
-      </div>
+
+      <WeekPicker className="lg:hidden" />
 
       <InstallHint />
 

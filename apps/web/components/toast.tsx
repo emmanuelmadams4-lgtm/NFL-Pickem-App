@@ -27,7 +27,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const toast = useCallback((message: string, tone: Tone = "info", action?: ToastItem["action"]) => {
     const id = next.current++;
-    setItems((cur) => [...cur.filter((item) => item.action), ...cur.filter((item) => !item.action).slice(-2), { id, message, tone, action }]);
+    setItems((cur) => {
+      if (action && cur.some((item) => item.action && item.message === message)) return cur;
+      return [...cur.filter((item) => item.action), ...cur.filter((item) => !item.action).slice(-2), { id, message, tone, action }];
+    });
     if (!action) window.setTimeout(() => setItems((cur) => cur.filter((t) => t.id !== id)), 5000);
   }, []);
 

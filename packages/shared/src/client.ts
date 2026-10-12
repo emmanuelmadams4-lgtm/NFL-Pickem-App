@@ -55,7 +55,9 @@ export function createClient(config: ClientConfig) {
   async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
     const res = await f(`${base}/api${path}`, {
       ...init,
-      signal: init.signal ?? (/\/report(?:\?|$)/.test(path) || path.endsWith("/ask") ? undefined : AbortSignal.timeout(API_TIMEOUT_MS)),
+      signal: init.signal ?? (/\/report(?:\?|$)/.test(path) || ["/ask", "/picks/import", "/refresh"].some((slow) => path.endsWith(slow))
+        ? undefined
+        : AbortSignal.timeout(API_TIMEOUT_MS)),
       headers: {
         Authorization: `Bearer ${config.token}`,
         ...(init.body && typeof init.body === "string" && !path.endsWith("import")

@@ -84,7 +84,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
           <div className="min-w-0">
             <p className="text-label text-text-2">
               {shortDate(game.kickoff_utc)}
-              {highlight && <span className="text-accent-ink/75">, next kickoff</span>}
+              {highlight && <span>, next kickoff</span>}
             </p>
             {started && away !== null && home !== null ? (
               <p className="font-display flex items-baseline gap-1.5 text-3xl leading-8 whitespace-nowrap lg:text-[32px] lg:leading-9">
@@ -201,14 +201,14 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
         <div className="mt-auto border-t border-border pt-2 lg:contents">
           <div className="flex flex-wrap items-end gap-2 lg:contents">
             <PointsControl game={game} count={pointsCount} />
-            <div className="relative z-10 min-w-36 flex-1 lg:mt-auto lg:flex-none lg:pt-1">
+            <div className="contents lg:relative lg:z-10 lg:mt-auto lg:block lg:pt-1">
               {game.sheet.pick_by === "app" && !locked && game.sheet.app_pick && (
-                <p className="mb-2 text-label text-text-2">Counts as {game.sheet.app_pick}, the model&apos;s pick, unless you tap a team.</p>
+                <p className="order-first w-full text-label text-text-2 lg:mb-2">Counts as {game.sheet.app_pick}, the model&apos;s pick, unless you tap a team.</p>
               )}
-              {game.sheet.pick_by === "auto" && <p className="mb-2"><Chip>Model picked {game.sheet.my_pick} for you</Chip></p>}
-              <PickButtons game={game} />
+              {game.sheet.pick_by === "auto" && <p className="order-first w-full lg:mb-2"><Chip>Model picked {game.sheet.my_pick} for you</Chip></p>}
+              <PickButtons game={game} className="min-w-36 flex-1 lg:min-w-0" />
               {final && (
-                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5">
+                <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-0.5 lg:mt-2">
                   {game.my_pick ? <Mark correct={game.my_pick_correct} who={game.sheet.pick_by === "auto" ? "Picked for you" : "Me"} /> : <span className="text-label text-subtle">No pick made</span>}
                   <Mark correct={game.model_correct} who="Model" />
                 </div>

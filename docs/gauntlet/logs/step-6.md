@@ -180,3 +180,9 @@ The three agree on: an unreadable "next kickoff" note (my L4 only checked "not l
 Mapped to failing tests before any fix (`red-r1-findings.log`, **8 failed, 17 passed**): P11 (older queued pick must go), P12 (a refused queued pick is reported, kept and retried), L4 strengthened (same ink as the date), L8 at 393 and 320 (44px bordered arrows), L9 at 393 and 320 (Yahoo sheet and "Updated" on the first screen), L10 (last tab clear of the fade). Work order 3 (`wo-3.md`) also carries F4 to F8, V4, U9 and F10 as reviewed requirements.
 
 Deferred, Visual or Polish, none blocks the step: V5 (uncertainty and upset chips on every seeded card: seed data, not layout), V6 and U11 (label wording, pinned by step 4 tests), V7 (tab pill over a lime header), V8 (game page first screen, not changed in this step), V9, V10, U5 to U8, U10, U12, U13, F9, F11. Listed for the dashboard step with the step 4 items.
+
+### Work order 3, try 1 (Ryan, Codex gpt-6-sol, effort high) — `step-6-evidence/wo-3.md`
+
+Model pick: Jev `model:pwa:wo-3` → sol 0.98, effort high 0.89 (follow). Diff inspected: 10 files, all in the allowed scope, 55 lines added and 40 removed.
+
+Gate `gate.sh wo3` (logs `wo3-*.log`): pytest **99 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **72 passed, 0 failed** (the 8 red tests green, nothing else broken). After screenshots retaken (`shots/after-*.png`): Yahoo sheet, the data's age and 44px week arrows are on the first screen at 393, and the first card with its pick buttons still ends above the tab bar.
