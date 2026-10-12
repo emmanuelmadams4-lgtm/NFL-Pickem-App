@@ -79,9 +79,11 @@ def _send(
             status = exc.response.status_code if exc.response is not None else None
             if status in (404, 410):
                 session.delete(sub)
-            log.warning("web push failed (%s): %s", status, exc)
+            log.warning("web push failed for %s (%s): %s", sub.endpoint, status, exc)
         except RequestException as exc:
-            log.warning("web push network error: %s", exc)
+            log.warning("web push network error for %s: %s", sub.endpoint, exc)
+        except Exception:  # noqa: BLE001 - one bad subscription must not stop delivery to others
+            log.exception("web push failed for %s", sub.endpoint)
     return sent
 
 

@@ -21,7 +21,7 @@ from nflpi.ai.providers import AIError
 from nflpi.api import schemas as s
 from nflpi.api import views
 from nflpi.config import get_settings
-from nflpi.db import REFRESH_LOCK_KEY, get_engine, get_session, session_factory
+from nflpi.db import acquire_refresh_lock, get_session, release_refresh_lock, session_factory
 from nflpi.ingestion.service import freshness
 from nflpi.models import AppSetting, BacktestRun, Game, PushSubscription, UserPick
 from nflpi.notify import push
@@ -54,8 +54,11 @@ def health(session: DB) -> s.HealthOut:
     stale = [f["dataset"] for f in freshness(session) if f["stale"]]
     has_model = engine.active_model(session) is not None
     heartbeat_row = session.get(AppSetting, jobs.HEARTBEAT_KEY)
-    heartbeat_text = heartbeat_row.value.get("at") if heartbeat_row else None
-    heartbeat = datetime.fromisoformat(heartbeat_text) if heartbeat_text else None
+    heartbeat_text = heartbeat_row.value.get("at") if heartbeat_row and isinstance(heartbeat_row.value, dict) else None
+    try:
+        heartbeat = datetime.fromisoformat(heartbeat_text) if isinstance(heartbeat_text, str) else None
+    except ValueError:
+        heartbeat = None
     heartbeat_fresh = bool(
         heartbeat
         and heartbeat.tzinfo
@@ -112,7 +115,7 @@ def set_pick(game_id: str, body: s.PickIn, session: DB) -> s.PickOut:
         raise HTTPException(404, "Game not found")
     if body.team not in (g.home_team, g.away_team):
         raise HTTPException(422, f"Pick must be {g.away_team} or {g.home_team}")
-    if g.status != "postponed" and not g.time_tbd and g.kickoff_utc <= datetime.now(UTC):
+    if views.is_locked(g, datetime.now(UTC)):
         raise HTTPException(409, "Game has kicked off; pick is locked")
     pick = session.get(UserPick, game_id) or UserPick(game_id=game_id)
     pick.picked_team, pick.picked_at, pick.source = body.team, datetime.now(UTC), "app"
@@ -124,7 +127,7 @@ def set_pick(game_id: str, body: s.PickIn, session: DB) -> s.PickOut:
 @api.delete("/picks/{game_id}", status_code=204)
 def clear_pick(game_id: str, session: DB) -> Response:
     g = session.get(Game, game_id)
-    if g is not None and g.status != "postponed" and not g.time_tbd and g.kickoff_utc <= datetime.now(UTC):
+    if g is not None and views.is_locked(g, datetime.now(UTC)):
         raise HTTPException(409, "Game has kicked off; pick is locked")
     pick = session.get(UserPick, game_id)
     if pick:
@@ -178,7 +181,7 @@ async def import_picks(request: Request, session: DB) -> s.ImportResult:
             skipped.append(gid or "?")
             continue
         pick = session.get(UserPick, gid)
-        if pick is not None and g.kickoff_utc <= datetime.now(UTC) and g.status != "postponed" and not g.time_tbd:
+        if pick is not None and views.is_locked(g, datetime.now(UTC)):
             skipped.append(gid)
             continue
         pick = pick or UserPick(game_id=gid)
@@ -248,8 +251,6 @@ def update_settings(body: s.SettingsIn, session: DB) -> s.MetaOut:
 
 
 def _refresh_job(lock_conn: Connection) -> None:
-    from nflpi import jobs  # imported here: jobs pulls in the push module and CLI only when used
-
     try:
         with session_factory()() as session:
             jobs.ingest(session, weather=True)
@@ -257,29 +258,19 @@ def _refresh_job(lock_conn: Connection) -> None:
     except Exception:  # noqa: BLE001 - background job; failure is logged and visible in freshness
         log.exception("manual refresh failed")
     finally:
-        try:
-            lock_conn.execute(text("select pg_advisory_unlock(:k)"), {"k": REFRESH_LOCK_KEY})
-        finally:
-            lock_conn.close()
+        release_refresh_lock(lock_conn)
 
 
 @api.post("/refresh", status_code=202)
 def refresh() -> dict:
     """Start a data + prediction refresh in the background (one at a time)."""
-    lock_conn = get_engine().connect()
-    try:
-        acquired = lock_conn.scalar(text("select pg_try_advisory_lock(:k)"), {"k": REFRESH_LOCK_KEY})
-    except Exception:
-        lock_conn.close()
-        raise
-    if not acquired:
-        lock_conn.close()
+    lock_conn = acquire_refresh_lock()
+    if lock_conn is None:
         return {"started": False, "reason": "A refresh is already running"}
     try:
         threading.Thread(target=_refresh_job, args=(lock_conn,), daemon=True).start()
     except Exception:
-        lock_conn.execute(text("select pg_advisory_unlock(:k)"), {"k": REFRESH_LOCK_KEY})
-        lock_conn.close()
+        release_refresh_lock(lock_conn)
         raise
     return {"started": True}
 
@@ -305,7 +296,7 @@ def create_app() -> FastAPI:
         path = request.url.path
         if path.startswith("/api"):
             return response
-        if path.startswith("/_next/static/"):
+        if path.startswith("/_next/static/") and response.status_code == 200:
             response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         elif path in ("/sw.js", "/manifest.webmanifest", "/manifest.json") or "text/html" in response.headers.get(
             "content-type", ""

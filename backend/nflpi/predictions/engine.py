@@ -19,7 +19,7 @@ from nflpi.analytics.backtest import _elo_frames, run_backtest, tune_elo
 from nflpi.analytics.metrics import EARLY_WEEK_END, UPSET_GAP, uncertainty_grade, upset_watch
 from nflpi.config import get_settings
 from nflpi.ingestion.service import freshness
-from nflpi.models import BacktestRun, Game, InjuryReport, MarketSnapshot, ModelVersion, Prediction
+from nflpi.models import BacktestRun, Game, MarketSnapshot, ModelVersion, Prediction
 from nflpi.predictions.elo import EloParams
 from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features
 from nflpi.predictions.model import LogitModel
@@ -147,22 +147,6 @@ def current_week(session: Session) -> tuple[int, int]:
     if latest is None:
         raise RuntimeError("no games loaded")
     return int(latest.season), int(latest.week)
-
-
-def _qb_injuries(session: Session, season: int) -> dict[tuple[int, str], list[InjuryReport]]:
-    """Latest status of each QB on the injury report, keyed by (week, team)."""
-    latest: dict[tuple[int, str, str], InjuryReport] = {}
-    for r in session.scalars(
-        select(InjuryReport)
-        .where(InjuryReport.season == season, InjuryReport.position == "QB")
-        .order_by(InjuryReport.id)
-    ):
-        latest[(r.week, r.team, r.player_id or r.player)] = r
-    out: dict[tuple[int, str], list[InjuryReport]] = {}
-    for (week, team, _), r in latest.items():
-        if r.report_status in ("Out", "Doubtful", "Questionable"):
-            out.setdefault((week, team), []).append(r)
-    return out
 
 
 def _factors(row: pd.Series, model: LogitModel, used_market: bool) -> list[dict]:

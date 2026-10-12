@@ -38,6 +38,10 @@ def status_of(g: Game, now: datetime) -> str:
     return "in_progress" if g.kickoff_utc <= now else "scheduled"
 
 
+def is_locked(game: Game, now: datetime) -> bool:
+    return game.status == "final" or (game.status != "postponed" and not game.time_tbd and game.kickoff_utc <= now)
+
+
 def winner(g: Game) -> str | None:
     if g.status != "final" or g.home_score is None or g.home_score == g.away_score:
         return None
@@ -195,7 +199,7 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                 my_pick=pick.picked_team if pick else None,
                 my_pick_correct=(pick.picked_team == win) if pick and win else None,
                 model_correct=(pred.pick == win) if pred and win else None,
-                locked=g.status != "postponed" and not g.time_tbd and g.kickoff_utc <= now,
+                locked=is_locked(g, now),
                 qb_not_projected=g.status != "final" and (not g.home_qb or not g.away_qb),
                 qb_alerts=qb_alerts,
                 injury_count=sum(

@@ -61,6 +61,7 @@ REPORT_SCHEMA = {
         "sources": {"type": "array", "items": {"type": "string"}, "description": "Evidence pack keys used"},
     },
 }
+AI_CAP_LOCK_KEY: int = 0x4149434150
 
 
 def evidence_pack(session: Session, game_id: str) -> dict:
@@ -136,7 +137,7 @@ def _check(report: s.MatchupReport, pack: dict) -> list[str]:
 def _reserve_call(session: Session) -> None:
     """Count a provider attempt before making it, including failed attempts."""
     key = f"ai_attempts_{datetime.now(UTC).date().isoformat()}"
-    session.execute(text("select pg_advisory_xact_lock(:k)"), {"k": 0x4149434150})
+    session.execute(text("select pg_advisory_xact_lock(:k)"), {"k": AI_CAP_LOCK_KEY})
     row = session.get(AppSetting, key, populate_existing=True)
     count = row.value["v"] if row else 0
     if count >= get_settings().ai_daily_call_limit:
@@ -160,9 +161,12 @@ def generate_report(
     provider = provider or get_provider(provider_name)
     user = "Evidence pack (JSON):\n" + json.dumps(pack, default=str) + "\n\nWrite the matchup report."
     error = "no attempt"
+    cap_error: AIError | None = None
     for _ in range(get_settings().ai_max_retries + 1):
-        _reserve_call(session)
+        reserved = False
         try:
+            _reserve_call(session)
+            reserved = True
             response = provider.complete(SYSTEM, user, REPORT_SCHEMA, max_tokens=16000)
             report = s.MatchupReport.model_validate_json(response)
             problems = _check(report, pack)
@@ -183,6 +187,8 @@ def generate_report(
             error = f"invalid report format: {exc.errors()[:3]}"
         except AIError as exc:
             error = str(exc)
+            if not reserved:
+                cap_error = exc
             break
         user += f"\n\nYour previous answer was rejected: {error}. Fix it and answer again."
     row = AIReport(
@@ -195,6 +201,8 @@ def generate_report(
     )
     session.add(row)
     session.commit()
+    if cap_error is not None:
+        raise cap_error
     return ai_report_out(row)
 
 
@@ -209,7 +217,7 @@ def answer_question(
         + f"\n\nQuestion: {question}\n\nAnswer in under 150 words. If the pack can't answer it, say what is missing."
     )
     _reserve_call(session)
-    text = provider.complete(SYSTEM, user, None, max_tokens=16000)
+    answer = provider.complete(SYSTEM, user, None, max_tokens=16000)
     row = AIReport(
         game_id=game_id,
         kind="answer",
@@ -217,8 +225,8 @@ def answer_question(
         model=provider.model,
         status="ok",
         question=question,
-        report={"answer": text},
+        report={"answer": answer},
     )
     session.add(row)
     session.commit()
-    return s.AskOut(answer=text, provider=provider.name, model=provider.model, created_at=row.created_at)
+    return s.AskOut(answer=answer, provider=provider.name, model=provider.model, created_at=row.created_at)

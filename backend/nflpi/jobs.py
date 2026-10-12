@@ -11,16 +11,17 @@ python -m nflpi.jobs backtest      # 2012-2025 walk-forward on nflverse games
 
 import argparse
 import logging
+import threading
 import time
 from datetime import UTC, datetime, timedelta
 
 import pandas as pd
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from nflpi.analytics.backtest import run_backtest
 from nflpi.analytics.metrics import EARLY_WEEK_END, UNCERTAINTY_GAP, UPSET_GAP
-from nflpi.db import REFRESH_LOCK_KEY, get_engine, session_factory
+from nflpi.db import acquire_refresh_lock, release_refresh_lock, session_factory
 from nflpi.ingestion import nflverse, service
 from nflpi.models import AppSetting, Game, ModelVersion
 from nflpi.notify import push
@@ -55,12 +56,13 @@ def predict(session) -> int:
 
 def backtest() -> None:
     games = nflverse.parse_games(nflverse.fetch_csv("schedules/games.csv"), 2002)
-    for game in games:
-        game["home_ml"] = game.pop("_home_ml")
-        game["away_ml"] = game.pop("_away_ml")
-        game.pop("_spread")
-        game.pop("_total")
-    frame = pd.DataFrame(games).sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)
+    frame = (
+        pd.DataFrame(games)
+        .rename(columns={"_home_ml": "home_ml", "_away_ml": "away_ml"})
+        .drop(columns=["_spread", "_total"])
+        .sort_values(["kickoff_utc", "game_id"])
+        .reset_index(drop=True)
+    )
     report = run_backtest(frame, list(range(2012, 2026)))
     print("2012-2025 walk-forward, nflverse closing lines")
     print(f"Upset watch: stats picks market underdog OR stats-market gap >= {UPSET_GAP:.0%}")
@@ -102,13 +104,17 @@ def next_interval(session, now: datetime) -> timedelta:
 
 def tick(session: Session, now: datetime) -> None:
     """Send due reminders and record that the worker is alive."""
-    log.info("kickoff reminders sent: %s", push.send_kickoff_reminders(session, now))
     row = session.get(AppSetting, HEARTBEAT_KEY)
     if row is None:
         session.add(AppSetting(key=HEARTBEAT_KEY, value={"at": now.isoformat()}))
     else:
         row.value = {"at": now.isoformat()}
     session.commit()
+    try:
+        log.info("kickoff reminders sent: %s", push.send_kickoff_reminders(session, now))
+    except Exception:  # noqa: BLE001 - reminder failure must not hide a live worker
+        log.exception("kickoff reminders failed")
+        session.rollback()
 
 
 def cycle(session) -> None:
@@ -118,24 +124,38 @@ def cycle(session) -> None:
     except Exception:  # noqa: BLE001 - reminders must not stop the refresh
         log.exception("kickoff reminders failed")
         session.rollback()
-    with get_engine().connect() as lock_conn:
-        acquired = lock_conn.scalar(text("select pg_try_advisory_lock(:k)"), {"k": REFRESH_LOCK_KEY})
-        try:
-            if acquired:
-                log.info("ingest %s", ingest(session))
-                season, _ = engine.current_week(session)
-                mv = engine.active_model(session)
-                if mv is None or mv.trained_through_season < season - 1:
-                    train(session)
-                    log.info("backfilled %s games", engine.backfill_season(session, season))
-                log.info("prediction alerts sent: %s", predict(session))
-        finally:
-            if acquired:
-                lock_conn.execute(text("select pg_advisory_unlock(:k)"), {"k": REFRESH_LOCK_KEY})
+    lock_conn = acquire_refresh_lock()
+    if lock_conn is None:
+        return
+    try:
+        log.info("ingest %s", ingest(session))
+        season, _ = engine.current_week(session)
+        mv = engine.active_model(session)
+        if mv is None or mv.trained_through_season < season - 1:
+            train(session)
+            log.info("backfilled %s games", engine.backfill_season(session, season))
+        log.info("prediction alerts sent: %s", predict(session))
+    finally:
+        release_refresh_lock(lock_conn)
 
 
 def loop() -> None:
     next_refresh = 0.0
+    next_tick = time.monotonic()
+    refresh_thread: threading.Thread | None = None
+
+    def refresh_cycle() -> None:
+        nonlocal next_refresh
+        try:
+            with session_factory()() as session:
+                cycle(session)
+                wait = next_interval(session, datetime.now(UTC))
+        except Exception:  # noqa: BLE001 - keep the worker alive; errors are logged and in ingestion_runs
+            log.exception("refresh cycle failed")
+            wait = timedelta(minutes=15)
+        next_refresh = time.monotonic() + wait.total_seconds()
+        log.info("next refresh in %s", wait)
+
     while True:
         with session_factory()() as session:
             try:
@@ -143,17 +163,11 @@ def loop() -> None:
             except Exception:  # noqa: BLE001 - keep the worker alive
                 log.exception("worker tick failed")
                 session.rollback()
-            if time.monotonic() >= next_refresh:
-                try:
-                    cycle(session)
-                    wait = next_interval(session, datetime.now(UTC))
-                except Exception:  # noqa: BLE001 - keep the worker alive; errors are logged and in ingestion_runs
-                    log.exception("refresh cycle failed")
-                    session.rollback()
-                    wait = timedelta(minutes=15)
-                next_refresh = time.monotonic() + wait.total_seconds()
-                log.info("next refresh in %s", wait)
-        time.sleep(TICK_SECONDS)
+        if time.monotonic() >= next_refresh and (refresh_thread is None or not refresh_thread.is_alive()):
+            refresh_thread = threading.Thread(target=refresh_cycle, daemon=True)
+            refresh_thread.start()
+        next_tick += TICK_SECONDS
+        time.sleep(max(0, next_tick - time.monotonic()))
 
 
 def main() -> None:

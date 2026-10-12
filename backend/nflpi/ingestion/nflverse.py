@@ -50,9 +50,13 @@ def _int(value: str) -> int | None:
     return int(float(value)) if value not in ("", "NA", None) else None
 
 
+def _no_clock_time(value: str | None) -> bool:
+    return value in ("", "NA", None)
+
+
 def kickoff_utc(gameday: str, gametime: str) -> datetime:
     # A missing clock time is represented by midnight at the start of the Eastern game day.
-    hh, mm = (gametime if gametime not in ("", "NA", None) else "00:00").split(":")[:2]
+    hh, mm = ("00:00" if _no_clock_time(gametime) else gametime).split(":")[:2]
     local = datetime.fromisoformat(gameday).replace(hour=int(hh), minute=int(mm), tzinfo=EASTERN)
     return local.astimezone(UTC)
 
@@ -71,7 +75,7 @@ def parse_games(rows: list[dict[str, str]], min_season: int) -> list[dict]:
                 "week": int(r["week"]),
                 "game_type": r["game_type"],
                 "kickoff_utc": kickoff_utc(r["gameday"], r["gametime"]),
-                "time_tbd": r["gametime"] in ("", "NA", None),
+                "time_tbd": _no_clock_time(r["gametime"]),
                 "weekday": r["weekday"],
                 "away_team": franchise(r["away_team"]),
                 "home_team": franchise(r["home_team"]),
