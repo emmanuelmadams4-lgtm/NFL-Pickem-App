@@ -28,7 +28,7 @@ wait_health() { # $1 = python expression over d (health json) that must be truth
 }
 cleanup() {
   if [ "${KEEP:-0}" = 1 ]; then echo "KEEP=1: clone at $CLONE, project $COMPOSE_PROJECT_NAME"; return; fi
-  [ -d "$CLONE" ] && (cd "$CLONE" && docker compose down -v --remove-orphans >/dev/null 2>&1 || true)
+  [ -d "$CLONE" ] && (cd "$CLONE" && docker compose down -v --remove-orphans --rmi local >/dev/null 2>&1 || true)
   rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -66,7 +66,7 @@ for name in ('app', 'worker', 'db'):
     assert c[name].get('restart') == 'unless-stopped', f'{name} does not restart by itself after a reboot or power cut'
 " || fail "D1 compose file: ports must follow APP_PORT/DB_PORT and every service restart: unless-stopped"
 for f in scripts/backup.sh scripts/restore.sh; do [ -x "$CLONE/$f" ] || fail "D1 $f is missing or not executable"; done
-for f in docs/DEPLOY.md; do [ -s "$CLONE/$f" ] || fail "D1 $f is missing"; done
+[ -s "$CLONE/docs/DEPLOY.md" ] || fail "D1 docs/DEPLOY.md is missing"
 grep -qi "rotate" "$CLONE/docs/DEPLOY.md" && grep -qi "windows" "$CLONE/docs/DEPLOY.md" && grep -qi "restore" "$CLONE/docs/DEPLOY.md" \
   || fail "D1 docs/DEPLOY.md must cover Windows PC setup, restore and token rotation"
 python3 - "$CLONE/docs/IPHONE_PWA.md" <<'PY' || fail "D1 IPHONE_PWA.md must say: add to Home Screen first, then sign in inside the app"
@@ -157,13 +157,39 @@ dc exec -T db psql -U nflpi -d nflpi -qc "delete from user_picks; delete from pr
 wait_health "d['database'] is True" 120 || fail "D7 app did not come back after restore"
 after=$(counts)
 [ "$after" = "$before" ] || fail "D7 counts after restore $after differ from before $before"
+ls "$CLONE"/backups/pre-restore-*.sql.gz >/dev/null 2>&1 || fail "D7 restore.sh did not keep a safety copy of the data it replaced"
+for safety in "$CLONE"/backups/pre-restore-*.sql.gz; do gzip -t "$safety" || fail "D7 safety copy is corrupt"; done
+
+# A bad file must be refused, or fail, with the live data intact and the app running.
+printf 'not a dump' | gzip > "$WORK/notdump.sql.gz"
+gzip -c < /dev/null > "$WORK/empty.sql.gz"
+gzip -dc "$file" | sed 's/^COPY public\.games /COPY public.no_such_table /' | gzip > "$WORK/broken.sql.gz"
+cmp -s <(gzip -dc "$file") <(gzip -dc "$WORK/broken.sql.gz") && fail "D7 test could not corrupt the dump"
+for bad in notdump empty broken; do
+  if (cd "$CLONE" && ./scripts/restore.sh "$WORK/$bad.sql.gz" --yes) >"$WORK/restore-$bad.log" 2>&1; then fail "D7 restore.sh accepted a $bad file"; fi
+  wait_health "d['database'] is True and d.get('worker_heartbeat')" 120 || fail "D7 app is not running after a refused $bad restore"
+  [ "$(counts)" = "$before" ] || fail "D7 a refused $bad restore changed the data: $(counts) vs $before"
+done
+# Two backups started together must both succeed and both be good, with no half files left anywhere.
+n0=$(ls -1 "$CLONE"/backups/nflpi-*.sql.gz | wc -l)
+(cd "$CLONE" && ./scripts/backup.sh >/dev/null 2>&1) & p1=$!
+(cd "$CLONE" && BACKUP_COPY_DIR="$OFFHOST" ./scripts/backup.sh >/dev/null 2>&1) & p2=$!
+wait "$p1" || fail "D7 first of two simultaneous backups failed"
+wait "$p2" || fail "D7 second of two simultaneous backups failed"
+[ "$(ls -1 "$CLONE"/backups/nflpi-*.sql.gz | wc -l)" = "$((n0 + 2))" ] || fail "D7 two simultaneous backups did not leave two files"
+for f in "$CLONE"/backups/nflpi-*.sql.gz "$OFFHOST"/*.sql.gz; do gzip -t "$f" || fail "D7 corrupt backup $f"; done
+[ -z "$(find "$CLONE/backups" "$OFFHOST" -name '*.part*' 2>/dev/null)" ] || fail "D7 a half-written backup file was left behind"
+# A dump that stops early (no pg_dump trailer) is not a complete backup.
+gzip -dc "$file" | sed '/^-- PostgreSQL database dump complete/,$d' | gzip > "$WORK/truncated.sql.gz"
+if (cd "$CLONE" && ./scripts/restore.sh "$WORK/truncated.sql.gz" --yes) >/dev/null 2>&1; then fail "D7 restore.sh accepted a dump with no completion trailer"; fi
+wait_health "d['database'] is True and d.get('worker_heartbeat')" 120 && [ "$(counts)" = "$before" ] || fail "D7 a truncated dump changed the data or stopped the app"
 dc stop db >/dev/null 2>&1
 n_before=$(ls -1 "$CLONE"/backups/*.sql.gz | wc -l)
 if (cd "$CLONE" && ./scripts/backup.sh) >/dev/null 2>&1; then fail "D7 backup.sh exited 0 with the database stopped (pipefail missing)"; fi
 [ "$(ls -1 "$CLONE"/backups/*.sql.gz | wc -l)" = "$n_before" ] || fail "D7 a failed backup left a file behind"
 dc start db >/dev/null 2>&1
 wait_health "d['database'] is True" 120 || fail "D7 database did not come back"
-pass "D7 backup restored with matching counts ($after); a failed backup fails loudly; off-host copy made"
+pass "D7 backup restored with matching counts ($after); safety copy kept; 3 bad files refused with data intact; failed backup fails loudly; off-host copy made"
 
 # --- D8 token rotation -----------------------------------------------------------------------------------------------
 NEW=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
