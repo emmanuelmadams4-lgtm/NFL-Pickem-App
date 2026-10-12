@@ -5,7 +5,7 @@ import { ApiError, keys, type GameDetail, type Provider, type Week } from "@nflp
 import { useApi } from "@/lib/api";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { isNetworkError, isServerReachable, queuePick, unqueue } from "@/lib/sync";
+import { isNetworkError, isServerReachable, orderedPickSend, queuePick, unqueue } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
 
@@ -71,15 +71,15 @@ export function useSetPick(gameId: string) {
     // One game's taps reach the server in order, so a quick pick-then-clear can't land as pick.
     scope: { id: `pick:${gameId}` },
     // Offline: keep the optimistic choice, queue it, and report success. The queue flushes when we are back online.
-    mutationFn: async (v: PickVars): Promise<{ queued: boolean }> => {
+    mutationFn: (v: PickVars): Promise<{ queued: boolean }> => orderedPickSend(v.gameId, async () => {
       if (!navigator.onLine || !isServerReachable()) {
         queuePick(v.gameId, v.team);
         return { queued: true };
       }
       try {
+        unqueue(v.gameId);
         if (v.team) await api.setPick(v.gameId, v.team);
         else await api.clearPick(v.gameId);
-        unqueue(v.gameId);
         return { queued: false };
       } catch (e) {
         if (isNetworkError(e)) {
@@ -88,7 +88,7 @@ export function useSetPick(gameId: string) {
         }
         throw e;
       }
-    },
+    }),
     onMutate: async (v) => {
       const weekKey = keys.week(v.season, v.week);
       const gameKey = keys.game(v.gameId);

@@ -32,7 +32,7 @@ export function KpiStrip({ week }: { week: Week }) {
       short: "Me",
       value: pctOr(s.my_accuracy),
       sub: s.my_accuracy === null ? "No graded picks yet" : `Season ${pctOr(s.season_my_accuracy)}`,
-      phoneSub: "No picks graded",
+      phoneSub: "None graded",
       missing: s.my_accuracy === null, // the reason is shown at every width, not only on desktop
     },
     {
@@ -41,7 +41,7 @@ export function KpiStrip({ week }: { week: Week }) {
       short: "Model",
       value: s.model_graded > 0 ? pctOr(s.model_accuracy) : "–", // live picks only; backfill never reads as a live figure
       sub: s.model_graded > 0 ? `Season ${pctOr(s.season_model_accuracy)}` : "No live picks graded",
-      phoneSub: "No live picks",
+      phoneSub: "None graded",
       missing: s.model_graded === 0, // the reason is shown at every width, not only on desktop
     },
   ];

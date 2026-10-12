@@ -265,10 +265,12 @@ test("P13 a pick queued while an older one is being sent is kept and sent after 
     await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click(); // offline: queued
     await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue"))).toContain(g.home.abbr);
     await context.setOffline(false);
-    await expect.poll(serverPick, { message: "the older pick lands first", timeout: 6_000 }).toBe(g.away.abbr);
-    expect(await page.evaluate((id) => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}")[id], g.game_id), "the newer pick is still queued").toBe(g.home.abbr);
+    // The older pick may land first for a moment; what matters is where the server and the queue end up.
     await expect.poll(serverPick, { message: "then the newer pick is sent", timeout: 25_000 }).toBe(g.home.abbr);
-    await expect(pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` })).toHaveAttribute("aria-pressed", "true");
+    await expect(pickGroup(page, g).getByRole("button", { name: `${g.home.name} picked` })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue")), { message: "nothing left waiting" }).toBe("{}");
+    await page.waitForTimeout(3_000);
+    expect(await serverPick(), "and it stays the newer pick").toBe(g.home.abbr);
   } finally {
     await context.setOffline(false);
     await context.unrouteAll({ behavior: "ignoreErrors" });

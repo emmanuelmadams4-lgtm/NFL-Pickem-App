@@ -116,6 +116,26 @@ export function unqueue(gameId: string) {
   if (warnedGameId === gameId) warnedGameId = null;
 }
 
+function unqueueIfCurrent(gameId: string, team: string | null): boolean {
+  const queue = readQueue();
+  if (!(gameId in queue) || queue[gameId] !== team) return false;
+  unqueue(gameId);
+  return true;
+}
+
+const pickSends = new Map<string, Promise<void>>();
+
+/** Keep direct saves and queued saves for one game in the order they start. */
+export function orderedPickSend<T>(gameId: string, send: () => Promise<T>): Promise<T> {
+  const current = (pickSends.get(gameId) ?? Promise.resolve()).then(send);
+  const settled = current.then(() => undefined, () => undefined);
+  pickSends.set(gameId, settled);
+  void settled.then(() => {
+    if (pickSends.get(gameId) === settled) pickSends.delete(gameId);
+  });
+  return current;
+}
+
 export function pendingCount(): number {
   return Object.keys(readQueue()).length;
 }
@@ -153,20 +173,22 @@ export async function flushPicks(api: Api, qc: QueryClient, notify: (message: st
     for (const [gameId, team] of entries) {
       if (!(gameId in readQueue()) || readQueue()[gameId] !== team) continue;
       try {
-        if (team) await api.setPick(gameId, team);
-        else await api.clearPick(gameId);
-        unqueue(gameId);
-        synced++;
+        const saved = await orderedPickSend(gameId, async () => {
+          if (!(gameId in readQueue()) || readQueue()[gameId] !== team) return false;
+          if (team) await api.setPick(gameId, team);
+          else await api.clearPick(gameId);
+          return unqueueIfCurrent(gameId, team);
+        });
+        if (saved) synced++;
       } catch (e) {
         if (e instanceof ApiError && (e.status === 409 || e.status === 422 || e.status === 404)) {
-          unqueue(gameId);
-          locked++;
+          if (unqueueIfCurrent(gameId, team)) locked++;
         } else if (isNetworkError(e)) {
           break;
         } else {
           if (warnedGameId !== gameId) notify("Pick not saved yet. Will retry.", "warn");
           warnedGameId = gameId;
-          break;
+          if (e instanceof ApiError && e.status === 401) break;
         }
       }
     }
