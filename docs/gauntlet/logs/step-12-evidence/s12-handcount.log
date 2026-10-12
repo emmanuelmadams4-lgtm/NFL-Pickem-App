@@ -1,6 +1,6 @@
 finished games in file from 2002: 6577
 MATCH Jaguars in London [2026_06_HOU_JAX] all: app=(8, 6, 0, 14, 2013, 2026) hand=(8, 6, 0, 14, 2013, 2026)
-MATCH Jaguars in London [2026_06_HOU_JAX] last_5_seasons: app=None hand=None
+MATCH Jaguars in London [2026_06_HOU_JAX] last_5_seasons: app=(4, 2, 0, 6, 2021, 2024) hand=(4, 2, 0, 6, 2021, 2024)
 MATCH Chiefs vs Raiders [2026_18_LV_KC] all: app=(35, 14, 0, 49, 2002, 2026) hand=(35, 14, 0, 49, 2002, 2026)
 MATCH Chiefs vs Raiders [2026_18_LV_KC] last_5_seasons: app=(8, 2, 0, 10, 2021, 2025) hand=(8, 2, 0, 10, 2021, 2025)
 MATCH Mahomes vs Broncos [2026_01_DEN_KC] all: app=(13, 2, 0, 15, 2017, 2025) hand=(13, 2, 0, 15, 2017, 2025)

@@ -117,7 +117,8 @@ def evidence_pack(session: Session, game_id: str) -> dict:
                 f"Records with fewer than {MIN_GAMES} games are left out. "
                 "'last_5_seasons' means the five finished seasons before this game's season. "
                 "Regular season and playoff games both count. QB and coach records are matched by name, "
-                "and an upcoming game's QB is a projection."
+                "and an upcoming game's QB is a projection. "
+                "Play caller records appear only where a sourced play caller is on file."
             ),
             "records": game_trends(session, game_id),
         },
