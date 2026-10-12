@@ -53,6 +53,7 @@ Gate evidence: `d-green.log` (final), `killed-restore-run.log` (the real output 
 
 ## 6. LANDING
 Jev review verdict: `JEV: review:step5 -> passed 0.34` (grey zone). Advisor (Sonnet): `VERDICT: PASS`, with two log corrections (the WO-5 swap branches have no green run on disk, stated in Known limits; D3's weather tolerance, stated in § 2). The decision log is `step-5-evidence/jev-decisions.jsonl`.
+Step 4 landed on `main` (PR #2) while this step was in review. `origin/main` was merged into `lane/deploy` (clean, no conflicts; lane-guard OK against `origin/main`) and the full gate was run on the combined code: ALL PASS D0-D8 on `0926d9f` (`step-5-evidence/d-green-merged-with-main.log`). The app code under test now includes the pick sheet and migration 0002.
 Push, PR, CI and merge are recorded below when done.
 
 ## Known limits (not proven or not fixed here)
