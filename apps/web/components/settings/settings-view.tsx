@@ -7,7 +7,7 @@ import { useApi, useSession } from "@/lib/api";
 import { useFreshness, useMeta } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
 import { useToast } from "@/components/toast";
-import { Button, Chip, ErrorState, Notice, SelectField, Section, Skeleton, errorMessage } from "@/components/ui";
+import { Button, Chip, ErrorState, Notice, PageHead, SelectField, Section, Skeleton, errorMessage } from "@/components/ui";
 import { FreshnessTable } from "@/components/freshness";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { useOnline } from "@/lib/sync";
@@ -387,10 +387,7 @@ export function SettingsView() {
   const meta = q.data;
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-title">Settings</h1>
-        <p className="mt-0.5 text-sm text-text-2">Access, alerts, picks data and system status.</p>
-      </div>
+      <PageHead kicker="Setup" title="Settings" sub="Access, alerts, picks data and system status." />
       {q.isPending && <Skeleton className="h-64 rounded-card" />}
       {q.isError && !meta && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {meta && (

@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Performance, Tally } from "@nflpi/shared";
 import { usePerformance, useMeta } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
-import { EmptyState, ErrorState, Section, Skeleton, cx } from "@/components/ui";
+import { EmptyState, ErrorState, PageHead, Section, Skeleton, cx } from "@/components/ui";
 import { SeasonPicker } from "@/components/pickers";
 import { ChevronRight } from "@/components/icons";
 import { WeeklyBars } from "@/components/charts/weekly-bars";
@@ -15,14 +15,14 @@ import { pctOr } from "@/lib/fmt";
 function TallyCell({ testId, label, tally, color, empty, note }: { testId: string; label: string; tally: Tally; color: string; empty?: React.ReactNode; note?: string }) {
   const has = tally.total > 0;
   return (
-    <div data-testid={testId} className="min-w-0 py-3 first:pt-0 last:pb-0 md:px-6 md:py-0 md:first:pl-0 md:last:pr-0">
+    <div data-testid={testId} className="min-w-0 rounded-card border border-border bg-surface p-4 lg:p-5">
       <p className="flex items-center gap-2 text-sm font-medium text-text">
         <span aria-hidden className="h-2.5 w-2.5 rounded-[3px]" style={{ background: color }} />
         {label}
       </p>
       {has ? (
         <>
-          <p className="num-display mt-2 text-stat text-text">{pctOr(tally.accuracy, 1)}</p>
+          <p className="font-display mt-2 text-[40px] leading-10 text-text">{pctOr(tally.accuracy, 1)}</p>
           <p className="mt-1 text-label text-text-2">
             95% CI {pctOr(tally.ci_low, 1)} to {pctOr(tally.ci_high, 1)}
           </p>
@@ -33,7 +33,7 @@ function TallyCell({ testId, label, tally, color, empty, note }: { testId: strin
         </>
       ) : (
         <>
-          <p className="num-display mt-2 text-stat text-subtle">–</p>
+          <p className="font-display mt-2 text-[40px] leading-10 text-subtle">–</p>
           <p className="mt-1 text-label text-text-2">{empty ?? "No graded games yet"}</p>
         </>
       )}
@@ -44,7 +44,7 @@ function TallyCell({ testId, label, tally, color, empty, note }: { testId: strin
 /** Backfilled predictions were computed after kickoff, so they sit apart from the live headline (PRODUCT.md). */
 function BackfillRecord({ tally }: { tally: Tally }) {
   return (
-    <div data-testid="tally-model-backfill" className="mt-4 border-t border-border pt-4">
+    <div data-testid="tally-model-backfill" className="mt-3 rounded-card border border-dashed border-border-strong p-5">
       <p className="flex items-center gap-2 text-sm font-medium text-text">
         <span aria-hidden className="h-2.5 w-2.5 rounded-[3px] border-2" style={{ borderColor: "var(--series-model)" }} />
         Model, backfilled
@@ -137,13 +137,7 @@ export function PerformanceView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-title">Results</h1>
-          <p className="mt-0.5 text-sm text-text-2">{season} season. Finished games only.</p>
-        </div>
-        <SeasonPicker className="inline-flex lg:hidden" />
-      </div>
+      <PageHead kicker="Your record" title="Results" sub={`${season} season. Finished games only.`} aside={<SeasonPicker className="inline-flex lg:hidden" />} />
 
       {q.isPending && <Skeletons />}
       {q.isError && !perf && <ErrorState title="Could not load performance" error={q.error} onRetry={() => q.refetch()} />}
@@ -155,7 +149,7 @@ export function PerformanceView() {
           ) : (
             <>
               <section aria-label="Accuracy summary">
-                <div className="divide-y divide-border md:grid md:grid-cols-4 md:divide-x md:divide-y-0">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                   <TallyCell
                     testId="tally-me"
                     label="Me"
@@ -163,7 +157,7 @@ export function PerformanceView() {
                     color="var(--series-me)"
                     empty={
                       <>
-                        Make picks on the <Link href="/" className="text-accent underline underline-offset-2">Week board</Link> to track your accuracy.
+                        Make picks on the <Link href="/" className="text-accent-text underline underline-offset-2">Week board</Link> to track your accuracy.
                       </>
                     }
                   />
@@ -197,7 +191,7 @@ export function PerformanceView() {
               </Section>
             </>
           )}
-          <Link href="/backtest/" className="flex items-center justify-between gap-4 rounded-card border border-border bg-surface p-4 hover:border-border-strong">
+          <Link href="/backtest/" className="flex items-center justify-between gap-4 rounded-card border border-border bg-surface p-5 hover:border-border-strong">
             <span>
               <span className="block text-sm font-semibold text-text">Backtest</span>
               <span className="block text-xs text-text-2">How the model, the market and simpler baselines did over past seasons.</span>

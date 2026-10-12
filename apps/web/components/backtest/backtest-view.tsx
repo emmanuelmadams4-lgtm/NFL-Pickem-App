@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ago, pct, type Backtest } from "@nflpi/shared";
 import { useBacktest } from "@/lib/queries";
-import { Card, Chip, ErrorState, Section, Segmented, Skeleton, cx } from "@/components/ui";
+import { Card, Chip, ErrorState, PageHead, Section, Segmented, Skeleton, cx } from "@/components/ui";
 import { SeasonLines, MODEL_STYLE, type SeasonRow } from "@/components/charts/season-lines";
 import { CalibrationChart } from "@/components/charts/calibration";
 import { pctOr } from "@/lib/fmt";
@@ -155,10 +155,7 @@ export function BacktestView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-title">Backtest</h1>
-        <p className="mt-0.5 text-sm text-text-2">How each approach would have done on past seasons, with uncertainty.</p>
-      </div>
+      <PageHead kicker="Model check" title="Backtest" sub="How each approach would have done on past seasons, with uncertainty." />
 
       {q.isPending && <Skeletons />}
       {q.isError && !data && <ErrorState title="Could not load the backtest" error={q.error} onRetry={() => q.refetch()} />}

@@ -2,6 +2,7 @@
 
 import { UNCERTAINTY, ago, pct, pickProb, strengthLabel, type GameDetail, type Prediction, type Team } from "@nflpi/shared";
 import { Bezel, Chip, Mark } from "@/components/ui";
+import { Refresh } from "@/components/icons";
 import { TeamLogo } from "@/components/team";
 import { PickButtons } from "@/components/pick-buttons";
 import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-bits";
@@ -54,11 +55,19 @@ export function Recommendation({ game }: { game: GameDetail }) {
               </div>
             </div>
             <div className="text-right">
-              <p className="num-display text-display text-text">{pct(pickProb(p))}</p>
+              <p className="font-display text-[56px] leading-[52px] text-text">{pct(pickProb(p))}</p>
               <p className="mt-1 text-xs text-text-2">{strengthLabel(pickProb(p))}</p>
             </div>
           </div>
           <ProbBar value={pickProb(p)} className="mt-3" label={`${p.pick} win probability`} />
+          {p.change_note && (
+            <p className="mt-3 flex items-start gap-1.5 text-xs text-text-2">
+              <Refresh size={14} className="mt-px shrink-0" />
+              <span>
+                <span className="font-medium text-text">What changed:</span> {p.change_note}
+              </span>
+            </p>
+          )}
 
           <Divider />
 

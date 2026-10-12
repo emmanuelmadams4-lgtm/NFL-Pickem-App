@@ -79,11 +79,13 @@ export function CalibrationChart({
   ].sort((a, b) => a.predicted - b.predicted);
   const lo = Math.max(0, Math.floor((Math.min(...pts.map((p) => Math.min(p.predicted, p.observed))) - 0.05) * 10) / 10);
   const small = pts.some((p) => p.n < 10);
+  const games = (b: Bucket[]) => b.reduce((n, x) => n + x.n, 0);
+  const counts = backfill !== undefined ? `; live: ${games(buckets)} games, backfilled: ${games(backfill)} games` : `; ${games(buckets)} games`;
   const ticks = Array.from({ length: Math.round((1 - lo) * 10) + 1 }, (_, i) => Math.round((lo + i / 10) * 10) / 10);
 
   return (
     <div>
-      <div role="img" aria-label={`Calibration chart for ${name}: predicted versus observed win rate across ${pts.length} probability buckets`} className="h-72 w-full">
+      <div role="img" aria-label={`Calibration chart for ${name}: predicted versus observed win rate across ${pts.length} probability buckets${counts}`} className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={pts} margin={{ top: 24, right: 20, bottom: 24, left: 0 }}>
             <CartesianGrid stroke={GRID_STROKE} />

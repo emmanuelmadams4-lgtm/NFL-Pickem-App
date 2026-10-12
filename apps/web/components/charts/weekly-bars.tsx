@@ -33,10 +33,15 @@ export function WeeklyBars({ weeks, leader }: { weeks: WeekPerformance[]; leader
     } as Record<string, string>,
   }));
   const keys = Object.keys(SERIES) as (keyof typeof SERIES)[];
+  // The chart's text alternative lists every week; live and backfilled model figures stay apart (en dash = none graded).
+  const whole = (c: number, t: number) => (t > 0 ? `${Math.round((c / t) * 100)}%` : "–");
+  const described = weeks
+    .map((w) => `W${w.week}: me ${whole(w.my_correct, w.my_total)}, model live ${whole(w.model_live_correct, w.model_live_total)}, model backfilled ${whole(w.model_backfill_correct, w.model_backfill_total)}, market ${whole(w.market_correct, w.market_total)}`)
+    .join("; ");
 
   return (
     <div>
-      <div role="img" aria-label="Grouped bar chart of weekly accuracy for you, the live model, the backfilled model and the market" className="h-64 w-full">
+      <div role="img" aria-label={`Grouped bar chart of weekly accuracy for you, the live model, the backfilled model and the market. ${described}`} className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 12, right: 8, bottom: 0, left: 0 }} barGap={2} barCategoryGap="22%">
             <CartesianGrid stroke={GRID_STROKE} vertical={false} />

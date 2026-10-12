@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useGame, useMeta } from "@/lib/queries";
 import { EmptyState, ErrorState, Skeleton, cx } from "@/components/ui";
-import { GameHeader } from "@/components/game/game-header";
+import { GameHeader, WinSplit } from "@/components/game/game-header";
 import { Recommendation } from "@/components/game/recommendation";
 import { Factors } from "@/components/game/factors";
 import { TeamCompare } from "@/components/game/team-compare";
@@ -23,13 +23,12 @@ const SECTIONS = [
   { id: "injuries", label: "Injuries" },
   { id: "conditions", label: "Conditions" },
   { id: "market", label: "Market" },
-  { id: "ai", label: "AI research" },
-  { id: "ask", label: "Ask" },
+  { id: "ai", label: "AI" },
   { id: "history", label: "History" },
   { id: "meetings", label: "Meetings" },
 ];
 
-/** Section chips: sticky under the top bar, highlight the section in view, jump on tap. */
+/** Pill section tabs (design.md § 0): sticky under the top bar, the section in view is the lime pill, jump on tap. */
 function SectionNav() {
   const [active, setActive] = useState<string>(SECTIONS[0].id);
 
@@ -56,11 +55,8 @@ function SectionNav() {
   }
 
   return (
-    <nav
-      aria-label="Matchup sections"
-      className="sticky top-[var(--header-h)] z-20 -mx-4 border-b border-border bg-bg/90 px-4 backdrop-blur supports-[backdrop-filter]:bg-bg/80 lg:-mx-5 lg:px-5"
-    >
-      <ul className="no-scrollbar flex gap-1 overflow-x-auto py-2">
+    <nav aria-label="Sections" className="sticky top-[var(--header-h)] z-20 -mx-4 bg-bg px-4 lg:-mx-5 lg:px-5">
+      <ul className="no-scrollbar flex gap-1.5 overflow-x-auto py-2">
         {SECTIONS.map((s) => (
           <li key={s.id} className="shrink-0">
             <a
@@ -71,8 +67,8 @@ function SectionNav() {
                 jump(s.id);
               }}
               className={cx(
-                "inline-flex h-9 items-center rounded-ctl px-3 text-sm whitespace-nowrap transition-colors lg:h-8",
-                active === s.id ? "bg-elevated font-medium text-text" : "text-text-2 hover:bg-elevated/70 hover:text-text",
+                "inline-flex h-10 items-center rounded-full px-4 text-sm whitespace-nowrap transition-colors lg:h-9",
+                active === s.id ? "bg-accent font-medium text-accent-ink" : "border border-border bg-surface text-text-2 hover:border-border-strong hover:text-text",
               )}
             >
               {s.label}
@@ -111,7 +107,7 @@ export function GameView() {
         title="No game selected"
         hint="Open a game from the Week board to see its matchup."
         action={
-          <Link href="/" className="text-sm text-accent underline underline-offset-2">
+          <Link href="/" className="text-sm text-accent-text underline underline-offset-2">
             Go to the Week board
           </Link>
         }
@@ -126,6 +122,7 @@ export function GameView() {
   return (
     <div className="space-y-4 lg:space-y-5">
       <GameHeader game={game} />
+      <WinSplit game={game} />
       <SectionNav />
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
         <aside className="lg:sticky lg:top-[calc(var(--header-h)+64px)] lg:col-start-2 lg:row-start-1">

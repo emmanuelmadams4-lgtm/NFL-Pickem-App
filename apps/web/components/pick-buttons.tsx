@@ -38,12 +38,12 @@ export function PickButtons({ game, size = "sm", className }: { game: PickGame; 
             onClick={() => mutation.mutate({ gameId: game.game_id, season: game.season, week: game.week, team: selected ? null : t.abbr })}
             className={cx(
               "relative z-10 inline-flex items-center justify-center gap-1.5 rounded-full border font-semibold transition-[transform,background-color,border-color,opacity] active:translate-y-px",
-              size === "sm" ? "h-12 min-w-[68px] flex-1 px-2 text-base lg:h-8 lg:text-xs" : "h-12 flex-1 px-3 text-base lg:h-11 lg:text-sm",
+              size === "sm" ? "h-12 min-w-[68px] flex-1 px-2 text-base lg:h-10 lg:text-sm" : "h-12 flex-1 px-3 text-base lg:h-11 lg:text-sm",
               selected
-                ? "border-transparent bg-accent-solid text-white"
+                ? "border-transparent bg-accent text-accent-ink"
                 : locked
                   ? "border-transparent bg-elevated text-text"
-                  : "border-border-strong bg-elevated text-text hover:border-accent",
+                  : "border-border-strong bg-elevated text-text hover:border-accent-text",
               locked && "cursor-not-allowed opacity-60 active:translate-y-0",
             )}
           >

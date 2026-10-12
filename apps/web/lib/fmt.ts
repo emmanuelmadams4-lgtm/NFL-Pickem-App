@@ -37,10 +37,6 @@ export function kickoffWhen(g: Kickoff): string {
   return `${new Date(g.kickoff_utc).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}, Time TBD`;
 }
 
-export function shortDay(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { weekday: "short" });
-}
-
 export function safeGet(key: string): string | null {
   try {
     return localStorage.getItem(key);
@@ -59,4 +55,9 @@ export function safeSet(key: string, value: string): void {
 
 export function isIndoor(roof: string | null | undefined): boolean {
   return roof === "dome" || roof === "closed";
+}
+
+/** "Sun, Oct 5" */
+export function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }

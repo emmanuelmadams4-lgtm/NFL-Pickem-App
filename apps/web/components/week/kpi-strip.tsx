@@ -37,9 +37,10 @@ export function KpiStrip({ week }: { week: Week }) {
       missing: s.my_accuracy === null, // the reason is shown at every width, not only on desktop
     },
     {
+      testId: "kpi-model",
       label: "Model accuracy, week",
       short: "Model",
-      value: pctOr(s.model_accuracy),
+      value: s.model_graded > 0 ? pctOr(s.model_accuracy) : "–", // live picks only; backfill never reads as a live figure
       sub: s.model_graded > 0 ? `Season ${pctOr(s.season_model_accuracy)}` : "No live picks graded",
       missing: s.model_graded === 0, // the reason is shown at every width, not only on desktop
     },
@@ -49,15 +50,15 @@ export function KpiStrip({ week }: { week: Week }) {
   const model = s.model_graded > 0 ? `Model: ${s.model_correct} of ${s.model_graded} graded this week.` : "No live picks graded this week.";
 
   return (
-    <section aria-label="Week summary" className="flex items-center gap-8">
+    <section aria-label="Week summary" className="flex items-center gap-8 rounded-card border border-border bg-surface px-2 py-4 lg:px-6">
       <dl className="grid min-w-0 flex-1 grid-cols-4 divide-x divide-border lg:flex lg:flex-none">
         {cells.map((c) => (
-          <div key={c.label} className="flex min-w-0 flex-col px-2 text-center lg:px-6 lg:text-left lg:first:pl-0">
+          <div key={c.label} data-testid={c.testId} className="flex min-w-0 flex-col px-2 text-center lg:px-6 lg:text-left lg:first:pl-0">
             <dt className="order-2 mt-0.5 truncate text-label text-subtle lg:order-none lg:mt-0">
               <span className="lg:hidden">{c.short}</span>
               <span className="hidden lg:inline">{c.label}</span>
             </dt>
-            <dd className="num-display text-xl/7 font-semibold text-text lg:mt-1 lg:text-stat">{c.value}</dd>
+            <dd className="font-display text-[28px] leading-8 text-text lg:mt-1 lg:text-[36px] lg:leading-10">{c.value}</dd>
             <dd className={cx("mt-0.5 text-label text-text-2", c.missing ? "order-3 lg:order-none" : "hidden lg:block")}>{c.sub}</dd>
           </div>
         ))}

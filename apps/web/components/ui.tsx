@@ -75,6 +75,20 @@ export function Section({
   );
 }
 
+/** Page head (design.md § 0): a small Geist kicker over a huge condensed uppercase title, then optional controls. */
+export function PageHead({ kicker, title, sub, aside }: { kicker: string; title: ReactNode; sub?: ReactNode; aside?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+      <div className="min-w-0">
+        <p className="text-sm text-text-2">{kicker}</p>
+        <h1 className="mt-0.5 text-[48px] leading-[44px] text-text lg:text-[64px] lg:leading-[58px]">{title}</h1>
+        {sub && <p className="mt-2 text-sm text-text-2">{sub}</p>}
+      </div>
+      {aside}
+    </div>
+  );
+}
+
 /* ---------- chips ---------- */
 
 export type ChipTone = "neutral" | "good" | "warn" | "warn-soft" | "bad" | "accent";
@@ -85,14 +99,14 @@ const chipTone: Record<ChipTone, string> = {
   warn: "border-warn/40 bg-warn/14 text-warn",
   "warn-soft": "border-warn/35 bg-transparent text-warn",
   bad: "border-bad/40 bg-bad/14 text-bad",
-  accent: "border-accent/50 bg-transparent text-accent",
+  accent: "border-accent-text/60 bg-transparent text-accent-text",
 };
 
 export function Chip({ tone = "neutral", children, className }: { tone?: ChipTone; children: ReactNode; className?: string }) {
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1 rounded-chip border px-1.5 py-px text-micro whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-chip border px-2 py-px text-micro whitespace-nowrap",
         chipTone[tone],
         className,
       )}
@@ -167,7 +181,7 @@ export function Tip({ content, children, className, align = "left" }: { content:
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 const variantClass: Record<Variant, string> = {
-  primary: "bg-accent-solid text-white border-transparent hover:brightness-110",
+  primary: "bg-accent text-accent-ink border-transparent hover:brightness-105",
   secondary: "bg-elevated text-text border-border hover:border-border-strong",
   ghost: "bg-transparent text-text-2 border-transparent hover:bg-elevated hover:text-text",
   danger: "bg-transparent text-bad border-bad/40 hover:bg-bad/10",
@@ -186,7 +200,7 @@ export function Button({
       {...rest}
       disabled={rest.disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-ctl border font-medium whitespace-nowrap transition-[transform,background-color,border-color,filter,opacity] duration-(--duration-press)",
+        "inline-flex items-center justify-center gap-2 rounded-full border font-medium whitespace-nowrap transition-[transform,background-color,border-color,filter,opacity] duration-(--duration-press)",
         "active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0",
         size === "sm" ? "h-9 px-3 text-xs lg:h-8" : "h-10 px-4 text-sm lg:h-9",
         variantClass[variant],
@@ -225,7 +239,7 @@ export function SelectField({
         <select
           id={id}
           {...rest}
-          className={cx("h-10 rounded-ctl border border-border-strong bg-elevated px-2 text-base text-text hover:border-text-2 lg:h-8 lg:text-sm", grow && "min-w-0 flex-1")}
+          className={cx("h-10 rounded-full border border-border-strong bg-elevated px-3 text-base text-text hover:border-text-2 lg:h-9 lg:text-sm", grow && "min-w-0 flex-1")}
         >
           {children}
         </select>
@@ -246,7 +260,7 @@ export function Segmented<T extends string>({
   options: { value: T; label: string; disabled?: boolean }[];
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-ctl border border-border bg-elevated p-0.5">
+    <div role="radiogroup" aria-label={label} className="inline-flex shrink-0 rounded-full border border-border bg-elevated p-0.5">
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -258,8 +272,8 @@ export function Segmented<T extends string>({
             disabled={o.disabled}
             onClick={() => onChange(o.value)}
             className={cx(
-              "h-9 rounded-[6px] px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 lg:h-7 lg:text-xs",
-              active ? "bg-surface text-text shadow-[0_0_0_1px_var(--border)]" : "text-text-2 hover:text-text",
+              "h-9 rounded-full px-3.5 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-45 lg:h-8",
+              active ? "bg-accent text-accent-ink" : "text-text-2 hover:text-text",
             )}
           >
             {o.label}

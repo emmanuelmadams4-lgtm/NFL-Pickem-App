@@ -3,50 +3,50 @@
   "reviewed": "2026-10-12",
   "color": {
     "status": "landed",
+    "$description": "Reference 06 direction (design.md § 0, owner D39), landed 2026-10-12 in step 3. Lime is me / interactive / selected; accent-ink is text on lime; accent-text is lime readable as text on a page background.",
     "dark": {
-      "bg": "#0b0f14",
-      "surface": "#11161d",
-      "elevated": "#171e27",
-      "border": "#232c38",
-      "text": "#e6edf3",
-      "text-2": "#9aa7b4",
-      "muted": "#6b7785",
-      "subtle": "color-mix(in srgb, #6b7785 70%, #9aa7b4)",
-      "accent": "#3b82f6",
-      "accent-solid": "#2563eb",
-      "good": "#3fb950",
-      "warn": "#d29922",
-      "bad": "#f85149"
+      "bg": "#0a0a0a",
+      "surface": "#151515",
+      "elevated": "#1f1f1f",
+      "border": "#2a2a2a",
+      "border-strong": "#6b6b6b",
+      "text": "#f5f5f5",
+      "text-2": "#a8a8a8",
+      "muted": "#737373",
+      "subtle": "#8a8a8a",
+      "accent": "#c6f135",
+      "accent-ink": "#0a0a0a",
+      "accent-text": "#c6f135",
+      "good": "#38bdf8",
+      "warn": "#fbbf24",
+      "bad": "#f87171"
     },
     "light": {
-      "bg": "#f6f8fa",
+      "bg": "#f4f5f0",
       "surface": "#ffffff",
-      "elevated": "#f0f3f6",
-      "border": "#d8dee4",
-      "text": "#1f2328",
-      "text-2": "#57606a",
-      "muted": "#6e7781",
-      "subtle": "color-mix(in srgb, #6e7781 70%, #57606a)",
-      "accent": "#0969da",
-      "accent-solid": "#0969da",
-      "good": "#166f31",
-      "warn": "#855700",
-      "bad": "#b91c25"
+      "elevated": "#ecede6",
+      "border": "#d9dbd2",
+      "border-strong": "#7d8076",
+      "text": "#141414",
+      "text-2": "#52554c",
+      "muted": "#74776e",
+      "subtle": "#62655c",
+      "accent": "#c6f135",
+      "accent-ink": "#0a0a0a",
+      "accent-text": "#4d6b00",
+      "good": "#0369a1",
+      "warn": "#92400e",
+      "bad": "#b91c1c"
     }
-  },
-  "color-proposed": {
-    "status": "landed",
-    "$description": "Decided as proposals, landed 2026-10-12. border-strong is exposed to Tailwind as a color (border-border-strong).",
-    "dark": { "border-strong": "#64707f" },
-    "light": { "border-strong": "#818b95", "series-model": "#c9501c", "series-market": "#168a61" }
   },
   "series": {
     "status": "landed",
-    "dark": { "me": "#3987e5", "model": "#d95926", "market": "#199e70", "stats": "#d9ae2e", "elo": "#d55181", "home": "#6b7785" },
-    "light": { "me": "#2a78d6", "model": "#c9501c", "market": "#168a61", "stats": "#957100", "elo": "#c93673", "home": "#727c87" }
+    "$description": "me lime, model orange, market teal. On surface: dark me 13.9, model 4.7, market 5.4, stats 5.7, elo 4.6, home 5.0; light me 4.2, model 4.5, market 4.3, stats 4.8, elo 4.9, home 4.2. stats (hue 220) and elo (338) are 30+ degrees of hue from lime (74); none is purple.",
+    "dark": { "me": "#c6f135", "model": "#d95926", "market": "#199e70", "stats": "#5b8def", "elo": "#d55181", "home": "#7d8794" },
+    "light": { "me": "#5f8700", "model": "#c9501c", "market": "#168a61", "stats": "#2f6fd6", "elo": "#c93673", "home": "#727c87" }
   },
   "contrast-measured": {
-    "$description": "WCAG 2 ratios computed 2026-10-11 (light semantic inks re-measured 2026-10-12) from the hex values above. subtle resolves to #798593 dark, #67707a light. 'tint' is the chip background: the ink at 14% over the named surface.",
+    "$description": "SUPERSEDED by the 2026-10-12 restyle: these ratios were computed for the earlier blue palette and are kept for history. Current key ratios: subtle on elevated 4.8 dark / 5.0 light, accent-ink on accent 15.1, accent-text on bg 15.1 dark / 5.6 light. WCAG 2 ratios computed 2026-10-11 (light semantic inks re-measured 2026-10-12). subtle resolves to #798593 dark, #67707a light. 'tint' is the chip background: the ink at 14% over the named surface.",
     "dark": {
       "text/surface": 15.37,
       "text-2/surface": 7.4,
@@ -127,11 +127,10 @@
     "gutter": { "phone": 16, "desktop": 20 },
     "breakpoints": { "tablet": 768, "desktop": 1024 },
     "header-height": { "phone": "52px + safe-area-inset-top", "desktop": 57 },
-    "tab-bar-clearance": "88px + safe-area-inset-bottom"
+    "tab-bar-clearance": "96px + safe-area-inset-bottom (floating pill bar 12px above the safe area)"
   },
   "radius": {
-    "landed": { "bezel": 18, "bezel-padding": 6, "card": 12, "ctl": 8, "chip": 6 },
-    "proposed": { "pill": 9999 }
+    "landed": { "bezel": 30, "bezel-padding": 6, "card": 24, "ctl": 12, "chip": 9999, "pill": 9999 }
   },
   "shadow": {
     "landed": {

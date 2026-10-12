@@ -11,6 +11,7 @@ import { FreshnessIndicator } from "@/components/freshness";
 import { OfflineBanner, PickSync } from "@/components/pwa";
 import { SeasonPicker, WeekPicker } from "@/components/pickers";
 import { Button, cx, errorMessage } from "@/components/ui";
+import { BarChart, Calendar, Gear } from "@/components/icons";
 import { useOnline } from "@/lib/sync";
 
 const REFRESH_WAIT_MS = 20_000;
@@ -60,9 +61,9 @@ const DESKTOP_NAV = [
 ];
 
 const TABS = [
-  { label: "Week", match: (p: string) => p === "/" || p.startsWith("/game") },
-  { label: "Results", match: (p: string) => p.startsWith("/performance") || p.startsWith("/backtest") },
-  { label: "Settings", match: (p: string) => p.startsWith("/settings") },
+  { label: "Week", Icon: Calendar, match: (p: string) => p === "/" || p.startsWith("/game") },
+  { label: "Results", Icon: BarChart, match: (p: string) => p.startsWith("/performance") || p.startsWith("/backtest") },
+  { label: "Settings", Icon: Gear, match: (p: string) => p.startsWith("/settings") },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -80,17 +81,21 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh]">
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-ctl focus:bg-accent-solid focus:px-3 focus:py-2 focus:text-white">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-full focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-ink">
         Skip to content
       </a>
       <PickSync />
 
-      <header className="sticky top-0 z-30 border-b border-border bg-surface/90 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-surface/80">
+      <header className="sticky top-0 z-30 border-b border-border bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-bg/80">
         <div className="mx-auto flex min-h-[52px] max-w-[1360px] items-center gap-x-6 px-4 lg:min-h-14 lg:px-5">
-          <Link href={`/${qs}`} className="text-[15px] font-semibold tracking-tight whitespace-nowrap text-text">
-            Pick&apos;em <span className="text-text-2">Intel</span>
+          <Link href={`/${qs}`} className="flex items-center gap-2 text-[15px] font-semibold tracking-tight whitespace-nowrap text-text">
+            {/* eslint-disable-next-line @next/next/no-img-element -- static export; the owner's app icon (D41) */}
+            <img src="/icons/icon-192.png" alt="" width={28} height={28} className="size-7 rounded-[8px]" />
+            <span>
+              Pick&apos;em <span className="text-text-2">Intel</span>
+            </span>
           </Link>
-          <nav aria-label="Primary" className="hidden gap-1 lg:flex">
+          <nav aria-label="Primary" className="hidden gap-1 rounded-full border border-border bg-surface p-1 lg:flex">
             {DESKTOP_NAV.map((n) => {
               const active = n.match(pathname);
               return (
@@ -99,8 +104,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   href={hrefs[n.label]}
                   aria-current={active ? "page" : undefined}
                   className={cx(
-                    "rounded-ctl px-3 py-1.5 text-sm transition-colors",
-                    active ? "bg-elevated font-medium text-text" : "text-text-2 hover:bg-elevated/70 hover:text-text",
+                    "rounded-full px-4 py-1.5 text-sm transition-colors",
+                    active ? "bg-accent font-medium text-accent-ink" : "text-text-2 hover:bg-elevated hover:text-text",
                   )}
                 >
                   {n.label}
@@ -118,18 +123,20 @@ export function AppShell({ children }: { children: ReactNode }) {
         <OfflineBanner />
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-[1360px] px-4 pt-4 pb-[calc(88px+env(safe-area-inset-bottom))] lg:px-5 lg:pt-6 lg:pb-6">
+      <main id="main" className="mx-auto w-full max-w-[1360px] px-4 pt-4 pb-[calc(96px+env(safe-area-inset-bottom))] lg:px-5 lg:pt-6 lg:pb-6">
         {children}
       </main>
       <footer className="mx-auto hidden max-w-[1360px] px-5 pt-2 pb-10 text-xs text-subtle lg:block">
         Probabilities are estimates, not guarantees. Uncertainty says how reliable an estimate is; it is not the same as win probability.
       </footer>
 
+      {/* Phone and tablet: a floating pill tab bar 12px above the safe area (design.md § 0). The active tab is a lime pill
+          with icon and label; the others are icon-only circles that keep their name in aria-label. */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-surface/85 lg:hidden"
+        className="fixed inset-x-0 bottom-[calc(12px+env(safe-area-inset-bottom))] z-30 mx-auto w-fit rounded-full border border-border bg-elevated/90 p-1.5 shadow-[var(--shadow-float)] backdrop-blur supports-[backdrop-filter]:bg-elevated/80 lg:hidden"
       >
-        <ul className="mx-auto grid max-w-lg grid-cols-3">
+        <ul className="flex items-center gap-1.5">
           {TABS.map((t) => {
             const active = t.match(pathname);
             return (
@@ -137,13 +144,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Link
                   href={hrefs[t.label]}
                   aria-current={active ? "page" : undefined}
+                  aria-label={active ? undefined : t.label}
                   className={cx(
-                    "relative flex h-14 flex-col items-center justify-center text-[13px] transition-colors",
-                    active ? "font-semibold text-text" : "text-text-2",
+                    "flex h-12 items-center justify-center gap-2 rounded-full transition-colors",
+                    active ? "bg-accent px-5 text-[15px] font-semibold text-accent-ink" : "w-12 bg-surface text-text-2 hover:text-text",
                   )}
                 >
-                  <span aria-hidden className={cx("absolute top-0 h-0.5 w-10 rounded-full transition-colors", active ? "bg-accent" : "bg-transparent")} />
-                  {t.label}
+                  <t.Icon size={20} />
+                  {active && t.label}
                 </Link>
               </li>
             );

@@ -15,6 +15,9 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     colorScheme: "dark",
     trace: "retain-on-failure",
+    // Specs rewrite API responses with page.route; a controlling service worker would fetch around it (Playwright docs:
+    // "page.route() will not intercept requests intercepted by Service Worker"). No spec tests the worker itself.
+    serviceWorkers: "block",
   },
   webServer: {
     command: "bash ../../scripts/e2e-server.sh",

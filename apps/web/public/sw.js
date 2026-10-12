@@ -8,7 +8,7 @@
  *
  * Bump VERSION to invalidate every cache; old ones are removed on activate.
  */
-const VERSION = "v1";
+const VERSION = "v2"; // v2: owner app icon (D41) replaced the cache-first icons
 const STATIC = `nflpi-static-${VERSION}`;
 const PAGES = `nflpi-pages-${VERSION}`;
 const API = `nflpi-api-${VERSION}`;
@@ -17,7 +17,7 @@ const CURRENT = [STATIC, PAGES, API, IMAGES];
 
 // Pages whose HTML (and the /_next/static assets it names) are fetched at install so the app opens offline on first run.
 const PRECACHE_PAGES = ["/", "/performance/", "/backtest/", "/settings/", "/game/"];
-const PRECACHE_FILES = ["/manifest.webmanifest", "/icons/icon.svg", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
+const PRECACHE_FILES = ["/manifest.webmanifest", "/icons/favicon-32.png", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

@@ -100,3 +100,23 @@ export const Info = (p: IconProps) => (
     <path d="M12 11v5M12 8h.01" />
   </Icon>
 );
+
+export const Calendar = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="5.5" width="16" height="14.5" rx="2.5" />
+    <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
+  </Icon>
+);
+
+export const BarChart = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 20V12M12 20V5M19 20v-5" />
+  </Icon>
+);
+
+export const Gear = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4L6 18M18 18l-1.6-1.6M7.6 7.6L6 6" />
+  </Icon>
+);

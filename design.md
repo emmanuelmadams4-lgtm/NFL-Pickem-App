@@ -26,6 +26,7 @@ The look and layout follow reference 06 (`docs/design/references/06-concept-dark
 | `warn` / `bad` | `#fbbf24` / `#f87171` | `#92400e` / `#b91c1c` | Moderate, stale, questionable / incorrect, high, out |
 
 Chart series stay fixed by entity: me = lime, model = orange, market = teal; stats/elo/home pick values that are ≥ 3:1 on `surface`, not purple, and at least 30° of hue away from lime.
+Landed values (step 3): dark me `#c6f135`, model `#d95926`, market `#199e70`, stats `#5b8def`, elo `#d55181`, home `#7d8794`; light me `#5f8700`, model `#c9501c`, market `#168a61`, stats `#2f6fd6`, elo `#c93673`, home `#727c87`. `subtle` is `#8a8a8a` dark / `#62655c` light (≥ 4.5:1 on `elevated`). Contrast in `docs/design/design-tokens.json`.
 
 **Type.** Display face: **Barlow Condensed 700**, self-hosted from `@fontsource/barlow-condensed` (offline PWA), UPPERCASE, used for page titles, the big kickoff time on a card, final scores and the big win-chance figures. A small sentence-case kicker in Geist sits above a title ("Picks" over "WEEK 6"), as in the reference. Everything else stays Geist (body) and Geist Mono (machine values). Nothing under 11px. Uppercase is allowed only in the display face.
 
@@ -212,7 +213,7 @@ Recharts, wrappers in `components/charts/`.
 
 ## 14. Iconography
 
-One file, `components/icons.tsx`, of inline SVGs: chevron-left, chevron-right, check, x, lock, warning, refresh, bell, cloud-off, clock, info. 1.5px stroke, round caps, `currentColor`, 16px beside `body` text and 20px in controls. No icon library (a dozen icons do not justify a dependency). An icon never stands alone without an `aria-label`; tabs and buttons use text.
+One file, `components/icons.tsx`, of inline SVGs: chevron-left, chevron-right, check, x, lock, warning, refresh, bell, cloud-off, clock, info, calendar, bar-chart, gear (the last three for the phone tab bar). 1.5px stroke, round caps, `currentColor`, 16px beside `body` text and 20px in controls. No icon library (a dozen icons do not justify a dependency). An icon never stands alone without an `aria-label`; tabs and buttons use text.
 
 ## 15. Anti-Patterns
 

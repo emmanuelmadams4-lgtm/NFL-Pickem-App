@@ -38,8 +38,10 @@ export function SignIn({ notice }: { notice?: string | null }) {
     <main className="flex min-h-[100dvh] items-center justify-center px-4">
       <Bezel className="w-full max-w-sm">
         <form onSubmit={submit} className="p-5 sm:p-6" aria-labelledby="signin-title">
-          <p className="text-xs font-medium text-subtle">Private workspace</p>
-          <h1 id="signin-title" className="mt-1 text-title">
+          {/* eslint-disable-next-line @next/next/no-img-element -- static export; the owner's app icon (D41) */}
+          <img src="/icons/icon-192.png" alt="" width={56} height={56} className="mb-4 size-14 rounded-[16px]" />
+          <p className="text-sm text-text-2">Private workspace</p>
+          <h1 id="signin-title" className="mt-0.5 text-[40px] leading-[40px] text-text">
             Pick&apos;em Intel
           </h1>
           <p className="mt-1 text-sm text-text-2">Enter the access token for your server to continue.</p>
