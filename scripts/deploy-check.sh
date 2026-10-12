@@ -8,6 +8,7 @@ set -eEuo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 APP_PORT=${DEPLOYCHECK_APP_PORT:-18000}
 DB_PORT=${DEPLOYCHECK_DB_PORT:-15432}
+unset BACKUP_COPY_DIR BACKUP_KEEP
 export COMPOSE_PROJECT_NAME=nflpi-deploycheck APP_PORT DB_PORT
 BASE="http://127.0.0.1:$APP_PORT"
 WORK=$(mktemp -d)
@@ -19,7 +20,10 @@ dc() { (cd "$CLONE" && docker compose "$@"); }
 api() { curl -fsS -H "Authorization: Bearer $TOKEN" "$BASE/api/$1"; }
 json() { python3 -c "import json,sys; d=json.load(sys.stdin); print($1)"; }
 counts() { dc exec -T db psql -U nflpi -d nflpi -Atc "select (select count(*) from user_picks)||','||(select count(*) from predictions)||','||(select count(*) from games)"; }
-running() { [ -n "$(dc ps --status running -q "$1" 2>/dev/null)" ]; }
+running() { # fails loudly if docker itself errors, so an error never reads as "not running"
+  local out; out=$(dc ps --status running -q "$1") || fail "docker compose ps failed while checking $1"
+  [ -n "$out" ]
+}
 leftovers() { dc exec -T db psql -U nflpi -d postgres -Atc "select count(*) from pg_database where datname in ('nflpi_restore','nflpi_old')" | tr -d ' '; }
 wait_health() { # $1 = python expression over d (health json) that must be truthy, $2 = seconds
   for _ in $(seq 1 "$2"); do
@@ -96,8 +100,10 @@ pass "D2 up from a clean clone; database ok, worker heartbeat present"
 
 # --- D3 bootstrap -> health ok ---------------------------------------------------------------------------------------
 dc exec -T app python -m nflpi.jobs bootstrap >"$WORK/bootstrap.log" 2>&1 || { tail -20 "$WORK/bootstrap.log"; fail "D3 bootstrap"; }
-wait_health "d['status'] == 'ok'" 120 || { curl -fsS "$BASE/api/health"; fail "D3 health is not ok after bootstrap"; }
-pass "D3 bootstrap; health ok ($(curl -fsS "$BASE/api/health" | json "d['status']"))"
+# Only the outside weather feed may be stale (it is a third-party service, not part of the deploy); anything else must be ok.
+HEALTH_OK="d['database'] is True and d['active_model'] is True and d.get('worker_heartbeat') and (d['status'] == 'ok' or d.get('stale_datasets') == ['weather'])"
+wait_health "$HEALTH_OK" 120 || { curl -fsS "$BASE/api/health"; fail "D3 health is not ok after bootstrap"; }
+pass "D3 bootstrap; health $(curl -fsS "$BASE/api/health" | json "d['status'] + (' (weather feed stale, outside service)' if d['status'] != 'ok' else '')")"
 
 # --- D4 web files and headers ----------------------------------------------------------------------------------------
 [ "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/")" = 200 ] || fail "D4 / is not 200"
@@ -154,8 +160,12 @@ while read -r gid home; do
 done < <(api "weeks/$season/$(api meta | json "d['current_week']")" | json "'\n'.join(g['game_id'] + ' ' + g['home']['abbr'] for g in d['games'])")
 [ "$picked" = 1 ] || fail "D7 could not save a test pick (no open game this week)"
 before=$(counts)
-case "$before" in 0,*|*,0,*) fail "D7 expected picks, predictions and games above zero, got $before" ;; esac
+case "$before" in 0,*|*,0,*|*,0) fail "D7 expected picks, predictions and games above zero, got $before" ;; esac
 OFFHOST="$WORK/offhost"; mkdir -p "$OFFHOST"
+mkdir -p "$WORK/offhost-no-marker"
+if (cd "$CLONE" && BACKUP_COPY_DIR="$WORK/offhost-no-marker" ./scripts/backup.sh) >/dev/null 2>&1; then fail "D7 backup.sh copied into a folder with no .pickem-backups marker (an empty mount point of an unplugged drive would look fine)"; fi
+[ -z "$(ls -A "$WORK/offhost-no-marker")" ] || fail "D7 backup.sh wrote into a folder with no .pickem-backups marker"
+touch "$OFFHOST/.pickem-backups"
 if (cd "$CLONE" && BACKUP_COPY_DIR="$WORK/not-plugged-in" ./scripts/backup.sh) >/dev/null 2>&1; then fail "D7 backup.sh treated a missing BACKUP_COPY_DIR as success (an unplugged drive would go unnoticed)"; fi
 [ ! -e "$WORK/not-plugged-in" ] || fail "D7 backup.sh created a missing BACKUP_COPY_DIR"
 (cd "$CLONE" && BACKUP_COPY_DIR="$OFFHOST" ./scripts/backup.sh) >"$WORK/backup.log" 2>&1 || { cat "$WORK/backup.log"; fail "D7 backup.sh"; }
@@ -219,7 +229,10 @@ dc exec -T db psql -U nflpi -d postgres -qc "DROP DATABASE nflpi WITH (FORCE)" >
 (cd "$CLONE" && ./scripts/restore.sh "$file" --yes) >"$WORK/restore3.log" 2>&1 || { tail -20 "$WORK/restore3.log"; fail "D7 restore.sh could not recover when the database was missing"; }
 wait_health "d['database'] is True" 120 && [ "$(counts)" = "$before" ] && running worker || fail "D7 recovery from a missing database did not return the data and the worker"
 [ "$(leftovers)" = 0 ] || fail "D7 scratch or old database left behind after recovery"
-# A restore killed after the app was stopped (closed terminal, SIGTERM) must leave the owner able to recover with docker compose up -d.
+# A restore killed after the app was stopped (SIGTERM) must restart the app by itself and leave the live data alone.
+dc exec -T db psql -U nflpi -d nflpi -qc "delete from user_picks" >/dev/null
+mutated=$(counts)
+[ "$mutated" != "$before" ] || fail "D7 test could not change the live data before the kill test"
 (cd "$CLONE" && exec ./scripts/restore.sh "$file" --yes) >"$WORK/restore4.log" 2>&1 & rpid=$!
 killed=0
 for _ in $(seq 1 300); do
@@ -234,7 +247,11 @@ grep -q "^restored " "$WORK/restore4.log" && fail "D7 the killed restore still p
 for _ in $(seq 1 90); do running app && running worker && break; sleep 2; done
 running app && running worker || fail "D7 a killed restore did not start the app and worker again by itself (exit handler)"
 [ -s "$WORK/restore4.log" ] && grep -qiE "restart requested|live data" "$WORK/restore4.log" || fail "D7 a killed restore printed no explanation"
-wait_health "d['database'] is True" 180 && [ "$(counts)" = "$before" ] && running worker || { tail -20 "$WORK/restore4.log"; fail "D7 a restore killed mid-way left the app unrecoverable or the data changed"; }
+wait_health "d['database'] is True" 180 && running worker || { tail -20 "$WORK/restore4.log"; fail "D7 a restore killed mid-way left the app unrecoverable"; }
+[ "$(counts)" = "$mutated" ] || fail "D7 a restore killed before the swap changed the live data: $(counts) vs $mutated"
+[ -z "$(find "$CLONE/backups" -name '.nflpi.*' 2>/dev/null)" ] || fail "D7 a killed restore left a half-written file in backups/"
+(cd "$CLONE" && ./scripts/restore.sh "$file" --yes) >"$WORK/restore5.log" 2>&1 || { tail -20 "$WORK/restore5.log"; fail "D7 a normal restore after a killed one failed"; }
+wait_health "d['database'] is True" 120 && [ "$(counts)" = "$before" ] || fail "D7 a normal restore after a killed one did not return the data"
 [ "$(leftovers)" = 0 ] || fail "D7 a killed restore left a scratch or old database behind"
 pass "D7 backup restored with matching counts ($after); safety copy kept; 4 bad files refused with data intact; killed restore recovers; failed backup fails loudly; off-host copy made"
 
