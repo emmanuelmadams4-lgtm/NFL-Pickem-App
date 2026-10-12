@@ -47,8 +47,9 @@ Test it once: restart the PC, sign in, wait a few minutes, then run `docker comp
 
 ## 3. Move from the Mac to the PC (UNVERIFIED on the PC side)
 
-The address changes when the computer changes, so the iPhone app is added again once. Passkeys (step 10) come after the move. Do not make picks while you move: the Mac stops taking them at step 1, and the PC does not have them until step 5.
+The address changes when the computer changes, so the iPhone app is added again once. Passkeys (step 10) come after the move. Do not make picks while you move: the Mac stops taking them at step 1, and the PC does not have them until the restore in step 3.
 
+0. **Same code on both computers.** The restored data must match the code. Run `git log -1 --oneline` on both and make sure they show the same commit (or that the PC has the newer one). If the Mac runs a newer version than the PC, `git pull` on the PC first; otherwise the app cannot start after the restore.
 1. **On the Mac, stop the app and take the last backup** (from the repo folder):
    ```bash
    cd ~/Projects/NFL-Pickem-App
@@ -108,11 +109,12 @@ Look for `nflpi`, `nflpi_old` and `nflpi_restore`, then follow the row that matc
 |---|---|---|
 | `nflpi` and `nflpi_restore`, no `nflpi_old` | The swap never started; your data is still in `nflpi`. | `docker compose up -d`. Remove the scratch copy: `docker compose exec -T db psql -U nflpi -d postgres -c 'DROP DATABASE nflpi_restore WITH (FORCE)'`. |
 | `nflpi_old` and `nflpi_restore`, no `nflpi` | The swap stopped halfway. Your old data is in `nflpi_old`, the restored data is in `nflpi_restore`. | Pick which one you want live: `docker compose exec -T db psql -U nflpi -d postgres -c 'ALTER DATABASE nflpi_old RENAME TO nflpi'` for the old data (or `nflpi_restore` for the restored data), then `docker compose up -d`. |
+| only `nflpi_old` (and maybe `nflpi_restore`), no `nflpi` | The swap was cut off after the first rename. | Same as the "halfway" row: `ALTER DATABASE nflpi_old RENAME TO nflpi` (or `nflpi_restore` for the restored data), then `docker compose up -d`. |
 | `nflpi` and `nflpi_old` | The swap finished. `nflpi` is the restored data; `nflpi_old` is what it replaced. | `docker compose up -d`, check health. When happy, remove the old copy: `docker compose exec -T db psql -U nflpi -d postgres -c 'DROP DATABASE nflpi_old WITH (FORCE)'`. A new restore is refused until `nflpi_old` is gone. |
 
 **Undo a restore:** restore the `pre-restore-*` file the earlier restore made (after removing `nflpi_old` as above). One limit: a restore refuses any file whose database has no games, so if the data you replaced had no games, the safety copy cannot be restored this way; load it by hand with `gunzip -c backups/pre-restore-<time>.sql.gz | docker compose exec -T db psql -U nflpi -d <a new empty database>`.
 
-Do not press Ctrl-C a second time while it is restarting the app. If you did, run `docker compose up -d`.
+Do not press Ctrl-C a second time while it is restarting the app. If you did, or if you closed the window, run `docker compose up -d`. A restore also needs about 20 seconds more than you expect, because the app and worker take 10 seconds each to stop.
 
 ## 6. Rotate the access token
 
