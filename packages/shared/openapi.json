@@ -1295,6 +1295,10 @@
       "format": "date-time",
       "title": "Kickoff Utc"
      },
+     "time_tbd": {
+      "type": "boolean",
+      "title": "Time Tbd"
+     },
      "status": {
       "type": "string",
       "enum": [
@@ -1533,6 +1537,7 @@
      "week",
      "game_type",
      "kickoff_utc",
+     "time_tbd",
      "status",
      "away",
      "home",
@@ -1589,6 +1594,10 @@
       "type": "string",
       "format": "date-time",
       "title": "Kickoff Utc"
+     },
+     "time_tbd": {
+      "type": "boolean",
+      "title": "Time Tbd"
      },
      "status": {
       "type": "string",
@@ -1747,6 +1756,7 @@
      "week",
      "game_type",
      "kickoff_utc",
+     "time_tbd",
      "status",
      "away",
      "home",
@@ -2301,7 +2311,12 @@
       "$ref": "#/components/schemas/Tally"
      },
      "model": {
-      "$ref": "#/components/schemas/Tally"
+      "$ref": "#/components/schemas/Tally",
+      "description": "Live predictions only: the final snapshot was made before kickoff"
+     },
+     "model_backfill": {
+      "$ref": "#/components/schemas/Tally",
+      "description": "Backfill predictions only: computed after the fact, labeled"
      },
      "model_first": {
       "$ref": "#/components/schemas/Tally"
@@ -2345,6 +2360,7 @@
      "weeks",
      "me",
      "model",
+     "model_backfill",
      "model_first",
      "market",
      "home",
@@ -3049,6 +3065,10 @@
       "type": "integer",
       "title": "Model First Total"
      },
+     "model_backfill_total": {
+      "type": "integer",
+      "title": "Model Backfill Total"
+     },
      "market_correct": {
       "type": "integer",
       "title": "Market Correct"
@@ -3076,6 +3096,7 @@
      "model_total",
      "model_first_correct",
      "model_first_total",
+     "model_backfill_total",
      "market_correct",
      "market_total",
      "home_correct",

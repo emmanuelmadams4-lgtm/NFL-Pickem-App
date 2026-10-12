@@ -184,6 +184,7 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                 week=g.week,
                 game_type=g.game_type,
                 kickoff_utc=g.kickoff_utc,
+                time_tbd=g.time_tbd,
                 status=status_of(g, now),
                 away=team_out(teams.get(g.away_team), g.away_team),
                 home=team_out(teams.get(g.home_team), g.home_team),
@@ -408,6 +409,8 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
             outcomes.append(1.0 if win == g.home_team else 0.0)
             live += final.kind == "live"
             backfill += final.kind == "backfill"
+            w[f"model_{final.kind}_total"] += 1
+            w[f"model_{final.kind}_correct"] += final.pick == win
         m = closing.get(g.game_id)
         if m and m.home_prob_novig is not None:
             w["market_total"] += 1
@@ -427,6 +430,7 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         "model_total",
         "model_first_correct",
         "model_first_total",
+        "model_backfill_total",
         "market_correct",
         "market_total",
         "home_correct",
@@ -436,7 +440,8 @@ def performance(session: Session, season: int) -> s.PerformanceOut:
         season=season,
         weeks=[s.WeekPerformance(week=wk, **{k: weeks[wk][k] for k in keys}) for wk in sorted(weeks)],
         me=total("my"),
-        model=total("model"),
+        model=total("model_live"),
+        model_backfill=total("model_backfill"),
         model_first=total("model_first"),
         market=total("market"),
         home=total("home"),

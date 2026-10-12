@@ -162,6 +162,7 @@ def ingest_weather(session: Session, now: datetime | None = None) -> IngestionRu
         upcoming = session.scalars(
             select(Game).where(
                 Game.status == "scheduled",
+                Game.time_tbd.is_(False),
                 Game.kickoff_utc > now,
                 Game.kickoff_utc < now + timedelta(days=7),
             )

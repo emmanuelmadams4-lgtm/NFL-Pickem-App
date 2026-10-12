@@ -79,3 +79,13 @@ Operational:
 First failing evidence (ran 2026-10-12, before any production change):
 * pytest `tests/test_web_contract.py`: 4 failed for the intended reasons (`KeyError: 'time_tbd'`; weather asked for the TBD kickoff; backfill wrote `2023_04_MIA_BUF` (TBD); `KeyError: 'model_backfill'`).
 * Playwright: 4 passed (E1, E2, E3, E5), 8 failed for the intended reasons: E4 buttons stay enabled past kickoff; E6 `time_tbd` undefined; E7 `model.total` 9 (backfill mixed in); E8 no `tally-me`; E9 one "Stale data" banner; E10 font stack starts `ui-sans-serif`; E11 dark week `color-contrast` (subtle on warn banner 4.49), matchup chip contrast 4.29 + `definition-list`, settings `label` (`#csv-file`, critical), light theme `color-contrast` on `text-warn` (4.37) across screens.
+
+## 3. IMPLEMENTATION
+
+`IMPLEMENTATION_PROVIDER: CLAUDE (limit hit: Codex not installed)` · `CODEX_POLICY: CODEX_FIRST` · `JEV: unavailable` (rungs picked by the coordinator) · `CLIMBS: none`. `/ponytail` rules (smallest diff, no speculative abstraction, no unrelated change) written into every work order.
+
+| WO | Scope | Rung | Commit | Proof rerun by the coordinator |
+|---|---|---|---|---|
+| A | W1-W3: `time_tbd` in the contract, weather and backfill skip TBD/postponed, live-only `model` + `model_backfill` + `weeks[].model_backfill_total`, `gen:api` | sonnet, try 1 (general-purpose subagent, main checkout, backend files only) | see below | pytest 52 passed · ruff clean · `gen:api` regenerated only `openapi.json` + `api-types.ts` · typecheck exit 0 |
+
+WO-A review: diff read in full (4 backend files, +17/-3, plus the two generated files). In scope; no test edited. Builder's note accepted, not a defect: `WeekSummary.season_model_accuracy` reads `perf.model`, so the Week board's season model figure is now live-only too, which is what PRODUCT.md principle 5 asks ("backfilled results are never mixed into the live headline").

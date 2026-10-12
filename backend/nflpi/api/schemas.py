@@ -63,6 +63,7 @@ class GameSummary(BaseModel):
     week: int
     game_type: str
     kickoff_utc: datetime
+    time_tbd: bool
     status: GameStatus
     away: TeamOut
     home: TeamOut
@@ -235,6 +236,7 @@ class WeekPerformance(BaseModel):
     model_total: int
     model_first_correct: int
     model_first_total: int
+    model_backfill_total: int
     market_correct: int
     market_total: int
     home_correct: int
@@ -260,7 +262,8 @@ class PerformanceOut(BaseModel):
     season: int
     weeks: list[WeekPerformance]
     me: Tally
-    model: Tally
+    model: Tally = Field(description="Live predictions only: the final snapshot was made before kickoff")
+    model_backfill: Tally = Field(description="Backfill predictions only: computed after the fact, labeled")
     model_first: Tally
     market: Tally
     home: Tally

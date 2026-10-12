@@ -320,7 +320,11 @@ def backfill_season(session: Session, season: int, now: datetime | None = None) 
         raise RuntimeError("backfill needs a model trained on seasons before the target season")
     now = now or datetime.now(UTC)
     have = set(session.scalars(select(Prediction.game_id)))
-    started = select(Game.game_id).where(Game.season == season, (Game.status == "final") | (Game.kickoff_utc <= now))
+    started = select(Game.game_id).where(
+        Game.season == season,
+        (Game.status == "final")
+        | ((Game.kickoff_utc <= now) & Game.time_tbd.is_(False) & (Game.status != "postponed")),
+    )
     ids = [g for g in session.scalars(started) if g not in have]
     refresh_predictions(session, now=now, game_ids=ids, kind="backfill")
     return len(ids)

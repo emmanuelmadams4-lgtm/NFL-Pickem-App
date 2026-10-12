@@ -426,6 +426,8 @@ export interface components {
              * Format: date-time
              */
             kickoff_utc: string;
+            /** Time Tbd */
+            time_tbd: boolean;
             /**
              * Status
              * @enum {string}
@@ -503,6 +505,8 @@ export interface components {
              * Format: date-time
              */
             kickoff_utc: string;
+            /** Time Tbd */
+            time_tbd: boolean;
             /**
              * Status
              * @enum {string}
@@ -712,7 +716,10 @@ export interface components {
             /** Weeks */
             weeks: components["schemas"]["WeekPerformance"][];
             me: components["schemas"]["Tally"];
+            /** @description Live predictions only: the final snapshot was made before kickoff */
             model: components["schemas"]["Tally"];
+            /** @description Backfill predictions only: computed after the fact, labeled */
+            model_backfill: components["schemas"]["Tally"];
             model_first: components["schemas"]["Tally"];
             market: components["schemas"]["Tally"];
             home: components["schemas"]["Tally"];
@@ -943,6 +950,8 @@ export interface components {
             model_first_correct: number;
             /** Model First Total */
             model_first_total: number;
+            /** Model Backfill Total */
+            model_backfill_total: number;
             /** Market Correct */
             market_correct: number;
             /** Market Total */
