@@ -257,3 +257,54 @@ Model pick: Jev `model:pwa:wo-6` → sol 0.98, effort high 1.0 (follow). Diff in
 Gate `gate.sh wo6` under `caffeinate -i` (logs `wo6-*.log`): pytest **115 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **78 passed, 0 failed** (2.6 min). Committed as `9aa5990`.
 
 Work orders in this step: six, seven tries in all (work order 1 took two; no other used its second try). No climb above gpt-6-sol.
+
+## 5. VERIFICATION
+
+Each result is recorded separately with its log. Commit ids in this section are the current ones (after the move onto main `3d87fa0`).
+
+### Review round 5, my own fresh reviewer (on `9aa5990`) — `reviews/r5-implementation.md`
+
+PASS: no Critical, High or Medium finding in the pick queue; five Low, deferred. It read the installed TanStack Query source and confirmed a tap is queued at tap time.
+
+### Coordinator gate, twice in a row, on `aaa2d63` (logs `wo6-*.log`, `final-*.log`)
+
+Both runs: pytest **115 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **78 passed, 0 failed**. `lane-guard.py check … pwa 3d87fa0`: `OK`.
+
+### Security review, Dwight (on `efd3625`) — `reviews/security-dwight.md`
+
+**PASS.** No Critical, no High. Checked clean: the worker never caches or answers `/api/` or anything carrying the token; cross-origin caching is limited to images; the update flow cannot loop; the build id is validated before it is stamped; no secret in the diff; error text is rendered as plain text. Seven Medium (D1 to D7) and eight Low (D8 to D15) about picks lost or mislabelled in rare cases; he left the timing to me and god.
+
+### Review and fresh-critic gate, Angela, first critic (on `893acb9`) — `reviews/critic-angela-1.md`
+
+**FAIL.** Her gate (`critic-angela-*.log`, `critic-angela-run2-*.log`): run 1 e2e 77 passed, **1 failed** (U3, the Yahoo rank form); run 2 e2e 78 passed, 0 failed; pytest 115, ruff, gen:api and typecheck clean both times. All 31 step 6 tests passed in both runs. Checkpoints PLANNING through CLEANUP: PASS. Tests weakened: no. Deferred list: none must block.
+
+| Blocking finding | What | Outcome |
+|---|---|---|
+| A1 (High) | The rank form's effect wipes what he typed when the scorecard arrives, so U3 fails now and then. Older than this step, but in the lane's files and it makes the gate red. | Red test U3b, fixed in work order 7 |
+| B1 (Medium), same as Dwight D2 | A failed storage write leaves a waiting pick in memory only, shown as waiting, lost on reload. | Red test P19, fixed in work order 7 |
+| B2 (Medium), same as Dwight D8 | Two open copies of the app overwrite each other's waiting picks. | Red test P20, fixed in work order 7 |
+| A2 | No VERIFICATION section. | This section |
+| A3 | The proof that the rewritten P13 still fails on the old code was not saved. | Accepted. I ran it and quoted the result in the work order 4 notes, but kept no log. Red proofs since then are saved (`red-r3-`, `red-r4-`, `red-verification-findings.log`). |
+
+God upheld all three blockers (hive message `2026-10-12T22-51-59-523Z-f655b2`).
+
+Also taken now: Dwight D1 and Angela C5 (a damaged stored queue crashes the app on every load; red test P18) and Angela T1 (a test for a waiting pick the server refuses as locked; P21, green on the code as it was).
+
+Red run before the fix (`red-verification-findings.log`): **5 failed** (P18 for `null` and `7`, P19, P20, U3b), **30 passed**. P20 hit the 30 s limit in that log; rerun alone with a 90 s limit it failed at "both picks are still waiting" (the first copy's pick was missing from storage).
+
+### Work order 7, try 1 (Ryan, Codex gpt-6-sol, effort high) — `step-6-evidence/wo-7.md`
+
+Model pick: Jev `model:pwa:wo-7` → sol 0.98, effort high 0.98 (follow). Diff inspected: 4 files, all in the allowed scope (`sync.ts`, `fmt.ts`, `queries.ts`, `scorecard.tsx`), 53 lines added and 21 removed. A stored queue that is not a plain object reads as empty; a queue write reports failure and a pick left waiting that could not be stored says "Could not save this pick on the phone. Keep the app open until it syncs."; every queue change starts from storage and the `storage` event refreshes the other copy; the rank form keeps typed input.
+
+Gate `gate.sh wo7` and again `gate.sh final2` on the commit `3f5f6ff` (logs `wo7-*.log`, `final2-*.log`), both under `caffeinate -i`: pytest **115 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **87 passed, 0 failed**, both times. `lane-guard.py check … pwa 3d87fa0`: `OK`.
+
+Work orders in this step: seven, eight tries in all.
+
+### Not fixed in this step (for the integrator to schedule)
+
+None of these was judged blocking by Dwight, Angela or the five fresh reviewers. Angela: T2 (test for a 401 during a flush), T3 (sign-out test; the queue is not cleared on sign-out), T4 (two games offline), T5 and T6 (fixed sleeps and 30 s holds in my tests), C1 (no timeout on the worker's page fetch: watch in the owner's iPhone check), C2 (opaque image cache cap), C3 (cache version is a constant), C4, C6 to C8. Dwight: D3 (a non-JSON 200 counts as saved), D4 (a 401 during a flush does not sign out and retries every 15 s), D5 (404 and 422 worded as "locked at kickoff"), D6 (queue kept across sign-out), D7 (a "not saved" toast can be pushed out by a newer one), D9 to D15. Earlier rounds: listed under each round above.
+
+### Pending, not PASS
+
+* Second critic by Angela and a re-review by Dwight on the commit that adds this section: results are appended below when they arrive.
+* The owner's check on his iPhone (Add to Home Screen, open offline, update prompt, a pick with Tailscale off): **PENDING**. It needs the live app rebuilt from this branch, which god does after landing.
