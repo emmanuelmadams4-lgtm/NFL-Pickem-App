@@ -30,7 +30,7 @@ export function PointsControl({ game, count }: { game: GameSummary; count: numbe
       const week = next === null ? await api.clearPoints(game.game_id) : await api.setPoints(game.game_id, next);
       qc.setQueryData(keys.week(game.season, game.week), week);
       if (next === null) {
-        toast(`${game.away.abbr} @ ${game.home.abbr} is back to the model's number, ${week.games.find((g) => g.game_id === game.game_id)?.sheet.my_points}.`);
+        toast(`${game.away.abbr} @ ${game.home.abbr} is back to the model's number, ${week.games.find((g) => g.game_id === game.game_id)?.sheet.my_points ?? "–"}.`);
       } else {
         const moved = previous?.games.find((g) => g.game_id !== game.game_id && g.sheet.my_points === next);
         toast(moved
@@ -47,7 +47,7 @@ export function PointsControl({ game, count }: { game: GameSummary; count: numbe
   return (
     <div className="relative z-10 border-t border-border pt-3">
       <div className="flex flex-wrap items-center gap-3">
-        <label htmlFor={`points-${game.game_id}`} className="text-sm font-medium text-text">Points</label>
+        {points === null ? <span className="text-sm font-medium text-text">Points</span> : <label htmlFor={`points-${game.game_id}`} className="text-sm font-medium text-text">Points</label>}
         {points === null ? <span className="text-text-2">– <span className="text-label">No points yet</span></span> : <select id={`points-${game.game_id}`}
         aria-label={`Points for ${game.away.abbr} at ${game.home.abbr}`}
         value={points ?? ""}
@@ -59,7 +59,7 @@ export function PointsControl({ game, count }: { game: GameSummary; count: numbe
         </select>}
         {locked && <span className="flex items-center gap-1 text-label text-text-2"><Lock size={16} /> Locked</span>}
       </div>
-      <div className="pt-1 text-label text-text-2 lg:min-h-11">
+      <div className="pt-1 text-label text-text-2">
         {game.sheet.points_by === "user" && <span>Your number. Model says {game.sheet.app_points}. </span>}
         {game.sheet.points_by === "user" && !locked && <button type="button" onClick={() => void change(null)} disabled={busy} className="min-h-10 text-accent-text underline underline-offset-2">Use the model&apos;s number</button>}
       </div>

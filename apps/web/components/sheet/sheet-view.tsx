@@ -29,7 +29,7 @@ export function SheetView() {
 
   return (
     <div className="space-y-5">
-      <PageHead kicker={`Week ${week}`} title="Copy sheet" sub="Enter these in Yahoo. Tiebreaker scores are not in the app yet." />
+      <PageHead kicker={`Yahoo sheet · Week ${week}`} title="Copy sheet" sub="Enter these in Yahoo. Tiebreaker scores are not in the app yet." />
       {total !== games.length && <p className="text-label text-text-2">{games.length} of {total} games have points</p>}
       {q.isPending && <div aria-busy="true" aria-label="Loading sheet"><Skeleton className="h-64 rounded-card" /></div>}
       {q.isError && !q.data && <ErrorState title="Could not load the sheet" error={q.error} onRetry={() => q.refetch()} />}

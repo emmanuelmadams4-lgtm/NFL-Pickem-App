@@ -6,6 +6,7 @@ import { ApiError, keys, type ScorecardWeek } from "@nflpi/shared";
 import { useApi } from "@/lib/api";
 import { useMeta } from "@/lib/queries";
 import { Button, ErrorState, Section, Skeleton, errorMessage } from "@/components/ui";
+import { Check } from "@/components/icons";
 
 const inputClass = "mt-1 h-11 w-full rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text lg:h-10";
 
@@ -83,7 +84,7 @@ export function Scorecard({ season }: { season: number }) {
           {[...q.data.weeks, q.data.totals].map((row, i) => <div key={i} className="border-b border-border py-3 text-sm">
             <p className="mb-2 font-medium text-text">{i === q.data.weeks.length ? "Total" : `Week ${row.week}`}</p>
             <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
-            {[["You", row.my_points], ["Model", row.app_points], ["Best possible", row.max_points], ["Picks you changed", `${row.changed} (${row.changed_right} right, ${row.changed_wrong} wrong)`], ["Picked for you", row.auto], ["Rank", row.rank ?? "–"]].map(([label, value]) => <div key={String(label)} className="contents"><dt className="text-label text-text-2">{label}</dt><dd className="text-right text-text">{value}</dd></div>)}
+            {([["You", row.games ? row.my_points : <Missing reason="No finished games" />], ["Model", row.games ? row.app_points : <Missing reason="No finished games" />], ["Best possible", row.games ? row.max_points : <Missing reason="No finished games" />], ["Picks you changed", `${row.changed} (${row.changed_right} right, ${row.changed_wrong} wrong)`], ["Picked for you", row.auto], ["Rank", row.rank === null ? <Missing reason={i === q.data.weeks.length ? "No total rank" : "Rank not entered"} /> : <>{row.rank}{row.leader_points !== null && <span className="block text-label text-text-2">Leader {row.leader_points} points</span>}</>]] as const).map(([label, value]) => <div key={label} className="contents"><dt className="text-label text-text-2">{label}</dt><dd className="text-right text-text">{value}</dd></div>)}
             </dl>
           </div>)}
         </div>
@@ -106,7 +107,7 @@ export function Scorecard({ season }: { season: number }) {
             </label>
           </div>
           {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-          {saved && <p role="status" className="text-sm text-good">Rank saved</p>}
+          {saved && <p role="status" className="flex items-center gap-1 text-sm text-good"><Check size={16} /> Rank saved</p>}
           <Button type="submit" className="h-11" loading={busy}>Save rank</Button>
         </fieldset>
       </form>

@@ -204,7 +204,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
           <PickButtons game={game} />
           {final && (
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5">
-              {game.my_pick ? <Mark correct={game.my_pick_correct} who="Me" /> : <span className="text-label text-subtle">No pick made</span>}
+              {game.my_pick ? <Mark correct={game.my_pick_correct} who={game.sheet.pick_by === "auto" ? "Picked for you" : "Me"} /> : <span className="text-label text-subtle">No pick made</span>}
               <Mark correct={game.model_correct} who="Model" />
             </div>
           )}

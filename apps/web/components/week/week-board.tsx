@@ -65,7 +65,7 @@ export function WeekBoard() {
   };
 
   const data = q.data;
-  const pointsCount = data?.games.filter((g) => g.sheet.my_points !== null).length ?? 0;
+  const pointsCount = data?.games.filter((g) => g.status !== "postponed").length ?? 0; // the server numbers 1..N over every game that is not postponed
   const now = useNow();
   const games = useMemo(() => {
     if (!data) return [];
