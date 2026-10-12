@@ -64,7 +64,7 @@ The address changes when the computer changes, so the iPhone app is added again 
 
 ## 4. Backups
 
-Run a backup by hand: `./scripts/backup.sh`. It keeps the newest 14 `nflpi-*.sql.gz` files in `backups/`. It saves nothing and exits with an error if the dump is incomplete, the database has no games, or anything fails. A failed run leaves no half file. A run whose only failure is the off-computer copy still keeps its good local backup. Do not run a backup while a restore is running.
+Run a backup by hand: `./scripts/backup.sh`. It keeps the newest 14 `nflpi-*.sql.gz` files in `backups/`. It saves nothing and exits with an error if the dump is incomplete, the database has no games, or anything fails. A failed run leaves no complete-looking half file (a run killed at the wrong instant can leave a hidden `.nflpi.*` temp file in `backups/`; it is safe to delete). A run whose only failure is the off-computer copy still keeps its good local backup. Do not run a backup while a restore is running.
 
 Copy it **off the computer** too. A folder on the same PC does not count. Point `BACKUP_COPY_DIR` at a USB drive, another computer, or a folder that syncs to a cloud drive:
 
@@ -110,9 +110,11 @@ Look for `nflpi`, `nflpi_old` and `nflpi_restore`, then follow the row that matc
 | `nflpi` and `nflpi_restore`, no `nflpi_old` | The swap never started; your data is still in `nflpi`. | `docker compose up -d`. Remove the scratch copy: `docker compose exec -T db psql -U nflpi -d postgres -c 'DROP DATABASE nflpi_restore WITH (FORCE)'`. |
 | `nflpi_old` and `nflpi_restore`, no `nflpi` | The swap stopped halfway. Your old data is in `nflpi_old`, the restored data is in `nflpi_restore`. | Pick which one you want live: `docker compose exec -T db psql -U nflpi -d postgres -c 'ALTER DATABASE nflpi_old RENAME TO nflpi'` for the old data (or `nflpi_restore` for the restored data), then `docker compose up -d`. |
 | only `nflpi_old` (and maybe `nflpi_restore`), no `nflpi` | The swap was cut off after the first rename. | Same as the "halfway" row: `ALTER DATABASE nflpi_old RENAME TO nflpi` (or `nflpi_restore` for the restored data), then `docker compose up -d`. |
+| only `nflpi_restore` (no `nflpi`, no `nflpi_old`) | A restore onto an empty server was cut off before it finished. | Run the same restore command again. |
+| only `nflpi` (no `nflpi_restore`, no `nflpi_old`) | Either nothing happened or a restore onto an empty server finished. | `docker compose up -d` and check health. |
 | `nflpi` and `nflpi_old` | The swap finished. `nflpi` is the restored data; `nflpi_old` is what it replaced. | `docker compose up -d`, check health. When happy, remove the old copy: `docker compose exec -T db psql -U nflpi -d postgres -c 'DROP DATABASE nflpi_old WITH (FORCE)'`. A new restore is refused until `nflpi_old` is gone. |
 
-**Undo a restore:** restore the `pre-restore-*` file the earlier restore made (after removing `nflpi_old` as above). One limit: a restore refuses any file whose database has no games, so if the data you replaced had no games, the safety copy cannot be restored this way; load it by hand with `gunzip -c backups/pre-restore-<time>.sql.gz | docker compose exec -T db psql -U nflpi -d <a new empty database>`.
+**Undo a restore:** restore the `pre-restore-*` file the earlier restore made (after removing `nflpi_old` as above). First check that file exists and `gzip -t` passes; do not delete `pre-restore-*` files until you are sure you will not undo. One limit: a restore refuses any file whose database has no games, so if the data you replaced had no games, the safety copy cannot be restored this way; load it by hand with create an empty database (`docker compose exec -T db psql -U nflpi -d postgres -c 'CREATE DATABASE nflpi_hand OWNER nflpi'`), then `gunzip -c backups/pre-restore-<time>.sql.gz | docker compose exec -T db psql -U nflpi -d nflpi_hand -v ON_ERROR_STOP=1 -1`, and look at it with psql. Use it only on a file you made yourself.
 
 Do not press Ctrl-C a second time while it is restarting the app. If you did, or if you closed the window, run `docker compose up -d`. A restore also needs about 20 seconds more than you expect, because the app and worker take 10 seconds each to stop.
 
