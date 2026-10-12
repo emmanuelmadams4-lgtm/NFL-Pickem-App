@@ -235,10 +235,11 @@ mutated=$(counts)
 [ "$mutated" != "$before" ] || fail "D7 test could not change the live data before the kill test"
 (cd "$CLONE" && exec ./scripts/restore.sh "$file" --yes) >"$WORK/restore4.log" 2>&1 & rpid=$!
 killed=0
-for _ in $(seq 1 300); do
+app_ct="$COMPOSE_PROJECT_NAME-app-1"
+for _ in $(seq 1 3000); do
   kill -0 "$rpid" 2>/dev/null || break
-  running app || { kill -TERM "$rpid" 2>/dev/null && killed=1; break; }
-  sleep 0.2
+  [ "$(docker inspect -f '{{.State.Running}}' "$app_ct" 2>/dev/null)" = true ] || { kill -TERM "$rpid" 2>/dev/null && killed=1; break; }
+  sleep 0.05
 done
 [ "$killed" = 1 ] || fail "D7 test could not catch the restore after the app stopped, so it did not test a killed restore"
 rc=0; wait "$rpid" 2>/dev/null || rc=$?
@@ -251,7 +252,13 @@ if ! { running app && running worker; }; then
 fi
 [ -s "$WORK/restore4.log" ] && grep -qiE "restart requested|live data" "$WORK/restore4.log" || fail "D7 a killed restore printed no explanation"
 wait_health "d['database'] is True" 300 && running worker || { tail -20 "$WORK/restore4.log"; fail "D7 a restore killed mid-way left the app unrecoverable"; }
-[ "$(counts)" = "$mutated" ] || fail "D7 a restore killed before the swap changed the live data: $(counts) vs $mutated"
+now=$(counts)
+if [ "$(leftovers)" != 0 ] && [ "$now" = "$before" ]; then
+  # the kill landed after the swap finished: the restored data is live and the replaced data waits in nflpi_old (documented)
+  dc exec -T db psql -U nflpi -d postgres -qc "DROP DATABASE IF EXISTS nflpi_old WITH (FORCE)" >/dev/null
+elif [ "$now" != "$mutated" ]; then
+  fail "D7 a killed restore left neither the old data nor the restored data: $now (old $mutated, restored $before)"
+fi
 [ -z "$(find "$CLONE/backups" -name '.nflpi.*' 2>/dev/null)" ] || fail "D7 a killed restore left a half-written file in backups/"
 (cd "$CLONE" && ./scripts/restore.sh "$file" --yes) >"$WORK/restore5.log" 2>&1 || { tail -20 "$WORK/restore5.log"; fail "D7 a normal restore after a killed one failed"; }
 wait_health "d['database'] is True" 120 && [ "$(counts)" = "$before" ] || fail "D7 a normal restore after a killed one did not return the data"
