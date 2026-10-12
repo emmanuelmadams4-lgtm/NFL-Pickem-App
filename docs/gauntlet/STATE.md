@@ -5,11 +5,11 @@
 ## STATUS
 
 * **Goal:** one private app (desktop web + iPhone PWA) for weekly NFL Pick'em: evidence-based picks that match/beat the market, honest uncertainty, alerts, accuracy tracking, a model that gets better over time (D18). See [PLAN.md](PLAN.md) and the owner's decisions D1–D41 in [OWNER_DECISIONS_2026-10-12.md](OWNER_DECISIONS_2026-10-12.md).
-* **Overall step:** **step 3 of 14 DONE** (2026-10-12, cloud session; restyle to reference 06, D39–D41). Objective critic PASS and design critic PASS on round 4 (`logs/step-3.md` § 5); CI 8/8 green on `3cd9964`. Roadmap is 14 steps (PLAN.md).
-* **Next:** **step 4, Pick sheet** (D1–D3, D7, D10–D14; PLAN.md row 4). PLANNING also rewrites design.md §§ 5/7/8 (still describe the old blue system). Polish carried to step 6 is listed in `logs/step-3.md` § 5 rounds 3–4.
-* **Phase:** between steps. Next session: `DIRECT_COORDINATOR / ONE_SHOT`.
+* **Overall step:** **step 5 of 14 DONE** (2026-10-12). Step 4, pick sheet, merged as PR #2 (`2b00b53`; record in `logs/step-4.md`). Step 5, deploy and operate, merged as PR #3 (`d01d0f8`; full gate D0-D8 ALL PASS on `0926d9f`, record and known limits in `logs/step-5.md`). 5 of 14 steps landed.
+* **Next:** two lanes side by side (owner asked for parallel lanes): **step 6, iPhone PWA** (lane `pwa`) and **step 12, Trends** (lane `trends`). Lane map: `/Users/emmanueladams/.claude/plans/nfl-pickem-lanes/lanes.md`. `lane-guard overlap` OK; `JEV: independent:pwa+trends -> interface_coupling 0.03, shared_state 0.05` (independent). Then step 7 (needs step 6). Steps 8, 10, 11 and 13 wait on the owner or on week 6 (PLAN.md).
+* **Phase:** lanes starting. Each lane is one `DIRECT_COORDINATOR / ONE_SHOT` session with its own STATE FILE `lane-<name>.md` in the plan folder.
 * **STRIKES:** none. **CONTINUATIONS:** 0.
-* **Repo:** branch `claude/nfl-pickem-intelligence`, draft PR #1, base `main` `83a9ae4`. Two Claude sessions write to this branch (cloud: code; owner's Mac: decisions and research, docs only); merge, never rebase or force.
+* **Repo:** base `main` (= `origin/main` `d01d0f8` plus the local handover commit, not pushed). Lane worktrees `.claude/worktrees/lane-<name>`, branches `lane/<name>`. **Integrator: Michael (hive agent `god`) since 2026-10-12, owner's yes on hive card HAG-1**; before that the owner's session "Work tree parallelization strategy". Only the integrator writes this file, PLAN.md, the progress page, `lanes.md`, `main` and the seam files. `coord` is initialised in this repo: claim your task and `coord lock` your paths; `res:e2e` before any run that starts a server or browser. JEVGREP: unavailable from the integrator's sandbox (network refused 2026-10-12); grep used instead.
 * **Provider ledger:** cloud sandbox: Codex not installed → `IMPLEMENTATION_PROVIDER: CLAUDE (limit hit)`; Jev unavailable (no key here). On the owner's Mac: Codex and Jev available. Fable / gpt-6-astra: never without the owner's yes in chat.
 * **21st.dev:** connected; search and theme CSS free; component code 2 retrievals a day on the free tier (`docs/design/COMPONENT_SOURCES.md`).
 * **Progress page:** https://claude.ai/artifact/6U5zCcvZijcXVMuH6Hbnvd, source `docs/gauntlet/progress.html`. Republish in place only.
@@ -31,35 +31,35 @@ See PLAN.md § Owner decisions (each has reversibility + revisit trigger).
 
 ## 0. Next handoff
 
+Two lane launchers. Each goes to its own session; do not run both in one.
+
 ```text
 GAUNTLET_MODE: DIRECT_COORDINATOR
 GAUNTLET_PHASE: ONE_SHOT
-STATE FILE: docs/gauntlet/STATE.md (repo root of the checkout; on the owner's Mac /Users/emmanueladams/Projects/NFL-Pickem-App/docs/gauntlet/STATE.md)
+GAUNTLET_LANE: pwa
+STATE FILE: /Users/emmanueladams/.claude/plans/nfl-pickem-lanes/lane-pwa.md
+LANE MAP: /Users/emmanueladams/.claude/plans/nfl-pickem-lanes/lanes.md   (read only for you)
+WORKTREE: /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-pwa   BRANCH: lane/pwa   BASE: main@<handover commit>
+OVERALL STEP: step 6 of 14, iPhone PWA (PLAN.md row 6; carried polish in logs/step-3.md section 5 rounds 3-4 and logs/step-4.md line 222)
+OWNS / NEEDS: as lanes.md, lane pwa. NEEDS none.
+Gate: PLAN.md row 6, plus cd backend && uv run pytest -q && uvx ruff check nflpi tests migrations; npm run gen:api (no drift) && npm run typecheck && npm run web:build && npm run e2e
+Done when: gate green with its own numbers, fresh objective critic PASS, design critic PASS, lane-guard check clean. Stop when: three straight failures of one command, or a one-way door needs the owner.
+Rules: claim the lane first; edit only OWNS; seams go to the integrator; every Jev question through decide.sh; lane-guard check before landing; push, PR and merge need the owner's yes through the integrator. The markers are authoritative.
+IMPLEMENTATION_PROVIDER: CODEX   CODEX_POLICY: CODEX_FIRST   BUILD_RUNG: per work order through decide.sh (try 1 of 2)   CLIMBS: none   STRIKES: none
+PROGRESS PAGE: https://claude.ai/artifact/6U5zCcvZijcXVMuH6Hbnvd (integrator republishes; lanes never do)
+```
 
-This is a Gauntlet Loop handoff for a fresh session. Load/re-read the gauntlet-loop skill, then read the
-STATE FILE, docs/gauntlet/PLAN.md (row 4), docs/gauntlet/OWNER_DECISIONS_2026-10-12.md and
-docs/gauntlet/logs/step-3.md (§ 5 rounds 3-4, § 6).
-If they disagree with this handoff, stop and report. Do not restart steps 1-3.
-
-OVERALL STEP: step 4 of 14, Pick sheet (D1-D3, D7, D10-D14).
-GOAL: labels (coin flip / tough matchup / easy pick, cuts from the backtest with hit rates), points 1-N with
-  re-rank and swap, auto pick at kickoff marked `auto`, copy-to-Yahoo sheet, weekly rank entry, scorecard of
-  the owner's changes vs the app's sheet. Built in the step 3 look (design.md § 0). PLANNING first rewrites
-  design.md §§ 5/7/8 (still the old blue system).
-GATE: pytest for labels/points/auto picks · backtest table for the label cuts · e2e for re-rank, swap, lock,
-  copy sheet · existing W/E/S/R/F/G checks stay green · axe 0 serious/critical · fresh objective + design critics.
-BASELINE: branch claude/nfl-pickem-intelligence at the step 3 landing commit (logs/step-3.md § 6).
-  Gate commands: cd backend && uv run pytest -q && uvx ruff check nflpi tests migrations;
-  npm run gen:api (no drift) && npm run typecheck && npm run web:build && npm run e2e (from the repo root;
-  e2e serves the built export, so rebuild first).
-DONE WHEN: gate green with its own numbers, objective critic PASS, design critic PASS, pushed, CI green.
-STOP WHEN: three straight failures of the same command, or a one-way door needs the owner.
-OPEN OWNER QUESTIONS: none blocking.
-IMPLEMENTATION_PROVIDER: CODEX on the owner's Mac; in a cloud sandbox CLAUDE (limit hit: Codex not installed)
-CODEX_POLICY: CODEX_FIRST
-BUILD_RUNG: decide per work order (Jev on the Mac, coordinator in the cloud); try 1 of 2
-CLIMBS: none
-STRIKES: none
-PROGRESS PAGE: https://claude.ai/artifact/6U5zCcvZijcXVMuH6Hbnvd (source docs/gauntlet/progress.html); republish in place
-CONSTRAINTS: STATE FILE § User constraints. 21st.dev: adapt, never paste whole; 2 code retrievals a day.
+```text
+GAUNTLET_MODE: DIRECT_COORDINATOR
+GAUNTLET_PHASE: ONE_SHOT
+GAUNTLET_LANE: trends
+STATE FILE: /Users/emmanueladams/.claude/plans/nfl-pickem-lanes/lane-trends.md
+LANE MAP: /Users/emmanueladams/.claude/plans/nfl-pickem-lanes/lanes.md   (read only for you)
+WORKTREE: /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-trends   BRANCH: lane/trends   BASE: main@<handover commit>
+OVERALL STEP: step 12 of 14, Trends (PLAN.md row 12; D30, Q3-Q5 in OWNER_DECISIONS_2026-10-12.md)
+OWNS / NEEDS: as lanes.md, lane trends. NEEDS none.
+Gate: PLAN.md row 12 (hand-checked counts on known examples; never moves the pick unless it wins walk-forward), plus cd backend && uv run pytest -q && uvx ruff check nflpi tests migrations; npm run gen:api shows no drift
+Done when: gate green with its own numbers, fresh critic PASS, lane-guard check clean. Stop when: three straight failures of one command, or a one-way door needs the owner.
+Rules: as lane pwa.
+IMPLEMENTATION_PROVIDER: CODEX   CODEX_POLICY: CODEX_FIRST   BUILD_RUNG: per work order through decide.sh (try 1 of 2)   CLIMBS: none   STRIKES: none
 ```

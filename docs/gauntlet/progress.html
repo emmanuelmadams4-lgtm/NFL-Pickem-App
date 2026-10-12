@@ -83,10 +83,10 @@ footer { color: var(--muted); font-size: 13px; }
   </header>
 
   <div class="headline">
-    <div class="big">3<small> / 14 steps landed</small></div>
+    <div class="big">5<small> / 14 steps landed</small></div>
     <div class="now">
-      <p><b>Finished:</b> step 3, the new look. Lime on near-black, a card per game with VS, pill tabs, a floating tab bar on the phone, your P logo as the app icon. 39 browser checks and 57 server tests pass; two fresh reviewers passed it.</p>
-      <p><b>Next:</b> step 4, the pick sheet: coin flip / tough / easy labels, 1–16 points you can re-rank, auto pick at kickoff, copy to Yahoo.</p>
+      <p><b>Finished:</b> step 5, running at home, is merged into main (PR #3): backups you can restore, a safe restore, a token change, a clean-copy test, and the Windows PC runbook. Step 4, the pick sheet, merged just before it (PR #2).</p>
+      <p><b>Next:</b> step 6, the iPhone app: works offline, says so when it cannot reach the server, and keeps your picks until it can send them. Before that, your two checks on step 5: set up the Windows PC and tell me what you see.</p>
     </div>
   </div>
 
@@ -94,9 +94,9 @@ footer { color: var(--muted); font-size: 13px; }
     <div class="yd done" role="listitem"><span class="n">1</span><span class="t">Safe backend + CI</span></div>
     <div class="yd done" role="listitem"><span class="n">2</span><span class="t">Desktop web</span></div>
     <div class="yd done" role="listitem"><span class="n">3</span><span class="t">New look (ref 06)</span></div>
-    <div class="yd next" role="listitem"><span class="n">4</span><span class="t">Pick sheet</span></div>
-    <div class="yd" role="listitem"><span class="n">5</span><span class="t">Deploy</span></div>
-    <div class="yd" role="listitem"><span class="n">6</span><span class="t">iPhone PWA</span></div>
+    <div class="yd done" role="listitem"><span class="n">4</span><span class="t">Pick sheet</span></div>
+    <div class="yd done" role="listitem"><span class="n">5</span><span class="t">Deploy</span></div>
+    <div class="yd next" role="listitem"><span class="n">6</span><span class="t">iPhone PWA</span></div>
     <div class="yd" role="listitem"><span class="n">7</span><span class="t">Alerts</span></div>
     <div class="yd" role="listitem"><span class="n">8</span><span class="t">Star players</span></div>
     <div class="yd" role="listitem"><span class="n">9</span><span class="t">Tiebreaker scores</span></div>
@@ -111,6 +111,7 @@ footer { color: var(--muted); font-size: 13px; }
     <h3>Waiting on you</h3>
     <ul>
       <li><b>Nothing blocking.</b> Your screenshots, logo and 41 decisions are in. Line freshness gets measured in week 6.</li>
+      <li>Run the setup on your Windows 11 PC (docs/DEPLOY.md) and tell me what you see. I can only test the Docker part on the Mac, so the PC steps will be marked unverified until you do.</li>
       <li>At step 6: install the app on your iPhone once and tell me what you see.</li>
       <li>At step 11: API keys, your server, and your iPhone for the live checks.</li>
     </ul>
@@ -125,8 +126,8 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td class="num">1</td><td>Safe backend + CI + first landing<span class="sub">Docker fix, picks locked after kickoff, reminders that can't get lost</span></td><td>All tests, migrations on an empty DB, CI green on the PR</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">2</td><td>Desktop web app<span class="sub">Honest Results, "Time TBD", lock at kickoff on screen, team logos</span></td><td>Browser checks + server tests, accessibility clean, two fresh reviewers</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">3</td><td>New look: reference 06 + your P logo<span class="sub">Lime on near-black, card per game, VS, pill tabs, floating phone tab bar</span></td><td>39 browser checks + 57 server tests, accessibility clean on phone, two fresh reviewers passed it</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">4</td><td>Pick sheet<span class="sub">Coin flip / tough / easy labels, points 1–N, auto pick at kickoff, copy to Yahoo</span></td><td>Label cuts from the backtest with hit rates; re-rank, swap, lock and copy tested</td><td><span class="pill todo">Next</span></td></tr>
-          <tr><td class="num">5</td><td>Deploy and operate<span class="sub">Docker, Tailscale HTTPS, backups off the machine</span></td><td>Clean clone to a running app; backup restores; all 32 team logos load live</td><td><span class="pill todo">To do</span></td></tr>
+          <tr><td class="num">4</td><td>Pick sheet<span class="sub">Coin flip / tough / easy labels, points 1–N, auto pick at kickoff, copy to Yahoo, scorecard</span></td><td>Label cuts from the backtest with hit rates; re-rank, swap, lock and copy tested; three review rounds</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">5</td><td>Deploy and operate<span class="sub">Docker at home, backups you can restore, token change, Windows PC runbook</span></td><td>Clean copy starts; backup restores with the same counts; bad files refused; a restore killed partway recovers; all 32 team logos load. Four review rounds. Your PC and iPhone checks stay with you</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">6</td><td>iPhone PWA<span class="sub">Offline, "can't reach server", phone polish</span></td><td>Opens offline with saved data; buttons lock at kickoff offline</td><td><span class="pill todo">To do</span></td></tr>
           <tr><td class="num">7</td><td>Alerts end to end<span class="sub">Flips, QB news, "no pick yet", test-alert button</span></td><td>Signed push delivered; the alert opens the game</td><td><span class="pill todo">To do</span></td></tr>
           <tr><td class="num">8</td><td>Star players + second injury source<span class="sub">5 stars per team, ESPN as a second source</span></td><td>Recorded-data tests; star idea must win walk-forward</td><td><span class="pill todo">To do</span></td></tr>
@@ -157,13 +158,15 @@ footer { color: var(--muted); font-size: 13px; }
       <p class="note">Verdict: structure is sound and right-sized. Every finding is assigned to a step.</p>
     </div>
     <div class="card">
-      <h3>Build setup here</h3>
-      <div class="stat"><span>Codex</span><span>Not installed</span></div>
-      <div class="stat"><span>Jev</span><span>No key</span></div>
-      <div class="stat"><span>Builders</span><span>Claude</span></div>
-      <p class="note">Claude builds on the matching rung; every step gets a fresh reviewer before it lands.</p>
+      <h3>Lanes</h3>
+      <div class="stat"><span>Sheet (step 4)</span><span>Merged</span></div>
+      <div class="stat"><span>Deploy (step 5)</span><span>Merged</span></div>
+      <div class="stat"><span>Merge conflicts</span><span>0</span></div>
+      <div class="stat"><span>iPhone app (step 6)</span><span>Starting</span></div>
+      <div class="stat"><span>Trends (step 12)</span><span>Starting</span></div>
+      <p class="note">Steps 6 and 12 now start side by side; Jev rated them independent (0.03 and 0.05), as it did steps 4 and 5. Each lane has its own copy of the code and its own fresh reviewer before it lands.</p>
     </div>
   </div>
 
-  <footer>Updated 2026-10-12 · Step 3 landed · Next: the pick sheet · Branch claude/nfl-pickem-intelligence · draft PR #1, not merged</footer>
+  <footer>Updated 2026-10-12 · Steps 1–5 landed (PRs #1, #2, #3 merged) · Now starting: iPhone app (step 6) and trends (step 12), side by side</footer>
 </div>
