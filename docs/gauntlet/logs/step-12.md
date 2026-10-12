@@ -80,3 +80,26 @@ Review fan-out (standard tier; reports returned in the reviewers' final messages
 WO-4 (`gpt-6-luna` medium, try 1; `JEV: model:trends:wo4-cleanup -> luna 0.69 (unsure), medium 0.88`): tests green, but the coordinator's read found a regression the tests did not cover (a null stadium name broke the sort), an 85-line function and chained conditionals. A failing test was added first, then WO-4b (`gpt-6-luna` high, try 2, one narrow correction, effort one level up): fixed. Ladder: both tries on rung 1 used, no climb needed.
 Proof on `5d7dd4f`: `PASS uv run pytest -q exit=0` **115 passed** (`s12-cleanup-pytest.log`; baseline 99 + 16 trends tests); `PASS uvx ruff check nflpi tests migrations exit=0` (`s12-cleanup-ruff.log`); hand count 12 of 12 MATCH again (`s12-handcount.log`); `lane-guard.py check ... trends 9d41cb0`: `OK`.
 Remaining, classified: `_home_side` is about 50 lines of plain branches (accepted: one branch per record kind); kind names are repeated as strings (accepted, no abstraction for six names).
+
+## 5. VERIFICATION
+On committed HEAD `ce67639` (code last changed in `5d7dd4f`; `ce67639` adds this log only).
+* **Fresh critic** (`ecc:code-reviewer` subagent, no build transcript, given the worktree, commit, gate commands and this log): **VERDICT: PASS**. It reran the gate itself: `PASS uv run pytest -q exit=0`, `115 passed in 30.02s`; `PASS uvx ruff check nflpi tests migrations exit=0`, `All checks passed!`. T1 to T11 each PASS with the test or line that proves it; lane file check PASS; stage evidence PASS (red test `e27877f` before the first production code `eccc4ae`; amendment red `5867bf5` before `8f6a42a`; cleanup has its own commit and proof); the hand count is independent of the module. Three LOW findings, none blocking: a null weekday on the target would match other null-weekday games (unmapped; weekday always comes from the feed's game day); the play-caller table is empty (T11, accepted, stated above); no real-data check for a play-caller record (T9, accepted: there is no real table yet).
+* **Coordinator's full validation** on the same code (`5d7dd4f`): `PASS uv run pytest -q exit=0` 115 passed (`s12-cleanup-pytest.log`); `PASS uvx ruff check nflpi tests migrations exit=0` (`s12-cleanup-ruff.log`); `PASS npm run gen:api exit=0`, no drift (`s12-genapi.log`; no file under `backend/nflpi/api/` changed after that run); hand count 12 of 12 MATCH (`s12-handcount.log`); `lane-guard.py check lanes.md trends 9d41cb0`: `OK`.
+* **Security re-review** (Dwight, `7dc8423..ce67639`): **PASS**, no CRITICAL or HIGH; both earlier asks confirmed done.
+* **Jev, did the review truly pass (Job 4):** `JEV: review:step12 -> 0.50` while the security re-review was still pending; asked again once it had answered: `JEV: review:step12:after-security -> passed 0.89` (the Job 4 bar is 0.8). Pass: green gates, the critic's PASS and Jev at or above 0.8.
+* Not verified here: a live Claude or Jev answer that quotes a trend (needs the owner's keys, step 11). PENDING there, never PASS from this step.
+
+Carried, not built (all latent while the play-caller table is empty; **do these before the first row goes in**), from Dwight's re-review:
+1. A play-caller row has a first week and no end: a caller who left stays on file until a successor row exists. Add a sourced vacancy row (name empty means unknown).
+2. The table's rules are held by one light test. Check row shape, side is `off` or `def`, a real club code, a real https link with a host, and no duplicate (team, season, side, first week).
+3. Add to the pack note that play-caller records cover only seasons with a sourced row.
+4. LOW: an unknown kind falls through to the weekday branch; a stadium id with no name gives a record with an empty context; the system prompt does not tell the model to treat pack text as data (older than this step).
+Also carried to the integrator: the game-screen trends panel (seams and `apps/web`); play-calling news (step 8); a trend as a model challenger (step 14, walk-forward first).
+
+## 6. LANDING
+Landing-ready on `lane/trends`. Not pushed, no pull request, not merged: those need the owner's yes through the integrator.
+* Commits on top of `9d41cb0`: `e27877f` red tests and spec; `eccc4ae` WO-1; `7dc8423` real-data hand count; `441db8e` review red; `f1cad1b` WO-2; `5867bf5` amendment red; `8f6a42a` WO-3; `5d7dd4f` cleanup; `ce67639` and this commit, log only.
+* Gate's own numbers: 115 passed, 0 failed (99 at baseline + 16 new); ruff clean; API types unchanged; hand count 12 of 12.
+* Merged: nothing. Deployed: nothing.
+* The lane's test database container `nflpi-lane-trends-db` (127.0.0.1:15437, no volume) is left running for the integrator's re-gate after the rebase; remove with `docker rm -f nflpi-lane-trends-db`.
+* Context tools: `headroom` not routed in this app, so no savings figure.
