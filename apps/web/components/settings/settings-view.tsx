@@ -11,6 +11,7 @@ import { Button, Chip, ErrorState, Notice, PageHead, SelectField, Section, Skele
 import { FreshnessTable } from "@/components/freshness";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { useOnline } from "@/lib/sync";
+import { useStorageStatus } from "@/lib/persist";
 import { AlertsSection } from "@/components/settings/alerts";
 
 function Row({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
@@ -273,6 +274,7 @@ function OfflineSection() {
   const api = useApi();
   const qc = useQueryClient();
   const online = useOnline();
+  const storageStatus = useStorageStatus();
   const { season, week } = useSelection();
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -317,6 +319,15 @@ function OfflineSection() {
 
   return (
     <Section id="offline" title="Offline" note="Read the board and matchups with no connection. Picks made offline sync when you are back online.">
+      <Row label="Storage">
+        <p className="text-sm text-text-2">
+          {storageStatus === "granted"
+            ? "Protected from automatic clearing."
+            : storageStatus === "denied"
+              ? "Not protected. The browser may clear saved data when the phone is low on space."
+              : "This browser does not say."}
+        </p>
+      </Row>
       <Row label={`Week ${week}, ${season}`} hint="Saves the week and every game in it on this device.">
         <div className="space-y-2">
           <Button onClick={save} loading={progress !== null} disabled={!online}>

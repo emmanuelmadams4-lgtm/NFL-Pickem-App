@@ -1,4 +1,5 @@
 import { dehydrate, hydrate, type QueryClient } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
 
 /**
  * Persist the React Query cache to localStorage so the app opens offline with the last data it saw.
@@ -74,10 +75,33 @@ export function clearPersistedCache(): void {
   } catch {
     /* ignore */
   }
-  if (typeof caches !== "undefined") {
-    caches
-      .keys()
-      .then((names) => Promise.all(names.filter((n) => n.startsWith("nflpi-api-")).map((n) => caches.delete(n))))
-      .catch(() => {});
-  }
+}
+
+type StorageStatus = "unknown" | "granted" | "denied";
+let storageStatus: StorageStatus = "unknown";
+let storageAsked = false;
+const storageListeners = new Set<() => void>();
+
+export function requestPersistentStorage(): void {
+  if (storageAsked) return;
+  storageAsked = true;
+  if (!navigator.storage?.persist) return;
+  void navigator.storage.persist().then(
+    (granted) => {
+      storageStatus = granted ? "granted" : "denied";
+      storageListeners.forEach((listener) => listener());
+    },
+    () => {},
+  );
+}
+
+export function useStorageStatus(): StorageStatus {
+  return useSyncExternalStore(
+    (listener) => {
+      storageListeners.add(listener);
+      return () => storageListeners.delete(listener);
+    },
+    () => storageStatus,
+    () => "unknown",
+  );
 }

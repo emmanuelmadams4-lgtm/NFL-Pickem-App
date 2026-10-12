@@ -24,7 +24,7 @@ export function useOnline(): boolean {
   );
 }
 
-/** Timestamp of the last API response that really came from the network (not the service worker cache). */
+/** Timestamp of the last successful API response. */
 const SYNC_KEY = "nflpi_last_sync";
 export function markNetworkSync() {
   safeSet(SYNC_KEY, String(Date.now()));
@@ -34,15 +34,49 @@ export function lastNetworkSync(): number | null {
   return Number.isFinite(v) && v > 0 ? v : null;
 }
 
-/** fetch wrapper: remembers when the app last heard from the server, ignoring responses the service worker replayed. */
+let serverReachable = true;
+const reachabilityListeners = new Set<() => void>();
+
+function setServerReachable(value: boolean) {
+  if (serverReachable === value) return;
+  serverReachable = value;
+  reachabilityListeners.forEach((listener) => listener());
+}
+
+export function isServerReachable(): boolean {
+  return serverReachable;
+}
+
+export function useServerReachable(): boolean {
+  return useSyncExternalStore(
+    (listener) => {
+      reachabilityListeners.add(listener);
+      return () => reachabilityListeners.delete(listener);
+    },
+    isServerReachable,
+    () => true,
+  );
+}
+
+/** Remember whether the server answered; HTTP errors still prove it is reachable. */
 export const trackedFetch: typeof fetch = async (input, init) => {
-  const res = await fetch(input, init);
-  if (res.ok && !res.headers.get("x-sw-cache")) markNetworkSync();
-  return res;
+  try {
+    const res = await fetch(input, init);
+    setServerReachable(true);
+    if (res.ok) markNetworkSync();
+    return res;
+  } catch (error) {
+    setServerReachable(false);
+    throw error;
+  }
 };
 
 export function isNetworkError(e: unknown): boolean {
-  return !(e instanceof ApiError) && (e instanceof TypeError || (e instanceof Error && /network|fetch|load failed/i.test(e.message)));
+  return !(e instanceof ApiError) && (
+    e instanceof TypeError ||
+    (e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError")) ||
+    (e instanceof Error && /network|fetch|load failed/i.test(e.message))
+  );
 }
 
 /* ---------- offline pick queue ---------- */

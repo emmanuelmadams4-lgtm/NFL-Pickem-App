@@ -2,21 +2,19 @@
  *
  *  /_next/static/* and /icons/*      cache-first (content-hashed, safe to keep)
  *  page navigations and other pages  network-first, cache fallback (so the app opens offline)
- *  GET /api/*                        network-first, cache fallback (replays are tagged x-sw-cache)
  *  team logos (cross-origin images)  stale-while-revalidate (opaque responses are fine)
  *  anything that is not a GET        never touched
  *
- * Bump VERSION to invalidate every cache; old ones are removed on activate.
+ * Cache names include the build ID; old ones are removed on activate.
  */
-const VERSION = "v2"; // v2: owner app icon (D41) replaced the cache-first icons
-const STATIC = `nflpi-static-${VERSION}`;
-const PAGES = `nflpi-pages-${VERSION}`;
-const API = `nflpi-api-${VERSION}`;
-const IMAGES = `nflpi-img-${VERSION}`;
-const CURRENT = [STATIC, PAGES, API, IMAGES];
+const BUILD_ID = "__BUILD_ID__";
+const STATIC = `nflpi-static-${BUILD_ID}`;
+const PAGES = `nflpi-pages-${BUILD_ID}`;
+const IMAGES = `nflpi-img-${BUILD_ID}`;
+const CURRENT = [STATIC, PAGES, IMAGES];
 
 // Pages whose HTML (and the /_next/static assets it names) are fetched at install so the app opens offline on first run.
-const PRECACHE_PAGES = ["/", "/performance/", "/backtest/", "/settings/", "/game/"];
+const PRECACHE_PAGES = ["/", "/sheet/", "/performance/", "/backtest/", "/settings/", "/game/"];
 const PRECACHE_FILES = ["/manifest.webmanifest", "/icons/favicon-32.png", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
@@ -41,7 +39,7 @@ self.addEventListener("install", (event) => {
       );
       await pages.add("/manifest.webmanifest").catch(() => undefined);
       await Promise.all([...assets].map((a) => statics.add(a).catch(() => undefined)));
-      await self.skipWaiting();
+      if (!self.registration.active) await self.skipWaiting();
     })(),
   );
 });
@@ -66,7 +64,11 @@ self.addEventListener("message", (event) => {
         const cache = await caches.open(STATIC);
         await Promise.all(
           data.urls
-            .filter((u) => typeof u === "string" && new URL(u, self.location.origin).origin === self.location.origin)
+            .filter((u) => {
+              if (typeof u !== "string") return false;
+              const url = new URL(u, self.location.origin);
+              return url.origin === self.location.origin && (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/"));
+            })
             .map((u) => cache.match(u).then((hit) => hit || cache.add(u)).catch(() => undefined)),
         );
       })(),
@@ -92,7 +94,7 @@ async function cacheFirst(request, cacheName) {
   return res;
 }
 
-async function networkFirst(request, cacheName, { ignoreSearch = false, tagReplay = false, fallbackUrl } = {}) {
+async function networkFirst(request, cacheName, { ignoreSearch = false, fallbackUrl } = {}) {
   const cache = await caches.open(cacheName);
   try {
     const res = await fetch(request);
@@ -102,23 +104,15 @@ async function networkFirst(request, cacheName, { ignoreSearch = false, tagRepla
     }
     if (res.status >= 500) {
       const cached = await cache.match(request, { ignoreSearch });
-      if (cached) return tagReplay ? replay(cached) : cached;
+      if (cached) return cached;
     }
     return res;
   } catch (err) {
     let cached = await cache.match(request, { ignoreSearch });
     if (!cached && fallbackUrl) cached = await cache.match(fallbackUrl);
-    if (cached) return tagReplay ? replay(cached) : cached;
+    if (cached) return cached;
     throw err;
   }
-}
-
-/** Mark a cached API response so the app can tell it is not fresh from the server. */
-function replay(response) {
-  const headers = new Headers(response.headers);
-  headers.set("x-sw-cache", "1");
-  headers.set("x-sw-cached-at", response.headers.get("date") || "");
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 async function staleWhileRevalidate(request, cacheName) {
@@ -153,10 +147,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/api/")) {
-    event.respondWith(networkFirst(request, API, { tagReplay: true }));
-    return;
-  }
+  if (url.pathname.startsWith("/api/")) return;
 
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
     event.respondWith(cacheFirst(request, STATIC));

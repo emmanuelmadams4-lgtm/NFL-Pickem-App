@@ -4,20 +4,48 @@ import { useEffect, useState } from "react";
 import { ago } from "@nflpi/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
-import { flushPicks, lastNetworkSync, useOnline } from "@/lib/sync";
+import { flushPicks, isServerReachable, lastNetworkSync, useOnline, useServerReachable } from "@/lib/sync";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { useToast } from "@/components/toast";
 import { Button, Card } from "@/components/ui";
 
 /** Registers the service worker in production builds only. */
 export function ServiceWorkerRegister() {
+  const { toast } = useToast();
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    let registration: ServiceWorkerRegistration | undefined;
+    let installed: ServiceWorker | null = null;
+    const offerUpdate = (reg: ServiceWorkerRegistration) => {
+      if (!navigator.serviceWorker.controller || !reg.waiting) return;
+      toast("New version ready.", "info", {
+        label: "Reload",
+        onClick: () => {
+          navigator.serviceWorker.addEventListener("controllerchange", () => location.reload(), { once: true });
+          reg.waiting?.postMessage("SKIP_WAITING");
+        },
+      });
+    };
+    const onStateChange = () => {
+      if (installed?.state === "installed" && registration) offerUpdate(registration);
+    };
+    const onUpdateFound = () => {
+      installed?.removeEventListener("statechange", onStateChange);
+      installed = registration?.installing ?? null;
+      installed?.addEventListener("statechange", onStateChange);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void registration?.update().catch(() => {});
+    };
     const register = () =>
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .then(() => navigator.serviceWorker.ready)
         .then((reg) => {
+          registration = reg;
+          reg.addEventListener("updatefound", onUpdateFound);
+          offerUpdate(reg);
+          document.addEventListener("visibilitychange", onVisible);
           // Hand the worker everything this page already loaded so a first-run offline reload works.
           const urls = performance
             .getEntriesByType("resource")
@@ -35,27 +63,34 @@ export function ServiceWorkerRegister() {
         .catch(() => {});
     if (document.readyState === "complete") register();
     else window.addEventListener("load", register, { once: true });
-  }, []);
+    return () => {
+      window.removeEventListener("load", register);
+      document.removeEventListener("visibilitychange", onVisible);
+      registration?.removeEventListener("updatefound", onUpdateFound);
+      installed?.removeEventListener("statechange", onStateChange);
+    };
+  }, [toast]);
   return null;
 }
 
 /** Shown on every page while the device is offline. */
 export function OfflineBanner() {
   const online = useOnline();
+  const reachable = useServerReachable();
   const qc = useQueryClient();
   const [at, setAt] = useState<number | null>(null);
 
   useEffect(() => {
-    if (online) return;
+    if (online && reachable) return;
     // Prefer the last real network sync; fall back to the freshest cached query.
     const fromCache = qc.getQueryCache().getAll().reduce((m, q) => Math.max(m, q.state.dataUpdatedAt), 0);
     setAt(lastNetworkSync() ?? (fromCache || null));
-  }, [online, qc]);
+  }, [online, reachable, qc]);
 
-  if (online) return null;
+  if (online && reachable) return null;
   return (
     <div role="status" className="border-b border-warn/40 bg-warn/12 px-4 py-2 text-center text-sm text-warn">
-      Offline &middot; showing data from {at ? ago(new Date(at).toISOString()) : "an earlier session"}
+      {online ? "Can't reach the server. Is Tailscale on?" : "Offline"} &middot; showing data from {at ? ago(new Date(at).toISOString()) : "an earlier session"}
     </div>
   );
 }
@@ -68,12 +103,23 @@ export function PickSync() {
 
   useEffect(() => {
     const run = () => {
-      if (navigator.onLine) void flushPicks(api, qc, toast);
+      if (!navigator.onLine || document.visibilityState !== "visible") return;
+      const wasUnreachable = !isServerReachable();
+      void api.health().then(async () => {
+        await flushPicks(api, qc, toast);
+        if (wasUnreachable) await qc.invalidateQueries();
+      }).catch(() => {
+        /* retry when the app returns or on the next tick */
+      });
     };
     run();
     window.addEventListener("online", run);
     document.addEventListener("visibilitychange", run);
+    const timer = window.setInterval(() => {
+      if (!isServerReachable()) run();
+    }, 15_000);
     return () => {
+      window.clearInterval(timer);
       window.removeEventListener("online", run);
       document.removeEventListener("visibilitychange", run);
     };

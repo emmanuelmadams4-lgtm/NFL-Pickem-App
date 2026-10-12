@@ -5,7 +5,7 @@ import { ApiError, keys, type GameDetail, type Provider, type Week } from "@nflp
 import { useApi } from "@/lib/api";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { isNetworkError, queuePick } from "@/lib/sync";
+import { isNetworkError, isServerReachable, queuePick } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
 
@@ -72,6 +72,10 @@ export function useSetPick(gameId: string) {
     scope: { id: `pick:${gameId}` },
     // Offline: keep the optimistic choice, queue it, and report success. The queue flushes when we are back online.
     mutationFn: async (v: PickVars): Promise<{ queued: boolean }> => {
+      if (!navigator.onLine || !isServerReachable()) {
+        queuePick(v.gameId, v.team);
+        return { queued: true };
+      }
       try {
         if (v.team) await api.setPick(v.gameId, v.team);
         else await api.clearPick(v.gameId);

@@ -9,7 +9,7 @@ import { ToastProvider } from "@/components/toast";
 import { SignIn } from "@/components/sign-in";
 import { ServiceWorkerRegister } from "@/components/pwa";
 import { useOnline } from "@/lib/sync";
-import { WEEK_MS, clearPersistedCache, restoreCache, startPersisting } from "@/lib/persist";
+import { WEEK_MS, clearPersistedCache, requestPersistentStorage, restoreCache, startPersisting } from "@/lib/persist";
 import { AppShell } from "@/components/app-shell";
 import { Button, Skeleton, errorMessage } from "@/components/ui";
 
@@ -73,6 +73,9 @@ function AuthFailureBridge({ handler }: { handler: React.MutableRefObject<() => 
 
 function Gate({ children }: { children: ReactNode }) {
   const { token, ready, notice } = useSession();
+  useEffect(() => {
+    if (ready && token) requestPersistentStorage();
+  }, [ready, token]);
   if (!ready) return <FullScreenLoading />;
   if (!token) return <SignIn notice={notice} />;
   return <MetaGate>{children}</MetaGate>;
@@ -99,6 +102,7 @@ function MetaGate({ children }: { children: ReactNode }) {
         <div role="alert" className="w-full max-w-md rounded-card border border-bad/40 bg-surface p-6">
           <h1 className="text-lg font-semibold text-bad">Cannot reach the API</h1>
           <p className="mt-1 text-sm text-text-2">{errorMessage(meta.error)}</p>
+          <p className="mt-1 text-sm text-text-2">Is Tailscale on?</p>
           <p className="mt-1 text-xs text-subtle">Server: {baseUrl || "this origin"}</p>
           <div className="mt-4 flex gap-2">
             <Button variant="primary" onClick={() => meta.refetch()}>
