@@ -141,3 +141,100 @@ After cleanup, on commit `29b14b4`: pytest 91 passed (`s4-cleanup-pytest.log`), 
 e2e 47 passed (`s4-e2e-5.log`). Real-data backtest (`s4-backtest-real.log`, 3,649 games): coin flip 14.2% of
 games, 52.4% right; tough matchup 40.6%, 59.6%; easy pick 45.1%, 77.1%; same order in 2012-2021
 (51.4 / 58.3 / 77.2) and 2022-2025 (54.8 / 62.6 / 76.7). Market 66.57%, blend 66.46%: unchanged from step 1.
+
+## 5. VERIFICATION
+
+### 5.1 Design critic, round 1: FAIL (no blocker, ten majors)
+
+Fresh subagent, read-only, given the screenshots, design.md and the frozen criteria. Report:
+`~/.claude/plans/nfl-pickem-intelligence-reviews/s4-design-critic-1.md`.
+
+| # | Finding | Fix (work order S4-D) |
+|---|---|---|
+| M1 | Board said "3 still open to pick" while the sheet listed 4 picks | Card says "Counts as X, the model's pick, unless you tap a team."; the tile says "N yours, M model picks" |
+| M2 | Three names for one thing (Model pick, App pick, Auto pick) | One word everywhere: the model |
+| M3 | After kickoff the chip did not name the team | "Model picked X for you" |
+| M4 | "Won 77% of the time" had no subject | "Easy picks have won 77% since 2012" |
+| M5 | Label chip sat on the Uncertainty row | Label is plain words under the win chance |
+| M6 | Points shown twice | One labelled select |
+| M7 | The swap was silent | One toast naming both games |
+| M8 | A game without points vanished | "No points yet" row; "N of M games have points" on the sheet |
+| M9 | Sheet had no column labels or width cap | Game / Pick / Points header, max width, whose pick on each row |
+| M10 | Phone scorecard scrolled sideways | Stacked rows under 640px; table first, rank form after |
+
+Spec change, said openly: `apps/web/e2e/sheet.spec.ts` was edited by the coordinator for the new words only
+("the model's pick", "Model says", "Use the model's number", "Yahoo sheet", column "Model") and two added
+checks (the swap toast, "Rank saved"). No check was removed or weakened.
+
+Coordinator edits after work order S4-D (small, said openly): the points row is hidden for a locked game from
+before the sheet existed; the "back to the model's number" message reads the number from the server's answer;
+the reserved line under the select applies from `lg` up only; the board tile counts only games that really
+follow the model; the phone scorecard is a `<dl>` axe accepts; the phone tile reads "Yours"; an empty scorecard
+says "No finished games on your sheet yet." Commits `d7b9570`, `cd25163`.
+
+### 5.2 Objective critic, round 1: FAIL (one high, six medium) on `29b14b4`
+
+Gates it ran: pytest 91 passed, ruff clean, typecheck clean, gen:api no drift, e2e 47 on a clean archive;
+one in-repo run had E4 (a step 2 test with a 1 second clock margin) fail once, not reproduced in 6 repeats.
+
+| # | Finding | Outcome |
+|---|---|---|
+| H1 | A malformed Jev answer was stored and made every week page fail | Fixed: only finite numbers are stored or read; test added |
+| M1 | Tie-break spent the daily AI cap with no key; re-asked games Jev left out | Fixed: no call without a key; every asked game is cached by its inputs hash; tests added |
+| M2 | "Best possible" wrong for a week in progress | Fixed: the sum of the points he had on finished games; test added |
+| M3 | Postponement after a lock can leave a locked number above N | Accepted limit: a locked number is never rewritten; the open games still get unique numbers. Revisit if it happens in a real week |
+| M4 | Evidence for the model's side used where he picked the other side | Fixed; test added |
+| M5 | No test failed if evidence never reached the sheet | Fixed: a test now shows the swap in the API and that a stale hash is ignored |
+| M6 | Export showed auto picks as his; a backfill prediction could become a sheet entry | Fixed: blank in the export; `finalize` skips backfill; tests added |
+| L1 | `sheet_start` first insert race | Fixed: insert on conflict do nothing |
+| L2 | Game page and export do not run `finalize` | Left: the worker tick and the week view do, within one tick |
+
+Amendment A5 (spec faults of mine, tests added before the fix, commit `8284694`, "test: step 4 amendment
+A5, red"): nine tests red, then green in `ff9396a` (Codex gpt-6-luna, work order S4-E; the number check was
+folded into one helper by the coordinator). The existing Jev test now marks Jev as configured; no assertion
+was removed. Admitted gap: `apps/web/e2e/sheet.spec.ts` first appeared in the implementation commit, so the
+browser checks have no red-first commit.
+
+Gates on `cd25163`: pytest 99 passed, ruff clean, typecheck clean, gen:api no drift, e2e 47 passed twice in a row.
+
+### 5.3 Round 2 (on `cd25163`)
+
+- Objective critic (fresh): PASS. Its own gate run: pytest 99, ruff clean, typecheck clean, gen:api no drift,
+  e2e 47. It mutated a scratch copy and saw the H1, M1, M4, M5 and M6 tests fail as they should. Left one medium
+  (the points dropdown offered fewer numbers than the server's 1..N when a game held no number) and one low.
+- Design critic (fresh): FAIL, one major (N1: the phone scorecard printed 0 where the table shows a dash, and
+  dropped the leader's points) plus minors. M1-M10 confirmed fixed.
+- Fixes, commit `c5435db`: dropdown range counts every game that is not postponed (the server's N); the phone
+  scorecard rows use the table's rules; "Rank saved" carries its icon; "Picked for you" on a final game the
+  model picked; no label without its select; "Yahoo sheet" in the sheet page's kicker.
+
+### 5.4 Round 3 (on `c5435db`, the commit that lands)
+
+| Check | Result |
+|---|---|
+| Coordinator gates | pytest 99 passed, ruff clean, typecheck clean, gen:api no drift, e2e 47 passed twice in a row |
+| Objective critic (fresh, clean archive) | PASS: same numbers; no critical, high or medium |
+| Design critic (fresh, 16 screenshots) | PASS: no blocker, no major |
+| Jev, Job 4 | review passed 0.92, open items stated honestly 0.91 (bar 0.8) |
+
+Screenshots: `~/.claude/plans/nfl-pickem-intelligence-reviews/s4-shots-r3/`. Logs: `~/.claude/plans/nfl-pickem-intelligence-logs/s4-*`.
+
+Carried forward, not fixed (for the dashboard step unless the owner wants them sooner):
+- Scorecard dashes have no visible footnote; zeros sit beside dashes when nothing is finished.
+- The phone tile shows "0/4 Yours" without the model-pick count.
+- With one week, the phone Total block repeats that week.
+- A locked points select keeps its outline.
+- Nothing says a higher number means a surer pick.
+- The Yahoo sheet does not mark numbers he set by hand.
+- About 40px of empty space under the points select on desktop.
+- A postponement after another game has locked can leave a locked number above N (accepted limit).
+- The game page and the export write down a started game only at the next worker tick.
+- A phone card is about 530px tall (owner decision D40; density belongs to the dashboard step).
+- Step 2's lock test (E4) has a 1 second clock margin and failed once in an early run.
+- Claude's written check of the sheet waits for step 11 (no Claude connection yet).
+
+No durable change to `design.md`.
+
+## 6. LANDING
+
+Pushed and PR opened under the owner's standing yes. Merge to `main` needs the owner's yes.
