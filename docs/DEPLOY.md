@@ -70,7 +70,7 @@ Copy it **off the computer** too. A folder on the same PC does not count. Point 
 BACKUP_COPY_DIR=/path/to/other-place ./scripts/backup.sh
 ```
 
-The copy is made under a temporary name, compared with the original, and only then renamed. The newest 14 are kept there too.
+The folder must already exist (an unplugged drive makes the backup report an error instead of quietly writing to the wrong place; the local backup is still saved). The copy is made under a temporary name, compared with the original, and only then renamed. The newest 14 are kept there too. `BACKUP_KEEP` (default 14) must be 2 or more.
 
 Run it every night, and write the output to a file you can read (a failed backup is silent otherwise):
 
@@ -90,7 +90,7 @@ ls -t backups | head                      # pick a file; names look like nflpi-2
 ./scripts/restore.sh backups/<that file> --yes
 ```
 
-This replaces the data with the backup. It first checks the file is a complete backup with games in it, loads it into a scratch copy while the app keeps running, saves the current data as `backups/pre-restore-<time>.sql.gz`, then swaps the two and restarts the app. If anything fails before the swap, nothing changes and the app stays up. After it prints `restored`, check `curl http://127.0.0.1:8000/api/health`.
+This replaces the data with the backup. It first checks the file is a complete backup with games in it and loads it into a scratch copy while the app keeps running. Then it stops the app and worker, saves the current data as `backups/pre-restore-<time>.sql.gz`, swaps the two, and starts the app again. If anything fails before the swap, the app is started again and nothing changes. If the window is closed or you press Ctrl-C partway, run `docker compose up -d`, then `curl http://127.0.0.1:8000/api/health`. After it prints `restored`, check the same URL. If the database `nflpi` itself is gone, the restore still works.
 
 If the app is not running after a problem, `docker compose up -d` starts it.
 

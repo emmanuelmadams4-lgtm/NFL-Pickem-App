@@ -1,4 +1,4 @@
-PASS D0 clean clone of c0d9e56
+PASS D0 clean clone of 84a28ed
 PASS D1 compose ports/restart, scripts, runbook and iPhone order
 PASS D2 up from a clean clone; database ok, worker heartbeat fresh
 PASS D3 bootstrap; health ok (ok)
@@ -13,5 +13,5 @@ NOTICE:  truncate cascades to table "user_picks"
 NOTICE:  truncate cascades to table "weather_forecasts"
 PASS D7 backup restored with matching counts (1,93,6771); safety copy kept; 3 bad files refused with data intact; failed backup fails loudly; off-host copy made
 PASS D8 token rotation: old token 401, new token 200
-ALL PASS deploy-check (c0d9e56)
+ALL PASS deploy-check (84a28ed)
 exit=0
