@@ -194,7 +194,9 @@ test("E9 weather outage: no banner on the board; Settings notes it is not a mode
   await expect(fresh).toContainText(/not a model input/i);
 });
 
-test("E9b stale model input: the board banner still shows for stale schedules", async ({ page }) => {
+test.describe(() => {
+  test.use({ serviceWorkers: "block" }); // rewrites an API response with page.route
+  test("E9b stale model input: the board banner still shows for stale schedules", async ({ page }) => {
   await page.route("**/api/weeks/**", async (route) => {
     const res = await route.fetch();
     const body = await res.json();
@@ -205,7 +207,8 @@ test("E9b stale model input: the board banner still shows for stale schedules", 
   await page.goto("/");
   await boardLoaded(page);
   await expect(page.getByText(/Stale data: schedules/)).toBeVisible();
-});
+});});
+
 
 test("E10 design: the app renders in Geist", async ({ page }) => {
   await signIn(page);

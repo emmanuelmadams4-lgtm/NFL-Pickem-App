@@ -6,7 +6,7 @@ Plan for the gauntlet-loop. Planned on Opus, 2026-10-11. Steps are numbered; pro
 
 Emmanuel uses one private app every week of the 2026 season, on desktop and on his iPhone (Home Screen PWA). It gives an evidence-based pick for every game that matches or beats the betting market. It shows how sure it is and why, alerts him to flips, QB news and unpicked kickoffs, and tracks his accuracy against the model, the market and the league leader (about 69%).
 
-Done when: steps 1–14 are landed (re-planned 2026-10-12 to fold owner decisions D1–D41). Step 14 (the model gets better) is required since 2026-10-12; a model change inside it ships only if it beats the current model in the walk-forward test, and if none does, step 8 lands the evidence and the weekly scorecard.
+Done when: steps 1–14 are landed (re-planned 2026-10-12 to fold owner decisions D1–D41). Step 14 (the model gets better) is required since 2026-10-12; a model change inside it ships only if it beats the current model in the walk-forward test, and if none does, step 14 lands the evidence and the weekly scorecard.
 
 Deadline pressure: week 6 starts Thursday 2026-10-15 (SEA @ DEN). Steps are ordered so a usable, deployed app exists as early as possible; the backend refactor waits.
 

@@ -27,6 +27,8 @@ async function board(request: APIRequestContext) {
   return { meta, games: week.games, open };
 }
 
+test.use({ serviceWorkers: "block" }); // R1/R6 rewrite API responses; a controlling service worker would bypass page.route
+
 const signIn = (page: Page) => page.addInitScript((t) => localStorage.setItem("nflpi_token", t), TOKEN);
 const card = (page: Page, g: Game) => page.getByTestId("game-card").filter({ has: page.getByRole("link", { name: `Open matchup: ${g.away.name} at ${g.home.name}` }) });
 const cardsLoaded = (page: Page) => expect(page.getByTestId("game-card").first()).toBeVisible();
@@ -72,6 +74,9 @@ test("S2 tokens and type: near-black page, lime accent, condensed uppercase titl
   expect(css.ink).toBe("rgb(10, 10, 10)");
   expect(css.font).toMatch(/^"?Barlow Condensed/);
   expect(css.transform).toBe("uppercase");
+  expect(await page.evaluate(() => document.fonts.check('700 48px "Barlow Condensed"') && [...document.fonts].some((f) => f.family.includes("Barlow Condensed") && f.status === "loaded"))).toBe(true);
+  const activeNav = page.getByRole("navigation", { name: "Primary" }).locator('[aria-current="page"]').first();
+  expect(await activeNav.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgb(198, 241, 53)");
 });
 
 test("S3 phone: floating pill tab bar, active tab is a labeled pill, no sideways scroll", async ({ page }) => {
@@ -180,8 +185,8 @@ test("R4 backfill never reads as live: Week KPI, Results table, chart labels, ma
   await expect(calibration).toHaveAttribute("aria-label", /live: 0 games[^]*backfilled: \d+ games/i);
   await page.goto(`/game/?id=${week1[0].game_id}`);
   await expect(page.locator("aside")).toContainText("Backfilled");
-  await expect(page.locator("aside")).not.toContainText(/\bLive\b/);
-  await expect(page.locator("#history")).not.toContainText(/\bLive\b/);
+  await expect(page.locator("aside")).not.toContainText(/\bLive\b/, { useInnerText: true });
+  await expect(page.locator("#history")).not.toContainText(/\bLive\b/, { useInnerText: true });
 });
 
 test("R6 the client lock follows the server rule: a TBD or postponed game stays open after its placeholder time", async ({ page, request }) => {
@@ -198,4 +203,80 @@ test("R6 the client lock follows the server rule: a TBD or postponed game stays 
   for (const g of [tbd, postponed]) {
     await expect(card(page, g).getByRole("button", { name: new RegExp(`^Pick ${g.home.name}`) }), g.game_id).toBeEnabled();
   }
+});
+
+const LIME = "rgb(198, 241, 53)";
+
+test("F1 smallest phone (320px): no screen scrolls sideways", async ({ page, request }) => {
+  const { open } = await board(request);
+  await page.setViewportSize({ width: 320, height: 700 });
+  await signIn(page);
+  for (const path of ["/", `/game/?id=${open[0].game_id}`, "/performance/", "/backtest/", "/settings/"]) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), path).toBeLessThanOrEqual(320);
+  }
+});
+
+test("F2 matchup: a pick against the model says 'Differs from model' in the pick panel", async ({ page, request }) => {
+  const { open } = await board(request);
+  const g = open.find((x) => x.prediction)!;
+  const against = g.prediction!.pick === g.home.abbr ? g.away : g.home;
+  await signIn(page);
+  await page.goto(`/game/?id=${g.game_id}`);
+  const panel = page.locator("aside");
+  await panel.getByRole("button", { name: new RegExp(`^Pick ${against.name}`) }).click();
+  await expect(panel).toContainText("Differs from model");
+  await panel.getByRole("button", { name: new RegExp(`^${against.name} picked`) }).click();
+  await expect(panel).not.toContainText("Differs from model");
+});
+
+test("F3 win split: lime is mine, never the model's tile; no check mark on it; backfill says so", async ({ page, request }) => {
+  const { meta, open } = await board(request);
+  const final = (await api<{ games: Game[] }>(request, `/weeks/${meta.current_season}/1`)).games[0];
+  await signIn(page);
+  for (const id of [open[0].game_id, final.game_id]) {
+    await page.goto(`/game/?id=${id}`);
+    const tile = page.getByTestId("win-tile-model");
+    await expect(tile).toContainText("Model pick");
+    expect(await tile.evaluate((el) => getComputedStyle(el).backgroundColor), id).not.toBe(LIME);
+    await expect(tile.locator("svg"), "no check icon on the model tile").toHaveCount(0);
+  }
+  await expect(page.getByTestId("win-split")).toContainText("Backfilled");
+});
+
+test("F4 week board: filter chips sit right under the title, above the summary and the cards, all visible on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 852 });
+  await signIn(page);
+  await page.goto("/");
+  await cardsLoaded(page);
+  const top = async (sel: string) => (await page.locator(sel).first().boundingBox())!.y;
+  const chips = await top('[data-testid="filter-chips"]');
+  expect(chips).toBeGreaterThan(await top("h1"));
+  expect(chips).toBeLessThan(await top('[data-testid="kpi-model"]'));
+  expect(chips).toBeLessThan(await top('[data-testid="game-card"]'));
+  for (const name of ["All games", "Open to pick"]) await expect(page.getByTestId("filter-chips").getByRole("button", { name: new RegExp(name) })).toBeInViewport({ ratio: 1 });
+});
+
+test("F5 matchup: my pick buttons are on screen without scrolling (phone and desktop)", async ({ page, request }) => {
+  const { open } = await board(request);
+  const g = open[0];
+  await signIn(page);
+  for (const [w, h] of [[393, 852], [1440, 900]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto(`/game/?id=${g.game_id}`);
+    await expect(page.locator("aside").getByRole("button", { name: new RegExp(`^Pick ${g.home.name}`) }), `${w}x${h}`).toBeInViewport({ ratio: 1 });
+  }
+});
+
+test("F6 section tabs: the tab you jump to is the one marked current", async ({ page, request }) => {
+  const { open } = await board(request);
+  await signIn(page);
+  await page.goto(`/game/?id=${open[0].game_id}`);
+  const tabs = page.getByRole("navigation", { name: "Sections" });
+  for (const name of ["Injuries", "Market", "History"]) {
+    await tabs.getByRole("link", { name }).click();
+    await expect(tabs.getByRole("link", { name }), name).toHaveAttribute("aria-current", "true");
+  }
+  await expect(tabs.getByRole("link", { name: "Ask" })).toBeVisible();
 });
