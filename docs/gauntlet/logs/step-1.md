@@ -114,8 +114,23 @@ Carried observation (unmapped, not a gate item): `current_week` now follows the 
 
 WO-A review note: Codex removed `EXPOSE 8000` from the Dockerfile because the coordinator's own grep (`expo`, case-insensitive) matched it. The gate was wrong, not the line: restored, and O1's grep is now `apps/mobile|react-native|"expo|expo-`.
 
+Review fan-out on `c1ba844` (tier large): ecc:code-reviewer approve, ecc:security-reviewer approve, ecc:silent-failure-hunter warn, ecc:python-reviewer warn, ecc:pr-test-analyzer warn. No CRITICAL or HIGH. Reports with the routing of every finding: `docs/gauntlet/logs/step-1-evidence/s1-*.md`. Mapped findings went to Codex as work order E (F1-F9), after two new red checks were committed (`test_one_broken_subscription_does_not_stop_reminders_or_the_heartbeat`, final-game lock assert) and A14 was re-pinned to 11/14 points.
+
+| WO | Scope | Rung | Commit | Proof rerun by the coordinator |
+|---|---|---|---|---|
+| E | F1-F9 review fixes + C1-C6 cleanup | gpt-6-sol high, try 1 | `68bb90c` | pytest 47 passed, twice · ruff exit 0 · scratch DB `alembic upgrade head` + `alembic check` exit 0 · backtest unchanged (66.57 / 64.51 / 66.46; upset 24.42%; grades 68.73 / 66.93 / 63.01) · gen:api no drift · typecheck exit 0 · `npm run web:build` exit 0 · logs in `step-1-evidence/` |
+
+Carried, unmapped (recorded, not fixed): reminders send-then-record can resend after a crash and one delivered device marks a reminder done; ingestion never sets `postponed` (nflverse has no status column); AI cap resets at UTC midnight; actions pinned by tag not SHA; `/api` responses have no `no-store`; duplicated picks-underdog logic; hard-coded backtest windows; `current_week` moves to the next week once the last game of a week kicks off (owner question for step 2).
+
 ## 4. CLEANUP
+
+Scope-locked to code touched in this step, items picked by the coordinator from ecc:python-reviewer's cleanup candidates, built by Codex in work order E part 2 (`68bb90c`): C1 dead `_qb_injuries` removed · C2 redundant local import removed · C3 one helper for "no clock time" · C4 backtest frame via rename/drop · C5 `requests` declared in pyproject + uv.lock · C6 named AI lock key. The `/refactor` skill itself was not invoked (context was nearly full); this is its behavioral equivalent. No behavior change: the full validation above ran after these edits.
 
 ## 5. VERIFICATION
 
+Coordinator, on `68bb90c`: gate green (see WO-E row). Operational: O1 `docker build .` on the final code: see STATE (rerun in progress when this was written; it passed on `4fe9701`) · O2 compose `127.0.0.1:8000:8000`, uvicorn `--proxy-headers --forwarded-allow-ips="*"` · O3 worker command `python -m nflpi.jobs loop` · O4 leftover grep empty · O6 cold start on an empty DB: `alembic upgrade head` exit 0, `jobs bootstrap` exit 0, 6771 games, 15 live + 78 backfill predictions, schedules/teams/injuries/weather all ok (`s1-o6-bootstrap.log`) · O7 running API with no worker: `http 200 status=degraded worker_heartbeat=None`; after one `jobs.tick`: `status=ok`; `/api/meta` without a token: 401 · O5 CI: PENDING until pushed.
+Fresh critic: NOT YET RUN. Jev Job 4: NOT YET RUN.
+
 ## 6. LANDING
+
+Not yet. Push + PR #1 update + CI are approved by the owner (2026-10-11) once the step verifies.
