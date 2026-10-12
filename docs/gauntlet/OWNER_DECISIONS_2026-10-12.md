@@ -86,6 +86,28 @@ Star-player notes (coordinator's reading, facts checked in the repo and database
 * Honest limit: with about 160 stars and Questionable included, the morning summary will often
   list 10 or more items midweek.
 
+## Quick chat (2026-10-12)
+
+| # | Decision | Door | Revisit when |
+|---|---|---|---|
+| D29 | Owner, his words: "include a quick chat area hooked up to the jev and Claude sdk so I can ask it questions and clarification on why it picked it." A chat area where he asks why the app picked a team, answered by Claude or Jev (his choice). Fits D16: it only runs when he asks. | two-way | - |
+
+D29 notes (coordinator's reading, checked in the repo). Most of this exists and is reused, not rebuilt:
+
+* Built: `POST /api/games/{game_id}/ask` -> `ai/research.py:answer_question`; Claude through the
+  Anthropic SDK and Jev through OpenRouter (`ai/providers.py`); answers come only from the game's
+  evidence pack, are capped per day, and are stored in `ai_reports` (kind `answer`). The web game
+  screen has the box with a Claude/Jev picker (`apps/web/components/game/ask.tsx`).
+* Missing for a "chat": (1) follow-up questions, each call is one question with no memory of the
+  last; (2) the evidence pack does not yet hold the label, points, star list or what changed since
+  his pick, because those are not built; (3) no way to ask about the whole week ("which games are
+  my riskiest?"), it is per game only; (4) never run against a real key (owner go-live step).
+* Smallest build: show the game's earlier questions and answers as a thread and send the last few
+  turns with each new question; add the new fields to the evidence pack as they land. A week-level
+  chat is a second, optional piece.
+* Rule kept: answers explain the model's numbers; they never invent a fact that is not in the
+  pack, and say what is missing instead. No "lock", no "guaranteed".
+
 ## What this does to the roadmap (coordinator's proposal, not yet in PLAN.md)
 
 * New step right after the desktop web app: **Pick sheet** = label (D2), points with re-rank and
