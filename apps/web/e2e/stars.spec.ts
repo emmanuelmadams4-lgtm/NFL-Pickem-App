@@ -39,36 +39,44 @@ for (const size of [
   test.describe(`${size.name}`, () => {
     test.use({ viewport: { width: size.width, height: size.height } });
 
-    test("ST1 the row names the stars who are out or doubtful, with how long ago that was seen", async ({ page, request }) => {
+    test("ST1 the row names the star whose status is worst and counts the others, with how long ago that was seen", async ({ page, request }) => {
       const g = find(await games(request, 4), "NE", "KC");
       await open(page, "/");
       const line = card(page, g).getByRole("group", { name: "Stars out" });
       await expect(line).toBeVisible({ timeout: 15_000 });
-      await expect(line).toContainText("Cory Corner");
-      await expect(line, "each name says whose star he is, as the QB alert does").toContainText(/KC\s*Cory Corner/);
+      // One star is named in full, the one whose status is worst; the rest are counted. Nothing a reader needs is clipped.
+      const name = line.getByText("KC Cory Corner", { exact: true });
+      await expect(name, "each name says whose star he is, as the QB alert does").toBeVisible();
+      expect(await name.evaluate((e) => e.scrollWidth <= e.clientWidth), "an ordinary name is shown whole, not cut").toBe(true);
       await expect(line).toContainText("CB");
       await expect(line).toContainText("Out");
-      await expect(line).toContainText("Cal Catch");
-      await expect(line).toContainText("Doubtful");
-      await expect(line).toContainText(/seen 3h ago/i);
+      await expect(line, "Out is named before Doubtful; the other star is counted, not hidden without a word").toContainText("+1 more");
+      await expect(line).not.toContainText("Cal Catch");
+      await expect(line).toContainText(/3h ago/i);
       await expect(line, "Questionable is not on the row").not.toContainText("Ron Runner");
       await expect(line, "a player who is out but not a star").not.toContainText("Not A Star");
     });
 
-    test("ST2 more than three: three names, then how many more; a QB already in the QB alert is not repeated; a long name never widens the page", async ({ page, request }) => {
+    test("ST2 several stars out: one name, then how many more; a QB already in the QB alert is not repeated; a long name never widens the page", async ({ page, request }) => {
       const g = find(await games(request, 4), "BUF", "MIA");
       await open(page, "/");
       const line = card(page, g).getByRole("group", { name: "Stars out" });
       await expect(line).toBeVisible({ timeout: 15_000 });
       await expect(card(page, g), "the QB alert that was there before").toContainText("Jo Thrower");
       await expect(line, "the same man is not shown twice on one card").not.toContainText("Jo Thrower");
-      await expect(line).toContainText("Maximilian Featherstonehaugh-Smythe III");
-      await expect(line).toContainText("Dee Deep");
-      await expect(line).toContainText("Ed Edge");
+      await expect(line, "the long name is in the page for a screen reader, even where the screen cuts it").toContainText("Maximilian Featherstonehaugh-Smythe III");
+      await expect(line).not.toContainText("Dee Deep");
       await expect(line).not.toContainText("Nick Nickel");
-      await expect(line).toContainText("+1 more");
-      await expect(line, "the other club has no star list: said on the same line, never left silent").toContainText("MIA: no star list");
-      expect(await line.evaluate((e) => e.getBoundingClientRect().height), "D27 a short line: one line even with five stars out and a very long name").toBeLessThanOrEqual(20);
+      const box = await line.evaluate((e) => e.getBoundingClientRect().toJSON());
+      // Whatever the name's length, these are never cut: his status, how many more, the age, and the club with no list.
+      for (const text of ["Out", "+3 more", "3h ago", "MIA: no list"]) {
+        const part = line.getByText(text, { exact: true });
+        await expect(part, text).toBeVisible();
+        const r = await part.evaluate((e) => e.getBoundingClientRect().toJSON());
+        expect(r.right, `"${text}" ends inside the line`).toBeLessThanOrEqual(box.right + 0.5);
+        expect(await part.evaluate((e) => e.scrollWidth <= e.clientWidth), `"${text}" is whole`).toBe(true);
+      }
+      expect(box.height, "D27 a short line: one line even with five stars out and a very long name").toBeLessThanOrEqual(20);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(0);
     });
 

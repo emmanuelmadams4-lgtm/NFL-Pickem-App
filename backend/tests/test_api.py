@@ -179,12 +179,12 @@ def test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them
     row = after.games[0]
 
     assert [(r.team, r.player, r.position, r.slot, r.status) for r in row.stars_out.out] == [
-        (game.away.abbr, "Stay Put", "QB", "qb", "Doubtful"),
-        (game.home.abbr, "Ron Runner", "RB", "off", "Out"),  # control characters never reach the web
+        (game.home.abbr, "Ron Runner", "RB", "off", "Out"),  # Out before Doubtful: the row names the first one
+        (game.away.abbr, "Stay Put", "QB", "qb", "Doubtful"),  # control characters never reach the web (Ron Runner)
     ]
     assert row.stars_out.reports_seen == 4
     assert row.stars_out.no_list == []  # both clubs have a list now (the away club's is a week older)
-    assert row.stars_out.out[1].observed_at == game.kickoff_utc - timedelta(hours=30)
+    assert row.stars_out.out[0].observed_at == game.kickoff_utc - timedelta(hours=30)
     assert row.prediction == game.prediction and row.sheet == game.sheet  # a star out never moves the pick (D24)
     clubs = {game.away.abbr, game.home.abbr}
     for other in after.games[1:]:  # another game lists a star only when his club plays in it
