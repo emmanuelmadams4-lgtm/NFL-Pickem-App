@@ -23,7 +23,9 @@ Pulls: `cryptography>=49` (already in `uv.lock` through pywebpush), `pyOpenSSL>=
 `endswith("." + rp_id)` on a host parsed by `urlsplit`; the value comes from the server's own `.env`, never from a
 caller). `Host`, `Origin` and `X-Forwarded-*` request headers are never read by this code.
 
-Not configured: every passkey route answers `503 {"detail": "Passkey sign-in is not configured"}`, a session value is
+Not configured: the four ceremony routes (register and sign-in, begin and finish) answer
+`503 {"detail": "Passkey sign-in is not configured"}`; list, remove and sign-out keep working with the app token so the
+owner can remove a passkey he does not know while passkeys are off (amended after code review, section 14), a session value is
 refused by `require_token` with no database call, and nothing else changes. So clearing the two settings is the off
 switch, and it also ends existing sessions.
 
@@ -166,7 +168,8 @@ from the request (a forged Host/Origin header changes nothing in the options).
 2. The session is sent in the same header as the app token and kept in the same place on the device.
 3. Up to 10 passkeys (one per device).
 4. Removing a passkey signs that device out at once.
-5. Clearing the passkey settings turns passkey sign-in off at once, sessions included; the app token is untouched.
+5. Clearing the passkey settings turns passkey sign-in off at once and sessions stop working; the app token is
+   untouched. Sessions under 30 days old work again if the settings are restored, so to end one for good remove its passkey.
 6. Face ID / Touch ID (user verification) is required on every sign-in.
 7. A passkey is tied to the host name in `PASSKEY_RP_ID`; a new host name means registering again (D33 note).
 8. Someone on the tailnet can make passkey sign-in refuse for as long as they keep flooding it; the token still works.
@@ -194,3 +197,33 @@ T1-T4 are covered by the P1, P13, P4, P16 tests and the gate's gen:api check.
 
 SEAM for the integrator (no edit made): `nflpi/notify/push.py` has no public "send one alert" function; this lane
 calls its `_send` and `_record`. A public wrapper there would be cleaner.
+
+## 14. Changes after the code review fan-out (2026-10-13)
+
+* **P1 amended.** List, remove and sign-out no longer answer 503 when the settings are unset: they need no relying
+  party, and the moment the owner pulls the off switch is the moment he needs to remove a passkey he does not know.
+  A session is still refused while passkeys are off, so only the app token reaches them then.
+* **Hostile input.** A body nested deeper than the JSON parser allows, a credential id that is not base64url text, and
+  an id outside 1..2147483647 on DELETE are refused cleanly (401, 401, 422), never a server error.
+* **Tests added** on the test reviewer's advice: the rate window slides; a failed registration finish also uses up
+  its challenge; six racing finishes spend one challenge once; refused registrations log nothing secret; a removal
+  that removes nothing alerts nobody.
+* Reason word `count` from section 10 was dropped: a sign-count refusal is logged as `verify` with the library's
+  exception class, because telling the two apart would mean parsing authenticator data ourselves.
+
+## 15. Changes after Dwight's code review at d4bf199 (dwight-code-review.md): PASS on security, C1 to fix
+
+* **C1 fixed (R2).** The `notifications` row of kind `passkey` is stored on every add and remove whether or not a
+  device was reached, and `passkey added|removed, nobody was alerted, id=N` is logged as a warning when none was.
+  Adding a passkey needs no push setup, so a silent add must still leave a record.
+* **C3 fixed.** A well-formed session refused because the settings are unset or unsafe logs
+  `passkey session refused: passkey sign-in is not configured` (a typo in `PASSKEY_ORIGINS` signs every device out).
+* **C4, C5 fixed (race guards, no test).** The sign-count update keeps the higher count; a passkey removed during a
+  sign-in is the same 401, not a 500.
+* **C9 fixed.** An `rp_id` with `*`, or with no dot (unless it is `localhost`), counts as not configured.
+* **Carried, accepted:** C2 one shared rate window (owner decision 8 says the cost in those words; Dwight rates it
+  MEDIUM, his silent-failure agent HIGH, both say no bypass); C6 the two caps are check-then-insert (small
+  overshoot); C7 a database error on the non-auth passkey routes is a 500, never a 401; C8 a session may remove a
+  passkey (owner decision 12); C10 a well-formed `pks_` value costs one indexed query, and restored settings revive
+  sessions under 30 days old (decision 5 now says so). Synced passkeys always report sign count 0, so clone
+  detection only works for authenticators that count.

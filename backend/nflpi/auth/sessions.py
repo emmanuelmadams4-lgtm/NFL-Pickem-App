@@ -38,7 +38,10 @@ def issue(session: Session, credential_pk: int) -> tuple[str, datetime]:
 
 def accepts(value: str) -> bool:
     """True for a live session value. No database call unless the value looks like one and passkeys are on."""
-    if not value.startswith(PREFIX) or len(value) != VALUE_LENGTH or passkeys.config() is None:
+    if not value.startswith(PREFIX) or len(value) != VALUE_LENGTH:
+        return False
+    if passkeys.config() is None:
+        log.warning("passkey session refused: passkey sign-in is not configured")
         return False
     try:
         with session_factory()() as s:

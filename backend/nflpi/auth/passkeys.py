@@ -3,6 +3,7 @@
 import hashlib
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Any
 from urllib.parse import urlsplit
 
 from sqlalchemy import text
@@ -56,7 +57,9 @@ def config() -> PasskeyConfig | None:
     s = get_settings()
     rp_id = s.passkey_rp_id.strip()
     origins = tuple(o.strip() for o in s.passkey_origins.split(",") if o.strip())
-    if not rp_id or not origins or not all(_origin_ok(o, rp_id) for o in origins):
+    if not rp_id or "*" in rp_id or (rp_id != "localhost" and "." not in rp_id):
+        return None
+    if not origins or not all(_origin_ok(o, rp_id) for o in origins):
         return None
     return PasskeyConfig(rp_id, origins)
 
@@ -100,7 +103,7 @@ def credential_count(session: Session) -> int:
     return session.execute(text("select count(*) from passkey_credentials")).scalar_one()
 
 
-def registration_options(session: Session, cfg: PasskeyConfig) -> dict:
+def registration_options(session: Session, cfg: PasskeyConfig) -> dict[str, Any]:
     stored = session.execute(text("select credential_id from passkey_credentials")).scalars().all()
     options = generate_registration_options(
         rp_id=cfg.rp_id,
@@ -116,13 +119,13 @@ def registration_options(session: Session, cfg: PasskeyConfig) -> dict:
     return options_to_json_dict(options)
 
 
-def signin_options(session: Session, cfg: PasskeyConfig) -> dict:
+def signin_options(session: Session, cfg: PasskeyConfig) -> dict[str, Any]:
     options = generate_authentication_options(rp_id=cfg.rp_id, user_verification=UserVerificationRequirement.REQUIRED)
     _store_challenge(session, "signin", options.challenge)
     return options_to_json_dict(options)
 
 
-def verify_registration(cfg: PasskeyConfig, credential: dict, challenge: bytes) -> tuple[str, bytes, int]:
+def verify_registration(cfg: PasskeyConfig, credential: dict[str, Any], challenge: bytes) -> tuple[str, bytes, int]:
     """Return (credential id as base64url, public key, sign count); raises on any failure."""
     verified = verify_registration_response(
         credential=credential,
@@ -134,7 +137,9 @@ def verify_registration(cfg: PasskeyConfig, credential: dict, challenge: bytes) 
     return bytes_to_base64url(verified.credential_id), verified.credential_public_key, verified.sign_count
 
 
-def verify_signin(cfg: PasskeyConfig, credential: dict, challenge: bytes, public_key: bytes, sign_count: int) -> int:
+def verify_signin(
+    cfg: PasskeyConfig, credential: dict[str, Any], challenge: bytes, public_key: bytes, sign_count: int
+) -> int:
     """Return the new sign count; raises on any failure."""
     return verify_authentication_response(
         credential=credential,

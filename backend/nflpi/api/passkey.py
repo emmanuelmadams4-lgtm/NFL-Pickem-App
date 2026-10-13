@@ -5,6 +5,7 @@ import logging
 import re
 import secrets
 import unicodedata
+from collections.abc import Callable
 from datetime import datetime
 from typing import Annotated, Any
 
@@ -99,7 +100,11 @@ async def _read_body(request: Request) -> bytes:
     return bytes(data)
 
 
-def _begin(make_options, session: Session, cfg: passkeys.PasskeyConfig) -> dict:
+def _begin(
+    make_options: Callable[[Session, passkeys.PasskeyConfig], dict[str, Any]],
+    session: Session,
+    cfg: passkeys.PasskeyConfig,
+) -> dict[str, Any]:
     try:
         return make_options(session, cfg)
     except passkeys.TooManyChallenges:
@@ -112,10 +117,11 @@ def _alert(session: Session, event: str, label: str | None, row_id: int) -> None
     body = f"{label or 'no name'}. Not you? Remove it in Settings and change the app token."
     try:
         sent = push._send(session, title, body, "/settings/")
-        if sent:
-            key = f"passkey:{event}:{row_id}:{secrets.token_hex(8)}"
-            push._record(session, "passkey", None, key, {"title": title, "body": body})
+        key = f"passkey:{event}:{row_id}:{secrets.token_hex(8)}"
+        push._record(session, "passkey", None, key, {"title": title, "body": body})
         session.commit()
+        if not sent:
+            log.warning("passkey %s, nobody was alerted, id=%s", event, row_id)
     except Exception as exc:  # noqa: BLE001 - an alert must not undo the change
         log.warning("passkey alert failed (%s)", type(exc).__name__)
         session.rollback()
@@ -125,7 +131,7 @@ def _alert(session: Session, event: str, label: str | None, row_id: int) -> None
 
 
 @router.post("/register/begin", dependencies=[Depends(_owner)])
-def register_begin(session: DB, cfg: Cfg) -> dict:
+def register_begin(session: DB, cfg: Cfg) -> dict[str, Any]:
     return _begin(passkeys.registration_options, session, cfg)
 
 
@@ -151,6 +157,7 @@ def _register_finish(raw: bytes, cfg: passkeys.PasskeyConfig) -> RegisteredOut:
         raise HTTPException(400, REGISTER_FAILED) from None
     label = _clean_label(body.get("label"))
     with session_factory()() as session:
+        # Check-then-insert: fine, only the owner (app token) can call this.
         if passkeys.credential_count(session) >= passkeys.MAX_PASSKEYS:
             raise HTTPException(409, f"Passkey limit reached ({passkeys.MAX_PASSKEYS}). Remove one first.")
         challenge = passkeys.burn_challenge(session, "register", client_data)
@@ -190,7 +197,7 @@ async def register_finish(request: Request, cfg: Cfg) -> RegisteredOut:
 
 
 @router.post("/signin/begin")
-def signin_begin(session: DB, cfg: Cfg) -> dict:
+def signin_begin(session: DB, cfg: Cfg) -> dict[str, Any]:
     if not throttle.allow():
         raise HTTPException(429, TOO_MANY)
     return _begin(passkeys.signin_options, session, cfg)
@@ -217,11 +224,18 @@ def _signin_finish(raw: bytes, cfg: passkeys.PasskeyConfig) -> tuple[str, dateti
             new_count = passkeys.verify_signin(cfg, body, challenge, row.public_key, row.sign_count)
         except Exception as exc:  # noqa: BLE001 - the library raises many types; all are one refusal
             raise _Refused("verify", type(exc).__name__) from None
-        session.execute(
-            text("update passkey_credentials set sign_count = :n, last_used_at = now() where id = :i"),
-            {"n": new_count, "i": row.id},
-        )
-        value, expires_at = sessions.issue(session, row.id)
+        try:
+            session.execute(
+                text(
+                    "update passkey_credentials set sign_count = :n, last_used_at = now() "
+                    "where id = :i and sign_count <= :n"
+                ),
+                {"n": new_count, "i": row.id},
+            )
+            value, expires_at = sessions.issue(session, row.id)
+        except IntegrityError:  # the passkey was removed while this sign-in was finishing
+            session.rollback()
+            raise _Refused("unknown") from None
         log.info("passkey sign-in ok id=%s", row.id)
         return value, expires_at
 
@@ -244,7 +258,7 @@ async def signin_finish(request: Request, response: Response, cfg: Cfg) -> Sessi
 
 
 @router.get("", response_model=PasskeyListOut, dependencies=[Depends(_signed_in)])
-def list_passkeys(session: DB, cfg: Cfg) -> PasskeyListOut:
+def list_passkeys(session: DB) -> PasskeyListOut:
     rows = session.scalars(select(PasskeyCredential).order_by(PasskeyCredential.created_at, PasskeyCredential.id))
     return PasskeyListOut(
         passkeys=[
@@ -254,7 +268,7 @@ def list_passkeys(session: DB, cfg: Cfg) -> PasskeyListOut:
 
 
 @router.delete("/{passkey_id}", status_code=204, dependencies=[Depends(_signed_in)])
-def remove_passkey(passkey_id: Annotated[int, Path(ge=1, le=2_147_483_647)], session: DB, cfg: Cfg) -> Response:
+def remove_passkey(passkey_id: Annotated[int, Path(ge=1, le=2_147_483_647)], session: DB) -> Response:
     row = session.execute(
         text("delete from passkey_credentials where id = :i returning label"), {"i": passkey_id}
     ).first()
@@ -267,7 +281,7 @@ def remove_passkey(passkey_id: Annotated[int, Path(ge=1, le=2_147_483_647)], ses
 
 
 @router.post("/signout", status_code=204, dependencies=[Depends(_signed_in)])
-def signout(session: DB, cfg: Cfg, authorization: Annotated[str | None, Header()] = None) -> Response:
+def signout(session: DB, authorization: Annotated[str | None, Header()] = None) -> Response:
     supplied = (authorization or "").removeprefix("Bearer ").strip()
     if supplied.startswith(sessions.PREFIX):
         sessions.revoke(session, supplied)

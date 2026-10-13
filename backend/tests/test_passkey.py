@@ -10,6 +10,7 @@ import hashlib
 import json
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -109,19 +110,16 @@ def opens(anon, value: str, path: str = "/api/freshness") -> bool:
 # P1 -------------------------------------------------------------------------------------------------------------------
 
 
-def test_p1_unset_settings_answer_not_configured_on_every_passkey_route_and_change_nothing_else(session, client, anon):
-    calls = [
-        ("post", "/api/passkey/register/begin"),
-        ("post", "/api/passkey/register/finish"),
-        ("post", "/api/passkey/signin/begin"),
-        ("post", "/api/passkey/signin/finish"),
-        ("post", "/api/passkey/signout"),
-        ("get", "/api/passkey"),
-        ("delete", "/api/passkey/1"),
-    ]
-    for method, path in calls:
-        res = client.request(method, path)
-        assert (res.status_code, res.json()) == (503, NOT_CONFIGURED), path
+def test_p1_unset_settings_answer_not_configured_on_every_ceremony_route_and_change_nothing_else(session, client, anon):
+    for step in ("register/begin", "register/finish", "signin/begin", "signin/finish"):
+        res = client.post(f"/api/passkey/{step}")
+        assert (res.status_code, res.json()) == (503, NOT_CONFIGURED), step
+    # list, remove and sign out need no relying party: they keep working so the owner can clean up while it is off
+    assert client.get("/api/passkey").json() == {"passkeys": []}
+    assert client.delete("/api/passkey/1").status_code == 404
+    assert client.post("/api/passkey/signout").status_code == 204
+    for method, path in [("get", "/api/passkey"), ("delete", "/api/passkey/1"), ("post", "/api/passkey/signout")]:
+        assert anon.request(method, path).status_code == 401, path
     assert anon.post("/api/passkey/signin/begin").json() == NOT_CONFIGURED
     assert client.get("/api/freshness").status_code != 401
     assert (anon.get("/api/freshness").status_code, anon.get("/api/freshness").json()) == (401, WRONG_TOKEN)
@@ -138,6 +136,8 @@ def test_p1_unset_settings_answer_not_configured_on_every_passkey_route_and_chan
         (RP, f"https://not{RP}"),  # suffix without a dot is another site
         (RP, f"{ORIGIN},https://evil.example"),  # one bad origin spoils the list
         (RP, f"{ORIGIN}/path"),  # an origin has no path
+        ("*", "https://*"),  # a wildcard is not a host name
+        ("tsnet", "https://tsnet"),  # a bare name with no dot is not a real host (only localhost is)
     ],
 )
 def test_p1_half_set_or_unsafe_settings_count_as_not_configured(session, client, env, rp_id, origins):
@@ -151,8 +151,8 @@ def test_p1_localhost_over_http_is_allowed_for_a_dev_machine(session, client, en
     assert client.post("/api/passkey/register/begin").status_code == 200
 
 
-def test_p1_clearing_the_settings_ends_existing_sessions_without_a_database_call(
-    configured, client, anon, device, env, monkeypatch
+def test_p1_clearing_the_settings_stops_existing_sessions_without_a_database_call(
+    configured, client, anon, device, env, monkeypatch, caplog
 ):
     from nflpi.auth import sessions
 
@@ -162,7 +162,21 @@ def test_p1_clearing_the_settings_ends_existing_sessions_without_a_database_call
     monkeypatch.setattr(sessions, "session_factory", lambda: pytest.fail("no lookup when passkeys are off"))
     res = anon.get("/api/freshness", headers=bearer(value))
     assert (res.status_code, res.json()) == (401, WRONG_TOKEN)
+    # C3: a typo in the settings signs every device out, so it must be visible in the server log
+    assert "passkey session refused: passkey sign-in is not configured" in caplog.text
+    assert value not in caplog.text
     assert client.get("/api/freshness").status_code != 401
+
+
+def test_p1_the_owner_can_remove_a_passkey_while_passkeys_are_off(configured, client, anon, device, env):
+    value = signed_in(client, anon, device)
+    env(PASSKEY_RP_ID="", PASSKEY_ORIGINS="")  # the off switch, pulled because something looks wrong
+    (row,) = client.get("/api/passkey").json()["passkeys"]
+    assert client.delete(f"/api/passkey/{row['id']}").status_code == 204
+    env(PASSKEY_RP_ID=RP, PASSKEY_ORIGINS=ORIGIN)  # back on: the removed passkey and its session stay dead
+    assert not opens(anon, value)
+    assert sign_in(anon, device).status_code == 401
+    assert (count(configured, "passkey_credentials"), count(configured, "passkey_sessions")) == (0, 0)
 
 
 # P2, P3 ---------------------------------------------------------------------------------------------------------------
@@ -302,14 +316,17 @@ def passkey_alerts(session) -> int:
     return session.execute(text("select count(*) from notifications where kind = 'passkey'")).scalar_one()
 
 
-def test_r2_adding_and_removing_a_passkey_alerts_the_owner(configured, client, device, pushes):
+def test_r2_adding_and_removing_a_passkey_alerts_the_owner(configured, client, device, pushes, caplog):
     res = register(client, device, label="iPad")
     assert res.status_code == 201
     assert pushes.titles == ["Passkey added"]
     assert passkey_alerts(configured) == 1
+    assert "nobody was alerted" not in caplog.text
     assert client.delete(f"/api/passkey/{res.json()['id']}").status_code == 204
     assert pushes.titles == ["Passkey added", "Passkey removed"]
     assert passkey_alerts(configured) == 2
+    assert client.delete(f"/api/passkey/{res.json()['id']}").status_code == 404  # nothing removed: nobody alerted
+    assert (pushes.titles, passkey_alerts(configured)) == (["Passkey added", "Passkey removed"], 2)
 
 
 def test_r2_a_refused_registration_alerts_nobody(configured, client, device, pushes):
@@ -317,14 +334,26 @@ def test_r2_a_refused_registration_alerts_nobody(configured, client, device, pus
     assert (pushes.titles, passkey_alerts(configured)) == ([], 0)
 
 
-def test_r2_a_failed_alert_does_not_undo_the_change(configured, client, device, pushes):
+def test_r2_a_failed_alert_does_not_undo_the_change_and_is_still_on_record(configured, client, device, pushes, caplog):
     pushes.fail = True
     res = register(client, device)
     assert res.status_code == 201
     assert count(configured, "passkey_credentials") == 1
     assert client.delete(f"/api/passkey/{res.json()['id']}").status_code == 204
-    assert (count(configured, "passkey_credentials"), passkey_alerts(configured)) == (0, 0)
+    assert (count(configured, "passkey_credentials"), passkey_alerts(configured)) == (0, 2)
     assert pushes.titles == ["Passkey added", "Passkey removed"]  # both were tried
+    assert caplog.text.count("nobody was alerted") == 2
+
+
+def test_r2_with_no_device_to_alert_the_change_is_recorded_and_warned(configured, client, device, caplog):
+    """C1: adding a passkey needs no push setup, so a silent add must still leave a record and a warning."""
+    res = register(client, device, label="quiet")
+    assert res.status_code == 201
+    assert passkey_alerts(configured) == 1
+    assert f"passkey added, nobody was alerted, id={res.json()['id']}" in caplog.text
+    assert client.delete(f"/api/passkey/{res.json()['id']}").status_code == 204
+    assert passkey_alerts(configured) == 2
+    assert f"passkey removed, nobody was alerted, id={res.json()['id']}" in caplog.text
 
 
 # P5, P6 ---------------------------------------------------------------------------------------------------------------
@@ -345,6 +374,28 @@ def test_p5_a_failed_finish_also_uses_up_the_challenge(configured, client, anon,
     assert anon.post("/api/passkey/signin/finish", json=device.get(options, tamper="signature")).status_code == 401
     assert anon.post("/api/passkey/signin/finish", json=device.get(options)).status_code == 401
     assert count(configured, "passkey_sessions") == 0
+
+
+def test_p5_a_failed_registration_finish_also_uses_up_the_challenge(configured, client, device):
+    options = client.post("/api/passkey/register/begin").json()
+    bad = client.post("/api/passkey/register/finish", json={"credential": device.create(options, uv=False)})
+    assert (bad.status_code, bad.json()) == (400, REGISTER_FAILED)
+    retry = client.post("/api/passkey/register/finish", json={"credential": device.create(options)})
+    assert (retry.status_code, retry.json()) == (400, REGISTER_FAILED)
+    assert (count(configured, "passkey_credentials"), count(configured, "passkey_challenges")) == (0, 0)
+
+
+def test_p5_finishes_racing_on_one_challenge_spend_it_once(configured, client, anon, device):
+    assert register(client, device).status_code == 201
+    body = device.get(anon.post("/api/passkey/signin/begin").json())
+
+    def finish(_: int) -> int:
+        return TestClient(app).post("/api/passkey/signin/finish", json=body).status_code
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        codes = list(pool.map(finish, range(6)))
+    assert sorted(codes) == [200, 401, 401, 401, 401, 401]
+    assert count(configured, "passkey_sessions") == 1
 
 
 def test_r3_a_challenge_is_matched_by_its_bytes_not_its_spelling(configured, client, anon, device):
@@ -589,6 +640,15 @@ def test_p15_nothing_secret_is_logged(configured, client, anon, device, caplog):
     assert sign_in(anon, SoftAuthenticator(RP, ORIGIN)).status_code == 401
     assert sign_in(anon, device).status_code == 200
     assert anon.get("/api/freshness", headers=bearer(value + "x")).status_code == 401
+    # refused registrations: a wrong origin, the same passkey again, a body that is not a credential, too big, too many
+    spare = SoftAuthenticator(RP, ORIGIN)
+    refused_options = client.post("/api/passkey/register/begin").json()
+    refused = spare.create(refused_options, origin="https://evil.example")
+    assert client.post("/api/passkey/register/finish", json={"credential": refused}).status_code == 400
+    assert register(client, device).status_code == 400
+    assert client.post("/api/passkey/register/finish", json={"credential": "text"}).status_code == 400
+    assert anon.post("/api/passkey/signin/finish", content=b"a" * 70_000).status_code == 413
+    assert anon.post("/api/passkey/register/begin", headers=bearer(value)).status_code == 403
     assert anon.post("/api/passkey/signout", headers=bearer(value)).status_code == 204
     (row,) = client.get("/api/passkey").json()["passkeys"]
     assert client.delete(f"/api/passkey/{row['id']}").status_code == 204
@@ -609,6 +669,9 @@ def test_p15_nothing_secret_is_logged(configured, client, anon, device, caplog):
         "signature": asserted["response"]["signature"],
         "attestation": created["response"]["attestationObject"],
         "client data": asserted["response"]["clientDataJSON"],
+        "refused challenge": refused_options["challenge"],
+        "refused credential id": spare.id,
+        "refused attestation": refused["response"]["attestationObject"],
     }
     for name, secret in secrets_.items():
         assert secret not in logged, name
@@ -636,6 +699,23 @@ def test_p16_the_public_routes_share_one_rate_limit(configured, client, anon, de
     assert client.get("/api/freshness").status_code != 401
     throttle.reset()
     assert sign_in(anon, device).status_code == 200
+
+
+def test_p16_the_rate_window_slides(configured, anon, monkeypatch):
+    from nflpi.auth import throttle
+
+    assert throttle.WINDOW_S == 60.0
+    clock = [1000.0]
+    monkeypatch.setattr(throttle.time, "monotonic", lambda: clock[0])
+    throttle.reset()
+    for _ in range(throttle.LIMIT):
+        assert anon.post("/api/passkey/signin/finish", json={}).status_code == 401
+    clock[0] += 59.0
+    assert anon.post("/api/passkey/signin/finish", json={}).status_code == 429  # still inside the minute
+    clock[0] += 1.0
+    assert anon.post("/api/passkey/signin/finish", json={}).status_code == 401  # the oldest calls have aged out
+    clock[0] += 3600.0
+    assert anon.post("/api/passkey/signin/begin").status_code == 200
 
 
 def test_p16_r5_live_challenges_are_capped_per_kind_and_expired_ones_are_cleared(configured, client, anon):
