@@ -1,0 +1,478 @@
+OpenAI Codex v0.156.1
+--------
+[1mworkdir:[0m /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[1mmodel:[0m gpt-6-luna
+[1mprovider:[0m openai
+[1mapproval:[0m never
+[1msandbox:[0m workspace-write [workdir, /tmp, $TMPDIR]
+[1mreasoning effort:[0m medium
+[1mreasoning summaries:[0m none
+[1msession id:[0m 01a13380-6932-7763-b565-7151a58070d2
+--------
+[36muser[0m
+CODEX WORK ORDER 2c (narrow fixes, lane news; two red tests in backend/tests/test_news.py)
+
+GOAL: fix two defects found by the coordinator's new tests.
+FAILING EVIDENCE (you cannot reach the database; read the tests):
+ 1. test_odd_unicode_case_in_a_headline_never_raises_and_never_matches_by_accident: `match.tie` raises KeyError: 'miami dolphi̇ns'. The regexes use re.I, so "MIAMI DOLPHİNS" (U+0130) matches, but the dict lookup `hit.group().casefold()` has no such key.
+ 2. test_a_not_modified_poll_still_prunes: in run.py the HTTP 304 branch skips `store.prune`, so old rows stay.
+ALLOWED SCOPE: backend/nflpi/ingestion/news/match.py and run.py only.
+REQUIREMENT:
+ 1. In match.py compile the TEAM and PLAYER patterns WITHOUT re.I from the casefolded phrases (they are already casefold keys), and run them on `f"{title} {extract}".casefold()`; keep the (?<!\w) / (?!\w) boundaries; a hit's text is then always a dict key. The tag regexes (which only test presence) keep re.I on the original text. A headline must never be able to raise inside tie().
+ 2. In run.py call store.prune(session, now) in the 304 branch as well (a successful poll of any kind prunes).
+PROOF: `bash docs/gauntlet/logs/step-8c-evidence/pure.sh` ends "PURE OK"; `cd backend && .venv/bin/python -c "import nflpi.ingestion.news.run"`. The coordinator runs the database tests.
+CONSTRAINTS: smallest diff, nothing else touched. DO NOT commit, push, install, use the network.
+RETURN: the changed lines.
+
+[2m2026-10-13T04:23:36.472971Z[0m [31mERROR[0m [2mrmcp::transport::worker[0m[2m:[0m worker quit with fatal: Transport channel closed, when AuthRequired(AuthRequiredError { www_authenticate_header: "Bearer error=\"invalid_request\", error_description=\"No access token was provided in this request\", resource_metadata=\"https://api.githubcopilot.com/.well-known/oauth-protected-resource/mcp/\"" })
+[2m2026-10-13T04:23:37.356033Z[0m [31mERROR[0m [2mrmcp::transport::worker[0m[2m:[0m worker quit with fatal: Transport channel closed, when AuthRequired(AuthRequiredError { www_authenticate_header: "Bearer error=\"invalid_request\", error_description=\"No access token was provided in this request\", resource_metadata=\"https://api.githubcopilot.com/.well-known/oauth-protected-resource/mcp/\"" })
+[35m[3mcodex[0m[0m
+I’ll inspect the two allowed files, make only the requested edits, then run the two proof commands you listed.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '1,240p' backend/nflpi/ingestion/news/match.py && sed -n '1,260p' backend/nflpi/ingestion/news/run.py && git status --short"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+"""Tie news items to teams and players in step 8e."""
+
+import re
+from collections.abc import Mapping
+from dataclasses import dataclass
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from nflpi.ingestion.news.parse import clean_text
+from nflpi.models import Team, TeamStar
+
+
+@dataclass(frozen=True)
+class Tie:
+    team_ids: list[str]
+    player_ids: list[str]
+    tags: list[str]
+
+
+@dataclass(frozen=True)
+class Names:
+    teams: re.Pattern[str] | None
+    team_ids: dict[str, set[str]]
+    players: re.Pattern[str] | None
+    player_ids: dict[str, str]
+    clubs: dict[str, str]
+
+
+def _pattern(phrases: Mapping[str, object]) -> re.Pattern[str] | None:
+    if not phrases:
+        return None
+    choices = sorted(phrases, key=lambda phrase: (-len(phrase), phrase))
+    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)", re.I)
+
+
+def load_names(session: Session) -> Names:
+    team_ids: dict[str, set[str]] = {}
+    for abbr, name, nick in session.execute(select(Team.abbr, Team.name, Team.nick)):
+        for phrase in (name, nick):
+            if phrase:
+                team_ids.setdefault(phrase.casefold(), set()).add(abbr)
+
+    season = session.scalar(select(func.max(TeamStar.season)))
+    player_ids: dict[str, set[str]] = {}
+    latest_clubs: dict[str, tuple[int, str]] = {}
+    if season is not None:
+        stars = session.execute(
+            select(TeamStar.player_id, TeamStar.player, TeamStar.team, TeamStar.week)
+            .where(TeamStar.season == season, TeamStar.player_id.is_not(None))
+        )
+        for player_id, player, team, week in stars:
+            phrase = clean_text(player, 64).casefold()
+            if phrase:
+                player_ids.setdefault(phrase, set()).add(player_id)
+            if player_id not in latest_clubs or week > latest_clubs[player_id][0]:
+                latest_clubs[player_id] = (week, team)
+
+    unique_players = {phrase: next(iter(ids)) for phrase, ids in player_ids.items() if len(ids) == 1}
+    return Names(
+        teams=_pattern(team_ids),
+        team_ids=team_ids,
+        players=_pattern(unique_players),
+        player_ids=unique_players,
+        clubs={player_id: team for player_id, (_, team) in latest_clubs.items()},
+    )
+
+
+_TAGS = {
+    "injury": re.compile(r"\binjur(?:y|ies|ed)\b|\bruled out\b|\bquestionable\b|\bdoubtful\b", re.I),
+    "trade": re.compile(r"\btrad(?:e|es|ed|ing)\b", re.I),
+    "coach": re.compile(r"\b(?:coach|coaches|coaching|coordinator|fired|fires|firing|hired|hires|hiring)\b", re.I),
+    "playcaller": re.compile(r"\bplay[- ]?call(?:er|ers|ing)\b|\bcalling (?:the )?plays\b", re.I),
+}
+
+
+def tie(title: str, extract: str, names: Names) -> Tie:
+    text = f"{title} {extract}"
+    teams: set[str] = set()
+    players: set[str] = set()
+    if names.teams:
+        for hit in names.teams.finditer(text):
+            teams.update(names.team_ids[hit.group().casefold()])
+    if names.players:
+        for hit in names.players.finditer(text):
+            player_id = names.player_ids[hit.group().casefold()]
+            players.add(player_id)
+            teams.add(names.clubs[player_id])
+    return Tie(sorted(teams), sorted(players), sorted(tag for tag, pattern in _TAGS.items() if pattern.search(text)))
+"""Poll each news source and record its outcome."""
+
+import logging
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from nflpi.ingestion.news import fetch, match, parse, sources, store
+from nflpi.models import AppSetting, IngestionRun
+
+log = logging.getLogger(__name__)
+
+POLL_MINUTES = 30
+BLOCK_HOURS = 24
+
+
+def run_news(
+    session: Session,
+    *,
+    now: datetime | None = None,
+    resolver=None,
+    transport=None,
+    sources=sources.SOURCES,
+) -> list[IngestionRun]:
+    now = now if now is not None else datetime.now(UTC)
+    resolver = resolver if resolver is not None else fetch.default_resolver
+    names = match.load_names(session)
+    made: list[IngestionRun] = []
+    for src in sources:
+        dataset = f"news:{src.id}"
+        latest = session.scalars(
+            select(IngestionRun)
+            .where(IngestionRun.dataset == dataset)
+            .order_by(IngestionRun.started_at.desc(), IngestionRun.id.desc())
+            .limit(1)
+        ).first()
+        if latest and (
+            latest.started_at > now - timedelta(minutes=POLL_MINUTES)
+            or (
+                (latest.error or "").startswith("blocked:")
+                and latest.started_at > now - timedelta(hours=BLOCK_HOURS)
+            )
+        ):
+            continue
+
+        run = IngestionRun(source=src.id, dataset=dataset, started_at=now, status="running")
+        session.add(run)
+        session.commit()
+        try:
+            setting = session.get(AppSetting, f"{dataset}:validators")
+            validators = setting.value if setting else None
+            result = fetch.fetch_feed(src, resolver=resolver, transport=transport, validators=validators)
+            if result.status == 304:
+                run.rows = 0
+            else:
+                items = parse.parse_feed(result.body, src, now)
+                run.rows = store.store_items(session, src.id, items, names, now)
+                if result.etag is not None or result.last_modified is not None:
+                    session.merge(
+                        AppSetting(
+                            key=f"{dataset}:validators",
+                            value={"etag": result.etag, "last_modified": result.last_modified},
+                        )
+                    )
+                store.prune(session, now)
+            run.status = "ok"
+        except fetch.Blocked as exc:
+            session.rollback()
+            run.status = "failed"
+            run.error = parse.clean_text(f"blocked: {exc}", 100)
+        except (fetch.FetchError, parse.FeedError) as exc:
+            session.rollback()
+            run.status = "failed"
+            run.error = parse.clean_text(str(exc), 100)
+        except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+            session.rollback()
+            log.exception("news ingestion failed for %s", src.id)
+            run.status = "failed"
+            run.error = parse.clean_text(f"unexpected: {type(exc).__name__}", 100)
+        run.finished_at = datetime.now(UTC)
+        session.add(run)
+        session.commit()
+        made.append(run)
+    return made
+?? docs/gauntlet/logs/step-8c-evidence/wo-2c-codex.log
+
+[1mapply patch[0m
+[1mpatch:[0m completed
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/match.py[0m
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/run.py[0m
+diff --git a/backend/nflpi/ingestion/news/match.py b/backend/nflpi/ingestion/news/match.py
+index a8f008e3ec3408ac419a9acc83ef2347bf80004d..104d9bb51697a32ed48704cb905a5b341cf97a18
+--- a/backend/nflpi/ingestion/news/match.py
++++ b/backend/nflpi/ingestion/news/match.py
+@@ -31,7 +31,7 @@
+     if not phrases:
+         return None
+     choices = sorted(phrases, key=lambda phrase: (-len(phrase), phrase))
+-    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)", re.I)
++    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)")
+ 
+ 
+ def load_names(session: Session) -> Names:
+@@ -76,14 +76,15 @@
+ 
+ def tie(title: str, extract: str, names: Names) -> Tie:
+     text = f"{title} {extract}"
++    folded_text = text.casefold()
+     teams: set[str] = set()
+     players: set[str] = set()
+     if names.teams:
+-        for hit in names.teams.finditer(text):
+-            teams.update(names.team_ids[hit.group().casefold()])
++        for hit in names.teams.finditer(folded_text):
++            teams.update(names.team_ids[hit.group()])
+     if names.players:
+-        for hit in names.players.finditer(text):
+-            player_id = names.player_ids[hit.group().casefold()]
++        for hit in names.players.finditer(folded_text):
++            player_id = names.player_ids[hit.group()]
+             players.add(player_id)
+             teams.add(names.clubs[player_id])
+     return Tie(sorted(teams), sorted(players), sorted(tag for tag, pattern in _TAGS.items() if pattern.search(text)))
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index da67ff6b9184ebcc39a288d09673086bc34ad4ce..b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -53,6 +53,7 @@
+             result = fetch.fetch_feed(src, resolver=resolver, transport=transport, validators=validators)
+             if result.status == 304:
+                 run.rows = 0
++                store.prune(session, now)
+             else:
+                 items = parse.parse_feed(result.body, src, now)
+                 run.rows = store.store_items(session, src.id, items, names, now)
+
+diff --git a/backend/nflpi/ingestion/news/match.py b/backend/nflpi/ingestion/news/match.py
+index a8f008e3ec3408ac419a9acc83ef2347bf80004d..104d9bb51697a32ed48704cb905a5b341cf97a18
+--- a/backend/nflpi/ingestion/news/match.py
++++ b/backend/nflpi/ingestion/news/match.py
+@@ -31,7 +31,7 @@
+     if not phrases:
+         return None
+     choices = sorted(phrases, key=lambda phrase: (-len(phrase), phrase))
+-    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)", re.I)
++    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)")
+ 
+ 
+ def load_names(session: Session) -> Names:
+@@ -76,14 +76,15 @@
+ 
+ def tie(title: str, extract: str, names: Names) -> Tie:
+     text = f"{title} {extract}"
++    folded_text = text.casefold()
+     teams: set[str] = set()
+     players: set[str] = set()
+     if names.teams:
+-        for hit in names.teams.finditer(text):
+-            teams.update(names.team_ids[hit.group().casefold()])
++        for hit in names.teams.finditer(folded_text):
++            teams.update(names.team_ids[hit.group()])
+     if names.players:
+-        for hit in names.players.finditer(text):
+-            player_id = names.player_ids[hit.group().casefold()]
++        for hit in names.players.finditer(folded_text):
++            player_id = names.player_ids[hit.group()]
+             players.add(player_id)
+             teams.add(names.clubs[player_id])
+     return Tie(sorted(teams), sorted(players), sorted(tag for tag, pattern in _TAGS.items() if pattern.search(text)))
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index da67ff6b9184ebcc39a288d09673086bc34ad4ce..b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -53,6 +53,7 @@
+             result = fetch.fetch_feed(src, resolver=resolver, transport=transport, validators=validators)
+             if result.status == 304:
+                 run.rows = 0
++                store.prune(session, now)
+             else:
+                 items = parse.parse_feed(result.body, src, now)
+                 run.rows = store.store_items(session, src.id, items, names, now)
+
+[35m[3mcodex[0m[0m
+The name patterns now match the casefolded text with case-sensitive dictionary keys, while tag checks still use the original text. I’ve also added pruning to the 304 path; I’m running the requested proofs now.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'git diff -- backend/nflpi/ingestion/news/match.py backend/nflpi/ingestion/news/run.py && git status --short'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+diff --git a/backend/nflpi/ingestion/news/match.py b/backend/nflpi/ingestion/news/match.py
+index a8f008e..104d9bb 100644
+--- a/backend/nflpi/ingestion/news/match.py
++++ b/backend/nflpi/ingestion/news/match.py
+@@ -31,7 +31,7 @@ def _pattern(phrases: Mapping[str, object]) -> re.Pattern[str] | None:
+     if not phrases:
+         return None
+     choices = sorted(phrases, key=lambda phrase: (-len(phrase), phrase))
+-    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)", re.I)
++    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)")
+ 
+ 
+ def load_names(session: Session) -> Names:
+@@ -76,14 +76,15 @@ _TAGS = {
+ 
+ def tie(title: str, extract: str, names: Names) -> Tie:
+     text = f"{title} {extract}"
++    folded_text = text.casefold()
+     teams: set[str] = set()
+     players: set[str] = set()
+     if names.teams:
+-        for hit in names.teams.finditer(text):
+-            teams.update(names.team_ids[hit.group().casefold()])
++        for hit in names.teams.finditer(folded_text):
++            teams.update(names.team_ids[hit.group()])
+     if names.players:
+-        for hit in names.players.finditer(text):
+-            player_id = names.player_ids[hit.group().casefold()]
++        for hit in names.players.finditer(folded_text):
++            player_id = names.player_ids[hit.group()]
+             players.add(player_id)
+             teams.add(names.clubs[player_id])
+     return Tie(sorted(teams), sorted(players), sorted(tag for tag, pattern in _TAGS.items() if pattern.search(text)))
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index da67ff6..b166059 100644
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -53,6 +53,7 @@ def run_news(
+             result = fetch.fetch_feed(src, resolver=resolver, transport=transport, validators=validators)
+             if result.status == 304:
+                 run.rows = 0
++                store.prune(session, now)
+             else:
+                 items = parse.parse_feed(result.body, src, now)
+                 run.rows = store.store_items(session, src.id, items, names, now)
+ M backend/nflpi/ingestion/news/match.py
+ M backend/nflpi/ingestion/news/run.py
+?? docs/gauntlet/logs/step-8c-evidence/wo-2c-codex.log
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'bash docs/gauntlet/logs/step-8c-evidence/pure.sh'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '.venv/bin/python -c "import nflpi.ingestion.news.run"'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[32m succeeded in 416ms:[0m
+[32m succeeded in 828ms:[0m
+ERROR tests/test_news.py::test_pruning_runs_after_a_good_poll_only
+ERROR tests/test_news.py::test_with_every_source_down_the_poll_returns_failed_runs_and_never_raises
+ERROR tests/test_news.py::test_a_bad_dns_answer_for_one_source_does_not_stop_the_other
+114 passed, 47 errors in 0.49s
+PURE OK
+
+diff --git a/backend/nflpi/ingestion/news/match.py b/backend/nflpi/ingestion/news/match.py
+index a8f008e3ec3408ac419a9acc83ef2347bf80004d..104d9bb51697a32ed48704cb905a5b341cf97a18
+--- a/backend/nflpi/ingestion/news/match.py
++++ b/backend/nflpi/ingestion/news/match.py
+@@ -31,7 +31,7 @@
+     if not phrases:
+         return None
+     choices = sorted(phrases, key=lambda phrase: (-len(phrase), phrase))
+-    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)", re.I)
++    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)")
+ 
+ 
+ def load_names(session: Session) -> Names:
+@@ -76,14 +76,15 @@
+ 
+ def tie(title: str, extract: str, names: Names) -> Tie:
+     text = f"{title} {extract}"
++    folded_text = text.casefold()
+     teams: set[str] = set()
+     players: set[str] = set()
+     if names.teams:
+-        for hit in names.teams.finditer(text):
+-            teams.update(names.team_ids[hit.group().casefold()])
++        for hit in names.teams.finditer(folded_text):
++            teams.update(names.team_ids[hit.group()])
+     if names.players:
+-        for hit in names.players.finditer(text):
+-            player_id = names.player_ids[hit.group().casefold()]
++        for hit in names.players.finditer(folded_text):
++            player_id = names.player_ids[hit.group()]
+             players.add(player_id)
+             teams.add(names.clubs[player_id])
+     return Tie(sorted(teams), sorted(players), sorted(tag for tag, pattern in _TAGS.items() if pattern.search(text)))
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index da67ff6b9184ebcc39a288d09673086bc34ad4ce..b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -53,6 +53,7 @@
+             result = fetch.fetch_feed(src, resolver=resolver, transport=transport, validators=validators)
+             if result.status == 304:
+                 run.rows = 0
++                store.prune(session, now)
+             else:
+                 items = parse.parse_feed(result.body, src, now)
+                 run.rows = store.store_items(session, src.id, items, names, now)
+
+[35m[3mcodex[0m[0m
+Changed the two requested files only:
+
+- `match.py`: TEAM and PLAYER patterns no longer use `re.I`; `tie()` searches casefolded text and uses each hit directly as a dictionary key. Tags still check the original text.
+- `run.py`: the 304 branch now calls `store.prune(session, now)`.
+
+Proof: `pure.sh` ended with `PURE OK` (114 passed; database-related errors were reported). The import command completed successfully. The existing untracked `wo-2c-codex.log` was left untouched.
+diff --git a/backend/nflpi/ingestion/news/match.py b/backend/nflpi/ingestion/news/match.py
+index a8f008e3ec3408ac419a9acc83ef2347bf80004d..104d9bb51697a32ed48704cb905a5b341cf97a18
+--- a/backend/nflpi/ingestion/news/match.py
++++ b/backend/nflpi/ingestion/news/match.py
+@@ -31,7 +31,7 @@
+     if not phrases:
+         return None
+     choices = sorted(phrases, key=lambda phrase: (-len(phrase), phrase))
+-    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)", re.I)
++    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)")
+ 
+ 
+ def load_names(session: Session) -> Names:
+@@ -76,14 +76,15 @@
+ 
+ def tie(title: str, extract: str, names: Names) -> Tie:
+     text = f"{title} {extract}"
++    folded_text = text.casefold()
+     teams: set[str] = set()
+     players: set[str] = set()
+     if names.teams:
+-        for hit in names.teams.finditer(text):
+-            teams.update(names.team_ids[hit.group().casefold()])
++        for hit in names.teams.finditer(folded_text):
++            teams.update(names.team_ids[hit.group()])
+     if names.players:
+-        for hit in names.players.finditer(text):
+-            player_id = names.player_ids[hit.group().casefold()]
++        for hit in names.players.finditer(folded_text):
++            player_id = names.player_ids[hit.group()]
+             players.add(player_id)
+             teams.add(names.clubs[player_id])
+     return Tie(sorted(teams), sorted(players), sorted(tag for tag, pattern in _TAGS.items() if pattern.search(text)))
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index da67ff6b9184ebcc39a288d09673086bc34ad4ce..b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -53,6 +53,7 @@
+             result = fetch.fetch_feed(src, resolver=resolver, transport=transport, validators=validators)
+             if result.status == 304:
+                 run.rows = 0
++                store.prune(session, now)
+             else:
+                 items = parse.parse_feed(result.body, src, now)
+                 run.rows = store.store_items(session, src.id, items, names, now)
+
+[2mtokens used[0m
+22,364
+Changed the two requested files only:
+
+- `match.py`: TEAM and PLAYER patterns no longer use `re.I`; `tie()` searches casefolded text and uses each hit directly as a dictionary key. Tags still check the original text.
+- `run.py`: the 304 branch now calls `store.prune(session, now)`.
+
+Proof: `pure.sh` ended with `PURE OK` (114 passed; database-related errors were reported). The import command completed successfully. The existing untracked `wo-2c-codex.log` was left untouched.

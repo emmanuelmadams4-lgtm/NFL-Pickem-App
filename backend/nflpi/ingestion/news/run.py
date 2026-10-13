@@ -53,6 +53,7 @@ def run_news(
             result = fetch.fetch_feed(src, resolver=resolver, transport=transport, validators=validators)
             if result.status == 304:
                 run.rows = 0
+                store.prune(session, now)
             else:
                 items = parse.parse_feed(result.body, src, now)
                 run.rows = store.store_items(session, src.id, items, names, now)

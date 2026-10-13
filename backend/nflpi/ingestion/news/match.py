@@ -31,7 +31,7 @@ def _pattern(phrases: Mapping[str, object]) -> re.Pattern[str] | None:
     if not phrases:
         return None
     choices = sorted(phrases, key=lambda phrase: (-len(phrase), phrase))
-    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)", re.I)
+    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(phrase) for phrase in choices) + r")(?!\w)")
 
 
 def load_names(session: Session) -> Names:
@@ -76,14 +76,15 @@ _TAGS = {
 
 def tie(title: str, extract: str, names: Names) -> Tie:
     text = f"{title} {extract}"
+    folded_text = text.casefold()
     teams: set[str] = set()
     players: set[str] = set()
     if names.teams:
-        for hit in names.teams.finditer(text):
-            teams.update(names.team_ids[hit.group().casefold()])
+        for hit in names.teams.finditer(folded_text):
+            teams.update(names.team_ids[hit.group()])
     if names.players:
-        for hit in names.players.finditer(text):
-            player_id = names.player_ids[hit.group().casefold()]
+        for hit in names.players.finditer(folded_text):
+            player_id = names.player_ids[hit.group()]
             players.add(player_id)
             teams.add(names.clubs[player_id])
     return Tie(sorted(teams), sorted(players), sorted(tag for tag, pattern in _TAGS.items() if pattern.search(text)))
