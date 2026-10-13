@@ -1,4 +1,4 @@
-PASS pytest exit=0 :: 675 passed in 76.60s (0:01:16)
+PASS pytest exit=0 :: 675 passed in 101.65s (0:01:41)
 PASS ruff exit=0 :: All checks passed!
 PASS alembic exit=0 :: No new upgrade operations detected.
 PASS genapi exit=0 :: no drift
