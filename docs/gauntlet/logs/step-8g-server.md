@@ -107,3 +107,6 @@ All routes need `Authorization: Bearer <token>` like every `/api` route (401 oth
 2. `url` is `null` for an unsafe link: then show no link at all (never guess one). Otherwise render `rel="noopener noreferrer"`, opened by the user only, and show the age from `published_at`.
 3. An empty list cannot tell "no news" from "feeds blocked / worker stopped". For a "stale" badge the screen needs freshness from `ingestion_runs` (datasets `news:espn`, `news:cbs`; a block shows `error` starting `blocked:`), which is a `views.py`/`schemas.py` change in lane web's files (SEAM: not done here). A run stuck for good keeps its `running` row until the worker restarts (the error log says so every 10 minutes).
 4. No rate limit on the route (one token, one user, read only, no network); an app-wide item for god.
+
+## Final re-gate after the last move of main
+`main` moved once more (`b387f33`, two docs files only). The branch was put on it again (the code diff against main is byte-identical to the one the critic passed: `cmp` showed no difference). The gate, run twice in a row on the final tree (`k1-summary.txt`, `k2-summary.txt`): `pytest 1190 passed` (161 s, then 150 s), ruff clean, alembic `No new upgrade operations detected.` (scratch database), `gen:api` 0 drift, both runs. The critic's verdict (on `12a5e15`, same code) is therefore not repeated.
