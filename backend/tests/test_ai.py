@@ -275,3 +275,26 @@ def test_no_secret_sits_in_plain_attributes_or_settings_repr(setup, monkeypatch)
     assert TOKEN not in repr(vars(provider.sdk)) and TOKEN not in repr(vars(provider))
     shown = repr(get_settings())
     assert "or-SECRET-key" not in shown and "test-token" not in shown
+
+
+# Dwight's LOW notes L1 and L2 (clauses C20, C21) ---------------------------------------------------------------
+
+
+def test_the_logged_failure_detail_is_capped(setup, caplog):
+    setup(token=TOKEN, key=KEY, sdk=FakeSdk(error=ValueError("x" * 5000)))
+    with caplog.at_level(logging.WARNING, logger="nflpi.ai"):
+        providers.get_provider("claude").complete("sys", "q")
+    assert "x" * 300 not in caplog.text and "ValueError" in caplog.text
+
+
+def test_a_failed_directory_cleanup_does_not_throw_away_a_good_answer(setup, monkeypatch):
+    real = providers.tempfile.TemporaryDirectory
+
+    class CleanupFails(real):
+        def __exit__(self, *args):
+            super().__exit__(*args)
+            raise OSError("child still writing")
+
+    monkeypatch.setattr(providers.tempfile, "TemporaryDirectory", lambda **kw: CleanupFails(**kw))
+    _, api = setup(token=TOKEN, key=KEY)
+    assert providers.get_provider("claude").complete("sys", "q") == "sdk reply" and api.calls == []
