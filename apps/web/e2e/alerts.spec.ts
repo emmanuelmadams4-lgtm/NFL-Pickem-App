@@ -112,6 +112,23 @@ test("A1 opening the app with alerts on re-sends the subscription; a row the ser
   }
 });
 
+test("A1c Settings shows the device the app just re-sent, not the count from before", async ({ page, context, request }) => {
+  const m = await meta(request);
+  const endpoint = endpointFor("a1c");
+  await forget(request, endpoint);
+  const before = (await meta(request)).push_subscriptions;
+  await phone(context, page, { endpoint, key: m.push_public_key! });
+  try {
+    await page.goto("/settings/#alerts");
+    const section = page.locator("#alerts");
+    await expect(section.getByText("Alerts on")).toBeVisible({ timeout: 15_000 });
+    const words = before + 1 === 1 ? "1 device is subscribed on the server." : `${before + 1} devices are subscribed on the server.`;
+    await expect(section.getByText(words), "the count is read again after the re-send").toBeVisible();
+  } finally {
+    await forget(request, endpoint);
+  }
+});
+
 test("A1b with alerts off, opening the app sends no subscription", async ({ page, context, request }) => {
   const before = (await meta(request)).push_subscriptions;
   await phone(context, page, null);
