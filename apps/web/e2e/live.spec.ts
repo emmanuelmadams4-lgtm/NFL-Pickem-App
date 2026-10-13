@@ -250,6 +250,7 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       expect(await y(/to win now/)).toBeGreaterThan(await y(/^Uncertainty/));
       expect((await c.locator('[aria-hidden="true"]').filter({ hasText: /^Live/ }).first().boundingBox())!.y).toBeLessThan(await y(/^Uncertainty/));
       await expect(c.getByText(/^(8|9|10|11|12|[1-7]):\d\d [AP]M$/), "no kickoff time on a started game").toHaveCount(0);
+      if (size.width < 500) expect((await c.boundingBox())!.height, "an ordinary live card keeps the board's density limit").toBeLessThanOrEqual(400);
     });
 
     test("L4 not updating by age: one failed poll changes nothing; after 120 seconds without a good reply the card says so", async ({ page }) => {
@@ -382,10 +383,11 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
 }
 
 for (const width of [393, 320]) {
-  test(`L8 phone fit at ${width} px: the worst live card keeps the density limit, nothing in the live block is cut, no sideways scroll`, async ({ page }) => {
+  test(`L8 phone fit at ${width} px: going live adds no height to the worst card, nothing in the live block is cut, no sideways scroll`, async ({ page }) => {
     await page.setViewportSize({ width, height: 852 });
     const live = reply([row({ game_id: WORST, home_team: "MIA", away_team: "BUF", home_score: 31, away_score: 34, period: 4, clock: "12:34", home_win_prob: 0.997, kalshi_home_prob: null })]);
-    const f = await fake(page, live, { ...started(), qb_alerts: ["BUF QB Jo Thrower: Out", "MIA QB Second Passer: Doubtful"] }, WORST);
+    const alerts = { qb_alerts: ["BUF QB Jo Thrower: Out", "MIA QB Second Passer: Doubtful"] };
+    const f = await fake(page, live, { status: "scheduled", kickoff_utc: new Date(T0 + 60_000).toISOString(), time_tbd: false, locked: false, ...alerts }, WORST);
     await page.unroute("**/api/{weeks,games}/**");
     await page.route("**/api/{weeks,games}/**", async (route) => {
       const res = await route.fetch();
@@ -399,13 +401,17 @@ for (const width of [393, 320]) {
     });
     await page.goto("/");
     const c = card(page, "BUF", "MIA");
+    await expect(c).toContainText("What changed", { timeout: 15_000 });
+    const before = (await c.boundingBox())!.height;
+    f.game = { ...started(), ...alerts };
+    await page.clock.fastForward(125_000);
     await expect(c).toContainText(words("Live · Q4 12:34"), { timeout: 15_000 });
     await expect(c).toContainText("34");
     await expect(c).toContainText("31");
     await expect(c).toContainText(words("to win now · ESPN"));
-    // the board's density rule is set at the owner's phone width (phone-layout L1); 320 px keeps the no-cut and no-scroll rules
+    // the worst card (every warning at once) is over the board's 400 px rule before kickoff too: live must not make it taller
     if (process.env.SHOT_DIR) await c.screenshot({ path: `${process.env.SHOT_DIR}/l8-${width}.png` });
-    if (width === 393) expect((await c.boundingBox())!.height, "the density limit of the board").toBeLessThanOrEqual(400);
+    expect((await c.boundingBox())!.height, `no taller live than before kickoff (${before} px)`).toBeLessThanOrEqual(before);
     // the visible parts only: the screen-reader sentence also starts with "Live"
     for (const text of [/^Live/, /to win now/]) {
       const part = c.locator('[aria-hidden="true"]').filter({ hasText: text }).first();

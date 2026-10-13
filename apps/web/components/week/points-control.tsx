@@ -57,7 +57,7 @@ export function PointsControl({ game, count }: { game: GameSummary; count: numbe
       >
           {Array.from({ length: count }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
         </select>}
-        {locked && <span className="flex items-center gap-1 text-label text-text-2"><Lock size={16} /> Locked</span>}
+        {locked && <span className="flex items-center gap-1 text-label text-text-2"><Lock size={16} /><span className="sr-only">Locked</span></span>}
       </div>
       <div className="pt-1 text-label text-text-2">
         {game.sheet.points_by === "user" && <span>Your number. Model says {game.sheet.app_points}. </span>}
