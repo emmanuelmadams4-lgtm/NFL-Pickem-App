@@ -3,14 +3,16 @@
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
-from nflpi.ingestion.live import espn, fetch, store
-from nflpi.models import Game, IngestionRun, LiveState
+from nflpi.config import get_settings
+from nflpi.ingestion.live import espn, fetch, kalshi, oddsapi, store
+from nflpi.models import Game, IngestionRun, LiveState, SourceStatus
+from nflpi.predictions.market import implied_prob, novig_home_prob
 
 log = logging.getLogger(__name__)
 EASTERN = ZoneInfo("America/New_York")
@@ -200,3 +202,191 @@ def refresh_live_games(
         min_interval=ESPN_MIN_INTERVAL,
         job=lambda: _espn_job(session, get, now),
     )
+
+
+def _quote_game(games: list[Game], teams: set[str], game_date: date) -> Game | None:
+    matches = [
+        game
+        for game in games
+        if {game.home_team, game.away_team} == teams and game.kickoff_utc.astimezone(EASTERN).date() == game_date
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _source_time(value: datetime | None, now: datetime) -> datetime | None:
+    return value if value is not None and now - timedelta(days=7) <= value <= now + timedelta(days=1) else None
+
+
+def _save_kalshi(session: Session, markets: list[kalshi.Market], game: Game, now: datetime) -> bool:
+    by_team = {kalshi.TEAM_CODES[market.team]: market for market in markets}
+    home, away = by_team[game.home_team], by_team[game.away_team]
+    home_mid, away_mid = (home.bid + home.ask) / 2, (away.bid + away.ask) / 2
+    total = home_mid + away_mid
+    if total == 0:
+        return False
+    updated = max(home.updated_time, away.updated_time) if home.updated_time and away.updated_time else None
+    return store.add_quote(
+        session,
+        game_id=game.game_id,
+        source="kalshi",
+        kind="live" if now >= game.kickoff_utc else "pregame",
+        home_prob=home_mid / total,
+        away_prob=away_mid / total,
+        raw_yes_bid=home.bid,
+        raw_yes_ask=home.ask,
+        overround=total - 1,
+        home_ml=None,
+        away_ml=None,
+        fetched_at=now,
+        source_ts=_source_time(updated, now),
+    )
+
+
+def _kalshi_job(session: Session, get: Callable[[str], fetch.JsonResult], now: datetime) -> tuple[int, int, None]:
+    grouped: dict[str, list[kalshi.Market]] = {}
+    skipped, cursor = 0, None
+    for page in range(3):
+        data = get(kalshi.markets_url(cursor)).data
+        markets = kalshi.parse_markets(data)
+        skipped += len(data["markets"]) - len(markets)
+        for market in markets:
+            grouped.setdefault(market.event_ticker, []).append(market)
+        next_cursor = data.get("cursor")
+        if (
+            page == 2
+            or not isinstance(next_cursor, str)
+            or kalshi.CURSOR.fullmatch(next_cursor) is None
+            or next_cursor == cursor
+        ):
+            break
+        cursor = next_cursor
+    games = list(session.scalars(select(Game)))
+    inserted = 0
+    for ticker, markets in grouped.items():
+        parts = kalshi.event_parts(ticker)
+        if parts is None:
+            skipped += 1
+            continue
+        game_date, (away, home) = parts
+        if len(markets) != 2 or {market.team for market in markets} != {away, home}:
+            skipped += 1
+            continue
+        game = _quote_game(games, {kalshi.TEAM_CODES[away], kalshi.TEAM_CODES[home]}, game_date)
+        if game is None:
+            skipped += 1
+            log.debug("unmatched Kalshi event %r", ticker[:64])
+        elif (markets[0].bid + markets[0].ask + markets[1].bid + markets[1].ask) == 0:
+            skipped += 1
+        elif _save_kalshi(session, markets, game, now):
+            inserted += 1
+    return inserted, skipped, None
+
+
+def refresh_kalshi_quotes(
+    session: Session,
+    *,
+    get: Callable[[str], fetch.JsonResult] = fetch.fetch_json,
+    now: datetime | None = None,
+) -> RefreshResult:
+    now = datetime.now(UTC) if now is None else now.astimezone(UTC)
+    return run_source(
+        session,
+        status_key="kalshi",
+        run_source="kalshi",
+        dataset="market_quotes",
+        now=now,
+        min_interval=KALSHI_MIN_INTERVAL,
+        job=lambda: _kalshi_job(session, get, now),
+    )
+
+
+def _save_odds(session: Session, event: oddsapi.Event, book: oddsapi.Book, game: Game, now: datetime) -> bool:
+    home_ml, away_ml = (
+        (book.home_ml, book.away_ml)
+        if oddsapi.TEAM_NAMES[event.home] == game.home_team
+        else (book.away_ml, book.home_ml)
+    )
+    home_prob = novig_home_prob(home_ml, away_ml)
+    return store.add_quote(
+        session,
+        game_id=game.game_id,
+        source="oddsapi:" + book.key,
+        kind="live" if now >= game.kickoff_utc else "pregame",
+        home_prob=home_prob,
+        away_prob=1 - home_prob if home_prob is not None else None,
+        raw_yes_bid=None,
+        raw_yes_ask=None,
+        overround=implied_prob(home_ml) + implied_prob(away_ml) - 1,
+        home_ml=home_ml,
+        away_ml=away_ml,
+        fetched_at=now,
+        source_ts=_source_time(book.updated, now),
+    )
+
+
+def _odds_job(
+    session: Session,
+    get: Callable[[str], fetch.JsonResult],
+    now: datetime,
+    key: str,
+    credits: list[int | None],
+) -> tuple[int, int, None]:
+    try:
+        result = get(oddsapi.odds_url(key))
+    except Exception:
+        raise fetch.FetchError("request failed") from None
+    header = result.headers.get("x-requests-remaining")
+    if isinstance(header, str) and oddsapi.CREDIT.fullmatch(header) is not None and int(header) <= 1_000_000:
+        credits[0] = int(header)
+    events, skipped = oddsapi.parse_events(result.data)
+    games = list(session.scalars(select(Game)))
+    inserted = 0
+    for event in events:
+        game = _quote_game(
+            games,
+            {oddsapi.TEAM_NAMES[event.home], oddsapi.TEAM_NAMES[event.away]},
+            event.commence.astimezone(EASTERN).date(),
+        )
+        if game is None:
+            skipped += 1
+            continue
+        for book in event.books:
+            if _save_odds(session, event, book, game, now):
+                inserted += 1
+    return inserted, skipped, None
+
+
+def refresh_odds_quotes(
+    session: Session,
+    *,
+    get: Callable[[str], fetch.JsonResult] = fetch.fetch_json,
+    now: datetime | None = None,
+    api_key: str | None = None,
+) -> RefreshResult:
+    key = api_key if api_key is not None else get_settings().odds_api_key
+    if not isinstance(key, str) or oddsapi.KEY.fullmatch(key) is None:
+        return RefreshResult("oddsapi", "skipped", detail="ODDS_API_KEY is not set")
+    now = datetime.now(UTC) if now is None else now.astimezone(UTC)
+    until = store.source_blocked_until(session, "oddsapi")
+    if until is not None and until > now:
+        return RefreshResult("oddsapi", "skipped", detail=f"backing off until {until.isoformat()}")
+    status = session.get(SourceStatus, "oddsapi")
+    if status is not None and status.credits_left is not None and status.credits_left < 50:
+        return RefreshResult("oddsapi", "skipped", detail="credits low")
+    credits: list[int | None] = [None]
+    result = run_source(
+        session,
+        status_key="oddsapi",
+        run_source="oddsapi",
+        dataset="market_quotes",
+        now=now,
+        min_interval=ODDS_MIN_INTERVAL,
+        floor=ODDS_MIN_INTERVAL,
+        job=lambda: _odds_job(session, get, now, key, credits),
+    )
+    if result.status == "ok":
+        store.mark_ok(session, "oddsapi", now, ODDS_MIN_INTERVAL, credits_left=credits[0])
+        if credits[0] is not None and credits[0] < 50:
+            store.mark_stopped(session, "oddsapi", now, now + timedelta(days=35), credits[0])
+        session.commit()
+    return result

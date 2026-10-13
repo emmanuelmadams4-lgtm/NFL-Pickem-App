@@ -912,10 +912,11 @@ def test_kalshi_is_pregame_before_kickoff_and_live_after_and_an_old_source_time_
 
 def test_a_kalshi_quote_has_a_source_time_inside_the_window(session):
     seed_four(session)
-    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
-    for row in quote_rows(session):
-        assert row.source_ts is None or KNOW - timedelta(days=7) <= row.source_ts <= KNOW + timedelta(days=1)
-    assert any(r.source_ts is not None for r in quote_rows(session))
+    now = datetime(2026, 10, 10, 12, 0, tzinfo=UTC)  # the recorded markets were last updated on 2026-10-06
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=now)
+    times = [r.source_ts for r in quote_rows(session)]
+    assert all(t is not None and now - timedelta(days=7) <= t <= now + timedelta(days=1) for t in times)
+    assert {t.isoformat() for t in times} <= {"2026-10-06T04:05:00.760741+00:00", "2026-10-06T04:06:00.764221+00:00"}
 
 
 def test_an_unchanged_kalshi_quote_adds_no_row_and_a_changed_price_adds_one(session):
