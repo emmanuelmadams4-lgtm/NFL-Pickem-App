@@ -32,6 +32,10 @@ class GroupImportError(ValueError):
     """The group file cannot be imported."""
 
 
+class GroupDatabaseError(RuntimeError):
+    """The database failed, not the file."""
+
+
 class ImportResult(NamedTuple):
     kind: str
     rows: int
@@ -212,7 +216,7 @@ def import_group_csv(session: Session, season: int, data: bytes) -> ImportResult
         session.commit()
     except SQLAlchemyError as exc:
         session.rollback()
-        raise RuntimeError(f"group import: database error ({type(exc).__name__})") from None
+        raise GroupDatabaseError(f"group import: database error ({type(exc).__name__})") from None
     except Exception:
         session.rollback()
         raise

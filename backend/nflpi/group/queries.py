@@ -67,3 +67,10 @@ def standings(session: Session, season: int, week: int) -> list[dict]:
     current = [entry for entry in by_member.values() if entry["points"] is not None]
     return sorted(current, key=lambda entry: (-entry["total"], entry["rank"] if entry["rank"] is not None
                                               else float("inf"), entry["member"].casefold(), entry["member"]))
+
+
+def standing_weeks(session: Session, season: int, week: int) -> list[int]:
+    """Weeks up to this one that have standings rows."""
+    return list(session.scalars(select(GroupStanding.week).where(
+        GroupStanding.season == season, GroupStanding.week <= week
+    ).distinct().order_by(GroupStanding.week)))

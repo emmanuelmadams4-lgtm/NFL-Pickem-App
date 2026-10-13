@@ -23,12 +23,15 @@ Router: `backend/nflpi/api/group.py`, `router = APIRouter(prefix="/api/group", d
 ### Routes and reply shapes
 `POST /api/group/import?season=<year>` body: the raw CSV bytes (any content type).
 * 200 `{"season": int, "kind": "picks" | "standings", "rows": int}`
+* 400 `{"detail": "bad content-length"}` — the Content-Length header is not a number.
 * 413 `{"detail": "file is too large"}` — Content-Length above the cap, or the streamed body passes the cap; the importer is not called and nothing is decoded. The cap is `nflpi.group.importer.MAX_BYTES`, read at request time (exactly the cap is allowed).
 * 422 `{"detail": "<the importer's own GroupImportError message>"}` (a string, no cell text, no member name); or FastAPI's 422 for a bad `season`.
-* 500 `{"detail": "group import failed: database error"}` when the importer raises `RuntimeError`.
+* 422 `{"detail": "no games for this season"}` — a file for a season with no games at all (a weekly file carries no season, so this stops a file posted under a wrong year from writing rows; a wrong year that has games is not caught: the screen shows the season and the web lead should make the owner confirm it).
+* 500 `{"detail": "group import failed: database error"}` when the importer raises `GroupDatabaseError` (a `RuntimeError` subclass added to `importer.py`); nothing else is turned into a database error.
+* `rows` for a weekly file is members times weeks in the file.
 * 401 / 503: the shared token check.
 
-`GET /api/group/standings?season=&week=` → 200 `{"season": int, "week": int, "rows": [{"member": str, "points": int, "total": int, "rank": int | null}]}`, rows in `queries.standings` order; empty `rows` when none.
+`GET /api/group/standings?season=&week=` → 200 `{"season": int, "week": int, "weeks_counted": [int], "rows": [{"member": str, "points": int, "total": int, "rank": int | null}]}`, rows in `queries.standings` order; empty `rows` when none.
 
 `GET /api/group/shares?season=&week=` → 200 `{"season": int, "week": int, "games": [{"game_id": str, "away_team": str, "home_team": str, "kickoff_utc": datetime string, "members": int, "picked": int, "away": {"team": str, "picks": int, "share": float | null, "avg_confidence": float | null}, "home": {same}}]}`; every game of that season and week appears (zero counts and null share when nobody picked); ordered by `kickoff_utc` then `game_id`; empty `games` for a week with no games.
 
@@ -44,6 +47,8 @@ Router: `backend/nflpi/api/group.py`, `router = APIRouter(prefix="/api/group", d
 | U6 | A refused file is 422 with exactly the importer's message, no member name in it, nothing stored; empty, binary, unknown-header and header-only files are 422 | functional |
 | U7 | `season` is required and must be an integer from 2000 to 2100 (else 422, nothing stored) | functional |
 | U8 | A database failure (importer `RuntimeError`) is 500 with the fixed text above, nothing of the error leaks | operational |
+| U10 | A weekly file for a season with no games is 422 "no games for this season", nothing stored (added after Dwight's code review D1) | functional |
+| U11 | A Content-Length that is not a number is 400 (L6) | functional |
 | U9 | No member name reaches any log line on success or refusal, upload or reads | operational |
 | S1 | Shares per game, per side: picks, share = picks/picked, mean confidence of that side's picks; counted by hand in the test | user-facing |
 | S2 | A game nobody picked is listed with zero counts and null share and null mean (missing is missing) | user-facing |
@@ -52,6 +57,7 @@ Router: `backend/nflpi/api/group.py`, `router = APIRouter(prefix="/api/group", d
 | S5 | The spread and the favoured side never change a share (swapping them in the file gives the same answer) | functional |
 | S6 | The number of SQL statements for the shares route does not grow with the number of games (at most 3) | operational |
 | T1 | Standings for a week: that week's points, running total of weeks up to it that season, stored rank or null; order as `queries.standings` | user-facing |
+| T4 | `weeks_counted` lists the weeks (up to the asked week) that have stored rows, so the screen can show which weeks a total adds up (D3, D4) | user-facing |
 | T2 | A later weekly file adds the rank it owns and keeps the others (via the route) | functional |
 | T3 | A week or season with no rows is `rows: []`; other seasons stay apart; `season` and `week` required and bounded (422) | functional |
 
@@ -60,3 +66,15 @@ Operational layer: U5, U8, U9, S6; the importer's own log-free behaviour is unch
 Gate: `bash docs/gauntlet/logs/step-16b-server-evidence/gate.sh <label>`: full pytest (a skipped test fails the gate), ruff on `nflpi tests migrations`, `alembic upgrade head / check` on an empty database, `npm run gen:api` with no drift (regenerated files committed).
 
 First failing tests: `backend/tests/test_group_api.py`, red at `ImportError: cannot import name 'group' from 'nflpi.api'` (the intended reason: the router does not exist). Log `red-pytest.log`.
+
+## 3. IMPLEMENTATION
+Provider: Codex built WO-1; Claude (Sonnet subagent) built WO-2 because Codex's workspace ran out of credits at about 09:00 UTC (god's notice 09:01Z). Coordinator reran every proof. CLIMBS: none. STRIKES: none.
+
+| Commit | What | Builder | Proof (coordinator's rerun) |
+|---|---|---|---|
+| `4f4d302`, `73ac0e6` | Spec, red tests (`red-pytest.log`: ImportError, no `nflpi.api.group`), gate script | coordinator | red for the intended reason |
+| `e2e2047` | WO-1: `api/group.py`, `week_shares`, the two main.py lines | `gpt-6-sol` xhigh, try 1 (`JEV: model:groupwire:wo-1 -> sol 0.98, effort xhigh 0.96`) | `test_group_api.py` + `test_group.py` 178 passed; diff read: only the 3 allowed files |
+| `34e1c96`, later test commits | lint fix; tests for per-chunk stream cut, season check, off-loop import; mutation sweep (`mutate-1.log`: 21 mutations, 16 killed first time, 4 killed after new tests, 1 equivalent) | coordinator | 44 passed |
+| `0fa36ae` | Red 2: Dwight's code review items D1, D2, D3/D4, L6 as failing tests (`red2-pytest.log`) | coordinator | ImportError `GroupDatabaseError` |
+
+**Design review (Dwight, required):** PASS at `4f4d302`, no CRITICAL or HIGH. G1 (never declare the body as a parameter) and G2 (threadpool, session opened after the body) were put into WO-1 and are in the code. **Code review (Dwight, with `ecc:security-reviewer` and `ecc:silent-failure-hunter`):** PASS on security at `34e1c96`, no CRITICAL, no HIGH security; four MEDIUM data-integrity items: D1 taken (route-level season guard, clause U10), D2 taken (`GroupDatabaseError`), D3/D4 taken in part (`weeks_counted`, clause T4; a member with no row that week is still left out of that week, carried), L6 taken (U11). Carried: L5 (a rollback that itself fails escapes the importer's catches), L7 (no body-read timeout, no rate limit, no run-log row per import), a wrong year that has games is not caught by the server.
