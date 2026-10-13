@@ -1216,6 +1216,85 @@
     }
    }
   },
+  "/api/live/grades": {
+   "get": {
+    "summary": "Live Grades",
+    "description": "Reads a whole season per call: open it on the Results page, do not poll it.",
+    "operationId": "live_grades_api_live_grades_get",
+    "parameters": [
+     {
+      "name": "season",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Season"
+      }
+     },
+     {
+      "name": "week",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Week"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LiveGradesOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/news": {
    "get": {
     "summary": "News",
@@ -1868,6 +1947,75 @@
     ],
     "title": "Factor"
    },
+   "ForecastGradeOut": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "scored",
+       "not_enough_data"
+      ],
+      "title": "Status"
+     },
+     "points": {
+      "type": "integer",
+      "title": "Points"
+     },
+     "coverage": {
+      "type": "number",
+      "title": "Coverage"
+     },
+     "brier": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Brier"
+     },
+     "log_loss": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Log Loss"
+     },
+     "kind": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kind",
+      "description": "For pregame_model: the chosen prediction's kind ('live' or 'backfill'); null otherwise"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "status",
+     "points",
+     "coverage",
+     "brier",
+     "log_loss",
+     "kind"
+    ],
+    "title": "ForecastGradeOut"
+   },
    "GameDetail": {
     "properties": {
      "game_id": {
@@ -2183,6 +2331,91 @@
      "weekday"
     ],
     "title": "GameDetail"
+   },
+   "GameGradeOut": {
+    "properties": {
+     "game_id": {
+      "type": "string",
+      "title": "Game Id"
+     },
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "home_team": {
+      "type": "string",
+      "title": "Home Team"
+     },
+     "away_team": {
+      "type": "string",
+      "title": "Away Team"
+     },
+     "home_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Score"
+     },
+     "away_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Away Score"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "graded",
+       "tie",
+       "no_live_data",
+       "in_progress",
+       "incomplete"
+      ],
+      "title": "Status",
+      "description": "graded|tie|no_live_data|in_progress|incomplete; incomplete is final with no closing post row"
+     },
+     "window_seconds": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Window Seconds"
+     },
+     "forecasters": {
+      "items": {
+       "$ref": "#/components/schemas/ForecastGradeOut"
+      },
+      "type": "array",
+      "title": "Forecasters"
+     }
+    },
+    "type": "object",
+    "required": [
+     "game_id",
+     "week",
+     "home_team",
+     "away_team",
+     "home_score",
+     "away_score",
+     "status",
+     "window_seconds",
+     "forecasters"
+    ],
+    "title": "GameGradeOut"
    },
    "GameShareOut": {
     "properties": {
@@ -2740,6 +2973,42 @@
      "updated_at"
     ],
     "title": "LiveGameOut"
+   },
+   "LiveGradesOut": {
+    "properties": {
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "games": {
+      "items": {
+       "$ref": "#/components/schemas/GameGradeOut"
+      },
+      "type": "array",
+      "title": "Games"
+     },
+     "week_summary": {
+      "$ref": "#/components/schemas/SummaryOut",
+      "description": "Means are over each forecaster's own scored games and are not comparable across forecasters; compare only on the same games."
+     },
+     "season_summary": {
+      "$ref": "#/components/schemas/SummaryOut",
+      "description": "Means are over each forecaster's own scored games and are not comparable across forecasters; compare only on the same games."
+     }
+    },
+    "type": "object",
+    "required": [
+     "season",
+     "week",
+     "games",
+     "week_summary",
+     "season_summary"
+    ],
+    "title": "LiveGradesOut"
    },
    "LiveOut": {
     "properties": {
@@ -4162,6 +4431,71 @@
      "checked_at"
     ],
     "title": "StarsOut"
+   },
+   "SummaryForecasterOut": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "games": {
+      "type": "integer",
+      "title": "Games"
+     },
+     "brier": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Brier",
+      "description": "Means are over each forecaster's own scored games and are not comparable across forecasters; compare only on the same games."
+     },
+     "log_loss": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Log Loss",
+      "description": "Means are over each forecaster's own scored games and are not comparable across forecasters; compare only on the same games."
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "games",
+     "brier",
+     "log_loss"
+    ],
+    "title": "SummaryForecasterOut"
+   },
+   "SummaryOut": {
+    "properties": {
+     "games_graded": {
+      "type": "integer",
+      "title": "Games Graded"
+     },
+     "forecasters": {
+      "items": {
+       "$ref": "#/components/schemas/SummaryForecasterOut"
+      },
+      "type": "array",
+      "title": "Forecasters"
+     }
+    },
+    "type": "object",
+    "required": [
+     "games_graded",
+     "forecasters"
+    ],
+    "title": "SummaryOut"
    },
    "Tally": {
     "properties": {
