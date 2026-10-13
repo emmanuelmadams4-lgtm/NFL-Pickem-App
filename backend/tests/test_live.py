@@ -1344,3 +1344,135 @@ def test_the_http_client_does_not_log_the_key_at_info(session, caplog):
         api_key=KEY,
     )
     assert KEY not in "\n".join(r.getMessage() for r in caplog.records)
+
+
+# ---------------------------------------------------------------- cleanup: only games near now are matched for quotes
+
+
+def test_quotes_match_only_games_that_kick_off_within_three_days_before_now_or_later(session):
+    old = seed_game(session, "SEA", "DEN", datetime(2026, 10, 16, 0, 15, tzinfo=UTC), status="final")
+    far_future = datetime(2026, 10, 20, 12, 0, tzinfo=UTC)  # three days after the last kickoff in the recorded replies
+    kalshi_result = run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=far_future)
+    odds_result, _ = refresh_odds(session, now=far_future)
+    assert quote_rows(session) == [] and kalshi_result.skipped >= 1 and odds_result.skipped >= 1
+    session.query(SourceStatus).update({"blocked_until": None})  # the far run set a wait; this is a separate case
+    session.commit()
+    near = datetime(2026, 10, 18, 12, 0, tzinfo=UTC)  # two days after kickoff: still matched
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=near)
+    assert {r.game_id for r in quote_rows(session)} == {old.game_id}
+
+
+# ---------------------------------------------------------------- fixes from the review fan-out (R1-R9)
+
+
+def test_a_very_long_run_of_failures_still_backs_off_exactly_a_day_and_never_raises(session):
+    session.add(SourceStatus(source="espn_live", consecutive_failures=60, updated_at=NOW))
+    session.commit()
+    result = run.refresh_live_games(session, get=fake_get({espn.SCOREBOARD_URL: fetch.FetchError("x")}), now=NOW)
+    status = session.get(SourceStatus, "espn_live")
+    assert result.status == "failed" and status.consecutive_failures == 61
+    assert status.blocked_until == NOW + timedelta(hours=24)
+
+
+def test_a_database_error_while_saving_ends_the_run_failed_with_a_back_off_and_no_rows(session, monkeypatch):
+    seed_four(session)
+
+    def bad_quote(session, **values):
+        session.add(MarketQuote(**{**values, "kind": "x" * 20}))  # too long for the column: fails on flush
+        return True
+
+    monkeypatch.setattr(store, "add_quote", bad_quote)
+    result = run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
+    (log,) = session.scalars(select(IngestionRun)).all()
+    status = session.get(SourceStatus, "kalshi")
+    assert result.status == "failed" and log.status == "failed" and log.finished_at is not None
+    assert status.consecutive_failures == 1 and status.blocked_until == KNOW + timedelta(minutes=15)
+    assert quote_rows(session) == []
+
+
+def test_after_the_thirty_five_day_stop_one_call_is_allowed_so_the_credit_count_can_refresh(session):
+    seed_four(session)
+    session.add(
+        SourceStatus(
+            source="oddsapi", consecutive_failures=0, credits_left=10, last_ok_at=ODDS_NOW,
+            blocked_until=ODDS_NOW + timedelta(days=35), updated_at=ODDS_NOW,
+        )
+    )  # fmt: skip
+    session.commit()
+    stopped, get = refresh_odds(session, now=ODDS_NOW + timedelta(days=34))
+    assert stopped.status == "skipped" and get.calls == []
+    resumed, get = refresh_odds(session, now=ODDS_NOW + timedelta(days=36))
+    assert resumed.status == "ok" and len(get.calls) == 1
+    assert session.get(SourceStatus, "oddsapi").credits_left == 499
+
+
+def test_a_credit_header_that_goes_missing_does_not_erase_the_last_known_count(session):
+    seed_four(session)
+    refresh_odds(session)
+    assert session.get(SourceStatus, "oddsapi").credits_left == 499
+    refresh_odds(session, odds_routes(headers={}), now=ODDS_NOW + timedelta(hours=7))
+    assert session.get(SourceStatus, "oddsapi").credits_left == 499
+
+
+@pytest.mark.parametrize(("bid", "ask"), [("0.0000", "1.0000"), ("0.00", "1.00"), ("0", "1")])
+def test_a_kalshi_market_with_an_empty_book_side_has_no_price_and_the_event_is_skipped(session, bid, ask):
+    games = seed_four(session)
+
+    def edit(markets):
+        next(m for m in markets if m["ticker"].endswith("SEADEN-SEA")).update(yes_bid_dollars=bid, yes_ask_dollars=ask)
+
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes(_edit(edit))), now=KNOW)
+    assert games["SEA_DEN"].game_id not in {r.game_id for r in quote_rows(session)} and len(quote_rows(session)) == 3
+
+
+def test_a_kalshi_quote_with_the_same_prices_across_kickoff_adds_one_live_row(session):
+    games = seed_four(session)
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
+    after_kickoff = datetime(2026, 10, 16, 0, 20, tzinfo=UTC)
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=after_kickoff)
+    rows = [r for r in quote_rows(session) if r.game_id == games["SEA_DEN"].game_id]
+    assert [r.kind for r in rows] == ["pregame", "live"]
+
+
+def test_a_reply_where_every_item_of_three_or_more_is_unusable_is_a_format_change_not_noise(session):
+    seed_recorded_games(session)
+    seed_four(session)
+    board = recorded("espn_scoreboard_final.json")
+    for event in board["events"]:
+        event["date"] = "yesterday"
+    kal = recorded("kalshi_markets.json")
+    for market in kal["markets"]:
+        market["yes_bid_dollars"] = 0.5  # numbers instead of strings
+    odds = recorded("odds_api_h2h.json")
+    for event in odds:
+        event["home_team"] = "The Home Team"
+    assert run.refresh_live_games(session, get=fake_get({espn.SCOREBOARD_URL: board}), now=NOW).status == "failed"
+    assert run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes(kal)), now=KNOW).status == "failed"
+    assert refresh_odds(session, odds_routes(odds))[0].status == "failed"
+    assert live_rows(session) == [] and quote_rows(session) == []
+    for source in ("espn_live", "kalshi", "oddsapi"):
+        assert session.get(SourceStatus, source).consecutive_failures == 1
+
+
+def test_one_or_two_unusable_items_in_a_reply_are_just_noise(session):
+    seed_recorded_games(session)
+    board = recorded("espn_scoreboard_final.json")
+    board["events"][0]["date"] = "yesterday"
+    board["events"][1]["date"] = "yesterday"
+    result = run.refresh_live_games(session, get=fake_get(recorded_routes() | {espn.SCOREBOARD_URL: board}), now=NOW)
+    assert result.status == "ok" and result.skipped >= 2
+
+
+def test_more_kalshi_pages_than_we_read_are_logged_not_silent(session, caplog):
+    import logging
+
+    caplog.set_level(logging.WARNING)
+    seed_four(session)
+    full = recorded("kalshi_markets.json")["markets"]
+    routes = {
+        kalshi.markets_url(): {"cursor": "p2", "markets": full[:2]},
+        kalshi.markets_url("p2"): {"cursor": "p3", "markets": full[2:4]},
+        kalshi.markets_url("p3"): {"cursor": "p4", "markets": full[4:6]},
+    }
+    run.refresh_kalshi_quotes(session, get=fake_get(routes), now=KNOW)
+    assert any("more pages" in r.getMessage() for r in caplog.records)

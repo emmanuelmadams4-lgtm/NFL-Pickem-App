@@ -32,7 +32,7 @@ class RefreshResult:
 
 
 def safe_error(exc: Exception) -> str:
-    if isinstance(exc, fetch.FetchError) or isinstance(exc, ValueError) and str(exc) in ("shape", "event id"):
+    if isinstance(exc, fetch.FetchError) or (isinstance(exc, ValueError) and str(exc) in ("shape", "event id")):
         return f"{type(exc).__name__}: {exc}"[:200]
     return type(exc).__name__[:200]
 
@@ -213,6 +213,10 @@ def _quote_game(games: list[Game], teams: set[str], game_date: date) -> Game | N
     return matches[0] if len(matches) == 1 else None
 
 
+def _quote_candidates(session: Session, now: datetime) -> list[Game]:
+    return list(session.scalars(select(Game).where(Game.kickoff_utc >= now - timedelta(days=3))))
+
+
 def _source_time(value: datetime | None, now: datetime) -> datetime | None:
     return value if value is not None and now - timedelta(days=7) <= value <= now + timedelta(days=1) else None
 
@@ -260,7 +264,7 @@ def _kalshi_job(session: Session, get: Callable[[str], fetch.JsonResult], now: d
         ):
             break
         cursor = next_cursor
-    games = list(session.scalars(select(Game)))
+    games = _quote_candidates(session, now)
     inserted = 0
     for ticker, markets in grouped.items():
         parts = kalshi.event_parts(ticker)
@@ -331,15 +335,12 @@ def _odds_job(
     key: str,
     credits: list[int | None],
 ) -> tuple[int, int, None]:
-    try:
-        result = get(oddsapi.odds_url(key))
-    except Exception:
-        raise fetch.FetchError("request failed") from None
+    result = get(oddsapi.odds_url(key))
     header = result.headers.get("x-requests-remaining")
     if isinstance(header, str) and oddsapi.CREDIT.fullmatch(header) is not None and int(header) <= 1_000_000:
         credits[0] = int(header)
     events, skipped = oddsapi.parse_events(result.data)
-    games = list(session.scalars(select(Game)))
+    games = _quote_candidates(session, now)
     inserted = 0
     for event in events:
         game = _quote_game(
