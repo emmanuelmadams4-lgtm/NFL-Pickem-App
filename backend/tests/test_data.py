@@ -124,6 +124,7 @@ def test_weather_picks_the_kickoff_hour():
 # --- Head coaches: nflverse games.csv carries last season's coach for some clubs (BUF still McDermott in 2026). ---
 # The current season's names come from ESPN's season coach list instead (defect, owner 2026-10-13).
 
+ESPN_HOST = "sports.core.api.espn.com"
 ESPN_TEAMS = {"2": "BUF", "13": "LV", "14": "LAR", "28": "WSH", "22": "ARI"}
 
 
@@ -138,7 +139,7 @@ def espn_get(coaches: dict[str, list[str]]):
         if url.endswith("/coaches?lang=en"):
             tid = url.split("/teams/")[1].split("/")[0]
             abbr = next(a for a, i in ids.items() if i == tid)
-            refs = [f"http://espn.test/coaches/{abbr}/{n}?lang=en" for n in range(len(coaches[abbr]))]
+            refs = [f"http://{ESPN_HOST}/v2/x/coaches/{abbr}/{n}?lang=en" for n in range(len(coaches[abbr]))]
             return {"items": [{"$ref": ref} for ref in refs]}
         abbr, n = url.split("/coaches/")[1].split("?")[0].split("/")
         first, last = coaches[abbr][int(n)].split(" ", 1)
