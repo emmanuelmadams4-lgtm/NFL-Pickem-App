@@ -127,15 +127,15 @@ def ingest_head_coaches(session: Session, coaches: dict[str, str] | None = None)
         current_coaches = coaches if coaches is not None else nflverse.fetch_head_coaches(season)
         changed = 0
         for abbr, name in current_coaches.items():
-            for team_side in (Game.home_team, Game.away_team):
+            for side in ("home", "away"):
                 result = session.execute(
                     update(Game)
                     .where(
                         Game.season == season,
-                        team_side == abbr,
-                        (Game.home_coach if team_side is Game.home_team else Game.away_coach).is_distinct_from(name),
+                        getattr(Game, f"{side}_team") == abbr,
+                        getattr(Game, f"{side}_coach").is_distinct_from(name),
                     )
-                    .values(**{"home_coach" if team_side is Game.home_team else "away_coach": name})
+                    .values(**{f"{side}_coach": name})
                 )
                 changed += result.rowcount or 0
         session.commit()
