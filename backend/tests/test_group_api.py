@@ -15,7 +15,7 @@ from sqlalchemy import event, select
 from nflpi.api import group as group_api
 from nflpi.db import get_engine
 from nflpi.group import importer
-from nflpi.group.importer import ImportResult
+from nflpi.group.importer import GroupDatabaseError, ImportResult
 from nflpi.models import Game, GroupPick, GroupStanding
 
 SEASON = 2023
@@ -232,12 +232,35 @@ def test_u7_a_missing_season_is_422(client, games):
 
 def test_u8_a_database_failure_is_500_and_leaks_nothing(client, games, monkeypatch):
     def broken(*args):
-        raise RuntimeError("group import: database error (OperationalError)")
+        raise GroupDatabaseError("group import: database error (OperationalError)")
 
     monkeypatch.setattr(group_api, "import_group_csv", broken)
     reply = upload(client)
     assert reply.status_code == 500
     assert reply.json() == {"detail": "group import failed: database error"}
+
+
+def test_u8_only_the_importers_own_database_error_is_called_a_database_error(client, games, monkeypatch):
+    def broken(*args):
+        raise RecursionError("something else")
+
+    monkeypatch.setattr(group_api, "import_group_csv", broken)
+    with pytest.raises(RecursionError):  # not dressed up as "database error"
+        upload(client)
+
+
+def test_u10_a_weekly_file_for_a_season_with_no_games_is_refused(client, games):
+    reply = upload(client, STANDINGS, season=2024)
+    assert reply.status_code == 422
+    assert reply.json() == {"detail": "no games for this season"}
+    assert stored(games) == ({}, {})
+    assert upload(client, STANDINGS, season=2022).status_code == 200  # a season that has games still works
+
+
+def test_u11_a_bad_content_length_is_400(games, monkeypatch):
+    monkeypatch.setattr(group_api, "import_group_csv", lambda *a: pytest.fail("importer called"))
+    status, body = asgi_post([b"x"], headers=[(b"content-length", b"abc")])
+    assert status == 400 and json.loads(body) == {"detail": "bad content-length"}
 
 
 def test_u9_no_member_name_reaches_the_log(client, games, caplog):
@@ -322,11 +345,12 @@ def test_s6_the_number_of_queries_does_not_grow_with_the_number_of_games(client,
 def test_t1_standings_for_a_week_with_running_totals(client, games):
     upload(client, STANDINGS)
     body = client.get(f"/api/group/standings?season={SEASON}&week=2").json()
-    assert body == {"season": SEASON, "week": 2, "rows": [
+    assert body == {"season": SEASON, "week": 2, "weeks_counted": [1, 2], "rows": [
         {"member": "Ann A", "points": 3, "total": 9, "rank": 1},
         {"member": "Bo's Picks", "points": 3, "total": 8, "rank": 2},
         {"member": "Cy!!", "points": 1, "total": 3, "rank": 3}]}
     first = client.get(f"/api/group/standings?season={SEASON}&week=1").json()
+    assert first["weeks_counted"] == [1] and body["weeks_counted"] == [1, 2]  # which weeks the totals add up
     assert [(r["member"], r["points"], r["total"], r["rank"]) for r in first["rows"]] == [
         ("Ann A", 6, 6, None), ("Bo's Picks", 5, 5, None), ("Cy!!", 2, 2, None)]  # no rank from a later file's week 1
 
@@ -342,7 +366,8 @@ def test_t2_a_later_file_adds_the_rank_it_owns_and_keeps_the_rest(client, games)
 
 def test_t3_no_rows_is_an_empty_list_other_seasons_are_apart_and_bounds_are_checked(client, games):
     upload(client, STANDINGS)
-    assert client.get("/api/group/standings?season=2022&week=1").json() == {"season": 2022, "week": 1, "rows": []}
+    empty = client.get("/api/group/standings?season=2022&week=1").json()
+    assert empty == {"season": 2022, "week": 1, "weeks_counted": [], "rows": []}
     for query in ("season=2023&week=0", "season=2023&week=23", "season=2101&week=1", "week=1", "season=2023",
                   "season=2023&week=x"):
         assert client.get(f"/api/group/standings?{query}").status_code == 422
