@@ -8,6 +8,7 @@ import { ChevronLeft } from "@/components/icons";
 import { cx } from "@/components/ui";
 import { useLocked } from "@/lib/clock";
 import { isIndoor, kickoffWhen, scoreTone, type ScoreTone } from "@/lib/fmt";
+import type { CardLiveState } from "@/components/live/state";
 
 function cap(s: string | null | undefined): string {
   if (!s) return "";
@@ -33,13 +34,13 @@ function TeamBlock({ team, side, record, split }: { team: Team; side: "Away" | "
 function ScoreSide({ abbr, score, tone }: { abbr: string; score: number; tone: ScoreTone }) {
   return (
     <span aria-hidden className={cx("flex flex-col items-center", tone === "lost" ? "text-text-2" : "text-text")}>
-      {score}
+      <span>{score}</span>
       <span className={cx("font-sans text-sm leading-5", tone === "won" ? "font-bold" : "font-medium")}>{abbr}</span>
     </span>
   );
 }
 
-export function GameHeader({ game }: { game: GameDetail }) {
+export function GameHeader({ game, live }: { game: GameDetail; live: CardLiveState | null }) {
   const locked = useLocked(game);
   const started = game.status !== "scheduled";
   const final = game.status === "final";
@@ -58,9 +59,8 @@ export function GameHeader({ game }: { game: GameDetail }) {
           {game.div_game && <Chip>Division game</Chip>}
           {game.neutral_site && <Chip>Neutral site</Chip>}
           {game.game_type !== "REG" && <Chip>{game.game_type}</Chip>}
-          {game.status === "in_progress" && <Chip>In progress</Chip>}
           {final && <Chip>Final</Chip>}
-          {game.status === "scheduled" && <Chip>{locked ? "Locked" : "Scheduled"}</Chip>}
+          {game.status === "scheduled" && !live && <Chip>{locked ? "Locked" : "Scheduled"}</Chip>}
           {game.status === "postponed" && <Chip tone="warn">Postponed</Chip>}
         </div>
       </div>
@@ -70,8 +70,22 @@ export function GameHeader({ game }: { game: GameDetail }) {
       </h1>
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 lg:gap-8">
         <TeamBlock team={game.away} side="Away" record={game.away_record} split={`Road ${game.away_form.away_record}`} />
-        <div className="flex min-h-16 items-center justify-center lg:min-h-20">
-          {scored ? (
+        <div className={cx("flex min-h-16 flex-col items-center justify-center lg:min-h-20", live && "w-28 sm:w-auto")}>
+          {live ? (
+            <>
+              <p className="max-w-full text-center text-label text-text-2">
+                <span aria-hidden="true" className="break-words">{live.label}</span>
+                <span className="sr-only">{live.reader}</span>
+              </p>
+              {live.score ? (
+                <p aria-hidden="true" className={cx("flex max-w-full items-start gap-1 font-display text-[40px] leading-[42px] tabular-nums lg:gap-4 lg:text-[80px] lg:leading-[80px]", live.kind === "S3" || live.kind === "S4" ? "text-text-2" : "text-text")}>
+                  <ScoreSide abbr={game.away.abbr} score={live.score.away} tone={live.kind === "S3" || live.kind === "S4" ? "lost" : "even"} />
+                  <span className="font-sans font-normal">–</span>
+                  <ScoreSide abbr={game.home.abbr} score={live.score.home} tone={live.kind === "S3" || live.kind === "S4" ? "lost" : "even"} />
+                </p>
+              ) : <p aria-hidden="true" className="max-w-full text-center text-label text-text-2">No live score right now</p>}
+            </>
+          ) : scored ? (
             <p className="font-display flex items-start gap-2 text-[48px] leading-[48px] lg:gap-4 lg:text-[80px] lg:leading-[80px]">
               <span className="sr-only">
                 {final ? "Final score" : "Score"} {game.away.abbr} {away}, {game.home.abbr} {home}
@@ -106,7 +120,7 @@ export function GameHeader({ game }: { game: GameDetail }) {
  * outline and the words "Model pick", never a lime fill or a check (lime is mine). Probability only; uncertainty stays a
  * separate chip in the pick panel.
  */
-export function WinSplit({ game }: { game: GameDetail }) {
+export function WinSplit({ game, started = false }: { game: GameDetail; started?: boolean }) {
   const p = game.prediction;
   if (!p) return null;
   const home = Math.round(p.home_win_prob * 100);
@@ -143,7 +157,7 @@ export function WinSplit({ game }: { game: GameDetail }) {
         })}
       </div>
       <p className="mt-2 text-label text-subtle">
-        Model win chance{backfill ? ", backfilled after the fact from pre-game inputs" : ""}. How reliable it is shows separately in the pick panel.
+        {started ? "Model win chance before kickoff. It does not change during the game." : `Model win chance${backfill ? ", backfilled after the fact from pre-game inputs" : ""}. How reliable it is shows separately in the pick panel.`}
       </p>
     </section>
   );

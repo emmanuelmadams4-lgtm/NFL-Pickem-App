@@ -25,7 +25,9 @@ type Fake = {
   calls: number;
 };
 
-const agoIso = (ms: number) => new Date(Date.now() - ms).toISOString();
+/** One "now" for the fixtures and the page clock, so a slow machine cannot age a fixture between the two. */
+const T0 = Date.now();
+const agoIso = (ms: number) => new Date(T0 - ms).toISOString();
 const row = (over: Partial<Row> = {}): Row => ({
   game_id: ID, state: "in", home_team: "KC", away_team: "NE", home_score: 21, away_score: 14, period: 3, clock: "4:12",
   home_win_prob: 0.71, kalshi_home_prob: 0.68, updated_at: agoIso(20_000), ...over,
@@ -34,9 +36,9 @@ const reply = (rows: Row[] = [row()], over: Partial<Reply> = {}): Reply => ({ ga
 const started = () => ({ status: "in_progress", kickoff_utc: agoIso(90 * 60_000), time_tbd: false, locked: true, home_score: null, away_score: null });
 
 /** Replace the API's answers for one game and for /api/live. The page clock is ours, so 30 seconds take no time. */
-async function fake(page: Page, live: Reply | number = reply(), game: Record<string, unknown> = started(), id = ID): Promise<Fake> {
+async function fake(page: Page, live: Reply | number = reply(), game: Record<string, unknown> = started(), id = ID, deviceSkewMs = 0): Promise<Fake> {
   const f: Fake = { live, game, calls: 0 };
-  await page.clock.install({ time: new Date() });
+  await page.clock.install({ time: T0 + deviceSkewMs });
   await page.addInitScript((t) => localStorage.setItem("nflpi_token", t), TOKEN);
   await page.route("**/api/{weeks,games}/**", async (route) => {
     try {
@@ -46,6 +48,16 @@ async function fake(page: Page, live: Reply | number = reply(), game: Record<str
       await route.fulfill({ response: res, json: body });
     } catch {
       // a request still in flight when the test ends: the page is gone, nothing to answer
+    }
+  });
+  // the server's clock is T0-based too, so the fixtures' stamps keep their age however slow the machine is
+  const installedAt = Date.now();
+  await page.route("**/api/meta", async (route) => {
+    try {
+      const res = await route.fetch();
+      await route.fulfill({ response: res, json: { ...(await res.json()), server_time: new Date(T0 + Date.now() - installedAt).toISOString() } });
+    } catch {
+      // as above
     }
   });
   await page.route("**/api/live", async (route) => {
@@ -125,7 +137,7 @@ test.describe("phone", () => {
   });
 
   test("L2 a board left open across a kickoff starts asking without a reload", async ({ page }) => {
-    const f = await fake(page, reply(), { status: "scheduled", kickoff_utc: new Date(Date.now() + 60_000).toISOString(), time_tbd: false, locked: false });
+    const f = await fake(page, reply(), { status: "scheduled", kickoff_utc: new Date(T0 + 60_000).toISOString(), time_tbd: false, locked: false });
     await board(page);
     await page.clock.fastForward(30_000);
     expect(f.calls).toBe(0);
@@ -169,6 +181,7 @@ const states: { name: string; live: Reply | number; game?: Record<string, unknow
     name: "S4 not updating", live: reply([row()], { stale: true, last_confirmed_at: agoIso(3 * 60_000) }),
     has: ["Not updating · Q3 4:12", "Last update 3m ago"], hasNot: /to win now|ESPN|Kalshi|71%|Live ·/, reader: "Score may be out of date, last update 3 minutes ago: NE 14, KC 21.",
   },
+  { name: "S4 one minute is singular", live: reply([row()], { stale: true, last_confirmed_at: agoIso(60_000) }), has: ["Last update 1m ago"], hasNot: /to win now/, reader: "Score may be out of date, last update 1 minute ago: NE 14, KC 21." },
   { name: "S4 not updating, never confirmed", live: reply([row()], { stale: true, last_confirmed_at: null }), has: ["Not updating · Q3 4:12", "No update yet"], hasNot: /Last update|to win now/ },
   { name: "S6 no row for the game", live: reply([]), has: ["Started", "No live score right now"], hasNot: /Live ·|to win now|Not updating|In progress|\d:\d\d [AP]M/, reader: "Game started, no live score right now." },
   { name: "S6 the request fails from the start (503)", live: 503, has: ["Started", "No live score right now"], hasNot: /Live ·|to win now|Not updating/ },
@@ -267,7 +280,7 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       await expect(main.getByText("In progress", { exact: true }), "the chip gives way to the label").toHaveCount(0);
       await expect(main).toContainText(words("KC to win now · ESPN 71%"));
       await expect(main).toContainText(words("Kalshi – · no fresh price"));
-      await expect(main).toContainText(/Checked (just now|\d+s ago)/);
+      await expect(main).toContainText(/Checked (just now|1m ago)/);
       await expect(main).toContainText("Kalshi is a prediction market. The figure is the price of a KC win, not this app's forecast.");
       await expect(main).toContainText("Model win chance before kickoff. It does not change during the game.");
       const label = (await main.locator('[aria-hidden="true"]').filter({ hasText: /^Live/ }).first().boundingBox())!;
@@ -276,12 +289,24 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       f.live = reply([row({ home_win_prob: null })]);
       await page.clock.fastForward(31_000);
       await expect(main).toContainText(words("ESPN – · none right now"));
-      f.live = reply([row()], { stale: true, last_confirmed_at: agoIso(4 * 60_000) });
+      // the page clock is 62 seconds ahead of this process by now: 3 minutes here is 4 on the page
+      f.live = reply([row()], { stale: true, last_confirmed_at: agoIso(3 * 60_000) });
       await page.clock.fastForward(31_000);
       await expect(main).toContainText(words("Not updating · Q3 4:12"));
       await expect(main).toContainText("Last update 4m ago");
       await expect(main).not.toContainText(/to win now|ESPN 71%/);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(0);
+    });
+
+    test("L4 a phone whose clock is five minutes behind the server still says Live: the age of a reply is measured on one clock", async ({ page }) => {
+      await fake(page, reply(), started(), ID, -5 * 60_000);
+      await board(page);
+      await expect(card(page)).toContainText(words("Live · Q3 4:12"), { timeout: 15_000 });
+      await page.clock.runFor(4_000);
+      await expect(card(page)).toContainText(words("KC to win now · ESPN 71%"));
+      await expect(card(page)).not.toContainText("Not updating");
+      await page.goto(`/game/?id=${ID}`);
+      await expect(page.getByRole("main")).toContainText("Checked just now", { timeout: 15_000 });
     });
 
     test("L5 the game screen with no live reply says the game has started, not its kickoff as if it were to come", async ({ page }) => {

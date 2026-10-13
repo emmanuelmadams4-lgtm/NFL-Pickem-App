@@ -11,6 +11,8 @@ export type CardLiveState = {
   label: string;
   score: { away: number; home: number } | null;
   chanceLine: string | null;
+  gameChanceLine: string | null;
+  chanceClub: string | null;
   chanceReader: string | null;
   reader: string;
 };
@@ -48,12 +50,12 @@ export function cardLiveState(game: GameSummary, live: LiveResult, now: number):
   if (game.status === "final") return null;
   const current = live.data?.games.find((row) => row.game_id === game.game_id);
   const row = current ?? live.heldPosts.get(game.game_id);
-  if (!row) return { kind: "S6", label: "Started", score: null, chanceLine: null, chanceReader: null, reader: "Game started, no live score right now." };
+  if (!row) return { kind: "S6", label: "Started", score: null, chanceLine: null, gameChanceLine: null, chanceClub: null, chanceReader: null, reader: "Game started, no live score right now." };
 
   const score = row.away_score !== null && row.home_score !== null ? { away: row.away_score, home: row.home_score } : null;
   const scoreWords = score ? `${game.away.abbr} ${score.away}, ${game.home.abbr} ${score.home}` : "no live score right now";
   const period = periodWords(row);
-  const base = { score, chanceLine: null, chanceReader: null };
+  const base = { score, chanceLine: null, gameChanceLine: null, chanceClub: null, chanceReader: null };
 
   if (row.state === "post") {
     return { ...base, kind: "S2", label: score ? "Ended · result pending" : "Ended · score not in yet", reader: score ? `Ended, result pending: ${scoreWords}.` : "Ended, score not in yet." };
@@ -69,6 +71,7 @@ export function cardLiveState(game: GameSummary, live: LiveResult, now: number):
       kind: "S4",
       label: `Not updating${period.short ? ` · ${period.short}` : ""}`,
       chanceLine: age ? `Last update ${age}` : "No update yet",
+      gameChanceLine: age ? `Last update ${age}` : "No update yet",
       reader: `Score may be out of date, ${age ? `last update ${spokenAge(age)}` : "no update yet"}: ${scoreWords}.`,
     };
   }
@@ -80,6 +83,9 @@ export function cardLiveState(game: GameSummary, live: LiveResult, now: number):
   const chanceLine = row.home_win_prob === null && row.kalshi_home_prob === null
     ? "No live win chance right now"
     : `${club} to win now · ESPN ${espn} · Kalshi ${kalshi}`;
+  const gameChanceLine = row.home_win_prob === null && row.kalshi_home_prob === null
+    ? chanceLine
+    : `${club} to win now · ESPN ${espn}${row.home_win_prob === null ? " · none right now" : ""} · Kalshi ${kalshi}${row.kalshi_home_prob === null ? " · no fresh price" : ""}`;
   const chanceParts = [
     row.home_win_prob === null ? null : `ESPN gives ${club} a ${spokenChance(espn)} chance to win`,
     row.kalshi_home_prob === null ? null : `Kalshi price ${spokenChance(kalshi)}`,
@@ -89,6 +95,8 @@ export function cardLiveState(game: GameSummary, live: LiveResult, now: number):
     label: `Live${period.short ? ` · ${period.short}` : ""}`,
     score,
     chanceLine,
+    gameChanceLine,
+    chanceClub: club,
     chanceReader: chanceParts.length ? `Right now ${chanceParts.join("; ")}.` : null,
     reader: score ? `Live score ${scoreWords}${period.spoken ? `, ${period.spoken}` : ""}.` : "Live score not in yet.",
   };

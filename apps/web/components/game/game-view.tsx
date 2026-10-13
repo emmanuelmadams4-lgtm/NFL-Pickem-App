@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useGame, useMeta } from "@/lib/queries";
+import { ago } from "@nflpi/shared";
+import { useGame, useLive, useMeta, startedGame } from "@/lib/queries";
+import { useNow } from "@/lib/clock";
+import { cardLiveState } from "@/components/live/state";
 import { EmptyState, ErrorState, Skeleton, cx } from "@/components/ui";
 import { GameHeader, WinSplit } from "@/components/game/game-header";
 import { Recommendation } from "@/components/game/recommendation";
@@ -123,6 +126,8 @@ export function GameView() {
   const id = params.get("id");
   const q = useGame(id);
   const meta = useMeta().data;
+  const live = useLive(q.data ? [q.data] : []);
+  const now = useNow();
 
   if (!id) {
     return (
@@ -141,11 +146,26 @@ export function GameView() {
   if (q.isError && !q.data) return <ErrorState title="Could not load this matchup" error={q.error} onRetry={() => q.refetch()} />;
   const game = q.data;
   if (!game || !meta) return null;
+  const liveState = startedGame(game, now) ? cardLiveState(game, live, now) : null;
 
   return (
     <div className="space-y-4 lg:space-y-5">
-      <GameHeader game={game} />
-      <WinSplit game={game} />
+      <GameHeader game={game} live={liveState} />
+      {liveState?.gameChanceLine && (
+        <div className="min-w-0 rounded-card border border-border bg-surface p-3 text-label text-text-2 lg:p-4">
+          <p>
+            <span aria-hidden="true" className="break-words">{liveState.gameChanceLine}</span>
+            <span className="sr-only">{liveState.chanceReader ?? liveState.gameChanceLine}</span>
+          </p>
+          {liveState.kind === "S5" && (
+            <>
+              <p className="mt-1">Checked {ago(new Date(live.dataUpdatedAt).toISOString(), new Date(now))}</p>
+              <p className="mt-1">Kalshi is a prediction market. The figure is the price of a {liveState.chanceClub} win, not this app&apos;s forecast.</p>
+            </>
+          )}
+        </div>
+      )}
+      <WinSplit game={game} started={!!liveState} />
       {/* Phone: the pick panel comes right after the win tiles, then the section tabs. Desktop: tabs over the sections,
           the panel sticky beside them. */}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
