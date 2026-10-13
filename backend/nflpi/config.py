@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     vapid_public_key: str = ""
     vapid_private_key: str = ""
     vapid_subject: str = ""  # "mailto:you@example.com" or an https URL; push services reject placeholders
-    alert_move_threshold: float = 0.10
+    alert_move_threshold: float = 0.07
 
 
 @lru_cache

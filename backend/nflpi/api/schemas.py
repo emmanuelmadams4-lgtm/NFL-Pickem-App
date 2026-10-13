@@ -367,6 +367,20 @@ class PushSubscriptionIn(BaseModel):
     keys: PushKeys
 
 
+class PushTestResult(BaseModel):
+    host: str
+    ok: bool
+    status: int | None
+    error: str | None
+
+
+class PushTestOut(BaseModel):
+    configured: bool
+    devices: int
+    delivered: int
+    results: list[PushTestResult]
+
+
 class SettingsIn(BaseModel):
     league_leader_accuracy: float | None = Field(default=None, ge=0, le=1)
     reminder_minutes: int | None = Field(default=None, ge=0, le=1440, description="0 turns reminders off")

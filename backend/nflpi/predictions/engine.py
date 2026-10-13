@@ -16,7 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from nflpi.analytics.backtest import _elo_frames, run_backtest, tune_elo
-from nflpi.analytics.metrics import EARLY_WEEK_END, UPSET_GAP, uncertainty_grade, upset_watch
+from nflpi.analytics.metrics import EARLY_WEEK_END, UPSET_GAP, pick_label, uncertainty_grade, upset_watch
 from nflpi.config import get_settings
 from nflpi.ingestion.service import freshness
 from nflpi.models import BacktestRun, Game, MarketSnapshot, ModelVersion, Prediction
@@ -43,6 +43,10 @@ class ChangeEvent:
     old_pick: str
     new_pick: str
     note: str
+    old_label: str | None = None
+    new_label: str | None = None
+    qb_team: str | None = None
+    qb_name: str | None = None
 
 
 def load_frame(session: Session) -> pd.DataFrame:
@@ -283,8 +287,19 @@ def refresh_predictions(
             what = ", ".join(sorted(changed)) or ("model version" if prev.model_version_id != mv.id else "risk flags")
             note = f"Changed: {what}. {home} win chance {prev.home_win_prob:.0%} → {prob:.0%}."
             moved = abs(prob - prev.home_win_prob)
-            if prev.pick != pick or moved >= settings.alert_move_threshold:
-                events.append(ChangeEvent(row["game_id"], prev.home_win_prob, prob, prev.pick, pick, note))
+            old_label = pick_label(max(prev.home_win_prob, 1 - prev.home_win_prob))
+            new_label = pick_label(max(prob, 1 - prob))
+            qb_team = next(
+                (team for col, team in (("home_qb", home), ("away_qb", away))
+                 if features.get(col) and features.get(col) != prev.features.get(col)),
+                None,
+            )
+            qb_name = features.get("home_qb" if qb_team == home else "away_qb") if qb_team else None
+            if prev.pick != pick or moved >= settings.alert_move_threshold or old_label != new_label or qb_team:
+                events.append(ChangeEvent(
+                    row["game_id"], prev.home_win_prob, prob, prev.pick, pick, note,
+                    old_label, new_label, qb_team, qb_name if isinstance(qb_name, str) else None,
+                ))
         session.add(
             Prediction(
                 game_id=row["game_id"],

@@ -79,6 +79,7 @@ def meta(session: DB) -> s.MetaOut:
     mv = engine.active_model(session)
     weeks = session.scalars(select(Game.week).where(Game.season == season).distinct().order_by(Game.week)).all()
     seasons = session.scalars(select(Game.season).distinct().order_by(Game.season.desc())).all()
+    reminder_minutes = views.get_setting(session, "reminder_minutes")
     return s.MetaOut(
         current_season=season,
         current_week=week,
@@ -89,7 +90,7 @@ def meta(session: DB) -> s.MetaOut:
         ai_providers=providers.available(),
         push_public_key=get_settings().vapid_public_key if push.configured() else None,
         push_subscriptions=session.scalar(select(func.count()).select_from(PushSubscription)) or 0,
-        reminder_minutes=views.get_setting(session, "reminder_minutes"),
+        reminder_minutes=60 if reminder_minutes is None else reminder_minutes,
         league_leader_accuracy=views.get_setting(session, "league_leader_accuracy"),
         server_time=datetime.now(UTC),
     )
@@ -300,6 +301,11 @@ def push_unsubscribe(endpoint: str, session: DB) -> Response:
         session.delete(sub)
         session.commit()
     return Response(status_code=204)
+
+
+@api.post("/push/test", response_model=s.PushTestOut)
+def push_test(session: DB) -> s.PushTestOut:
+    return s.PushTestOut(**push.send_test_alert(session))
 
 
 @api.put("/settings", response_model=s.MetaOut)
