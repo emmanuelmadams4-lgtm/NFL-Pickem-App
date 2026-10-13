@@ -6,9 +6,12 @@ Both routes are mocked. No test makes a real call, and no test needs a real toke
 import asyncio
 import json
 import logging
+import math
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
+import anyio
 import claude_agent_sdk
 import pytest
 from claude_agent_sdk import ProcessError, ResultMessage
@@ -31,13 +34,14 @@ class FakeSdk:
     """Stands in for claude_agent_sdk.query: records calls, then yields or raises what the test set."""
 
     def __init__(self, messages=(), error: Exception | None = None, delay: float = 0.0) -> None:
-        self.messages, self.error, self.delay, self.calls = list(messages), error, delay, []
+        self.messages, self.error, self.delay, self.calls, self.seen = list(messages), error, delay, [], {}
 
     def __call__(self, *, prompt, options=None, **kwargs):
         self.calls.append({"prompt": prompt, "options": options})
-        return self._stream()
+        return self._stream(options)
 
-    async def _stream(self):
+    async def _stream(self, options):
+        self.seen = {"deadline": anyio.current_effective_deadline(), "cwd_is_dir": os.path.isdir(str(options.cwd))}
         if self.delay:
             await asyncio.sleep(self.delay)
         if self.error:
@@ -200,3 +204,74 @@ def test_research_answers_through_the_sdk_route(setup, loaded):
 def test_the_image_gets_the_cli_from_the_python_package():
     bundled = Path(claude_agent_sdk.__file__).parent / "_bundled" / "claude"
     assert bundled.is_file(), "the wheel no longer bundles the Claude Code CLI: the Dockerfile must install it"
+
+
+# Dwight's security review (S1 to S3, F1 to F4 and the LOW notes), frozen as clauses C12 to C19 --------------------
+
+
+def test_child_process_cannot_be_pointed_elsewhere_by_the_server_environment(setup):
+    sdk, _ = setup(token=TOKEN)
+    providers.get_provider("claude").complete("sys", "q")
+    env = sdk.calls[0]["options"].env
+    for name in ("ANTHROPIC_BASE_URL", "ANTHROPIC_CUSTOM_HEADERS", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
+                 "CLAUDE_CODE_USE_FOUNDRY", "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"):
+        assert env[name] == "", name
+    assert env["DISABLE_AUTOUPDATER"] == "1" and env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] == "1"
+
+
+def test_the_sdk_call_runs_under_a_deadline_that_also_stops_the_child(setup):
+    sdk, _ = setup(token=TOKEN)
+    providers.get_provider("claude").complete("sys", "q")
+    assert math.isfinite(sdk.seen["deadline"])  # an anyio deadline, so the SDK can terminate its CLI process
+
+
+def test_each_call_gets_a_throwaway_working_and_config_directory(setup):
+    sdk, _ = setup(token=TOKEN)
+    providers.get_provider("claude").complete("sys", "q")
+    options = sdk.calls[0]["options"]
+    assert sdk.seen["cwd_is_dir"] is True and str(options.cwd) == options.env["CLAUDE_CONFIG_DIR"]
+    assert not os.path.exists(str(options.cwd))  # removed after the call: no transcripts left behind
+
+
+def test_a_fallback_leaves_a_traceable_log_line_without_the_token(setup, caplog):
+    setup(token=TOKEN, key=KEY, sdk=FakeSdk(error=ProcessError(f"x {TOKEN}", exit_code=1)))
+    with caplog.at_level(logging.WARNING, logger="nflpi.ai"):
+        providers.get_provider("claude").complete("sys", "q")
+    assert "ProcessError" in caplog.text and TOKEN not in caplog.text
+
+
+def test_the_route_says_api_only_after_the_api_answered(setup):
+    sdk = FakeSdk(error=ProcessError("exit 1", exit_code=1))
+    setup(token=TOKEN, key=KEY, sdk=sdk, api=FakeAnthropic(error=AIError("401")))
+    provider = providers.get_provider("claude")
+    with pytest.raises(AIError):
+        provider.complete("sys", "q")
+    assert provider.route == "sdk"
+
+
+def test_a_refusal_is_not_retried_on_the_paid_route(setup):
+    sdk, api = setup(token=TOKEN, key=KEY, sdk=FakeSdk([result(result="no", stop_reason="refusal")]))
+    with pytest.raises(AIError, match="declined"):
+        providers.get_provider("claude").complete("sys", "q")
+    assert api.calls == []
+
+
+def test_a_failed_result_reports_why(setup):
+    setup(token=TOKEN, sdk=FakeSdk([result(is_error=True, subtype="error_max_turns")]))
+    with pytest.raises(AIError, match="error_max_turns"):
+        providers.get_provider("claude").complete("sys", "q")
+
+
+def test_a_cut_off_sdk_answer_is_an_error_like_the_api_route(setup):
+    setup(token=TOKEN, sdk=FakeSdk([result(result="half an ans", stop_reason="max_tokens")]))
+    with pytest.raises(AIError, match="cut off"):
+        providers.get_provider("claude").complete("sys", "q")
+
+
+def test_no_secret_sits_in_plain_attributes_or_settings_repr(setup, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-SECRET-key")
+    setup(token=TOKEN)
+    provider = providers.get_provider("claude")
+    assert TOKEN not in repr(vars(provider.sdk)) and TOKEN not in repr(vars(provider))
+    shown = repr(get_settings())
+    assert "or-SECRET-key" not in shown and "test-token" not in shown
