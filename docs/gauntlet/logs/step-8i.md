@@ -56,3 +56,15 @@ Gate: `cd backend && DATABASE_URL=postgresql+psycopg://nflpi:nflpi@127.0.0.1:154
 ## 4. CLEANUP
 
 No change needed: one new module (197 lines, one helper shared by three checks), no dead code, no new dependency, no table, no migration. `jobs.py` +5 lines, `config.py` +1 setting.
+
+## 5. VERIFICATION
+
+* **Gate** (`step-8i-evidence/gate.sh`, each run in its own scratch databases, under `res:gate-b` or `res:gate-c`): `uv run pytest -q`, `uvx ruff check nflpi tests migrations`, `alembic upgrade head` then `alembic check` on a fresh database, `npm run gen:api` with no drift in `packages/`. Summaries in `step-8i-evidence/gate-runs.txt`.
+* **Tests:** 48 in `test_star_alerts.py`; each frozen clause A1-A14 plus A1b and A3b has a test that fails when it is broken (mutation sweeps: `mutation-sweep-1.log`, 53 mutants, 6 survivors, 5 killed after new tests, 1 equivalent; `mutation-sweep-2.log`, 5 of 5 killed).
+* **Note on one bad run.** A gate run on the rebased tree showed 7 failures in `test_data.py` / `test_group.py` (UndefinedTable, StaleDataError, deadlock). Cause: a second pytest process (the critic's single-file run) used the same database at the same time. The gate script was changed to give every run its own database; the runs below used it. No code changed.
+* **Critic (new subagent `ecc:code-reviewer`, no build transcript) at 8c4afb5: PASS.** 48 passed in `test_star_alerts.py`, ruff clean; clauses checked once by reading code against the spec, no failures, one advisory (a star Out then cleared is skipped, which is the intended C1 fix). It could not get a gate slot for the full suite; the full-suite proof is the coordinator's gate above.
+* **Lane-guard** (`step-8i-evidence/lane-guard.txt`): only `backend/nflpi/config.py` (one setting) and `backend/nflpi/jobs.py` (5 lines in `tick`), the granted seams.
+
+## 6. LANDING
+
+Ready for the integrator. Branch `lane/staralerts`, rebased on main. No push, no PR. Nothing to deploy beyond the worker (no migration, no route, no schema change). Owner-visible: from the first worker tick after deploy, the first round only stores a baseline; changes after that reach his phone. Open owner items: IR / suspension / trade / inactive / return-after-missed-games triggers need the D26 ESPN source (carried); the 8 AM Eastern hour is the setting `STAR_SUMMARY_HOUR`.
