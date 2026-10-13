@@ -4,12 +4,14 @@ from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     DateTime,
     Float,
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -390,3 +392,38 @@ class QbObservation(Base):
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (Index("ix_qb_obs_game", "game_id", "side", "id"),)
+
+
+class PasskeyCredential(Base):
+    """A WebAuthn passkey the owner registered (public key only)."""
+
+    __tablename__ = "passkey_credentials"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    credential_id: Mapped[str] = mapped_column(String(1400), unique=True)  # base64url, unpadded
+    public_key: Mapped[bytes] = mapped_column(LargeBinary)
+    sign_count: Mapped[int] = mapped_column(BigInteger)
+    label: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PasskeyChallenge(Base):
+    """A live, single-use WebAuthn challenge (only the sha256 of its raw bytes is kept)."""
+
+    __tablename__ = "passkey_challenges"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    challenge_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    kind: Mapped[str] = mapped_column(String(8))  # register | signin
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class PasskeySession(Base):
+    """A sign-in made with a passkey (only the sha256 of the session value is kept)."""
+
+    __tablename__ = "passkey_sessions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    credential_id: Mapped[int] = mapped_column(ForeignKey("passkey_credentials.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

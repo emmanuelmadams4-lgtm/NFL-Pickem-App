@@ -517,6 +517,8 @@ def test_p13_removing_a_passkey_ends_its_sessions_and_the_app_token_still_works(
     assert sign_in(anon, device).status_code == 401
     assert client.delete(f"/api/passkey/{first}").status_code == 404
     assert client.delete("/api/passkey/999999").status_code == 404
+    for bad in ("0", "-1", "99999999999999999999", "abc"):  # refused cleanly, never a server error
+        assert client.delete(f"/api/passkey/{bad}").status_code == 422, bad
 
     assert anon.delete(f"/api/passkey/{second}", headers=bearer(laptop)).status_code == 204  # the last one
     assert not opens(anon, laptop)
@@ -533,6 +535,10 @@ def test_p13_removing_a_passkey_ends_its_sessions_and_the_app_token_still_works(
 def test_p14_every_sign_in_failure_answers_the_same(configured, client, anon, device):
     assert register(client, device).status_code == 201
     stranger = SoftAuthenticator(RP, ORIGIN)  # never registered
+
+    def live() -> dict:
+        return anon.post("/api/passkey/signin/begin").json()
+
     replies = [
         sign_in(anon, stranger),
         sign_in(anon, device, tamper="signature"),
@@ -542,6 +548,11 @@ def test_p14_every_sign_in_failure_answers_the_same(configured, client, anon, de
         anon.post("/api/passkey/signin/finish", json=[1, 2]),
         anon.post("/api/passkey/signin/finish", json={"id": device.id, "response": {"clientDataJSON": "!!"}}),
         anon.post("/api/passkey/signin/finish"),
+        anon.post("/api/passkey/signin/finish", content=b"[" * 60_000),  # nesting deeper than the parser allows
+        anon.post("/api/passkey/signin/finish", json={**device.get(live()), "id": "nul\x00byte"}),
+        anon.post("/api/passkey/signin/finish", json={**device.get(live()), "id": "x" * 2000}),
+        anon.post("/api/passkey/signin/finish", json={**device.get(live()), "id": 7}),
+        anon.post("/api/passkey/signin/finish", json={**device.get(live()), "response": "text"}),
     ]
     assert {(r.status_code, r.text, r.headers.get("content-type")) for r in replies} == {
         (401, '{"detail":"Passkey sign-in failed"}', "application/json")

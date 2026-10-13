@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     alert_move_threshold: float = 0.07
     star_summary_hour: int = Field(default=8, ge=0, le=20)  # daily star summary, 8 AM Eastern
 
+    # Passkey sign-in (both empty = off). rp id is the host name; origins are comma-separated https://host[:port].
+    passkey_rp_id: str = ""
+    passkey_origins: str = ""
+
     # News
     news_contact: str = ""
 
