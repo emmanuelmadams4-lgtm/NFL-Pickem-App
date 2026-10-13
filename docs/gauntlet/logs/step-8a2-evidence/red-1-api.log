@@ -1,0 +1,30 @@
+>       [94massert[39;49;00m seen == [CURRENT]  [90m# this season's list, once per round[39;49;00m[90m[39;49;00m
+        ^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE       assert [] == [2023][0m
+[1m[31mE         [0m
+[1m[31mE         Right contains one more item: [0m[94m2023[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_api.py[0m:222: AssertionError
+[31m[1m___________ test_freshness_lists_the_star_list_and_the_head_coaches ____________[0m
+
+loaded = <sqlalchemy.orm.session.Session object at 0x114201550>
+client = <starlette.testclient.TestClient object at 0x11425e690>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_freshness_lists_the_star_list_and_the_head_coaches[39;49;00m(loaded, client):[90m[39;49;00m
+        [94mfrom[39;49;00m[90m [39;49;00m[04m[96mnflpi[39;49;00m[04m[96m.[39;49;00m[04m[96mingestion[39;49;00m[04m[96m.[39;49;00m[04m[96mservice[39;49;00m[90m [39;49;00m[94mimport[39;49;00m run_logged[90m[39;49;00m
+    [90m[39;49;00m
+        rows = {d[[33m"[39;49;00m[33mdataset[39;49;00m[33m"[39;49;00m]: d [94mfor[39;49;00m d [95min[39;49;00m client.get([33m"[39;49;00m[33m/api/freshness[39;49;00m[33m"[39;49;00m).json()}[90m[39;49;00m
+>       [94massert[39;49;00m {[33m"[39;49;00m[33mstars[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mhead_coaches[39;49;00m[33m"[39;49;00m} <= [96mset[39;49;00m(rows)[90m[39;49;00m
+[1m[31mE       AssertionError: assert {'head_coaches', 'stars'} <= {'injuries', ...s', 'weather'}[0m
+[1m[31mE         [0m
+[1m[31mE         Extra items in the left set:[0m
+[1m[31mE         [0m[33m'[39;49;00m[33mhead_coaches[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         [0m[33m'[39;49;00m[33mstars[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+
+[1m[31mtests/test_api.py[0m:230: AssertionError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_api.py::[1mtest_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them[0m - AttributeError: 'GameSummary' object has no attribute 'stars_out'
+[31mFAILED[0m tests/test_api.py::[1mtest_the_worker_refreshes_the_star_list_and_a_failure_does_not_stop_the_round[0m - assert [] == [2023]
+[31mFAILED[0m tests/test_api.py::[1mtest_freshness_lists_the_star_list_and_the_head_coaches[0m - AssertionError: assert {'head_coaches', 'stars'} <= {'injuries', ...s', 'we...
+[31m[31m[1m3 failed[0m, [32m7 passed[0m[31m in 4.31s[0m[0m

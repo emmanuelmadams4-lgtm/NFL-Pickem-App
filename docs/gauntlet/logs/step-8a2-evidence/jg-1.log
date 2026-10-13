@@ -1,0 +1,1316 @@
+Jevgrep: 50 relevant files.
+Symbols use name@start-end. Roles are estimates; locations-only files remain reading leads.
+AGENTS.md lookup (root and returned-file ancestors): "apps/web/AGENTS.md".
+- "apps/web/components/game/game-view.tsx" — implementation, caller, helper; source below
+- "apps/web/components/week/game-card.tsx" — implementation, caller, helper; source below
+- "apps/web/components/week/week-board.tsx" — implementation, caller, helper; source below
+- "backend/nflpi/api/views.py" — implementation, helper; source below
+- "apps/web/components/game/injuries.tsx" — implementation, caller, helper; source below
+- "backend/nflpi/api/main.py" — implementation, caller, helper; locations only
+- "packages/shared/src/api-types.ts" — helper; locations only
+- "apps/web/lib/queries.ts" — implementation, caller, helper; locations only
+- "backend/nflpi/models.py" — helper; locations only
+- "backend/nflpi/api/schemas.py" — fixture, helper; locations only
+- "apps/web/components/game/game-header.tsx" — implementation, helper; locations only
+- "apps/web/components/game/schedule.tsx" — implementation, helper; locations only
+- "apps/web/app/game/page.tsx" — implementation, caller, helper; locations only
+- "packages/shared/openapi.json" — helper; locations only
+- "apps/web/components/game/team-compare.tsx" — helper; locations only
+- "apps/web/e2e/restyle.spec.ts" — test, fixture, helper; locations only
+- "packages/shared/src/client.ts" — helper; locations only
+- "apps/web/e2e/step2.spec.ts" — caller, test, fixture, helper; source below
+- "apps/web/e2e/sheet.spec.ts" — test, fixture, helper; locations only
+- "apps/web/components/game/factors.tsx" — relevant; role uncertain; locations only
+- "apps/web/components/game/ai-research.tsx" — implementation; locations only
+- "apps/web/components/game/recommendation.tsx" — helper; locations only
+- "packages/shared/src/format.ts" — implementation, helper; locations only
+- "apps/web/components/game/market.tsx" — helper; locations only
+- "docs/ARCHITECTURE.md" — helper; locations only
+- "apps/web/components/week/points-control.tsx" — helper; locations only
+- "apps/web/components/game/history.tsx" — relevant; role uncertain; locations only
+- "apps/web/app/page.tsx" — caller; locations only
+- "backend/tests/test_web_contract.py" — test, fixture, helper; source below
+- "CLAUDE.md" — helper; locations only
+- "backend/nflpi/analytics/stars.py" — implementation, helper; locations only
+- "backend/tests/test_api.py" — test, fixture, helper; locations only
+- "apps/web/components/game/meetings.tsx" — relevant; role uncertain; locations only
+- "apps/web/e2e/pwa.spec.ts" — test, fixture, helper; locations only
+- "backend/nflpi/ingestion/service.py" — helper; locations only
+- "backend/tests/test_sheet.py" — test, fixture, helper; locations only
+- "apps/web/e2e/phone-layout.spec.ts" — test, fixture; locations only
+- "apps/web/components/pick-buttons.tsx" — helper; locations only
+- "backend/nflpi/ingestion/nflverse.py" — helper; locations only
+- "apps/web/components/game/ask.tsx" — relevant; role uncertain; locations only
+- "backend/tests/test_stars.py" — test, fixture, helper; locations only
+- "backend/tests/test_hardening.py" — test, fixture, helper; locations only
+- "backend/tests/test_data.py" — test, fixture, helper; locations only
+- "apps/web/lib/fmt.ts" — helper; locations only
+- "backend/nflpi/ai/research.py" — helper; locations only
+- "backend/nflpi/predictions/engine.py" — relevant; role uncertain; locations only
+- "backend/nflpi/jobs.py" — relevant; role uncertain; locations only
+- "apps/web/lib/clock.ts" — helper; locations only
+- "backend/nflpi/predictions/features.py" — relevant; role uncertain; locations only
+- "apps/web/components/settings/alerts.tsx" — relevant; role uncertain; locations only
+End file list. Declaration locations follow source.
+
+Source block "apps/web/components/game/game-view.tsx" lines 17-107:
+```
+import { History } from "@/components/game/history";
+import { Meetings } from "@/components/game/meetings";
+
+const SECTIONS = [
+  { id: "factors", label: "Factors" },
+  { id: "teams", label: "Teams" },
+  { id: "injuries", label: "Injuries" },
+  { id: "conditions", label: "Conditions" },
+  { id: "market", label: "Market" },
+  { id: "ai", label: "AI" },
+  { id: "ask", label: "Ask" },
+  { id: "history", label: "History" },
+  { id: "meetings", label: "Meetings" },
+];
+
+/** Below the top bar and this tab row: the last section whose top has passed this line is the one in view. */
+const SPY_LINE = 160;
+
+/**
+ * Pill section tabs (design.md § 0): sticky under the top bar, the section in view is the lime pill, jump on tap.
+ * A tapped tab stays current while its jump scrolls (and when the page cannot scroll that far), until the next user scroll.
+ */
+function SectionNav() {
+  const [active, setActive] = useState<string>(SECTIONS[0].id);
+  const jumping = useRef(false);
+
+  useEffect(() => {
+    let frame = 0;
+    const spy = () => {
+      if (jumping.current) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (jumping.current) return;
+        let current = SECTIONS[0].id;
+        for (const s of SECTIONS) {
+          const el = document.getElementById(s.id);
+          if (el && el.getBoundingClientRect().top <= SPY_LINE) current = s.id;
+        }
+        setActive(current);
+      });
+    };
+    const release = () => {
+      jumping.current = false;
+    };
+    const gestures = ["wheel", "touchstart", "keydown", "scrollend"] as const;
+    window.addEventListener("scroll", spy, { passive: true });
+    gestures.forEach((g) => window.addEventListener(g, release, { passive: true }));
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", spy);
+      gestures.forEach((g) => window.removeEventListener(g, release));
+    };
+  }, []);
+
+  function jump(id: string) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    jumping.current = true;
+    setActive(id);
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }
+
+  return (
+    <nav aria-label="Sections" className="sticky top-[var(--header-h)] z-20 -mx-4 bg-bg px-4 lg:mx-0 lg:px-0">
+      <ul className="no-scrollbar flex gap-1.5 overflow-x-auto py-2 pr-12 max-lg:[mask-image:linear-gradient(to_right,black_85%,transparent)] lg:pr-0">
+        {SECTIONS.map((s) => (
+          <li key={s.id} className="shrink-0">
+            <a
+              href={`#${s.id}`}
+              aria-current={active === s.id ? "true" : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                jump(s.id);
+              }}
+              className={cx(
+                "inline-flex h-10 items-center rounded-full px-4 text-sm whitespace-nowrap transition-colors lg:h-9",
+                active === s.id ? "bg-accent font-medium text-accent-ink" : "border border-border bg-surface text-text-2 hover:border-border-strong hover:text-text",
+              )}
+            >
+              {s.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+function GameSkeleton() {
+  return (
+```
+
+Source block "apps/web/components/game/game-view.tsx" lines 118-171:
+```
+  );
+}
+
+export function GameView() {
+  const params = useSearchParams();
+  const id = params.get("id");
+  const q = useGame(id);
+  const meta = useMeta().data;
+
+  if (!id) {
+    return (
+      <EmptyState
+        title="No game selected"
+        hint="Open a game from the Week board to see its matchup."
+        action={
+          <Link href="/" className="text-sm text-accent-text underline underline-offset-2">
+            Go to the Week board
+          </Link>
+        }
+      />
+    );
+  }
+  if (q.isPending) return <GameSkeleton />;
+  if (q.isError && !q.data) return <ErrorState title="Could not load this matchup" error={q.error} onRetry={() => q.refetch()} />;
+  const game = q.data;
+  if (!game || !meta) return null;
+
+  return (
+    <div className="space-y-4 lg:space-y-5">
+      <GameHeader game={game} />
+      <WinSplit game={game} />
+      {/* Phone: the pick panel comes right after the win tiles, then the section tabs. Desktop: tabs over the sections,
+          the panel sticky beside them. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
+        <aside className="lg:sticky lg:top-[calc(var(--header-h)+16px)] lg:col-start-2 lg:row-start-1">
+          <Recommendation game={game} />
+        </aside>
+        <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
+          <SectionNav />
+          <Factors game={game} />
+          <TeamCompare game={game} />
+          <Injuries game={game} />
+          <Schedule game={game} />
+          <MarketSection game={game} />
+          <AiResearch game={game} ai={meta.ai_providers} />
+          <Ask game={game} ai={meta.ai_providers} />
+          <History game={game} />
+          <Meetings game={game} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+```
+
+Source block "apps/web/components/week/game-card.tsx" lines 44-223:
+```
+/**
+ * One card per game (design.md § 0, D40). Top: away, VS, home. Middle: kickoff (or the score), the model's pick with
+ * its win chance and bar, uncertainty as a separate chip. Bottom: status chips, what changed, and the two pick pills.
+ * The whole card opens the matchup; the pills and tooltips sit above that link. `highlight` fills the top band lime
+ * (the next game to kick off; at most one per board).
+ */
+const labelWords = { easy_pick: ["Easy pick", "Easy picks"], tough_matchup: ["Tough matchup", "Tough matchups"], coin_flip: ["Coin flip", "Coin flips"] } as const;
+
+export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; highlight?: boolean; pointsCount: number }) {
+  const p = game.prediction;
+  const fav = marketFavorite(game);
+  const locked = useLocked(game);
+  const pending = usePendingPicks();
+  const mine = effectivePick(pending, game.game_id, game.my_pick).pick;
+  const started = game.status !== "scheduled";
+  const final = game.status === "final";
+  const pickTeam: Team | null = p ? (p.pick === game.home.abbr ? game.home : game.away) : null;
+  const prob = p ? pickProb(p) : null;
+  const differs = !!(p && mine && mine !== p.pick);
+  const away = game.away_score;
+  const home = game.home_score;
+
+  return (
+    <li data-testid="game-card" className="relative flex flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-border-strong">
+      <Link
+        href={`/game/?id=${game.game_id}`}
+        aria-label={`Open matchup: ${game.away.name} at ${game.home.name}`}
+        className="absolute inset-0 z-0 rounded-card focus-visible:outline-offset-[-2px]"
+      />
+
+      <div className={cx("grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 p-3 lg:gap-3 lg:p-4", highlight ? "bg-accent text-accent-ink" : "text-text")}>
+        <TeamSide team={game.away} record={game.away_record} onLime={highlight} />
+        <span className={cx("font-display grid size-9 shrink-0 place-items-center rounded-full text-base lg:size-11 lg:text-lg", highlight ? "bg-accent-ink text-accent" : "border border-border bg-elevated text-text")}>
+          VS
+        </span>
+        <TeamSide team={game.home} record={game.home_record} right onLime={highlight} />
+      </div>
+
+      <div className="flex flex-1 flex-col gap-2 border-t border-border p-3 lg:gap-3 lg:p-4">
+        <div className="flex flex-wrap items-end justify-between gap-2 lg:gap-3">
+          <div className="min-w-0">
+            <p className="text-label text-text-2">
+              {shortDate(game.kickoff_utc)}
+              {highlight && <span>, next kickoff</span>}
+            </p>
+            {started && away !== null && home !== null ? (
+              <p className="font-display flex items-baseline gap-1.5 text-3xl leading-8 whitespace-nowrap lg:text-[32px] lg:leading-9">
+                <span className="sr-only">
+                  {final ? "Final score" : "Score"} {game.away.abbr} {away}, {game.home.abbr} {home}
+                </span>
+                <span aria-hidden className={scoreClass(final ? scoreTone(away, home) : "even")}>
+                  <span className="mr-1 font-sans text-sm">{game.away.abbr}</span>
+                  {away}
+                </span>
+                <span aria-hidden className="font-sans font-normal text-text-2">
+                  –
+                </span>
+                <span aria-hidden className={scoreClass(final ? scoreTone(home, away) : "even")}>
+                  {home}
+                  <span className="ml-1 font-sans text-sm">{game.home.abbr}</span>
+                </span>
+              </p>
+            ) : game.status === "postponed" ? (
+              <p className="py-1.5"><Chip tone="warn">Postponed</Chip></p>
+            ) : (
+              <p className="font-display text-3xl leading-8 text-text lg:text-[32px] lg:leading-9">{kickoffClock(game)}</p>
+            )}
+          </div>
+          {p && pickTeam && prob !== null && (
+            <div className="text-right">
+              <p className="text-label text-text-2">Model pick</p>
+              <p className="flex items-center justify-end gap-1.5">
+                <TeamLogo team={pickTeam} size={20} />
+                <span className="text-sm font-semibold">{p.pick}</span>
+                <span className="font-display text-3xl leading-8 text-text lg:text-[32px] lg:leading-9">{pct(prob)}</span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {p && prob !== null ? (
+          <div>
+            <ProbBar value={prob} fromRight={p.pick === game.home.abbr} label={`${p.pick} win probability`} />
+            <div className="mt-1.5 lg:mt-2">
+              {game.sheet.label && game.sheet.label in labelWords && (
+                <p className="text-sm font-medium text-text">
+                  <span data-testid="pick-label">{labelWords[game.sheet.label as keyof typeof labelWords][0]}</span>
+                  {game.sheet.label_hit_rate !== null && (
+                    <span className="font-normal text-text-2"> · {labelWords[game.sheet.label as keyof typeof labelWords][1]} have won {pct(game.sheet.label_hit_rate)} since 2012</span>
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-subtle">No prediction yet</p>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          {p && (
+            <span className="flex items-center gap-1.5 text-label text-subtle">
+              Uncertainty <UncertaintyChip prediction={p} />
+            </span>
+          )}
+          <p className="text-label text-text-2">
+            Market{" "}
+            {fav ? (
+              <>
+                <span className="font-semibold text-text">{fav.team}</span> {pct(fav.prob)}
+              </>
+            ) : (
+              <span className="text-subtle">no line yet</span>
+            )}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          {game.status === "in_progress" && <Chip>In progress</Chip>}
+          {final && <Chip>Final</Chip>}
+          {p?.kind === "backfill" && <BackfillChip />}
+          {differs && <Chip tone="accent">Differs from model</Chip>}
+          {p && p.upset_flags.length > 0 && (
+            <Tip
+              content={
+                <span className="block min-w-48">
+                  <span className="block font-semibold">Upset watch</span>
+                  <ul className="mt-1.5 list-disc space-y-1 pl-4">
+                    {p.upset_flags.map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
+                  </ul>
+                </span>
+              }
+            >
+              <Chip tone="warn">Upset watch</Chip>
+            </Tip>
+          )}
+          {game.qb_alerts.slice(0, 2).map((a) => {
+            const { who, status } = alertParts(a);
+            return (
+              <span key={a} className="inline-flex max-w-full items-center gap-1.5 text-label text-text-2">
+                <span className="truncate">{who}</span>
+                {status && <Chip tone={statusTone(status)}>{status}</Chip>}
+              </span>
+            );
+          })}
+          {game.qb_alerts.length > 2 && <span className="text-label text-subtle">+{game.qb_alerts.length - 2} more</span>}
+        </div>
+
+        {p?.change_note && (
+          <p className="flex items-start gap-1.5 text-label text-text-2">
+            <Refresh size={14} className="mt-px shrink-0" />
+            <span>
+              <span className="font-medium text-text">What changed:</span> {p.change_note.replace(/^Changed:\s*/i, "")}
+            </span>
+          </p>
+        )}
+
+        <div className="mt-auto border-t border-border pt-2 lg:contents">
+          <div className="flex flex-wrap items-end gap-2 lg:contents">
+            <PointsControl game={game} count={pointsCount} />
+            <div className="contents lg:relative lg:z-10 lg:mt-auto lg:block lg:pt-1">
+              {game.sheet.pick_by === "app" && !locked && game.sheet.app_pick && (
+                <p className="order-first w-full text-label text-text-2 lg:mb-2">Counts as {game.sheet.app_pick}, the model&apos;s pick, unless you tap a team.</p>
+              )}
+              {game.sheet.pick_by === "auto" && <p className="order-first w-full lg:mb-2"><Chip>Model picked {game.sheet.my_pick} for you</Chip></p>}
+              <PickButtons game={game} className="min-w-36 flex-1 lg:min-w-0" />
+              {final && (
+                <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-0.5 lg:mt-2">
+                  {game.my_pick ? <Mark correct={game.my_pick_correct} who={game.sheet.pick_by === "auto" ? "Picked for you" : "Me"} /> : <span className="text-label text-subtle">No pick made</span>}
+                  <Mark correct={game.model_correct} who="Model" />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+```
+
+Source block "apps/web/components/week/week-board.tsx" lines 48-207:
+```
+  );
+}
+
+export function WeekBoard() {
+  const { season, week, qs } = useSelection();
+  const q = useWeek(season, week);
+  const [sort, setSortState] = useState<SortKey>(initialSort);
+  const [onlyAttention, setOnlyAttention] = useState(false);
+  const [scope, setScopeState] = useState<Scope>(() => (safeGet(SCOPE_KEY) === "open" ? "open" : "all"));
+  const setScope = (v: Scope) => {
+    setScopeState(v);
+    safeSet(SCOPE_KEY, v);
+  };
+
+  const setSort = (k: SortKey) => {
+    setSortState(k);
+    safeSet(SORT_KEY, k);
+  };
+
+  const data = q.data;
+  const pointsCount = data?.games.filter((g) => g.status !== "postponed").length ?? 0; // the server numbers 1..N over every game that is not postponed
+  const now = useNow();
+  const games = useMemo(() => {
+    if (!data) return [];
+    let base = scope === "open" ? data.games.filter((g) => g.status === "scheduled" && !isLocked(g, now)) : data.games;
+    if (onlyAttention) base = base.filter(needsAttention);
+    return sortGames(base, sort);
+  }, [data, sort, onlyAttention, scope, now]);
+
+  const groups = useMemo(() => {
+    if (sort !== "kickoff") return [{ day: "", games }];
+    const out: { day: string; games: GameSummary[] }[] = [];
+    for (const g of games) {
+      const day = kickoffDay(g.kickoff_utc);
+      const last = out[out.length - 1];
+      if (last && last.day === day) last.games.push(g);
+      else out.push({ day, games: [g] });
+    }
+    return out;
+  }, [games, sort]);
+
+  // The one lime card: the next game still open to pick (design.md § 0: at most one highlight per board).
+  const nextId = useMemo(() => {
+    const open = (data?.games ?? []).filter((g) => g.status === "scheduled" && !g.time_tbd && !isLocked(g, now));
+    return open.sort((a, b) => a.kickoff_utc.localeCompare(b.kickoff_utc))[0]?.game_id ?? null;
+  }, [data, now]);
+
+  // Loud only for what can change a pick: stale model inputs. Weather is context; Settings notes it.
+  const stale = staleList(data?.freshness).filter(feedsModel);
+
+  return (
+    <div className="space-y-2 lg:space-y-5">
+      <PageHead
+        kicker="Picks"
+        title={`Week ${week}`}
+        sub={
+          <>
+            <span className="lg:hidden">{season}{data ? ` · ${data.summary.games_total} games` : ""}</span>
+            <span className="hidden lg:inline">{season} season{data ? `, ${data.summary.games_total} games` : ""}</span>
+            {data && <span className="ml-2 text-xs text-subtle">Updated {ago(data.generated_at)}{q.isFetching && !q.isPending ? ", refreshing" : ""}</span>}
+          </>
+        }
+        aside={
+          <Link href={`/sheet/${qs}`} className="relative z-10 inline-flex min-h-11 items-center gap-1 rounded-full border border-border-strong bg-elevated px-3 text-sm font-medium text-text lg:min-h-9 lg:px-4">
+            Yahoo sheet <ChevronRight size={16} />
+          </Link>
+        }
+      />
+
+      {/* Filter chips directly under the title, before any summary (design.md § 0); one scrolling row on the phone. */}
+      <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex min-w-0 items-center gap-2 overflow-x-auto pl-4 pr-12 max-lg:[mask-image:linear-gradient(to_right,black_85%,transparent)] lg:mx-0 lg:flex-wrap lg:px-0">
+        <div role="group" aria-label="Games shown" className="flex shrink-0 gap-2">
+          {SCOPES.map((o) => (
+            <button key={o.value} type="button" aria-pressed={scope === o.value} onClick={() => setScope(o.value)} className={chipClass(scope === o.value)}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {data && (
+          <button
+            type="button"
+            aria-pressed={onlyAttention}
+            onClick={() => setOnlyAttention((v) => !v)}
+            className={chipClass(onlyAttention, "border-warn/50 bg-warn/12 text-warn")}
+          >
+            Needs attention ({data.summary.attention})
+          </button>
+        )}
+        {data && (
+          <span className="hidden text-xs text-subtle lg:ml-auto lg:inline" aria-live="polite">
+            {games.length} of {data.games.length} games
+          </span>
+        )}
+        <SelectField label="Sort by" className="inline-flex shrink-0" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+          {SORTS.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.label}
+            </option>
+          ))}
+        </SelectField>
+      </div>
+
+      <WeekPicker className="lg:hidden" />
+
+      <InstallHint />
+
+      {q.isPending && <BoardSkeleton />}
+      {q.isError && !data && <ErrorState title="Could not load this week" error={q.error} onRetry={() => q.refetch()} />}
+
+      {data && (
+        <>
+          {stale.length > 0 && (
+            <div role="note" className="rounded-ctl border border-warn/40 bg-warn/10 px-4 py-2.5 text-sm text-text-2">
+              <span className="font-semibold text-warn">Stale data: {stale.map(describeStale).join(", ")}.</span>{" "}
+              <span className="hidden sm:inline">Anything that depends on {stale.length === 1 ? "it" : "them"} may be missing or out of date.</span>
+              {stale.some((s) => s.last_error) && (
+                <span className="hidden sm:inline"> Last error: {stale.filter((s) => s.last_error).map((s) => `${s.dataset} ${s.last_error}`).join("; ")}.</span>
+              )}{" "}
+              <Link href="/settings/" className="text-accent-text underline underline-offset-2">
+                See data sources
+              </Link>
+            </div>
+          )}
+
+          <KpiStrip week={data} />
+
+          {data.games.length === 0 ? (
+            <EmptyState title={`No games scheduled for Week ${week}`} hint={`There are no ${season} games in this week. Pick another week or season above.`} />
+          ) : (
+            <section aria-label="Games">
+              {games.length === 0 ? (
+                <p className="rounded-card border border-border bg-surface px-4 py-10 text-center text-sm text-text-2">{scope === "open" ? "No games are open to pick in this week." : "No games need attention in this week."}</p>
+              ) : (
+                <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {groups.map((grp) => (
+                    <Fragment key={grp.day || "all"}>
+                      {grp.day && (
+                        <li className="col-span-full pt-2 text-sm font-medium text-text first:pt-0">
+                          {grp.day}
+                          <span className="ml-2 text-xs font-normal text-subtle">
+                            {grp.games.length} {grp.games.length === 1 ? "game" : "games"}
+                          </span>
+                        </li>
+                      )}
+                      {grp.games.map((g) => (
+                        <GameCard key={g.game_id} game={g} highlight={g.game_id === nextId} pointsCount={pointsCount} />
+                      ))}
+                    </Fragment>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 text-xs text-subtle">Select a game for the full matchup. Picks lock at kickoff.</p>
+            </section>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+```
+
+Source block "backend/nflpi/api/views.py" lines 149-261:
+```
+    return None
+
+
+def summaries(session: Session, games: list[Game], now: datetime) -> list[s.GameSummary]:
+    if not games:
+        return []
+    ids = [g.game_id for g in games]
+    teams = {t.abbr: t for t in session.scalars(select(Team))}
+    names = dict(session.execute(select(ModelVersion.id, ModelVersion.name)).all())
+    picks = {p.game_id: p for p in session.scalars(select(UserPick).where(UserPick.game_id.in_(ids)))}
+    sheets = {week: sheet.compute_week(session, games[0].season, week, now) for week in {g.week for g in games}}
+    recommendations = sheet.recommendations(session, games)
+    wx = _latest_by_game(session, WeatherForecast, ids)
+    season = games[0].season
+    involved = {g.home_team for g in games} | {g.away_team for g in games}
+    recs = _records(session, season, involved)
+    weeks = {g.week for g in games}
+    injuries = {w: _week_injuries(session, season, w, involved) for w in weeks}
+
+    out = []
+    for g in games:
+        # The recommendation for a game is the last snapshot made before kickoff.
+        pred = recommendations.get(g.game_id)
+        win = winner(g)
+        pick = picks.get(g.game_id)
+        inj = injuries[g.week]
+        qb_alerts = [
+            f"{r.team} QB {r.player}: {r.report_status}"
+            for team in (g.away_team, g.home_team)
+            for r in inj.get(team, [])
+            if r.position == "QB" and r.report_status in ALERT_STATUSES
+        ]
+        out.append(
+            s.GameSummary(
+                game_id=g.game_id,
+                season=g.season,
+                week=g.week,
+                game_type=g.game_type,
+                kickoff_utc=g.kickoff_utc,
+                time_tbd=g.time_tbd,
+                status=status_of(g, now),
+                away=team_out(teams.get(g.away_team), g.away_team),
+                home=team_out(teams.get(g.home_team), g.home_team),
+                away_score=g.away_score,
+                home_score=g.home_score,
+                away_record=record_before(recs[g.away_team], g.away_team, g.kickoff_utc),
+                home_record=record_before(recs[g.home_team], g.home_team, g.kickoff_utc),
+                stadium=g.stadium,
+                roof=g.roof,
+                neutral_site=g.neutral_site,
+                div_game=g.div_game,
+                prediction=prediction_out(pred, names) if pred else None,
+                sheet=s.SheetOut(**sheets[g.week][g.game_id]),
+                my_pick=pick.picked_team if pick else None,
+                my_pick_correct=(pick.picked_team == win) if pick and win else None,
+                model_correct=(pred.pick == win) if pred and win else None,
+                locked=is_locked(g, now),
+                qb_not_projected=g.status != "final" and (not g.home_qb or not g.away_qb),
+                qb_alerts=qb_alerts,
+                injury_count=sum(
+                    1
+                    for team in (g.away_team, g.home_team)
+                    for r in inj.get(team, [])
+                    if r.report_status in ALERT_STATUSES
+                ),
+                weather=_weather(g, wx.get(g.game_id)),
+            )
+        )
+    return out
+
+
+def week_view(session: Session, season: int, week: int) -> s.WeekOut:
+    now = now_utc()
+    sheet.finalize(session, now)
+    games = session.scalars(
+        select(Game).where(Game.season == season, Game.week == week).order_by(Game.kickoff_utc, Game.game_id)
+    ).all()
+    items = summaries(session, games, now)
+    perf = performance(session, season)
+    graded = [g for g in items if g.my_pick_correct is not None and g.sheet.pick_by != "auto"]
+    mgraded = [g for g in items if g.model_correct is not None and g.prediction and g.prediction.kind == "live"]
+    attention = sum(
+        1
+        for g in items
+        if g.status == "scheduled" and g.prediction and (g.prediction.uncertainty == "high" or g.prediction.upset_flags)
+    )
+    summary = s.WeekSummary(
+        games_total=len(items),
+        games_final=sum(g.status == "final" for g in items),
+        games_remaining=sum(g.status != "final" for g in items),
+        picks_made=sum(g.my_pick is not None and g.sheet.pick_by != "auto" for g in items),
+        picks_correct=sum(bool(g.my_pick_correct) for g in graded),
+        picks_incorrect=sum(not g.my_pick_correct for g in graded),
+        my_accuracy=(sum(bool(g.my_pick_correct) for g in graded) / len(graded)) if graded else None,
+        model_correct=sum(bool(g.model_correct) for g in mgraded),
+        model_graded=len(mgraded),
+        model_accuracy=(sum(bool(g.model_correct) for g in mgraded) / len(mgraded)) if mgraded else None,
+        season_my_accuracy=perf.me.accuracy,
+        season_model_accuracy=perf.model.accuracy,
+        league_leader_accuracy=get_setting(session, "league_leader_accuracy"),
+        attention=attention,
+    )
+    return s.WeekOut(
+        season=season,
+        week=week,
+        summary=summary,
+        games=items,
+        freshness=[s.DatasetFreshness(**f) for f in freshness(session, now)],
+        generated_at=now,
+    )
+
+
+def _form(session: Session, g: Game, side: str, recs: list[Game], pred: Prediction | None) -> s.TeamForm:
+```
+
+Source block "backend/nflpi/api/views.py" lines 287-361:
+```
+    )
+
+
+def game_detail(session: Session, game_id: str) -> s.GameDetail | None:
+    g = session.get(Game, game_id)
+    if g is None:
+        return None
+    now = now_utc()
+    base = summaries(session, [g], now)[0]
+    names = dict(session.execute(select(ModelVersion.id, ModelVersion.name)).all())
+    history = session.scalars(select(Prediction).where(Prediction.game_id == game_id).order_by(Prediction.id)).all()
+    last = history[-1] if history else None
+    recs = _records(session, g.season, {g.home_team, g.away_team})
+    injuries = _week_injuries(session, g.season, g.week, {g.home_team, g.away_team})
+    markets = session.scalars(
+        select(MarketSnapshot).where(MarketSnapshot.game_id == game_id).order_by(MarketSnapshot.observed_at)
+    ).all()
+    meetings = session.scalars(
+        select(Game)
+        .where(
+            Game.status == "final",
+            Game.kickoff_utc < g.kickoff_utc,
+            or_(
+                (Game.home_team == g.home_team) & (Game.away_team == g.away_team),
+                (Game.home_team == g.away_team) & (Game.away_team == g.home_team),
+            ),
+        )
+        .order_by(Game.kickoff_utc.desc())
+        .limit(5)
+    ).all()
+    report = session.scalars(
+        select(AIReport)
+        .where(AIReport.game_id == game_id, AIReport.kind == "report")
+        .order_by(AIReport.id.desc())
+        .limit(1)
+    ).first()
+    home_form = _form(session, g, "home", recs[g.home_team], last)
+    away_form = _form(session, g, "away", recs[g.away_team], last)
+    if last:
+        home_form.prev_qb = last.features.get("home_prev_qb")
+        away_form.prev_qb = last.features.get("away_prev_qb")
+    rank = {"Out": 0, "Doubtful": 1, "Questionable": 2}
+    inj_rows = sorted(
+        (r for team in (g.away_team, g.home_team) for r in injuries.get(team, [])),
+        key=lambda r: (r.team != g.away_team, rank.get(r.report_status or "", 3), r.position or ""),
+    )
+    return s.GameDetail(
+        **base.model_dump(),
+        home_form=home_form,
+        away_form=away_form,
+        injuries=[s.InjuryOut.model_validate(r, from_attributes=True) for r in inj_rows],
+        market_history=[
+            s.MarketOut(
+                observed_at=m.observed_at,
+                kind=m.kind,
+                source=m.source,
+                home_moneyline=m.home_moneyline,
+                away_moneyline=m.away_moneyline,
+                spread_line=m.spread_line,
+                total_line=m.total_line,
+                home_prob=m.home_prob_novig,
+            )
+            for m in markets
+        ],
+        prediction_history=[prediction_out(p, names) for p in history],
+        meetings=[s.MeetingOut.model_validate(m, from_attributes=True) for m in meetings],
+        ai_report=ai_report_out(report) if report else None,
+        coach_home=g.home_coach,
+        coach_away=g.away_coach,
+        surface=g.surface,
+        weekday=g.weekday,
+    )
+
+
+def ai_report_out(r: AIReport) -> s.AIReportOut:
+```
+
+Source block "apps/web/components/game/injuries.tsx" lines 67-85:
+```
+  );
+}
+
+export function Injuries({ game }: { game: GameDetail }) {
+  const latest = game.injuries.reduce<string | null>((m, r) => (!m || r.observed_at > m ? r.observed_at : m), null);
+  return (
+    <Section id="injuries" title="Injuries" note={latest ? `Report as of ${ago(latest)}.` : "Official injury report entries for both teams."}>
+      {game.injuries.length === 0 ? (
+        <p className="rounded-ctl border border-dashed border-border px-3 py-6 text-center text-sm text-text-2">No injury report entries</p>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          <TeamInjuries team={game.away} rows={game.injuries.filter((r) => r.team === game.away.abbr)} />
+          <TeamInjuries team={game.home} rows={game.injuries.filter((r) => r.team === game.home.abbr)} />
+        </div>
+      )}
+    </Section>
+  );
+}
+
+```
+
+Source block "apps/web/e2e/step2.spec.ts" lines 45-51:
+```
+
+const matchupName = (g: Game) => `Open matchup: ${g.away.name} at ${g.home.name}`;
+const pickGroup = (page: Page, g: Game) => page.getByRole("group", { name: `Your pick: ${g.away.abbr} at ${g.home.abbr}` });
+const gameRow = (page: Page, g: Game) => page.locator("li").filter({ has: page.getByRole("link", { name: matchupName(g) }) });
+const eastern = (iso: string) =>
+  new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
+
+```
+
+Source block "backend/tests/test_web_contract.py" lines 102-113:
+```
+    assert summary["model_graded"] == 1
+
+
+def test_w5_no_api_field_mixes_live_and_backfill(loaded, client):
+    engine.backfill_season(loaded, CURRENT)
+    perf = client.get(f"/api/performance/{CURRENT}").json()
+    assert "model_first" not in perf
+    mixed = {"model_correct", "model_total", "model_first_correct", "model_first_total"}
+    assert all(not mixed & w.keys() for w in perf["weeks"])
+
+
+def test_r4_week_summary_season_model_accuracy_is_live_only(loaded, client):
+```
+
+Declaration locations:
+- "apps/web/components/game/game-view.tsx"
+  source@1-1
+  source@3-3
+  source@4-4
+  source@5-5
+  source@6-6
+  source@7-7
+  source@8-8
+  source@9-9
+  source@10-10
+  source@11-11
+  source@12-12
+  source@13-13
+  source@14-14
+  source@15-15
+  source@16-16
+  source@17-17
+  source@18-18
+  SECTIONS@20-30
+  SPY_LINE@33-33
+  SectionNav@39-104
+  GameSkeleton@106-119
+  GameView@121-170
+- "apps/web/components/week/game-card.tsx"
+  source@3-3
+  source@4-4
+  source@5-5
+  source@6-6
+  source@7-7
+  source@8-8
+  source@9-9
+  source@10-10
+  source@11-11
+  source@12-12
+  source@13-13
+  scoreClass@16-16
+  TeamSide@19-30
+  alertParts@32-35
+  statusTone@37-42
+  labelWords@50-50
+  GameCard@52-222
+- "apps/web/components/week/week-board.tsx"
+  source@3-3
+  source@4-4
+  source@5-5
+  source@6-6
+  source@7-7
+  source@8-8
+  source@9-9
+  source@10-10
+  source@11-11
+  source@12-12
+  source@13-13
+  source@14-14
+  source@15-15
+  source@16-16
+  SORT_KEY@18-18
+  SCOPE_KEY@19-19
+  Scope@20-20
+  SCOPES@21-24
+  chipClass@27-31
+  initialSort@33-36
+  BoardSkeleton@38-49
+  WeekBoard@51-206
+- "backend/nflpi/api/views.py"
+  now_utc@32-33
+  status_of@36-41
+  is_locked@44-45
+  winner@48-51
+  team_out@59-64
+  prediction_out@67-84
+  _records@87-97
+  record_before@100-114
+  _latest_by_game@117-119
+  _week_injuries@122-133
+  _weather@136-149
+  summaries@152-217
+  week_view@220-258
+  _form@261-287
+  game_detail@290-358
+  ai_report_out@361-371
+  _tally@374-376
+  performance@379-454
+  scorecard@457-501
+- "apps/web/components/game/injuries.tsx"
+  source@3-3
+  source@4-4
+  source@5-5
+  source@6-6
+  statusTone@8-19
+  COLLAPSED@21-21
+  TeamInjuries@23-68
+  Injuries@70-84
+- "backend/nflpi/api/main.py"
+  meta@76-96
+  week@99-101
+  game@104-109
+  set_pick@112-125
+  clear_pick@128-137
+  set_points@140-164
+  clear_points@167-179
+  scorecard@191-193
+  export_picks@196-229
+  performance@258-260
+  data_freshness@346-348
+  create_app@351-379
+- "packages/shared/src/api-types.ts"
+  paths@6-339
+  components@341-356
+  components@357-372
+  components@373-388
+  components@389-404
+  components@405-420
+  components@421-436
+  components@437-452
+  components@453-468
+  components@469-484
+  components@485-500
+  components@501-516
+  components@517-532
+  components@533-548
+  components@549-564
+  components@565-580
+  components@581-596
+  components@597-612
+  components@613-628
+  components@629-644
+  components@645-660
+  components@661-676
+  components@677-692
+  components@693-708
+  components@709-724
+  components@725-740
+  components@741-756
+  components@757-772
+  components@773-788
+  components@789-804
+  components@805-820
+  components@821-836
+  components@837-852
+  components@853-868
+  components@869-884
+  components@885-900
+  components@901-916
+  components@917-932
+  components@933-948
+  components@949-964
+  components@965-980
+  components@981-996
+  components@997-1012
+  components@1013-1028
+  components@1029-1044
+  components@1045-1060
+  components@1061-1076
+  components@1077-1092
+  components@1093-1108
+  components@1109-1124
+  components@1125-1140
+  components@1141-1156
+  components@1157-1172
+  components@1173-1188
+  components@1189-1194
+- "apps/web/lib/queries.ts"
+  LIVE_REFETCH_MS@10-10
+  useWeek@17-24
+  useGame@26-34
+  PickVars@51-57
+  withPick@59-62
+  useSetPick@65-125
+- "backend/nflpi/models.py"
+  Game@38-72
+  InjuryReport@94-109
+- "backend/nflpi/api/schemas.py"
+  TeamOut@15-23
+  Factor@26-31
+  PredictionOut@34-49
+  WeatherOut@52-59
+  SheetOut@62-71
+  GameSummary@74-101
+  DatasetFreshness@104-109
+  WeekSummary@112-126
+  WeekOut@129-135
+  InjuryOut@138-145
+  MarketOut@148-156
+  TeamForm@159-172
+  MeetingOut@175-182
+  MatchupReport@185-201
+  AIReportOut@204-212
+  GameDetail@215-226
+  RankIn@237-239
+  PickOut@242-246
+  WeekPerformance@254-268
+  Tally@271-276
+  PerformanceOut@286-299
+  ScorecardWeek@325-338
+  ScorecardOut@341-345
+  MetaOut@418-430
+- "apps/web/components/game/game-header.tsx"
+  source@4-4
+  source@5-5
+  source@6-6
+  TeamBlock@18-30
+  ScoreSide@33-40
+  GameHeader@42-102
+  WinSplit@109-150
+- "apps/web/components/game/schedule.tsx"
+  source@4-4
+  source@6-6
+  Fact@8-15
+  cap@17-19
+  outageText@25-28
+  WeatherFact@30-47
+  Schedule@49-81
+- "apps/web/app/game/page.tsx"
+  source@1-1
+  Page@3-5
+- "packages/shared/openapi.json"
+  source@161-317
+  source@318-475
+  source@476-628
+  source@629-784
+  source@785-939
+  source@940-1096
+  source@1097-1259
+  source@1260-1417
+  source@1418-1592
+  source@1593-1758
+  source@1759-1922
+  source@1923-2092
+  source@2093-2267
+  source@2420-2579
+- "apps/web/components/game/team-compare.tsx"
+  source@3-3
+  source@4-4
+  source@5-5
+  source@6-6
+  Better@8-8
+  Row@10-18
+  winner@20-24
+  qbCell@26-34
+  NO_GAMES@36-36
+  NOT_LISTED@37-37
+  show@40-42
+  TeamCompare@44-97
+- "apps/web/e2e/restyle.spec.ts"
+  Team@12-12
+  Prediction@13-13
+  Game@14-14
+  Meta@15-15
+  api@17-21
+  expectServerCleared@24-26
+  board@28-33
+  card@36-36
+  cardsLoaded@37-37
+  patchGames@40-47
+  source@49-61
+  source@63-83
+  source@85-101
+  source@103-111
+  source@113-131
+  source@133-150
+  source@153-167
+  source@169-176
+  source@178-197
+  source@199-215
+  source@220-233
+  source@236-248
+  source@250-269
+  source@271-282
+  source@284-293
+  source@295-305
+  source@307-316
+  source@318-348
+  source@350-374
+  source@377-392
+  source@394-409
+- "packages/shared/src/client.ts"
+  S@3-3
+  Week@5-5
+  GameSummary@7-7
+  GameDetail@8-8
+  Team@11-11
+  TeamForm@12-12
+  Injury@13-13
+  createClient@52-119
+  keys@124-131
+- "apps/web/e2e/step2.spec.ts"
+  Team@13-13
+  Game@14-24
+  Meta@25-25
+  Tally@26-26
+  api@28-32
+  board@34-40
+  matchupName@46-46
+  pickGroup@47-47
+  gameRow@48-48
+  eastern@49-50
+  boardLoaded@52-54
+  source@56-65
+  source@67-82
+  source@84-103
+  source@105-123
+  source@125-138
+  source@140-153
+  source@155-166
+  source@168-186
+  source@188-197
+  source@199-213
+  source@216-223
+  source@225-261
+  source@263-285
+  source@287-300
+  source@302-313
+  source@324-345
+- "apps/web/e2e/sheet.spec.ts"
+  LABELS@10-10
+  Team@12-12
+  Sheet@13-22
+  Game@23-23
+  Meta@24-24
+  api@26-30
+  board@32-38
+  card@44-45
+  points@46-46
+  boardLoaded@48-50
+  source@52-64
+  source@66-90
+  source@92-103
+  source@105-132
+  source@134-149
+  source@151-172
+  source@174-203
+  source@205-218
+  source@220-230
+- "apps/web/components/game/factors.tsx"
+  Factors@7-62
+- "apps/web/components/game/ai-research.tsx"
+  source@4-4
+  source@5-5
+  PROVIDER_NAME@11-11
+  List@13-26
+  Para@28-37
+  ReportView@39-89
+  AiResearch@91-154
+- "apps/web/components/game/recommendation.tsx"
+  source@4-4
+  source@6-6
+  source@7-7
+  Divider@13-15
+  Figure@17-25
+  Recommendation@27-146
+- "packages/shared/src/format.ts"
+  SortKey@67-67
+  SORTS@69-77
+  marketGap@81-85
+  sortGames@88-101
+  marketFavorite@104-108
+  needsAttention@110-112
+  resultLabel@114-117
+- "apps/web/components/game/market.tsx"
+  source@5-5
+  spreadText@9-14
+  KIND@16-16
+  Fact@18-25
+  MarketSection@27-104
+- "docs/ARCHITECTURE.md"
+- "apps/web/components/week/points-control.tsx"
+  PointsControl@12-68
+- "apps/web/components/game/history.tsx"
+- "apps/web/app/page.tsx"
+  source@1-1
+  Page@3-5
+- "backend/tests/test_web_contract.py"
+  test_w1_time_tbd_is_in_the_api_contract@14-22
+  test_w3_results_headline_counts_live_predictions_only@56-71
+  test_w3b_weekly_figures_and_calibration_keep_live_and_backfill_apart@74-90
+  test_w4_week_summary_model_figures_count_live_predictions_only@93-102
+  test_w5_no_api_field_mixes_live_and_backfill@105-110
+  test_r4_week_summary_season_model_accuracy_is_live_only@113-115
+  test_r5_csv_export_labels_each_model_pick_with_its_kind@118-122
+- "CLAUDE.md"
+- "backend/nflpi/analytics/stars.py"
+  rank_stars@128-164
+  _current_reports@167-180
+  _star_report@183-197
+  _listed_star@200-213
+  stars_out@216-258
+- "backend/tests/test_api.py"
+  test_week_and_game_contracts@22-31
+- "apps/web/components/game/meetings.tsx"
+- "apps/web/e2e/pwa.spec.ts"
+  Team@16-16
+  Game@17-17
+  Meta@18-18
+  api@20-24
+  board@26-32
+  pickGroup@38-38
+  boardLoaded@41-43
+  weekPersisted@51-53
+  holdFirstSave@239-251
+  source@282-301
+  source@325-347
+  source@349-372
+  source@374-400
+  source@557-582
+- "backend/nflpi/ingestion/service.py"
+  upsert_games@50-106
+  ingest_injuries@184-205
+- "backend/tests/test_sheet.py"
+  week@26-27
+  sheets@30-31
+  by_points@34-37
+  Schedule.kick_off@50-57
+  Schedule.finish@59-61
+  schedule@64-66
+  test_label_is_three_steps_of_the_picks_win_chance@72-78
+  test_every_game_gets_a_label_and_points_one_to_n_by_win_chance@92-104
+  test_picking_the_underdog_moves_that_game_to_the_fewest_points@107-118
+  test_postponed_game_gets_no_points_and_the_rest_use_one_to_n@121-128
+  test_setting_points_swaps_with_the_game_that_had_them@134-144
+  test_hand_set_points_stay_when_the_apps_order_changes@147-158
+  test_clearing_hand_set_points_gives_the_game_back_to_the_app@161-169
+  test_points_outside_one_to_n_are_refused@172-175
+  test_a_started_game_keeps_its_pick_and_points_and_the_open_games_rerank@181-198
+  test_games_that_kick_off_together_each_keep_their_own_points@201-208
+  test_points_cannot_move_onto_or_off_a_started_game@211-220
+  test_a_game_he_never_touched_becomes_an_auto_pick_at_kickoff@223-232
+  test_the_worker_tick_writes_down_started_games_without_anyone_opening_the_app@235-242
+  test_his_own_pick_is_kept_at_kickoff_and_not_marked_auto@245-253
+  test_games_played_before_the_sheet_existed_get_no_points_and_no_auto_pick@256-269
+  test_a_game_that_started_and_ended_while_nobody_looked_is_still_written_down@272-282
+  test_auto_picks_are_scored_apart_from_his_own@288-302
+  test_scorecard_compares_his_sheet_with_the_apps_and_shows_his_rank@305-332
+  test_a_tied_game_scores_zero_for_both_sheets@335-344
+  test_a_week_with_a_rank_but_no_finished_games_is_still_listed@347-351
+  test_rank_entry_refuses_bad_numbers@354-356
+  test_order_is_by_win_chance_and_jev_only_swaps_neighbours_that_are_nearly_equal@362-373
+  test_jev_is_asked_once_per_change_and_never_blocks_the_sheet@376-402
+  test_jev_is_not_asked_when_no_two_games_are_nearly_equal@405-408
+  near_ties@414-425
+  test_a_malformed_jev_answer_is_ignored_and_the_sheet_still_loads@428-436
+  test_jev_does_not_use_up_the_daily_ai_cap_when_it_is_not_configured@439-445
+  test_games_jev_left_out_of_its_answer_are_not_asked_again@448-457
+  test_jev_evidence_reorders_near_ties_on_the_sheet_until_the_prediction_changes@460-473
+  test_jev_evidence_for_the_models_side_is_not_used_where_he_picked_the_other_side@476-487
+  test_best_possible_points_for_a_week_in_progress_count_only_finished_games@490-498
+  test_the_export_leaves_a_game_the_model_picked_for_him_blank@501-510
+  test_a_game_with_only_an_after_the_fact_prediction_is_not_written_down@513-522
+- "apps/web/e2e/phone-layout.spec.ts"
+  cards@15-15
+  tabBarTop@16-16
+  openWeek@18-23
+  openGame@25-32
+  withChangeNote@35-42
+  source@52-60
+  source@62-68
+  source@70-77
+  source@79-84
+  source@86-94
+  source@96-115
+  source@117-144
+  source@146-154
+  source@156-161
+- "apps/web/components/pick-buttons.tsx"
+- "backend/nflpi/ingestion/nflverse.py"
+  kickoff_utc@131-135
+  parse_games@138-181
+  parse_teams@184-198
+  parse_injuries@201-225
+- "apps/web/components/game/ask.tsx"
+- "backend/tests/test_stars.py"
+  stars@182-192
+  _game@218-235
+  _injury@238-255
+  test_five_stars_per_club_ranked_from_snaps_and_production@261-283
+  test_stars_for_a_week_use_only_earlier_weeks_of_that_season@289-304
+  test_a_lineman_makes_the_list_only_when_too_few_others_produce@310-319
+  test_a_two_way_player_is_ranked_once_on_his_stronger_side@325-328
+  test_a_traded_player_counts_only_for_his_latest_club@334-344
+  test_rerun_replaces_the_season_and_keeps_other_seasons@350-363
+  test_a_bad_file_fails_the_run_and_keeps_the_old_stars@373-522
+  test_a_failed_download_keeps_the_old_stars@525-534
+  test_recorded_2026_files_give_the_hand_counted_stars@558-592
+  test_stars_out_lists_stars_whose_latest_report_is_out_or_doubtful@598-658
+  test_stars_out_matches_by_name_when_either_side_has_no_id@661-673
+  test_stars_out_uses_the_latest_earlier_list_and_says_which@676-698
+  test_stars_out_never_matches_a_name_across_clubs@701-707
+  test_stars_out_takes_the_newest_report_when_one_has_an_id_and_one_has_none@710-715
+  test_stars_out_rejects_an_unknown_game@718-720
+  test_stars_out_says_when_no_injury_report_exists_for_the_week@723-729
+  test_a_player_missing_from_the_id_file_is_joined_to_his_stats_by_name_and_club@735-760
+  test_stars_out_orders_a_club_by_slot_then_rank@811-828
+  test_same_name_twins_are_not_joined_and_a_quarterback_needs_no_snap_row@831-861
+  test_equal_players_are_ranked_by_name_and_week_22_is_read@864-891
+- "backend/tests/test_hardening.py"
+  test_recommendation_is_the_last_snapshot_before_kickoff@189-200
+  test_schedule_times_handle_dst_london_and_time_tbd@293-306
+  test_postponed_game_keeps_its_status_and_gets_no_reminder_or_pick_lock@320-336
+  test_time_tbd_game_is_not_locked_or_reminded_from_its_placeholder_time@339-352
+  test_upcoming_game_without_a_projected_qb_is_flagged@358-362
+- "backend/tests/test_data.py"
+  test_injury_parsing_skips_empty_rows_and_maps_teams@31-61
+  test_schedule_ingest_is_idempotent_and_tracks_line_moves@71-83
+- "apps/web/lib/fmt.ts"
+- "backend/nflpi/ai/research.py"
+  evidence_pack@69-134
+- "backend/nflpi/predictions/engine.py"
+- "backend/nflpi/jobs.py"
+- "apps/web/lib/clock.ts"
+- "backend/nflpi/predictions/features.py"
+- "apps/web/components/settings/alerts.tsx"
+
+End context.

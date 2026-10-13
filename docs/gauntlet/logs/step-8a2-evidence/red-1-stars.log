@@ -1,0 +1,25 @@
+            ([33m"[39;49;00m[33mMarv O[39;49;00m[33m'[39;49;00m[33mCatcher Sr.[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mMarv OCatcher[39;49;00m[33m"[39;49;00m),[90m[39;49;00m
+        ],[90m[39;49;00m
+    )[90m[39;49;00m
+    [94mdef[39;49;00m[90m [39;49;00m[92mtest_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently[39;49;00m(session, star, reported):[90m[39;49;00m
+        game_id = _game(session, SEASON, [94m5[39;49;00m, [33m"[39;49;00m[33mNYJ[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mKC[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+        session.add(_star(SEASON, [94m4[39;49;00m, [33m"[39;49;00m[33mKC[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33moff[39;49;00m[33m"[39;49;00m, [94m1[39;49;00m, [94mNone[39;49;00m, star))[90m[39;49;00m
+        session.commit()[90m[39;49;00m
+        _injury(session, [94m5[39;49;00m, [33m"[39;49;00m[33mKC[39;49;00m[33m"[39;49;00m, [94mNone[39;49;00m, reported, [33m"[39;49;00m[33mOut[39;49;00m[33m"[39;49;00m, [94m1[39;49;00m)[90m[39;49;00m
+>       [94massert[39;49;00m [r[[33m"[39;49;00m[33mplayer[39;49;00m[33m"[39;49;00m] [94mfor[39;49;00m r [95min[39;49;00m stars_out(session, game_id, now=NOW)[[33m"[39;49;00m[33mout[39;49;00m[33m"[39;49;00m]] == [star][90m[39;49;00m
+[1m[31mE       assert [] == ["Marv O'Catcher Sr."][0m
+[1m[31mE         [0m
+[1m[31mE         Right contains one more item: [0m[33m"[39;49;00m[33mMarv O[39;49;00m[33m'[39;49;00m[33mCatcher Sr.[39;49;00m[33m"[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_stars.py[0m:969: AssertionError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_stars.py::[1mtest_stars_out_uses_each_clubs_own_latest_list[0m - AssertionError: assert [('NYJ', 'Sta..., 'Doubtful')] == [('NYJ', 'Sta...rn...
+[31mFAILED[0m tests/test_stars.py::[1mtest_game_stars_lists_every_star_of_both_clubs_with_his_status[0m - ImportError: cannot import name 'game_stars' from 'nflpi.analytics.stars' (...
+[31mFAILED[0m tests/test_stars.py::[1mtest_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently[Marv Catcher-Marv Catcher Jr.][0m - AssertionError: assert [] == ['Marv Catcher']
+[31mFAILED[0m tests/test_stars.py::[1mtest_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently[Marv Catcher Jr.-Marv Catcher][0m - AssertionError: assert [] == ['Marv Catcher Jr.']
+[31mFAILED[0m tests/test_stars.py::[1mtest_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently[Marv Catcher-Marv Catcher II][0m - AssertionError: assert [] == ['Marv Catcher']
+[31mFAILED[0m tests/test_stars.py::[1mtest_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently[Marv Catcher III-marv catcher][0m - AssertionError: assert [] == ['Marv Catcher III']
+[31mFAILED[0m tests/test_stars.py::[1mtest_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently[D.J. Catcher-DJ Catcher][0m - AssertionError: assert [] == ['D.J. Catcher']
+[31mFAILED[0m tests/test_stars.py::[1mtest_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently[Marv O'Catcher Sr.-Marv OCatcher][0m - assert [] == ["Marv O'Catcher Sr."]
+[31m[31m[1m8 failed[0m, [32m62 passed[0m[31m in 4.70s[0m[0m
