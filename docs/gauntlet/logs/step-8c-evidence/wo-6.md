@@ -1,0 +1,6 @@
+CODEX WORK ORDER 6 (mechanical migration renumber, lane news; god's ruling: migration numbers are taken at landing time)
+GOAL: main now has migration 0004_group_picks; this lane's news migration must become 0005 with down revision 0004.
+ALLOWED SCOPE: backend/migrations/versions/0005_news_items.py (already renamed by the coordinator; do NOT run git; set revision = "0005" and down_revision = "0004"); backend/tests/test_hardening.py (the migration list assertion `["0001", "0002", "0003", "0004"]` gains "0005", and its comment gains ", then news items (step 8c)"). Any other text in backend/ or docs that names this migration as "0004" for news (grep -rn "0004" backend --include='*.py' and docs/gauntlet/logs/step-8c.md is NOT to be edited): report, do not edit, anything else.
+PROOF: `cd backend && uvx ruff check nflpi tests migrations`; with DATABASE_URL=postgresql+psycopg://nflpi:nflpi@localhost:15441/nflpi_alembic_wo6 on a fresh database you may NOT create (no network): so only run `.venv/bin/python -c "import ast,sys;[ast.parse(open(f).read()) for f in sys.argv[1:]]" backend/migrations/versions/0005_news_items.py` style syntax checks. The coordinator runs alembic.
+CONSTRAINTS: smallest diff, no other change. DO NOT commit, push, edit other files.
+RETURN: changed files and a 3-line summary.

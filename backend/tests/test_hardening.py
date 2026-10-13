@@ -487,8 +487,8 @@ def test_one_migration_builds_the_schema_with_no_drift():
             c.execute(drop)
         admin.dispose()
     versions = sorted((BACKEND / "migrations" / "versions").glob("*.py"))
-    # initial schema, then the pick sheet (step 4), then team stars (step 8a), then group picks (step 16a)
-    assert [v.name[:4] for v in versions] == ["0001", "0002", "0003", "0004"]
+    # initial schema, pick sheet (step 4), team stars (8a), group picks (16a), news items (8c)
+    assert [v.name[:4] for v in versions] == ["0001", "0002", "0003", "0004", "0005"]
     for version in versions:
         source = version.read_text()
         # A migration is a frozen record: explicit tables, never the live models (or it can never drift).

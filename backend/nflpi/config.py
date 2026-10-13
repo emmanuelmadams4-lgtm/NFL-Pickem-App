@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     vapid_subject: str = ""  # "mailto:you@example.com" or an https URL; push services reject placeholders
     alert_move_threshold: float = 0.07
 
+    # News
+    news_contact: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

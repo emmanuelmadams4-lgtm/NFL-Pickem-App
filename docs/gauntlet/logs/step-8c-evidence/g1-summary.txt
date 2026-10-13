@@ -1,0 +1,4 @@
+PASS pytest exit=0 :: [32m[32m[1m569 passed[0m[32m in 80.12s (0:01:20)[0m[0m
+PASS ruff exit=0 :: [1;32mAll checks passed![0m
+PASS alembic exit=0 :: No new upgrade operations detected.
+PASS genapi exit=0 :: no drift
