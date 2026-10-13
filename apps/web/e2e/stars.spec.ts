@@ -45,6 +45,7 @@ for (const size of [
       const line = card(page, g).getByRole("group", { name: "Stars out" });
       await expect(line).toBeVisible({ timeout: 15_000 });
       await expect(line).toContainText("Cory Corner");
+      await expect(line, "each name says whose star he is, as the QB alert does").toContainText(/KC\s*Cory Corner/);
       await expect(line).toContainText("CB");
       await expect(line).toContainText("Out");
       await expect(line).toContainText("Cal Catch");
@@ -66,6 +67,7 @@ for (const size of [
       await expect(line).toContainText("Ed Edge");
       await expect(line).not.toContainText("Nick Nickel");
       await expect(line).toContainText("+1 more");
+      await expect(card(page, g), "the other club has no star list: said beside the stars, never left silent").toContainText("No star list yet for MIA");
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(0);
     });
 
@@ -115,6 +117,8 @@ for (const size of [
       await expect(section.getByText("Star list from week 4")).toHaveCount(0);
       await expect(section.getByText(/does not change the pick/i), "D24, D27: said on the screen").toBeVisible();
       await expect(section.getByText(/when this app first saw/i), "what the age counts from").toBeVisible();
+      await expect(section.getByRole("heading", { level: 3, name: "Full injury report" }), "the list below has its own heading").toBeVisible();
+      await expect(section.getByRole("heading", { level: 4, name: g.home.name }), "club names sit under both headings").toHaveCount(2);
     });
 
     test("ST5 a club with no star list says so", async ({ page, request }) => {

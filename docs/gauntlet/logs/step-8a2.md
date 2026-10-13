@@ -134,3 +134,18 @@ Subjective (Design Gauntlet): blind A/B of the game screen against the "before" 
 * `red-1-e2e.log` (load 10.08 before): all 17 browser tests of `stars.spec.ts` fail against the baseline web build: no "Stars out" group, no "Star players" heading, no `stars` row in Settings.
 
 **Seed for the browser tests** (`backend/tests/e2e_seed.py`, `STAR_LISTS`): made-up players in the app's own domain: KC (week 4 list; Out, Doubtful, Questionable), NE (week 3 list), BUF (four out, one very long name), MIA and LV with no list; reports first seen three hours ago; one ok run each for `stars` and `head_coaches` so the freshness indicator does not change for the existing tests.
+
+## 3. IMPLEMENTATION
+
+Builder: Ryan (Codex). Coordinator inspects each diff and reruns the proof (Ryan cannot bind ports or reach the test database). Model choice: `decide.sh` returned route "advisor" (Jev unavailable); step-7 precedent used: work order 1 sol/medium, work order 2 sol/high. No climbs.
+
+| Work order | Commit | What | Proof (mine) |
+|---|---|---|---|
+| WO-1 (`wo-1.md`), try 1 | `83d116e` | `analytics/stars.py`: each club's own newest list, `game_stars`, name matching; `views.py`, `schemas.py`: `stars_out`, `stars`, cleaned text; `jobs.ingest` refreshes the star list and survives its failure | `wo1-proof.log`: ruff clean; `test_stars.py` 70 passed; `test_api.py` 8 passed, 2 failed. One failure was my own wrong assertion (corrected, see the amendment above); the other is the freshness test, which waits on the seam. |
+| WO-2 (`wo-2.md`), try 1 | `4657935` | `game-card.tsx` "Stars out" line; new `star-players.tsx`; `injuries.tsx`; `freshness.tsx` label; `stars_out.no_list` | ruff clean, typecheck exit 0, `gen:api` no further drift, `test_api.py` 9 passed 1 failed (freshness, seam). `wo2-e2e.log` (load 4.53): 13 passed, 4 failed. ST7 x3: axe measured an existing line ("Tap a team to pick", `recommendation.tsx`) mid fade-in; my test lacked the reduced-motion setting the existing E11 check uses. Fixed in the test; `wo2-e2e-st7.log` (load 7.64): 12 passed (4 checks x 3 repeats). ST8 waits on the seam. |
+
+Diff inspection: both diffs touch only lane web's files; no untracked extras; no new dependency.
+
+**Open seam (sent to god twice):** the freshness list (`STALE_HOURS`) lives in `backend/nflpi/ingestion/service.py`, not lane web's file. Two entries are needed (`stars`, `head_coaches`). Until granted, `test_freshness_lists_the_star_list_and_the_head_coaches` and browser ST8 stay red.
+
+Screenshots: `~/.claude/plans/nfl-pickem-lanes-logs/step-8a2/before-*.png` (baseline build, `shots-before.log`) and `after-*.png` (HEAD of work order 2), board and two game screens at phone, tablet and desktop.

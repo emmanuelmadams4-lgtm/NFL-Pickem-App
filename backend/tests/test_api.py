@@ -205,6 +205,32 @@ def test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them
     assert detail.stars_out == row.stars_out
 
 
+def test_a_star_quarterback_named_in_the_qb_alert_is_marked_by_the_api_whatever_the_spelling(loaded, client):
+    from nflpi.models import InjuryReport
+
+    game = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json()).games[0]
+    _seed_stars(loaded, game)
+
+    def qb(pid, player, hours):
+        return InjuryReport(
+            season=game.season, week=game.week, team=game.home.abbr, player_id=pid, player=player, position="QB",
+            report_status="Out", practice_status=None, injury="Ankle", source="nflverse",
+            observed_at=game.kickoff_utc - timedelta(hours=hours),
+        )  # fmt: skip
+
+    # two backups first, then the star, whose name the injury report spells another way
+    loaded.add_all([qb("00-801", "Backup One", 9), qb("00-802", "Backup Two", 8), qb("00-001", "Patrick Passer", 7)])
+    loaded.commit()
+
+    row = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json()).games[0]
+    marked = {r.player: r.qb_alert for r in row.stars_out.out}
+    assert marked == {"Stay Put": False, "Pat Passer": True, "Ron Runner": False}  # Stay Put's report has no position
+    # the web shows the first two alerts: the star's is one of them, so he is never hidden from both lines
+    assert row.qb_alerts[0] == f"{game.home.abbr} QB Patrick Passer: Out" and len(row.qb_alerts) == 3
+    detail = s.GameDetail.model_validate(client.get(f"/api/games/{game.game_id}").json())
+    assert [r.qb_alert for r in detail.stars[1].stars] == [True, False, False, False, False]
+
+
 def test_the_worker_refreshes_the_star_list_and_a_failure_does_not_stop_the_round(loaded, monkeypatch):
     from types import SimpleNamespace
 
