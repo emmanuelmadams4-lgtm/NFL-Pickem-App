@@ -201,9 +201,10 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
             {star.position && <span className="shrink-0 text-subtle">{star.position}</span>}
             {star.status && <span className={cx("shrink-0", statusTone(star.status) === "bad" ? "text-bad" : "text-warn")}>{star.status}</span>}
             {stars.length > 1 && <span className="shrink-0 text-subtle">+{stars.length - 1} more</span>}
+            {star.observed_at && <span aria-hidden="true" className="shrink-0 text-subtle">·</span>}
             {star.observed_at && <span className="shrink-0 text-subtle">{ago(star.observed_at)}</span>}
             {game.stars_out.no_list.map((club) => (
-              <span key={club} className="shrink-0 text-text-2">{club}: no list</span>
+              <span key={club} className="shrink-0 text-text-2">{club}: no star list</span>
             ))}
           </div>
         ) : starNote ? <p className="text-label text-text-2">{starNote}</p> : null)}
