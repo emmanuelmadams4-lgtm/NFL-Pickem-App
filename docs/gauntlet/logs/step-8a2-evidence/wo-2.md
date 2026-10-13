@@ -35,7 +35,7 @@ MOTION: none.
 DON'T: lime anywhere in this feature (lime means "me") · a red or amber border, tint or icon on the card or near the pick buttons · a card inside a card · a new pill for the label · gradient, glow, glass · one-off hex or px values · lines longer than about 160 characters of JSX (match `injuries.tsx`).
 CHANGES, in order: API field → row line → game-screen block → freshness label.
 
-PROOF (the coordinator reruns all of it; you cannot bind a port or reach the test database, so say so): `npm run gen:api`, `npm run typecheck`, `npm run web:build`, `cd backend && uvx ruff check nflpi tests migrations`.
+PROOF (the coordinator reruns all of it; you cannot bind a port or reach the test database, so say so): `npm run gen:api`, `npm run typecheck`, `cd backend && uvx ruff check nflpi tests migrations`. Do NOT run `npm run web:build`, `npm run e2e` or anything that writes `apps/web/out`: the coordinator still needs the old build for the "before" screenshots and runs the build himself.
 
 CONSTRAINTS: smallest diff that does each item (Ponytail); match the surrounding code; no test edits; do not commit.
 
