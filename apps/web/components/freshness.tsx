@@ -27,7 +27,7 @@ export function FreshnessTable({ data }: { data: Freshness[] }) {
       {data.map((d) => (
         <li key={d.dataset} className="flex items-start justify-between gap-4 py-2 first:pt-0 last:pb-0">
           <div className="min-w-0">
-            <p className="text-sm font-medium capitalize text-text">{d.dataset}</p>
+            <p className="text-sm font-medium capitalize text-text">{d.dataset.replaceAll("_", " ")}</p>
             {d.last_error && <p className="mt-0.5 text-xs break-words text-bad">Last error: {d.last_error}</p>}
           </div>
           <div className="shrink-0 text-right">

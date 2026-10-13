@@ -1289,6 +1289,8 @@ export interface components {
         StarsOut: {
             /** Out */
             out: components["schemas"]["StarStatus"][];
+            /** No List */
+            no_list: string[];
             /** Reports Seen */
             reports_seen: number;
             /** Checked At */

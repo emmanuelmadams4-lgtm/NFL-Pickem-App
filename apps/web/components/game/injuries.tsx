@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ago, type GameDetail, type Injury, type Team } from "@nflpi/shared";
 import { Button, Chip, Section, type ChipTone } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
+import { StarPlayers } from "@/components/game/star-players";
 
 function statusTone(status: string | null): ChipTone | null {
   switch ((status ?? "").toLowerCase()) {
@@ -71,6 +72,7 @@ export function Injuries({ game }: { game: GameDetail }) {
   const latest = game.injuries.reduce<string | null>((m, r) => (!m || r.observed_at > m ? r.observed_at : m), null);
   return (
     <Section id="injuries" title="Injuries" note={latest ? `Report as of ${ago(latest)}.` : "Official injury report entries for both teams."}>
+      <StarPlayers game={game} />
       {game.injuries.length === 0 ? (
         <p className="rounded-ctl border border-dashed border-border px-3 py-6 text-center text-sm text-text-2">No injury report entries</p>
       ) : (

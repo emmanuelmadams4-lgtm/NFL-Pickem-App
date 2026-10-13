@@ -4120,6 +4120,13 @@
       "type": "array",
       "title": "Out"
      },
+     "no_list": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "No List"
+     },
      "reports_seen": {
       "type": "integer",
       "title": "Reports Seen"
@@ -4140,6 +4147,7 @@
     "type": "object",
     "required": [
      "out",
+     "no_list",
      "reports_seen",
      "checked_at"
     ],

@@ -84,6 +84,7 @@ class StarStatus(BaseModel):
 
 class StarsOut(BaseModel):
     out: list[StarStatus]
+    no_list: list[str]
     reports_seen: int
     checked_at: datetime | None
 

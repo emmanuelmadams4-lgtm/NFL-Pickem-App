@@ -196,6 +196,11 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
             if r.position == "QB" and r.report_status in ALERT_STATUSES
         ]
         star_data = stars.stars_out(session, g.game_id, now)
+        no_list = [
+            club["team"]
+            for club in stars.game_stars(session, g.game_id, now)["teams"]
+            if club["stars_week"] is None
+        ]
         out.append(
             s.GameSummary(
                 game_id=g.game_id,
@@ -231,6 +236,7 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                 ),
                 stars_out=s.StarsOut(
                     out=[_star_status(row) for row in star_data["out"]],
+                    no_list=no_list,
                     reports_seen=star_data["reports_seen"], checked_at=star_data["checked_at"],
                 ),
                 weather=_weather(g, wx.get(g.game_id)),

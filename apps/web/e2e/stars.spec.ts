@@ -138,7 +138,8 @@ for (const size of [
 
     for (const scheme of ["dark", "light"] as const) {
       test(`ST7 accessibility (${scheme}): no serious or critical axe issue on the board or the game screen`, async ({ page, request }) => {
-        await page.emulateMedia({ colorScheme: scheme });
+        // reducedMotion as in E11 (step2.spec.ts): axe must not measure contrast in the middle of a fade-in
+        await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
         const g = find(await games(request, 4), "NE", "KC");
         for (const path of ["/", `/game/?id=${g.game_id}`]) {
           await open(page, path);
