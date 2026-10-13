@@ -30,6 +30,16 @@ async function open(page: Page, path: string) {
 const card = (page: Page, g: Game) =>
   page.getByRole("listitem").filter({ has: page.getByRole("link", { name: `Open matchup: ${g.away.name} at ${g.home.name}` }) });
 
+/** The week as the API sends it, with one game's stars block replaced: the states the fixture has no game for. */
+async function withStars(page: Page, gameId: string, starsOut: object) {
+  await page.route("**/api/weeks/**", async (route) => {
+    const res = await route.fetch();
+    const week = await res.json();
+    for (const x of week.games ?? []) if (x.game_id === gameId) x.stars_out = starsOut;
+    await route.fulfill({ response: res, json: week });
+  });
+}
+
 const find = (all: Game[], away: string, home: string) => all.find((g) => g.away.abbr === away && g.home.abbr === home)!;
 
 for (const size of [
@@ -94,16 +104,28 @@ for (const size of [
       await expect(noList.getByRole("group", { name: "Stars out" })).toHaveCount(0);
       await expect(noList, "neither club has a star list").toContainText("No star list yet");
 
-      const week5 = await games(request, 5);
-      const next = week5.find((x) => ["KC", "NE", "BUF"].includes(x.home.abbr) && ["KC", "NE", "BUF"].includes(x.away.abbr));
-      if (next) {
-        await open(page, `/?season=${SEASON}&week=5`);
-        await expect(card(page, next), "lists exist, the week's report does not").toContainText("Injury report not in yet", { timeout: 15_000 });
-      }
       const past = (await games(request, 3))[0];
       await open(page, `/?season=${SEASON}&week=3`);
       await expect(card(page, past)).toBeVisible({ timeout: 15_000 });
       await expect(card(page, past), "a finished game carries no stars line").not.toContainText(/star list|report not in/i);
+    });
+
+    // Both clubs have a list. The fixture has no such game without a star out, so the API's answer is replaced for one game.
+    test("ST3b lists exist but the week's injury report does not: the row says so", async ({ page, request }) => {
+      const g = find(await games(request, 4), "NE", "KC");
+      await withStars(page, g.game_id, { out: [], no_list: [], reports_seen: 0, checked_at: null });
+      await open(page, "/");
+      await expect(card(page, g)).toContainText("Injury report not in yet", { timeout: 15_000 });
+      await expect(card(page, g).getByRole("group", { name: "Stars out" })).toHaveCount(0);
+    });
+
+    test("ST3c the report is in and no star is out: the row says nothing about stars", async ({ page, request }) => {
+      const all = await games(request, 4);
+      const g = find(all, "NE", "KC");
+      await withStars(page, g.game_id, { out: [], no_list: [], reports_seen: 4, checked_at: new Date().toISOString() });
+      await open(page, "/");
+      await expect(card(page, find(all, "BUF", "MIA")).getByRole("group", { name: "Stars out" }), "the board has loaded").toBeVisible({ timeout: 15_000 });
+      await expect(card(page, g)).not.toContainText(/stars out|star list|report not in/i);
     });
 
     test("ST4 the game screen lists both clubs' five stars with each one's status, and says when a list is older", async ({ page, request }) => {

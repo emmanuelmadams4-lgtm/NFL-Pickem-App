@@ -254,6 +254,13 @@ def test_the_worker_refreshes_the_star_list_and_a_failure_does_not_stop_the_roun
     assert seen == [CURRENT]  # this season's list, once per round
     assert out["stars"] == "failed" and out["injuries"] == "ok" and "qb_alerts" in out  # the round went on
 
+    def broken(session, season):
+        raise RuntimeError("no network")
+
+    monkeypatch.setattr(service, "ingest_stars", broken)
+    out = jobs.ingest(loaded, weather=False)
+    assert out["stars"] == "failed" and out["injuries"] == "ok" and "qb_alerts" in out  # a crash: the same
+
 
 def test_freshness_lists_the_star_list_and_the_head_coaches(loaded, client):
     from nflpi.ingestion.service import run_logged

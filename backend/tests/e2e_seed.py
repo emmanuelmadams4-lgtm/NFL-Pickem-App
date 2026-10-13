@@ -33,7 +33,7 @@ STAR_LISTS = [
         ("def", 1, "00-204", "Lyle Backer", "LB", None),
         ("def", 2, "00-205", "Sam Safety", "S", None),
     ]),
-    ("BUF", 4, [  # all five out: the QB is already in the row's QB alert, the row shows three more and "+1 more"
+    ("BUF", 4, [  # all five out: the QB is already in the row's QB alert, the row names one more and says "+3 more"
         ("qb", 1, "00-301", "Jo Thrower", "QB", "Out"),
         ("off", 1, "00-302", "Maximilian Featherstonehaugh-Smythe III", "WR", "Out"),  # a very long name
         ("off", 2, "00-303", "Dee Deep", "WR", "Doubtful"),
