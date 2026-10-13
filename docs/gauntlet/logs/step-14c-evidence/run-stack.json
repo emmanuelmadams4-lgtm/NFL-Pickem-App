@@ -1,0 +1,181 @@
+{
+ "stage": "stack",
+ "tree_chosen_on_tune": "p_tree_core_d2_l30",
+ "weights_by_season": {
+  "2011": 0.25,
+  "2012": 0.25,
+  "2013": 0.25,
+  "2014": 0.05,
+  "2015": 0.1,
+  "2016": 0.15,
+  "2017": 0.1,
+  "2018": 0.15,
+  "2019": 0.1,
+  "2020": 0.1,
+  "2021": 0.1,
+  "2022": 0.2,
+  "2023": 0.2,
+  "2024": 0.15,
+  "2025": 0.1
+ },
+ "games": 3649,
+ "confirm_games": 1084,
+ "confirm_clusters": 72,
+ "baseline": {
+  "market": {
+   "n": 3649,
+   "accuracy": 0.6656618251575774,
+   "accuracy_ci": [
+    0.6508632502055358,
+    0.6807344477939161
+   ],
+   "brier": 0.21101053281928192,
+   "log_loss": 0.6094274267769724
+  },
+  "blend": {
+   "n": 3649,
+   "accuracy": 0.6645656344203892,
+   "accuracy_ci": [
+    0.6492189640997533,
+    0.6793642093724308
+   ],
+   "brier": 0.2115343303375747,
+   "log_loss": 0.6106975489610106
+  }
+ },
+ "baseline_confirm": {
+  "market": {
+   "n": 1084,
+   "accuracy": 0.6780442804428044,
+   "accuracy_ci": [
+    0.6494464944649446,
+    0.7075645756457565
+   ],
+   "brier": 0.21045524447924308,
+   "log_loss": 0.6081896562059822
+  },
+  "blend": {
+   "n": 1084,
+   "accuracy": 0.6752767527675276,
+   "accuracy_ci": [
+    0.6476014760147601,
+    0.7038745387453874
+   ],
+   "brier": 0.21111446829834304,
+   "log_loss": 0.6095256237556241
+  }
+ },
+ "candidates": [
+  {
+   "candidate": "stack",
+   "variants": [
+    {
+     "variant": "p_stack_fit",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.00026577872821642525,
+      "log_loss_gain_ci": [
+       -0.0009610898098848944,
+       0.0003980191804596878
+      ],
+      "accuracy_diff": 0.0007797270955165692,
+      "accuracy_diff_ci": [
+       -0.0011695906432748538,
+       0.0027290448343079924
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0010239914873698037,
+       0.0004782640669356978
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.0019432757871399309,
+       0.0031397174254317113
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_stack_half",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.0006572504862576127,
+      "log_loss_gain_ci": [
+       -0.002901891111512294,
+       0.001520230858652082
+      ],
+      "accuracy_diff": -0.001949317738791423,
+      "accuracy_diff_ci": [
+       -0.007017543859649123,
+       0.0027290448343079924
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0030199108065273516,
+       0.001728732948890046
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.0074045206547155105,
+       0.003515865984870739
+      ],
+      "ships_cluster": false
+     }
+    }
+   ],
+   "chosen": "p_stack_fit",
+   "confirm": {
+    "n": 1084,
+    "log_loss_gain": -0.00061522458590904,
+    "log_loss_gain_ci": [
+     -0.0015213311683682207,
+     0.0003651129213277087
+    ],
+    "accuracy_diff": -0.0027675276752767526,
+    "accuracy_diff_ci": [
+     -0.007380073800738007,
+     0.0018450184501845018
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.0015701797885222116,
+     0.00042781485129119665
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.008205132379015698,
+     0.0018519808108944593
+    ],
+    "ships_cluster": false
+   },
+   "ships": false,
+   "all_variants": [
+    {
+     "variant": "p_stack_fit",
+     "tune_gain": -0.00026577872821642525,
+     "confirm_gain": -0.00061522458590904,
+     "gap": 0.0003494458576926147
+    },
+    {
+     "variant": "p_stack_half",
+     "tune_gain": -0.0006572504862576127,
+     "confirm_gain": -0.002283030999427969,
+     "gap": 0.0016257805131703563
+    }
+   ],
+   "signal": false,
+   "verdict_flips_with_clusters": false,
+   "confirm_half_width": {
+    "game": 0.0009432220448479647,
+    "cluster": 0.0009989973199067042
+   }
+  }
+ ],
+ "scored_games_missing_an_input": {
+  "spread_line": 0,
+  "total_line": 0
+ },
+ "variant_columns_equal_to_blend": {
+  "p_stack_fit": 3,
+  "p_stack_half": 0
+ },
+ "seconds": 149.9
+}
