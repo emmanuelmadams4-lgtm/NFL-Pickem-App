@@ -9,8 +9,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy import select, update
-from sqlalchemy.exc import OperationalError
+from sqlalchemy import select, text, update
+from sqlalchemy.exc import DBAPIError, OperationalError
 
 from nflpi.group import importer
 from nflpi.group.importer import GroupImportError, import_group_csv
@@ -623,3 +623,13 @@ def cells(base: str, changes: dict[int, str]) -> str:
 def test_the_first_problem_in_the_frozen_order_is_the_one_reported(games, rows, header, line, first, second):
     message = refused(games, picks(*rows, header=header), f"line {line}: .*{first}")
     assert second not in message
+
+
+def test_database_errors_hide_bound_values():
+    from nflpi.db import get_engine
+
+    marker = "Zed Secret hide-param-probe"
+    with pytest.raises(DBAPIError) as err:
+        with get_engine().connect() as connection:
+            connection.execute(text("SELECT :marker FROM missing_hide_param_probe"), {"marker": marker})
+    assert marker not in str(err.value)
