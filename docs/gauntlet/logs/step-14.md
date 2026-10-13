@@ -135,7 +135,7 @@ Provider: Codex, one bounded work order at a time, prompt on stdin. Models picke
 |---|---|---|---|---|
 | WO-1 harness + in-season refit (`wo-1.md`) | gpt-6-sol, medium, try 1 | sol 0.82, medium 0.92: follow | 14 of 15 tests passed. Codex stopped and reported that one test of mine was wrong: it flipped every week 3 result, and Elo rightly moves between games of one week. That was the coordinator's fault, not the builder's (Build Ladder rule 2): I fixed the test (flip only from the last game of the week on) and added an "own result" check. No second try was needed. | `b8c2f6c` |
 | WO-2 EPA rating (`wo-2.md`) | gpt-6-sol, medium, try 1 | sol 0.82, medium 0.97: follow | 18 passed, first try. | `2c4ece6` |
-| WO-3 review fixes + cleanup (`wo-3.md`) | gpt-6-luna, medium, try 1 | luna 0.83: follow. Effort unsure (medium 0.48): I took medium, the higher option, instead of paying for an advisor call on an effort level. | see section 4 | see section 4 |
+| WO-3 review fixes + cleanup (`wo-3.md`) | gpt-6-luna, medium, try 1 | luna 0.83: follow. Effort unsure (medium 0.48): I took medium, the higher option, instead of paying for an advisor call on an effort level. | 19 passed, first try. Diff read, proof rerun by the coordinator. | `ec4425e` |
 
 CLIMBS: none. STRIKES: none. No Codex limit was hit.
 
@@ -176,3 +176,13 @@ Rulings (each accepted finding went back to a failing test first, commit `a3a7a8
 * Carried, advisory: per-reason drop counts in `team_game_epa`; a unique `game_id` check; a count of tied games; a check that tune and confirm seasons do not overlap; `fetch_csv` does not chain the original error (lane coaches owns that file).
 
 AGENTS: `ecc:code-reviewer`, `ecc:silent-failure-hunter` ran. `ecc:security-reviewer` not run: the security review is Dwight's by the dispatch. `ecc:python-reviewer`, `ecc:pr-test-analyzer` not run: work item is "standard" size (no security surface, public API or new dependency). `ecc:planner`, `ecc:architect`, `ecc:code-explorer` not run: the plan and the six seam files were given by the dispatch.
+
+## 4. CLEANUP
+
+Explicit scope-locked refactor pass on the touched code (`/refactor` rules: behaviour unchanged, touched functions only), done by Codex in work order 3 (`wo-3.md`, gpt-6-luna), commit `ec4425e`.
+
+* **Simplified:** the same four lines (train seasons, tune Elo, pick the frame, select finished rows) stood in `predict_season`, `inseason_blend` and the EPA branch of `candidate_preds`. They are now one private helper, `_train_rows`. `predict_season` returns what it returned before.
+* **Fixed wording:** the `candidate_preds` docstring names both candidates.
+* **No change needed:** `team_game_epa` keeps its explicit two-pass shape (it must return rows in input order and drop a game when either side is unusable); `evaluate` keeps the `ships` key next to `confirm` because clause S7 names it; `metrics.py` additions are already minimal.
+* **Proof after the edit:** `tests/test_model.py` 19 passed; ruff clean; the real-data run on the final code (`run-3-candidates.json`) gives the same candidate numbers and the same baseline as the run before the cleanup (compared key by key: identical). New counts in that run: `epa_rows` 12,990, `epa_games` 6,491, `epa_missing_scored_games` 0. The first attempt at this run was killed by the host (exit 144, cause not known, during the overload window); the rerun exited 0.
+* **Remaining findings, classified:** all advisory, listed under "Carried" in section 3 and again in section 6.
