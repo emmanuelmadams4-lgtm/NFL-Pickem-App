@@ -153,10 +153,23 @@ def parse_injuries(rows: list[dict[str, str]], observed_at: datetime) -> list[di
 
 
 STAR_STATS = (
-    "attempts", "rushing_yards", "rushing_tds", "receptions", "receiving_yards", "receiving_tds",
-    "def_tackles_solo", "def_tackles_with_assist", "def_tackle_assists", "def_tackles_for_loss",
-    "def_fumbles_forced", "def_sacks", "def_qb_hits", "def_interceptions", "def_pass_defended",
-    "def_tds", "def_safeties",
+    "attempts",
+    "rushing_yards",
+    "rushing_tds",
+    "receptions",
+    "receiving_yards",
+    "receiving_tds",
+    "def_tackles_solo",
+    "def_tackles_with_assist",
+    "def_tackle_assists",
+    "def_tackles_for_loss",
+    "def_fumbles_forced",
+    "def_sacks",
+    "def_qb_hits",
+    "def_interceptions",
+    "def_pass_defended",
+    "def_tds",
+    "def_safeties",
 )
 MIN_STAR_WEEK = 1
 MAX_STAR_WEEK = 22
@@ -222,12 +235,17 @@ def parse_star_snaps(rows: list[dict[str, str]], season: int) -> list[dict]:
         de = _star_int(row["defense_snaps"], "defense_snaps")
         if not 0 <= off <= MAX_STAR_SNAP_COUNT or not 0 <= de <= MAX_STAR_SNAP_COUNT:
             raise ValueError("snap count outside allowed range")
-        out.append({
-            "week": week, "team": team,
-            "pfr_id": pfr_id, "player": row["player"].strip()[:64],
-            "position": row["position"].strip()[:8] or None,
-            "offense_snaps": off, "defense_snaps": de,
-        })
+        out.append(
+            {
+                "week": week,
+                "team": team,
+                "pfr_id": pfr_id,
+                "player": row["player"].strip()[:64],
+                "position": row["position"].strip()[:8] or None,
+                "offense_snaps": off,
+                "defense_snaps": de,
+            }
+        )
     return out
 
 
@@ -246,7 +264,9 @@ def parse_star_stats(rows: list[dict[str, str]], season: int) -> list[dict]:
             raise ValueError("duplicate stat row")
         seen.add(key)
         record = {
-            "week": week, "team": team, "player_id": player_id,
+            "week": week,
+            "team": team,
+            "player_id": player_id,
             "player": row["player_display_name"].strip()[:64],
             "position": row["position"].strip()[:8] or None,
         }

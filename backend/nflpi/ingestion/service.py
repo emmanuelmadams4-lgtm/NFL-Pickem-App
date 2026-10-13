@@ -156,26 +156,43 @@ def ingest_injuries(
     return run_logged(session, nflverse.SOURCE, "injuries", job), changed
 
 
+def _parse_star_file(rows: list[dict[str, str]], parser: Callable, name: str, *args) -> object:
+    try:
+        return parser(rows, *args)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"{name}: {exc!r}") from exc
+
+
+def _check_stars_against_stored(session: Session, season: int, ranked: list[dict]) -> None:
+    last_week = max(row["week"] for row in ranked)
+    stored_week = session.scalar(select(func.max(TeamStar.week)).where(TeamStar.season == season))
+    if stored_week is not None and last_week < stored_week:
+        raise RuntimeError("new stars end before stored stars")
+    stored_clubs = session.scalar(
+        select(func.count(func.distinct(TeamStar.team))).where(
+            TeamStar.season == season,
+            TeamStar.week == last_week,
+        )
+    )
+    new_clubs = {row["team"] for row in ranked if row["week"] == last_week}
+    if len(new_clubs) < stored_clubs:
+        raise RuntimeError("new stars have fewer clubs than stored stars")
+
+
 def ingest_stars(
-    session: Session, season: int, snaps: list[dict[str, str]] | None = None,
-    stats: list[dict[str, str]] | None = None, players: list[dict[str, str]] | None = None,
+    session: Session,
+    season: int,
+    snaps: list[dict[str, str]] | None = None,
+    stats: list[dict[str, str]] | None = None,
+    players: list[dict[str, str]] | None = None,
 ) -> IngestionRun:
     def job() -> int:
         snap_rows = snaps if snaps is not None else nflverse.fetch_csv(f"snap_counts/snap_counts_{season}.csv")
         stat_rows = stats if stats is not None else nflverse.fetch_csv(f"stats_player/stats_player_week_{season}.csv")
         player_rows = players if players is not None else nflverse.fetch_csv("players/players.csv")
-        try:
-            parsed_snaps = nflverse.parse_star_snaps(snap_rows, season)
-        except (KeyError, ValueError) as exc:
-            raise ValueError(f"snap_counts: {exc!r}") from exc
-        try:
-            parsed_stats = nflverse.parse_star_stats(stat_rows, season)
-        except (KeyError, ValueError) as exc:
-            raise ValueError(f"stats_player_week: {exc!r}") from exc
-        try:
-            ids = nflverse.parse_star_players(player_rows)
-        except (KeyError, ValueError) as exc:
-            raise ValueError(f"players: {exc!r}") from exc
+        parsed_snaps = _parse_star_file(snap_rows, nflverse.parse_star_snaps, "snap_counts", season)
+        parsed_stats = _parse_star_file(stat_rows, nflverse.parse_star_stats, "stats_player_week", season)
+        ids = _parse_star_file(player_rows, nflverse.parse_star_players, "players")
         if not parsed_snaps or not parsed_stats or not ids:
             raise RuntimeError("incomplete star files; keeping existing season")
         if max(row["week"] for row in parsed_snaps) != max(row["week"] for row in parsed_stats):
@@ -183,19 +200,7 @@ def ingest_stars(
         ranked = rank_stars(season, parsed_snaps, parsed_stats, ids, datetime.now(UTC))
         if not ranked:
             raise RuntimeError("no stars ranked; keeping existing season")
-        last_week = max(row["week"] for row in ranked)
-        stored_week = session.scalar(select(func.max(TeamStar.week)).where(TeamStar.season == season))
-        if stored_week is not None and last_week < stored_week:
-            raise RuntimeError("new stars end before stored stars")
-        stored_clubs = session.scalar(select(func.count(func.distinct(TeamStar.team))).where(
-            TeamStar.season == season, TeamStar.week == last_week,
-        ))
-        new_clubs = {row["team"] for row in ranked if row["week"] == last_week}
-        if len(new_clubs) < stored_clubs:
-            raise RuntimeError("new stars have fewer clubs than stored stars")
-        stored_rows = session.scalar(select(func.count()).select_from(TeamStar).where(TeamStar.season == season))
-        if len(ranked) < stored_rows:
-            raise RuntimeError("new star list is shorter than stored stars")
+        _check_stars_against_stored(session, season, ranked)
         session.execute(delete(TeamStar).where(TeamStar.season == season))
         session.add_all(TeamStar(**row) for row in ranked)
         session.commit()
