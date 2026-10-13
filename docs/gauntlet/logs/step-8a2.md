@@ -285,3 +285,26 @@ Two lines in `game-card.tsx`. Red by reading (ST2 asked for "MIA: no star list" 
 Logs: `g4-a-*.log`, `g4-b-*.log`. The backend count rose from 965 to 1033 because main gained the live lane's tests.
 
 **Lane-guard** (`lane-guard.log`, against `98ec875`): `OUT OF LANE: backend/nflpi/ingestion/service.py: owned by lane coaches`, 1 problem: the granted edit, nothing else.
+
+### Work order 10 (`wo-10.md`), one try, built by Claude Sonnet: the missing-list note leaves the stars line
+
+Pair g4 above is superseded. I looked at the `after6` phone screenshot of work order 9 and the line read "Stars out BUF M… WR Out +3 more · 3h ago MIA: no star list": the note took the name's room, so any ordinary name would be cut to a few letters whenever one club has no list (design critic 2 finding 1 pointed the same way). Decision: the note ("No star list yet for MIA", the wording the card already uses) sits on its own line directly under the stars line, with no gap; the stars line holds the label, one name, position, status, "+N more", a dot and the age. The card grows by one 16 px line only in that state; the density check L1 measures exactly that card and stays green.
+
+| What | Proof (mine) |
+|---|---|
+| Red first | ST2 rewritten before the build (commit "red ST2 … work order 10"): the note is not in the line, it is visible on the card, and the name element is at least 100 px wide on a phone. Red by reading: the code still put the note in the line. |
+| After the build | diff in scope (one file); typecheck exit 0; `wo10-e2e.log`: `stars.spec.ts` and `phone-layout.spec.ts` 30 passed with a fresh build |
+| Screenshots | `after7-*.png`; I looked at the phone board: "Stars out BUF Maximilian Feathe… WR Out +3 more · 3h ago", then "No star list yet for MIA" under it; pick buttons unchanged |
+
+Security: work orders 9 and 10 came after Dwight's round 3. They change fixed strings and move one existing note in `game-card.tsx`; no feed text is handled differently, no logic, no API change. I did not ask for a fourth round.
+
+### Landing gate pair g5 on `88037c5` (lane replayed onto main `92adfbc`; the two generated files conflicted, one side taken, then `npm run gen:api`: no drift): GREEN twice
+
+| Run | Load before (1, 5, 15 min) | pytest | ruff | gen:api | typecheck | browser |
+|---|---|---|---|---|---|---|
+| g5-a | 4.78 5.69 5.86 | 1081 passed | clean | no drift | exit 0 | 119 passed |
+| g5-b | 6.68 6.29 6.05 | 1081 passed (344 s: a backend lane's run was going beside it on the second lock, `res:gate-b`) | clean | no drift | exit 0 | 119 passed |
+
+Logs: `g5-a-*.log`, `g5-b-*.log`. The backend count is 1081 because main gained the group and live lanes' tests. Main has since moved to `6359c7f` (lane starb: two bench files and logs, none of this lane's files), so no further replay was needed for the pair.
+
+**Lane-guard** (`lane-guard.log`, against `92adfbc`): `OUT OF LANE: backend/nflpi/ingestion/service.py: owned by lane coaches`, 1 problem: the granted edit, nothing else.
