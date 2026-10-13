@@ -185,3 +185,35 @@ Proof, since these pass at once: `s8a-mutate.py` now makes 28 wrong changes (the
 - LOW, carried: a 16-character id accepted and a 40-character echo kept whole are not tested; the id file winning over a same-name stats row; the "no stars ranked" text.
 
 **Routed back to tests. No production code changed.** Star cases 56 to 57: a 2022 star in the same week and club as the list in use, out, must not be listed; `test_stars_out_takes_the_newest_report_when_one_has_an_id_and_one_has_none`. `s8a-mutate.py` gains those two wrong changes: `s8a-mutations.log`, control 57 passed, 30 of 30 caught.
+
+**Coordinator's gate on `a910177`, twice (`final9-*.log`, `final10-*.log`):** pytest 172 passed, ruff, alembic, genapi PASS, both runs.
+
+**Critic 5 (a new `ecc:code-reviewer` subagent, no build transcript, briefed with the integrator's bar and budget) on `a910177`: PASS, no blocking finding.** Its own gate, twice (`critic9-*.log`, `critic10-*.log`): pytest 172 passed, no skips, ruff, alembic, genapi no drift. `b7c71d5..a910177` touches no production file. It removed the season filter on the star-row query on a scratch copy and `test_stars_out_uses_the_latest_earlier_list_and_says_which` failed; it reversed the newest-report choice and `test_stars_out_takes_the_newest_report_when_one_has_an_id_and_one_has_none` failed. The new cases test what they say; no false sentence at the end of this section. Reports for all five critics: `~/.claude/plans/nfl-pickem-lanes-reviews/s8a-critic-1.md` to `s8a-critic-5.md`.
+
+**Lane guard on `a910177`** (`python3 ~/.claude/bin/lane-guard.py check ~/.claude/plans/nfl-pickem-lanes/lanes.md stars 696c64f --repo .`, exit 1), as printed:
+```
+OUT OF LANE: backend/tests/test_hardening.py: owned by lane alerts
+1 problem(s)
+```
+This is the one seam line the integrator granted (commit `808cfac`): the migration list in that file's assert, and its comment. Lane alerts edits other parts of the same file; if this lane lands second, rebase and keep their changes.
+
+**Security.** Dwight: PASS at `9e1b51c`. The three commits after it (`857053f`, `b7c71d5`, `a910177`) change tests, this log and evidence only, so no further delta review was asked for.
+
+**Jev, Job 4.** `JEV: review:stars:8a -> passed 0.74` (grey zone, below 0.8). `ADVISOR: sonnet "did step 8a truly pass review" -> PASS`: it read the four gate logs (172 passed, no skips), found no production file in `9e1b51c..a910177`, confirmed 30 of 30 in `s8a-mutations.log`, and judged the carried items to be outside the frozen clauses. All three needed for a pass are present: green gates, the critic's PASS, and the advisor's PASS in Jev's grey zone.
+
+**Carried to step 8a2 (none breaks a frozen criterion; critics 2 to 5 each confirmed that):**
+- Wiring: add "stars" to the freshness list and the worker loop; API route, schemas, web.
+- `checked_at` is not per season, and an empty injuries file still logs ok (`ingest_injuries`, older code). `reports_seen` shows an empty week today.
+- `stars_week` is taken over both clubs: add a per-club flag. A stale list shows only as `stars_week` below `week`.
+- `age_hours` counts from when the app first saw the status, not from when the club filed it (the file has no report time).
+- A star with no league id is matched by exact name: spelling differences (Jr., II) are missed. Two players at one club with the same name and no id in the id file are not joined (N3).
+- Strip control characters from names before they go to the web or an AI prompt, and have that path reviewed (Dwight).
+- A distinct message for expected failures, such as the two files being published at different times (N5, L3).
+- Dwight's LOW: the same cut in both files passes the pair check (L1); a single blank cell is read as 0 (L2).
+- Test gaps outside the stated clauses (critic 4): a 16-character id accepted, a 40-character echo kept whole, the id file winning over a same-name stats row, the "no stars ranked" text. `TypeError` in `_parse_star_file` is a guard with no case.
+- For step 8b: snap counts start in 2013 (2012 is a header only).
+
+## 6. LANDING
+**Landing-ready, not landed.** Branch `lane/stars`, base `main@696c64f`. Last production code: `9e1b51c`. Tested HEAD: `a910177` (the commit that adds this section and the last gate logs is docs and evidence only). Nothing was pushed, no pull request was opened, nothing was merged or deployed: the integrator (god) lands lanes, and the push needs the owner's yes, relayed by god.
+For the integrator: migration `0003_team_stars` (down revision `0002`); if another lane also adds a migration, the second to land must re-point its down revision and the list in `backend/tests/test_hardening.py`. The lane's test database container `nflpi-lane-stars-db` (127.0.0.1:15438, no volume) is still running; the lane did not remove it.
+What was merged: nothing. What was deployed: nothing. The live app was not touched.
