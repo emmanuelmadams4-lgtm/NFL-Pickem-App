@@ -46,6 +46,13 @@ MUTATIONS = [
     ("C17 refusal falls back", P, "except ClaudeDeclined:\n                raise", "except ClaudeDeclined:\n                pass"),
     ("C18 subtype hidden", P, "{result.subtype if result else 'no result'}", "failed"),
     ("C19 cut-off accepted", P, 'if result.stop_reason == "max_tokens":', "if False:"),
+    ("C20 log detail uncapped", P, "detail[:_LOG_DETAIL_MAX]", "detail"),
+    (
+        "C21 cleanup failure fails the call",
+        P,
+        "            with contextlib.suppress(OSError):  # a failed cleanup must not discard a good answer\n                scratch.cleanup()",
+        "            scratch.cleanup()",
+    ),
 ]
 
 

@@ -1,6 +1,7 @@
 """AI providers, with Claude sign-in first and the API key as fallback."""
 
 import asyncio
+import contextlib
 import json
 import logging
 import tempfile
@@ -16,6 +17,7 @@ from pydantic import SecretStr
 from nflpi.config import get_settings
 
 SDK_TIMEOUT_S = 120.0
+_LOG_DETAIL_MAX = 200
 _SDK_ENV = {
     "ANTHROPIC_API_KEY": "",
     "ANTHROPIC_AUTH_TOKEN": "",
@@ -71,7 +73,7 @@ def _log_sdk_failure(exc: Exception, *secrets: str) -> None:
     for secret in secrets:
         if secret:
             detail = detail.replace(secret, "[redacted]")
-    logging.getLogger("nflpi.ai").warning("Claude sign-in route error: %s", detail)
+    logging.getLogger("nflpi.ai").warning("Claude sign-in route error: %s", detail[:_LOG_DETAIL_MAX])
 
 
 class AIProvider(Protocol):
@@ -133,25 +135,28 @@ class ClaudeSdkProvider:
                         last = message
             return last
 
+        scratch = tempfile.TemporaryDirectory(prefix="nflpi-claude-", ignore_cleanup_errors=True)
         try:
-            with tempfile.TemporaryDirectory(prefix="nflpi-claude-") as cfg:
-                options = ClaudeAgentOptions(
-                    system_prompt=system,
-                    tools=[],
-                    setting_sources=[],
-                    model=self.model,
-                    max_turns=5 if json_schema else 2,
-                    effort="medium" if json_schema else "low",
-                    output_format={"type": "json_schema", "schema": json_schema} if json_schema else None,
-                    stderr=lambda _line: None,
-                    cwd=cfg,
-                    env={**_SDK_ENV, "CLAUDE_CODE_OAUTH_TOKEN": token, "CLAUDE_CONFIG_DIR": cfg},
-                )
-                result = _run_sync(lambda: last_result(options))
+            options = ClaudeAgentOptions(
+                system_prompt=system,
+                tools=[],
+                setting_sources=[],
+                model=self.model,
+                max_turns=5 if json_schema else 2,
+                effort="medium" if json_schema else "low",
+                output_format={"type": "json_schema", "schema": json_schema} if json_schema else None,
+                stderr=lambda _line: None,
+                cwd=scratch.name,
+                env={**_SDK_ENV, "CLAUDE_CODE_OAUTH_TOKEN": token, "CLAUDE_CONFIG_DIR": scratch.name},
+            )
+            result = _run_sync(lambda: last_result(options))
         except Exception as exc:  # noqa: BLE001 - every SDK failure becomes AIError
             api_key = get_settings().anthropic_api_key
             _log_sdk_failure(exc, token, api_key)
             raise AIError(f"Claude sign-in route failed: {type(exc).__name__}") from None
+        finally:
+            with contextlib.suppress(OSError):  # a failed cleanup must not discard a good answer
+                scratch.cleanup()
 
         return _result_text(result, json_schema)
 
