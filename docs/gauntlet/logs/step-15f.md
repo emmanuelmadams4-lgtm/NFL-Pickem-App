@@ -43,7 +43,8 @@ Scope-locked to own files. `ruff format` on the three own files. No other change
 * **Targeted:** 81 tests (`test_live_grade.py`, `test_live_api.py`); every clause G1-G12 has a test that fails when it is broken.
 * **Mutation sweep** (`mutate.py`, `mutation.log`): 24 of 26 caught; the 2 survivors are equivalent mutants (documented); one real survivor (a mid-game lost row counts as a point) was fixed in `c3bcbfd`/`2b37b66`.
 * **Security (Dwight):** PASS. D1 (window end) and D3 (pregame fallback labelling) fixed in `8dd7bed`. S1 carried: the route reads a whole season per call; the Results page must open it once, not poll it.
-* **Critic (new, no build transcript):** see the done message.
+* **Critic (new `ecc:code-reviewer`, no build transcript): PASS** on HEAD 70e094b. Reran 81 targeted tests, full pytest **1268 passed** (267 s, under `res:gate-b`), ruff clean; every clause G1-G12 has a failing-if-broken test. Advisory, carried: (1) G2 text says "last row", code ends at the first `post` row (fix D1); docstring/spec text not updated; (2) fifth status `incomplete` is not in the G12 list, so the web lead must handle it; (3) `MEANS_NOTE` defined twice in `api/live.py`; (4) near-vacuous loop in the 422 test (exact-body assert covers it); (5) `states.index(...)` row lookup.
+* **Lane-guard** (`lane-guard.txt`): only the two granted `packages/shared` generated files are flagged (wire-lane grant (c)).
 * **Real-game hand count: PENDING (after 2026-10-15).** All numbers above are from made-up series.
 
 ## 6. LANDING
