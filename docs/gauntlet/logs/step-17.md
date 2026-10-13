@@ -49,13 +49,57 @@ Cap note: `research._count_attempt` counts one provider attempt per `complete()`
 * `Dockerfile`: no change needed if the hand check passes.
 
 ## 3. IMPLEMENTATION
-(pending)
+
+Provider: Codex on the Build Ladder, coordinator inspected every diff and reran every proof (Codex could not reach the test database from its sandbox, so none of its proof counts).
+`JEV: model:sdk-wo-1 -> sol (0.94), effort -> xhigh (0.91)` (secret handling). `JEV: model:sdk-wo-3 -> luna (1.00), effort unsure (medium 0.65 / low 0.35, confidence 0.53) -> coordinator chose medium` (low-stakes cleanup, no advisor call spent).
+`EFFORT: PLANNING/SPEC high; build dispatch low; VERIFICATION high`. `CLIMBS: none`. `BUILD_RUNG: sol try 1 (wo-1), sol try 2 = narrow correction (wo-2), luna (wo-3, wo-5), sol (wo-4)`. No astra, no Fable.
+
+| Commit | Work order | Model | Result |
+|---|---|---|---|
+| `663889e` | spec: 13 red tests + `claude-agent-sdk` 0.2.165 | coordinator | red at `providers.query` missing |
+| `551cef3` | wo-1 SDK provider, router, setting | gpt-6-sol xhigh | 20 pass; 2 added spec tests red |
+| `1b9c4b3` | wo-2 narrow correction: any SDK failure falls back, API status kept, config tidy | gpt-6-sol xhigh | 22 pass |
+| `290072a` | wo-3 CLEANUP 1 | gpt-6-luna medium | 22 pass |
+| `a5df2b7` | security clauses C12-C19 red (from Dwight's review of 290072a) + mutation script | coordinator | 9 red |
+| `d99ecf2` | wo-4 security fixes | gpt-6-sol xhigh | 31 pass |
+| `012e526` | wo-5 CLEANUP 2 | gpt-6-luna medium | 31 pass |
+
+Review of 290072a (Dwight, hive `dwight-mv5mkpow`, with `ecc:security-reviewer` and `ecc:silent-failure-hunter` under him): PASS on token handling, no CRITICAL or HIGH security finding, 4 MEDIUM + 4 data-integrity notes. Handling:
+
+| Finding | Decision |
+|---|---|
+| S1 child inherits server env, could be pointed elsewhere | fixed (C12): base URL, headers, Bedrock/Vertex/Foundry, proxies blanked; updater and extra traffic off. The other server secrets (DB URL, access token, VAPID, OpenRouter key) still sit in the child's inherited environment: the SDK has no clean-env switch; accepted, the child is the bundled Claude CLI with no tools |
+| S2 timeout leaves child running | fixed (C13): `anyio.fail_after` inside the coroutine. Child termination is the SDK's own behavior; not observed with a real CLI |
+| S3 prompts written under `~/.claude` | fixed (C14): throwaway `cwd` + `CLAUDE_CONFIG_DIR` per call, deleted after. Cost: a fresh config directory each call; first-run time unknown until the live call |
+| S4 daily cap passed by ~2x | recorded, not changed: SDK calls are flat-rate; the paid route is one counted attempt per `complete()` exactly as before this step, so the paid-call ceiling is unchanged (`ai_daily_call_limit` bounds paid calls, plus the API client's own 2 retries as before) |
+| F1 dead SDK route hidden by quiet fallback | partly: fallback logs a redacted `repr(exc)` (C15, tested by the log test, which my mutation script does not cover; test is `test_a_fallback_leaves_a_traceable_log_line_without_the_token`). Not done: a counter or a stored route |
+| F2 stored report cannot say which route answered | carried to the web lane (needs a column or a field in `AIReport` / `AskOut`, outside lane sdk's files). `route` is set to `api` only after the API answered (C16) |
+| F3 refusal retried on the paid route | fixed (C17) with `ClaudeDeclined`; failed results show their `subtype` (C18) |
+| F4 `max_tokens` ignored on the SDK route | fixed (C19): a cut-off answer is an error like the API route |
+| LOW token as plain attribute / settings repr | fixed (`SecretStr` kept; four secret settings hidden from `repr(Settings)`; `database_url` still shown) |
+| LOW `.env.example` | seam ask to god |
+| For god: no recorded owner yes for running the subscription sign-in on the server (HAG-25 open) | passed on in the done message |
 
 ## 4. CLEANUP
-(pending)
+
+`/refactor` pass, scope-locked to the code this step added in `ai/providers.py`:
+1. After wo-1/2 (`290072a`): extracted `_run_sync`; moved `output_format` into the options constructor; flattened `ClaudeRouter.complete`; fallback log prints our own message instead of a constant class name. 22 tests green.
+2. After the security fixes (`012e526`): `complete` had grown to ~55 lines. Extracted `_result_text` (result checks) and `_log_sdk_failure` (redacted warning). 31 tests green, ruff clean.
+Left alone on purpose: `ClaudeRouter.complete` still has two exception shapes for the paid route (a deliberate fork between "sign-in also failed" and "API-only"); `config.py` keeps one small frozenset.
+No change needed in `research.py` (no edits there).
 
 ## 5. VERIFICATION
-(pending)
+
+Evidence directory: `docs/gauntlet/logs/step-17-evidence/` (gate logs, mutation sweep, image check, build log).
+
+* Mutation sweep `mutate.py`, 35 mutations over clauses C1 to C19 (not C10/C11/C15, which are integration, file and log tests): `mutate-2.log` 35/35 killed. First sweep (`mutate-1` deleted) found 9 stale patterns after the cleanup and one equivalent mutant (repr of a `SecretStr`), both fixed in the script, not in the code.
+* Gate on HEAD `94ae938` (code unchanged since `012e526`), run twice with the lock `res:gate` held:
+  * `gate1-*.log`, `gate2-*.log`: `uv run pytest -q` 460 passed (75 s, 65 s); `ruff check nflpi tests migrations` All checks passed; `alembic check` No new upgrade operations detected (own database `nflpi` in container `nflpi-lane-sdk-db`, after `alembic upgrade head`); `npm run gen:api` no drift (`git status` clean after).
+  * Test database: container `nflpi-lane-sdk-db`, 127.0.0.1:15444, no volume. I started it before the `res:gate` lock was mine (a bare `postgres:17`, no build); noted here for the record.
+* Hand check, the image: `docker build` ok (`image-build.log`); inside the image the bundled CLI runs (`claude 2.1.294`, aarch64), `claude auth status` with `CLAUDE_CODE_OAUTH_TOKEN` set and `ANTHROPIC_API_KEY` empty reports `authMethod: oauth_token`, and `from nflpi.ai.providers import ClaudeSdkProvider` imports (`image-check.log`). The lock holds a `manylinux_2_17_x86_64` wheel too (for the Windows PC's Docker). No Dockerfile change. Image deleted after.
+* Real call: none made, none needed for the gate. PENDING (owner's yes through god): one live report or question with only the token set, then one with a broken token and the key set.
+* Security: Dwight PASS on 290072a; delta to HEAD sent, verdict below.
+* Fresh critic: below.
 
 ## 6. LANDING
 Not mine: god lands it.
