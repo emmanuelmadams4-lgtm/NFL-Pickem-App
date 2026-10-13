@@ -70,3 +70,49 @@ Decisions (each two-way):
 * `JEV: model:stars:wo-1 -> sol (0.97), effort medium (0.91)`. BUILD_RUNG: gpt-6-sol medium (try 1 of 2). Reason: one table, one migration, three parsers, a ranking with a join across two id systems, one query; nineteen hand-counted cases check it.
 
 Red: `s8a-red.log`, `ModuleNotFoundError: No module named 'nflpi.analytics.stars'` at collection. Right reason: the module does not exist. The cases were written together by the coordinator (the builder never writes its own bar), not one per build slice.
+
+### Spec amendments after the freeze
+* **Seam line (integrator's grant, 2026-10-13, option a):** `backend/tests/test_hardening.py` pinned the migration list to `0001, 0002`. The integrator granted one line in lane stars so the list reads `0001, 0002, 0003` (commit `808cfac`, recorded in `lanes.md`). Nothing else in that file changed.
+* **From review round 1 (section 3), each with a failing case written by the coordinator first (`s8a-red-2.log`: 16 failed, 15 passed):**
+
+| # | Criterion | Layer |
+|---|---|---|
+| S19 | The parsers reject: a week outside 1 to 22, a blank or over-long club code, a blank snap-file player id, the same player, week and club twice, a stat over 1,000, a snap count over 300. An echoed bad value is cut to 40 characters | operational |
+| S20 | The run fails, with the old stars kept, when the snap rows, the stat rows or the id map are empty; when the two files end in different weeks; when the new list ends before the stored one; when it has fewer clubs in its last week than are stored. A parse error names its file | operational |
+| S21 | A snap player missing from the id file is joined to the one stats player with the same club and exact name, so he is one star with both his snaps and his production (S6 otherwise unchanged) | functional |
+| S22 | A quarterback with no offence snaps and no pass attempts is not a star (S14 applied to the `qb` slot) | functional |
+| S23 | `stars_out` also returns `reports_seen`: how many players have a report for this game's week and clubs. Zero means the week is not reported yet, so an empty `out` means "not known", not "nobody is out" | user-facing |
+
+## 3. IMPLEMENTATION
+Provider: Codex, every production line. The coordinator wrote the tests, the hand-count script, the real-data check and this log, read each diff (`git status`, `git diff`, untracked files) and reran every proof itself.
+
+| Work order | Rung | Decision | Result | Commit |
+|---|---|---|---|---|
+| WO-1 table, migration, parsers, ranking, `ingest_stars`, `stars_out` | `gpt-6-sol` medium, try 1 | `JEV: model:stars:wo-1 -> sol 0.97, medium 0.91` | 19 of 19; in scope (5 files); stopped correctly at the seam test instead of editing it | `1ccdfaf` |
+| WO-2 review round 1 fixes | `gpt-6-sol` high, try 1 | `JEV: model:stars:wo-2 -> sol 0.59, high 0.64 (unsure)`; taken without an advisor call: same rung as WO-1's sure answer, and the effort table puts a bug fix with edge cases at high | 31 of 31; in scope (3 files); added one guard nobody ordered (removed in CLEANUP) | `09e9c66` |
+
+CLIMBS: none. STRIKES: none. Codex could reach the lane's own test database, so its runs were real; each was rerun by the coordinator.
+
+Proof: `gate.sh wo1`: `FAIL pytest exit=1` 133 passed, 1 failed, the one failure being the seam line above (`wo1-pytest.log`); ruff, alembic, genapi PASS. After the grant and WO-2, `gate.sh wo2`: `PASS pytest exit=0` 146 passed; `PASS ruff`; `PASS alembic` (up, check, down to base, up, check); `PASS genapi` no drift.
+
+**S16, real data (`s8a-realcheck.py`, `s8a-realcheck-wo1.log`, again after each later build):** the full 2025 and 2026 files are loaded into a throwaway database through `ingest_stars` (3,520 and 800 rows); the app's stars are compared row by row with `s8a-handcount.py`. 2026 week 6, eight clubs: MATCH 40 of 40. 2025 week 19 (the whole regular season), eight clubs: MATCH 40 of 40. Then the real schedule and injury files are loaded and `stars_out` is asked about all 15 week 5 games of 2026: 9 stars out or doubtful, equal to a direct read of the injury file (9). Section 5 lists the names.
+
+Review fan-out (standard tier; full reports in `~/.claude/plans/nfl-pickem-lanes-reviews/s8a-r1-*.md`):
+* `ecc:code-reviewer` on `696c64f..1ccdfaf`: APPROVE WITH CHANGES, no CRITICAL or HIGH. MEDIUM: an unmapped snap player ranked as two people (S6; fixed, S21); one constant used for three weights (CLEANUP); a quarterback with no playing time stored as a star (S14; fixed, S22).
+* `ecc:silent-failure-hunter` on the same range: five HIGH. Fixed with a failing case first: no report yet for the week reads as "nobody is out" (S23); a shorter or cut file replaces a good season (S20); one of three files empty still gives an ok run (S20); the split player (S21). Not built: `checked_at` is not per season and an empty injury file still logs ok; that is `ingest_injuries`, older code outside this step, and `reports_seen` now shows an empty week. Carried to 8a2.
+* Security: Dwight (`dwight-mv5mkpow`, with `ecc:security-reviewer` and `ecc:silent-failure-hunter`) on `1ccdfaf`: **PASS**, no CRITICAL or HIGH. His three MEDIUM (unbounded week, a short snap file replacing the season, the split player) and three of his LOW (value bounds, club length, echoed file text) are fixed in WO-2 (S19 to S21). Clean: ORM with bound parameters only, a failed run keeps old data, fixed download paths, migration matches the model, no secrets, no route. A confirmation of the delta was requested (section 5).
+* Accepted and carried, not built (reasons in the triage file): name spelling differences for a star with no league id; `stars_week` taken over both clubs; a stale list shows only as `stars_week` below `week`; `age_hours` counts from when the app first saw the status (the nflverse injury file has no report time; now stated in the `stars_out` docstring); control characters in names (strip when 8a2 sends names to the web or the AI); playoff weeks counted on purpose.
+* Speed (reviewer L3, not measured by him): the whole real check, two seasons ranked and stored plus the schedule and injuries, runs in about 2 seconds.
+
+## 4. CLEANUP
+`/refactor` at coordinator level, scope-locked to the code this step added (`analytics/stars.py`, the `parse_star_*` code in `ingestion/nflverse.py`, `ingest_stars` in `ingestion/service.py`). The coordinator read the code after WO-2 and picked:
+1. Name the weights for what they weigh: `SACK_POINTS`, `INTERCEPTION_POINTS` (the touchdown constant had been reused; numbers unchanged).
+2. Replace the six-position tuple in `_rank_club` with a row helper.
+3. Split `ingest_stars`: one helper parses a file and names it in the error (three try blocks became three calls); one helper checks the new list against the stored one.
+4. Remove the row-count guard WO-2 added without an order: a stats correction can shorten a list by one row, which would have blocked every later run. The week and club guards (S20) stay.
+5. Format the new code the way the rest of the repository is formatted.
+`models.py` and the migration: no change needed (one table, one create and drop).
+
+WO-3 (`gpt-6-luna` medium, try 1; `JEV: model:stars:wo-3-cleanup -> luna 0.49, medium 0.71 (unsure; the lowest rung taken)`): tests green and in scope, but the coordinator's read found a nine-parameter helper and `stars_out` over 50 lines. WO-3b (`gpt-6-luna` high, try 2, one narrow correction, effort one level up): `_rank_club` returns one club's rows and `rank_stars` adds the shared fields; `stars_out` split into `_star_report` and `_listed_star`. Both tries on rung 1 used, no climb needed. Checked against the base: no line from before this step changed in the three files; no added function is over 50 lines.
+
+Proof on the cleanup tree (`gate.sh cleanup`): `PASS pytest exit=0` 146 passed; `PASS ruff`; `PASS alembic`; `PASS genapi` no drift. Real-data check again: MATCH 40 of 40, 40 of 40, 9 of 9 (`s8a-realcheck-cleanup.log`). `ruff format --check` on the three files: already formatted. Commit `231bd82`.
