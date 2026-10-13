@@ -62,7 +62,7 @@ def _candidate(player_id: str | None, history: list[tuple[str, dict]], week: int
 
 def _rank_club(candidates: list[dict], season: int, week: int, computed_at: datetime) -> list[dict]:
     rows = []
-    qbs = [p for p in candidates if p["position"] == "QB"]
+    qbs = [p for p in candidates if p["position"] == "QB" and (p["off_snaps"] or p["attempts"])]
     if qbs:
         qb = sorted(qbs, key=lambda p: (-p["off_snaps"], -p["attempts"], p["player"]))[0]
         rows.append(("qb", 1, qb, qb["off_snaps"], qb["attempts"], float(qb["off_snaps"])))
@@ -84,8 +84,15 @@ def _rank_club(candidates: list[dict], season: int, week: int, computed_at: date
 def rank_stars(season: int, snaps: list[dict], stats: list[dict], players: dict[str, str],
                computed_at: datetime) -> list[dict]:
     history = defaultdict(list)
+    name_ids = defaultdict(set)
+    for row in stats:
+        name_ids[(row["team"], row["player"])].add(row["player_id"])
     for row in snaps:
         player_id = players.get(row["pfr_id"])
+        if not player_id:
+            matches = name_ids[(row["team"], row["player"])]
+            if len(matches) == 1:
+                player_id = next(iter(matches))
         key = ("gsis", player_id) if player_id else ("pfr", row["pfr_id"] or row["player"])
         history[key].append(("snap", row))
     for row in stats:
@@ -115,6 +122,11 @@ def _current_reports(session: Session, game: Game) -> list[InjuryReport]:
 
 
 def stars_out(session: Session, game_id: str, now: datetime | None = None) -> dict:
+    """Find out and doubtful stars for a game's latest star list.
+    `out` lists stars whose newest report says Out or Doubtful.
+    `reports_seen` 0 means the week has no report yet; empty `out` means not known, not nobody is out.
+    `age_hours` starts at `observed_at`, when this app first saw that status; `stars_week` is the list used.
+    """
     now = now or datetime.now(UTC)
     game = session.get(Game, game_id)
     if game is None:
@@ -124,14 +136,14 @@ def stars_out(session: Session, game_id: str, now: datetime | None = None) -> di
         TeamStar.season == game.season, TeamStar.week <= game.week, TeamStar.team.in_(teams)))
     checked_at = session.scalar(select(func.max(IngestionRun.finished_at)).where(
         IngestionRun.dataset == "injuries", IngestionRun.status == "ok"))
+    reports = _current_reports(session, game)
     result = dict(game_id=game_id, season=game.season, week=game.week,
-                  stars_week=stars_week, checked_at=checked_at, out=[])
+                  stars_week=stars_week, checked_at=checked_at, reports_seen=len(reports), out=[])
     if stars_week is None:
         return result
     stars = session.scalars(select(TeamStar).where(
         TeamStar.season == game.season, TeamStar.week == stars_week, TeamStar.team.in_(teams))).all()
     stars.sort(key=lambda star: (teams.index(star.team), SLOT_ORDER[star.slot], star.rank))
-    reports = _current_reports(session, game)
     for star in stars:
         report = max((r for r in reports if r.team == star.team and
                       (r.player_id == star.player_id if r.player_id and star.player_id else r.player == star.player)),

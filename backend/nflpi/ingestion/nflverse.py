@@ -158,12 +158,42 @@ STAR_STATS = (
     "def_fumbles_forced", "def_sacks", "def_qb_hits", "def_interceptions", "def_pass_defended",
     "def_tds", "def_safeties",
 )
+MIN_STAR_WEEK = 1
+MAX_STAR_WEEK = 22
+MAX_STAR_CLUB_LENGTH = 4
+MAX_STAR_SNAP_COUNT = 300
+MAX_STAR_STAT_ABS = 1000
+MAX_STAR_ERROR_VALUE_LENGTH = 40
+
+
+def _star_int(value: str, label: str) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid {label}: {str(value)[:MAX_STAR_ERROR_VALUE_LENGTH]}") from exc
+
+
+def _star_week(value: str) -> int:
+    week = _star_int(value, "week")
+    if not MIN_STAR_WEEK <= week <= MAX_STAR_WEEK:
+        raise ValueError(f"week outside {MIN_STAR_WEEK}..{MAX_STAR_WEEK}: {str(value)[:MAX_STAR_ERROR_VALUE_LENGTH]}")
+    return week
+
+
+def _star_club(value: str) -> str:
+    team = franchise(value.strip())
+    if not team or len(team) > MAX_STAR_CLUB_LENGTH:
+        raise ValueError(f"invalid club: {str(value)[:MAX_STAR_ERROR_VALUE_LENGTH]}")
+    return team
 
 
 def _star_number(value: str) -> float:
-    number = 0.0 if value in ("", "NA") else float(value)
-    if not math.isfinite(number):
-        raise ValueError(f"invalid star statistic: {value}")
+    try:
+        number = 0.0 if value in ("", "NA") else float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid star statistic: {str(value)[:MAX_STAR_ERROR_VALUE_LENGTH]}") from exc
+    if not math.isfinite(number) or abs(number) > MAX_STAR_STAT_ABS:
+        raise ValueError(f"invalid star statistic: {str(value)[:MAX_STAR_ERROR_VALUE_LENGTH]}")
     return number
 
 
@@ -176,15 +206,25 @@ def _star_id(value: str) -> str | None:
 
 def parse_star_snaps(rows: list[dict[str, str]], season: int) -> list[dict]:
     out = []
+    seen = set()
     for row in rows:
-        if int(row["season"]) != season:
+        if _star_int(row["season"], "season") != season:
             continue
-        off, de = int(row["offense_snaps"]), int(row["defense_snaps"])
-        if off < 0 or de < 0:
-            raise ValueError("negative snap count")
+        week, team = _star_week(row["week"]), _star_club(row["team"])
+        pfr_id = row["pfr_player_id"].strip()
+        if not pfr_id:
+            raise ValueError("blank pfr_player_id")
+        key = (pfr_id, week, team)
+        if key in seen:
+            raise ValueError("duplicate snap row")
+        seen.add(key)
+        off = _star_int(row["offense_snaps"], "offense_snaps")
+        de = _star_int(row["defense_snaps"], "defense_snaps")
+        if not 0 <= off <= MAX_STAR_SNAP_COUNT or not 0 <= de <= MAX_STAR_SNAP_COUNT:
+            raise ValueError("snap count outside allowed range")
         out.append({
-            "week": int(row["week"]), "team": franchise(row["team"]),
-            "pfr_id": row["pfr_player_id"].strip(), "player": row["player"].strip()[:64],
+            "week": week, "team": team,
+            "pfr_id": pfr_id, "player": row["player"].strip()[:64],
             "position": row["position"].strip()[:8] or None,
             "offense_snaps": off, "defense_snaps": de,
         })
@@ -193,14 +233,20 @@ def parse_star_snaps(rows: list[dict[str, str]], season: int) -> list[dict]:
 
 def parse_star_stats(rows: list[dict[str, str]], season: int) -> list[dict]:
     out = []
+    seen = set()
     for row in rows:
-        if int(row["season"]) != season:
+        if _star_int(row["season"], "season") != season:
             continue
+        week, team = _star_week(row["week"]), _star_club(row["team"])
         player_id = _star_id(row["player_id"])
         if not player_id:
             continue
+        key = (player_id, week, team)
+        if key in seen:
+            raise ValueError("duplicate stat row")
+        seen.add(key)
         record = {
-            "week": int(row["week"]), "team": franchise(row["team"]), "player_id": player_id,
+            "week": week, "team": team, "player_id": player_id,
             "player": row["player_display_name"].strip()[:64],
             "position": row["position"].strip()[:8] or None,
         }
