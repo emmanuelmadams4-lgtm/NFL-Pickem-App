@@ -1,0 +1,34 @@
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/test_group.py:8:1
+   |
+ 6 |   """
+ 7 |
+ 8 | / from datetime import UTC, datetime
+ 9 | | from pathlib import Path
+10 | |
+11 | | import pytest
+12 | | from sqlalchemy import select
+13 | |
+14 | | from nflpi.group import importer
+15 | | from nflpi.group.importer import GroupImportError, import_group_csv
+16 | | from nflpi.group.queries import game_shares, standings
+17 | | from nflpi.models import Game, GroupPick, GroupStanding
+   | |_______________________________________________________^
+18 |
+19 |   FIXTURES = Path(__file__).parent / "fixtures" / "group"
+   |
+help: Organize imports
+   |
+11 | import pytest
+   - from sqlalchemy import select
+   -
+12 | from nflpi.group import importer
+13 | from nflpi.group.importer import GroupImportError, import_group_csv
+14 | from nflpi.group.queries import game_shares, standings
+15 + from sqlalchemy import select
+16 +
+17 | from nflpi.models import Game, GroupPick, GroupStanding
+   |
+
+Found 1 error.
+[*] 1 fixable with `--fix`.

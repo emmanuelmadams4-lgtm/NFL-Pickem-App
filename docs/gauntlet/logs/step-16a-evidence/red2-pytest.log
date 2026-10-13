@@ -1,0 +1,40 @@
+            lines += [f"1,{name},1,Buf,3.5,Mia,Buf,Favorite,3,5", f"1,{name},2,NE,1.5,NYJ,NE,Favorite,2,5",
+                      f"1,{name},3,KC,7.0,LV,LV,Underdog,1,5", f"2,{name},1,LAR,2.5,KC,,none,,3",
+                      f"2,{name},2,Buf,10.0,NE,Buf,Favorite,1,3"]
+        data = picks(*lines)
+        assert len(data) < importer.MAX_BYTES
+>       assert import_group_csv(games, SEASON, data).rows == 16_000
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_group.py:482: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <sqlalchemy.orm.session.Session object at 0x10a208c20>, season = 2023
+data = b'Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Confidence,Week_Total_Pts\r\n1,m0000,1,Buf,3.5,Mia,Buf,Favorite,3,5...\r\n1,m3199,3,KC,7.0,LV,LV,Underdog,1,5\r\n2,m3199,1,LAR,2.5,KC,,none,,3\r\n2,m3199,2,Buf,10.0,NE,Buf,Favorite,1,3\r\n'
+
+    def import_group_csv(session: Session, season: int, data: bytes) -> ImportResult:
+        """Import one fully checked picks or weekly standings file."""
+        if len(data) > MAX_BYTES:
+            raise GroupImportError("file is too large")
+        try:
+            text = data.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise GroupImportError("file is not UTF-8") from exc
+        kind, weeks, rows = _csv_rows(text)
+        try:
+            if kind == "picks":
+                values = _pick_rows(rows, len(PICKS_HEADER), session, season)
+                _write_picks(session, values)
+            else:
+                values = _standing_rows(rows, weeks, season)
+                _write_standings(session, values)
+            session.commit()
+        except SQLAlchemyError as exc:
+            session.rollback()
+>           raise GroupImportError("database import failed") from exc
+E           nflpi.group.importer.GroupImportError: database import failed
+
+nflpi/group/importer.py:216: GroupImportError
+=========================== short test summary info ============================
+FAILED tests/test_group.py::test_n11_a_big_valid_file_under_the_cap_is_stored_whole
+1 failed, 100 deselected in 3.03s

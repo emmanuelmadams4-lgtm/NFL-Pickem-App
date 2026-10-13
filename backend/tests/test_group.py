@@ -467,3 +467,23 @@ def test_q4_running_total_counts_only_weeks_up_to_the_asked_week(games):
     ]
     assert [(r["member"], r["total"], r["rank"]) for r in standings(games, SEASON, 3)] == [("Ann A", 16, 1),
                                                                                            ("Cy!!", 11, 2)]
+
+
+def test_n11_a_big_valid_file_under_the_cap_is_stored_whole(games):
+    # 3,200 members x 5 games = 16,000 rows: more values than one database statement can carry.
+    lines = []
+    for i in range(3200):
+        name = f"m{i:04d}"
+        lines += [f"1,{name},1,Buf,3.5,Mia,Buf,Favorite,3,5", f"1,{name},2,NE,1.5,NYJ,NE,Favorite,2,5",
+                  f"1,{name},3,KC,7.0,LV,LV,Underdog,1,5", f"2,{name},1,LAR,2.5,KC,,none,,3",
+                  f"2,{name},2,Buf,10.0,NE,Buf,Favorite,1,3"]
+    data = picks(*lines)
+    assert len(data) < importer.MAX_BYTES
+    assert import_group_csv(games, SEASON, data).rows == 16_000
+    rows = stored_picks(games)
+    assert len(rows) == 16_000 and rows[("2023_01_LV_KC", "m3199")] == ("LV", 1)
+    assert game_shares(games, "2023_02_KC_LA")["members"] == 3200
+    header = "Rank,Team," + ",".join(f"Wk{i}" for i in range(1, 19)) + ",Total_Pts"
+    weekly = picks(*[f"{i + 1},m{i:04d}," + "1," * 18 + "18" for i in range(3200)], header=header)
+    assert import_group_csv(games, SEASON, weekly).rows == 57_600
+    assert len(stored_standings(games)) == 57_600
