@@ -289,16 +289,18 @@ def refresh_predictions(
             moved = abs(prob - prev.home_win_prob)
             old_label = pick_label(max(prev.home_win_prob, 1 - prev.home_win_prob))
             new_label = pick_label(max(prob, 1 - prob))
-            qb_team = next(
-                (team for col, team in (("home_qb", home), ("away_qb", away))
-                 if prev.features.get(col) and features.get(col) and features.get(col) != prev.features.get(col)),
-                None,
-            )
-            qb_name = features.get("home_qb" if qb_team == home else "away_qb") if qb_team else None
+            qb_team = qb_name = None
+            for col, team in (("home_qb", home), ("away_qb", away)):
+                old_starter = prev.features.get(col)
+                new_starter = features.get(col)
+                if old_starter and new_starter and new_starter != old_starter:
+                    qb_team = team
+                    qb_name = new_starter if isinstance(new_starter, str) else None
+                    break
             if prev.pick != pick or moved >= settings.alert_move_threshold or old_label != new_label or qb_team:
                 events.append(ChangeEvent(
                     row["game_id"], prev.home_win_prob, prob, prev.pick, pick, note,
-                    old_label, new_label, qb_team, qb_name if isinstance(qb_name, str) else None,
+                    old_label, new_label, qb_team, qb_name,
                 ))
         session.add(
             Prediction(

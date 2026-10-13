@@ -82,10 +82,7 @@ def _send(
                 timeout=10,
             )
             sent += 1
-            if results is not None:
-                results.append({
-                    "host": host, "ok": True, "status": getattr(response, "status_code", None), "error": None,
-                })
+            ok, status, error = True, getattr(response, "status_code", None), None
         except WebPushException as exc:
             status = exc.response.status_code if exc.response is not None else None
             if status in (404, 410):
@@ -95,18 +92,15 @@ def _send(
                 if status in (404, 410) else "Push service rejected the alert."
             )
             log.warning("web push failed for %s (%s)", host, status)
-            if results is not None:
-                results.append({"host": host, "ok": False, "status": status, "error": error})
+            ok = False
         except RequestException:
             log.warning("web push network error for %s", host)
-            if results is not None:
-                results.append({
-                    "host": host, "ok": False, "status": None, "error": "Could not reach the push service.",
-                })
+            ok, status, error = False, None, "Could not reach the push service."
         except Exception:  # noqa: BLE001 - one bad subscription must not stop delivery to others
             log.warning("web push failed for %s", host)
-            if results is not None:
-                results.append({"host": host, "ok": False, "status": None, "error": "Could not send this alert."})
+            ok, status, error = False, None, "Could not send this alert."
+        if results is not None:
+            results.append({"host": host, "ok": ok, "status": status, "error": error})
     return sent
 
 

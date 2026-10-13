@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { keys, type Meta, type PushSubscriptionIn, type PushTestOut } from "@nflpi/shared";
+import { keys, type Meta, type PushSubscriptionIn } from "@nflpi/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
 import { useToast } from "@/components/toast";
 import { Button, Chip, Notice, SelectField, Section, errorMessage } from "@/components/ui";
-import { urlBase64ToUint8Array } from "@/lib/push";
+import { testAlertWords, urlBase64ToUint8Array } from "@/lib/push";
 
 function env() {
   const ua = navigator.userAgent;
@@ -106,19 +106,7 @@ export function AlertsSection({ meta }: { meta: Meta }) {
     setError(null);
     setTestResult(null);
     try {
-      const result: PushTestOut = await api.pushTest();
-      if (!result.configured || result.devices === 0) {
-        setTestResult({ text: "The server has no device to send to. Turn alerts off and on again.", problem: true });
-      } else {
-        const summary = result.delivered === result.devices
-          ? `Delivered to ${result.delivered} ${result.delivered === 1 ? "device" : "devices"}.`
-          : result.delivered === 0
-            ? "Not delivered."
-            : `Delivered to ${result.delivered} of ${result.devices} devices.`;
-        const failures = result.results.filter((item) => !item.ok)
-          .map((item) => ` ${item.host}: ${item.error ?? "Not delivered."}${item.status === null ? "" : ` (${item.status})`}`);
-        setTestResult({ text: summary + failures.join(""), problem: result.delivered !== result.devices });
-      }
+      setTestResult(testAlertWords(await api.pushTest()));
       void qc.invalidateQueries({ queryKey: keys.meta });
     } catch (e) {
       setTestResult(null);

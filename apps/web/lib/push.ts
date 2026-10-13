@@ -1,4 +1,18 @@
-import type { Api, PushSubscriptionIn } from "@nflpi/shared";
+import type { Api, PushSubscriptionIn, PushTestOut } from "@nflpi/shared";
+
+export function testAlertWords(result: PushTestOut): { text: string; problem: boolean } {
+  if (!result.configured || result.devices === 0) {
+    return { text: "The server has no device to send to. Turn alerts off and on again.", problem: true };
+  }
+  const summary = result.delivered === result.devices
+    ? `Delivered to ${result.delivered} ${result.delivered === 1 ? "device" : "devices"}.`
+    : result.delivered === 0
+      ? "Not delivered."
+      : `Delivered to ${result.delivered} of ${result.devices} devices.`;
+  const failures = result.results.filter((item) => !item.ok)
+    .map((item) => ` ${item.host}: ${item.error ?? "Not delivered."}${item.status === null ? "" : ` (${item.status})`}`);
+  return { text: summary + failures.join(""), problem: result.delivered !== result.devices };
+}
 
 export function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
