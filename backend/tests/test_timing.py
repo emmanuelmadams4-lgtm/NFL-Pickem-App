@@ -1,4 +1,4 @@
-"""Data timing (step 13, B8): when the line, each club's quarterback and the injury rows were first seen and last changed.
+"""Data timing (step 13, B8): when the line, each club's quarterback and injury rows were first seen and last changed.
 
 Made-up rows only. Every ingestion time is passed in, so the clock never matters.
 """

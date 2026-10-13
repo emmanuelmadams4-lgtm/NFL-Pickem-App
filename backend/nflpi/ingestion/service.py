@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from nflpi.analytics.stars import rank_stars
 from nflpi.config import get_settings
-from nflpi.ingestion import nflverse, weather
+from nflpi.ingestion import nflverse, timing, weather
 from nflpi.models import Game, IngestionRun, InjuryReport, MarketSnapshot, Team, TeamStar, WeatherForecast
 from nflpi.predictions.market import novig_home_prob
 
@@ -104,6 +104,7 @@ def upsert_games(session: Session, games: list[dict], observed_at: datetime) -> 
             )
         )
     session.add_all(new_snaps)
+    timing.record_qbs(session, games, observed_at)
     session.commit()
     return len(rows)
 
@@ -184,15 +185,15 @@ def ingest_teams(session: Session, rows: list[dict[str, str]] | None = None) -> 
 
 
 def ingest_injuries(
-    session: Session, season: int, rows: list[dict[str, str]] | None = None
+    session: Session, season: int, rows: list[dict[str, str]] | None = None, now: datetime | None = None
 ) -> tuple[IngestionRun, list[InjuryReport]]:
     """Insert a row only when a player's status changed. Returns the changed rows."""
     changed: list[InjuryReport] = []
 
     def job() -> int:
         data = rows if rows is not None else nflverse.fetch_csv(f"injuries/injuries_{season}.csv")
-        now = datetime.now(UTC)
-        incoming = nflverse.parse_injuries(data, now)
+        at = now or datetime.now(UTC)
+        incoming = nflverse.parse_injuries(data, at)
         current = {}
         for r in session.scalars(select(InjuryReport).where(InjuryReport.season == season).order_by(InjuryReport.id)):
             current[(r.week, r.team, r.player_id or r.player)] = (r.report_status, r.practice_status)
