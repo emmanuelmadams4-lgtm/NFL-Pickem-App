@@ -1,0 +1,38 @@
+PASS health: HTTP 200
+PASS token-required: HTTP 401
+PASS token: HTTP 200
+PASS meta: season 2023 week 4, model blend-elo-qb-v1-through-2022-ae5b8b5e1ea1
+PASS push-configured: 0 devices subscribed
+smoke: PASS
+ok   good token: exit 0
+ok   PASS health
+ok   PASS token-required
+ok   PASS token
+ok   PASS meta
+ok   PASS push-configured
+ok   no test alert without --push
+ok   last line smoke: PASS
+ok   token never printed
+PASS health: HTTP 200
+PASS token-required: HTTP 401
+FAIL token: HTTP 401
+FAIL meta: invalid meta response
+FAIL push-configured: invalid meta response
+smoke: FAIL (3 failed)
+ok   wrong token: exit 1
+ok   wrong token: FAIL token
+ok   wrong token: health still checked
+ok   wrong token: last line smoke: FAIL
+ok   wrong token never printed
+PASS health: HTTP 200
+PASS token-required: HTTP 401
+PASS token: HTTP 200
+PASS meta: season 2023 week 4, model blend-elo-qb-v1-through-2022-ae5b8b5e1ea1
+PASS push-configured: 0 devices subscribed
+FAIL test-alert: delivered 0 of 0
+smoke: FAIL (1 failed)
+ok   --push with no device: exit 1
+ok   --push with no device: FAIL test-alert
+ok   no base URL: exit 2
+ok   no token: exit 2
+smoke-proof: PASS
