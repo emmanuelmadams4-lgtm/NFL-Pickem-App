@@ -1,0 +1,10 @@
+dedb762 PASS g1 pytest exit=0 :: 1340 passed in 491.82s (0:08:11) 
+dedb762 PASS g1 ruff exit=0 :: All checks passed! 
+dedb762 PASS g1 genapi exit=0 :: no drift 
+dedb762 PASS g1 typecheck exit=0 :: 
+dedb762 PASS g1 e2e exit=0 ::   ✓  155 e2e/restyle.spec.ts:379:7 › G4 stale weather with no logged error never claims the source is down (953ms)   205 passed (7.2m) 
+dedb762 PASS g2 pytest exit=0 :: 1340 passed in 391.24s (0:06:31) 
+dedb762 PASS g2 ruff exit=0 :: All checks passed! 
+dedb762 PASS g2 genapi exit=0 :: no drift 
+dedb762 PASS g2 typecheck exit=0 :: 
+dedb762 FAIL g2 e2e exit=1 :: npm error command failed npm error command sh -c playwright test 

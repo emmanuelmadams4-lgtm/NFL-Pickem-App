@@ -390,14 +390,18 @@ for (const width of [393, 320]) {
     const f = await fake(page, live, { status: "scheduled", kickoff_utc: new Date(T0 + 60_000).toISOString(), time_tbd: false, locked: false, ...alerts }, WORST);
     await page.unroute("**/api/{weeks,games}/**");
     await page.route("**/api/{weeks,games}/**", async (route) => {
-      const res = await route.fetch();
-      const body = await res.json();
-      for (const g of body.games ?? [body]) {
-        if (g.game_id !== WORST) continue;
-        Object.assign(g, f.game);
-        if (g.prediction) Object.assign(g.prediction, { upset_flags: ["Stats model and market differ"], change_note: "Changed: the line moved two points toward MIA since Tuesday and the BUF quarterback is out" });
+      try {
+        const res = await route.fetch();
+        const body = await res.json();
+        for (const g of body.games ?? [body]) {
+          if (g.game_id !== WORST) continue;
+          Object.assign(g, f.game);
+          if (g.prediction) Object.assign(g.prediction, { upset_flags: ["Stats model and market differ"], change_note: "Changed: the line moved two points toward MIA since Tuesday and the BUF quarterback is out" });
+        }
+        await route.fulfill({ response: res, json: body });
+      } catch {
+        // a request still in flight when the test ends: the page is gone, nothing to answer
       }
-      await route.fulfill({ response: res, json: body });
     });
     await page.goto("/");
     const c = card(page, "BUF", "MIA");
