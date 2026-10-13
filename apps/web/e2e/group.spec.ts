@@ -256,6 +256,33 @@ test("E2 a 413 and a 500 get their own plain messages, and a retry after a 500 w
   await expect(page.getByTestId("upload-error")).toHaveCount(0);
 });
 
+test("E4 a rejected token signs the owner out, on an upload and on a read", async ({ page }) => {
+  await page.route("**/api/group/import*", (route) => route.fulfill({ status: 401, json: { detail: "Invalid token" } }));
+  await open(page, 4);
+  await chooser(page).setInputFiles(csvFile("a.csv", "x"));
+  await sendButton(page).click();
+  await expect(page.getByText("Your token was rejected by the server. Sign in again.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+});
+
+test("E5 an error with no body, or with text that is not ours to show, gets a fixed message", async ({ page }) => {
+  let reply: { status: number; json?: unknown; body?: string } = { status: 502, body: "" };
+  await page.route("**/api/group/import*", (route) => route.fulfill(reply));
+  await open(page, 4);
+  await chooser(page).setInputFiles(csvFile("a.csv", "x"));
+  await sendButton(page).click();
+  await expect(page.getByTestId("upload-error")).toHaveText("Upload failed (HTTP 502). Try again.");
+  reply = { status: 403, json: { detail: "Pat Example is not allowed" } }; // server text is shown for a 422 only
+  await sendButton(page).click();
+  await expect(page.getByTestId("upload-error")).toHaveText("The server could not read this file.");
+  reply = { status: 422, json: { detail: [{ loc: ["query", "season"], msg: "bad", type: "x" }] } };
+  await sendButton(page).click();
+  await expect(page.getByTestId("upload-error")).toHaveText("The server could not read this file.");
+  reply = { status: 422, json: { detail: "line 2: pick is invalid" } };
+  await sendButton(page).click();
+  await expect(page.getByTestId("upload-error")).toHaveText("line 2: pick is invalid");
+});
+
 test("E3 a file over the 1,000,000 byte cap is refused on the page without being sent", async ({ page }) => {
   let sent = 0;
   await page.route("**/api/group/import*", (route) => {

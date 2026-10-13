@@ -1,6 +1,6 @@
 import type { GroupStandings } from "@nflpi/shared";
 import { EmptyState, ErrorState, Section, Skeleton } from "@/components/ui";
-import type { Load } from "@/lib/group";
+import type { Load } from "@/components/group/data";
 
 export function Standings({ season, week, state, onRetry }: { season: number; week: number; state: Load<GroupStandings>; onRetry: () => void }) {
   return (

@@ -1,7 +1,7 @@
 import type { GroupShares, Week } from "@nflpi/shared";
 import { Card, Chip, EmptyState, ErrorState, Section, Skeleton } from "@/components/ui";
 import { dateTime, kickoffWhen } from "@/lib/fmt";
-import { shareLine, type Load } from "@/lib/group";
+import { shareLine, type Load } from "@/components/group/data";
 
 type Game = GroupShares["games"][number];
 type Side = Game["away"];

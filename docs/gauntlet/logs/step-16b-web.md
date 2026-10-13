@@ -70,6 +70,14 @@ Executable gate: `apps/web/e2e/group.spec.ts` (clauses below, one test each; it 
 | R2 | 32 members and a 70-character name without spaces fit 375px with no sideways scroll, and the last row clears the tab bar | R2 |
 | X1b | "spread" appears nowhere in the body text or markup, in the confirm step either | X1 |
 
+**Amendments from the security review (Dwight, round 1: PASS, no critical; 4 medium taken):**
+
+| ID | Clause | Check |
+|---|---|---|
+| E4 | A 401 on the upload or on a group read signs out like every other request ("Your token was rejected by the server. Sign in again.") | E4 |
+| E5 | An error with an empty body shows "Upload failed (HTTP nnn). Try again."; server text is shown only for a 422 whose detail is a string; every other status or a list-form detail shows "The server could not read this file." | E5 |
+| E6 | A timeout (60 s) says there was no answer, that the file may have been saved, and reloads the tables. **No browser check** (it needs a 60 s wait); carried gap | none |
+
 Advisories carried, not built: collapsing the standings to a top ten; showing the detected file kind before saving (the server cannot tell without saving); per-member "x of 32" wording; explaining a null rank beyond the en dash; picks above standings on the page (the owner's order is kept: upload, standings, picks).
 
 Out of the gate on purpose: Dwight's security review of the form and name rendering; design critics; repo gate (§ 5).

@@ -4,12 +4,14 @@ import { useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import type { GroupImportResult } from "@nflpi/shared";
 import { Button, Section, SelectField } from "@/components/ui";
-import { useApi } from "@/lib/api";
-import { MAX_UPLOAD_BYTES, TOO_LARGE_MESSAGE, uploadErrorMessage, uploadResultText } from "@/lib/group";
+import { ApiError } from "@nflpi/shared";
+import { useApi, useSession } from "@/lib/api";
+import { MAX_UPLOAD_BYTES, TOO_LARGE_MESSAGE, uploadErrorMessage, uploadResultText } from "@/components/group/data";
 import { useMeta } from "@/lib/queries";
 
 export function UploadPanel({ season, week, onSaved }: { season: number; week: number; onSaved: () => void }) {
   const api = useApi();
+  const { signOut } = useSession();
   const seasons = useMeta().data?.seasons ?? [season];
   const input = useRef<HTMLInputElement>(null);
   const sending = useRef(false);
@@ -52,7 +54,14 @@ export function UploadPanel({ season, week, onSaved }: { season: number; week: n
       setResult(saved);
       onSaved();
     } catch (e) {
-      setError(uploadErrorMessage(e));
+      if (e instanceof ApiError && e.status === 401) {
+        signOut("Your token was rejected by the server. Sign in again.");
+      } else if (e instanceof DOMException && e.name === "TimeoutError") {
+        setError(uploadErrorMessage(e));
+        onSaved();
+      } else {
+        setError(uploadErrorMessage(e));
+      }
     } finally {
       sending.current = false;
       setLoading(false);

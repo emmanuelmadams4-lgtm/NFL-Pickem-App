@@ -2,7 +2,7 @@
 
 import { PageHead } from "@/components/ui";
 import { WeekPicker } from "@/components/pickers";
-import { useGroupData } from "@/lib/group";
+import { useGroupData } from "@/components/group/data";
 import { useWeek } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
 import { UploadPanel } from "@/components/group/upload-panel";
