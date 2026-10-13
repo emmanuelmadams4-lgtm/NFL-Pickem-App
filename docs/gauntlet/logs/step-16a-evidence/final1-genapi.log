@@ -1,0 +1,11 @@
+
+> gen:api
+> cd backend && uv run python -c "import json; from nflpi.api.main import app; print(json.dumps(app.openapi(), indent=1))" > ../packages/shared/openapi.json && cd .. && npx --yes openapi-typescript@7.13.0 packages/shared/openapi.json -o packages/shared/src/api-types.ts
+
+(node:60153) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✨ openapi-typescript 7.13.0
+(node:60242) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+🚀 packages/shared/openapi.json → packages/shared/src/api-types.ts [71.5ms]
+no drift

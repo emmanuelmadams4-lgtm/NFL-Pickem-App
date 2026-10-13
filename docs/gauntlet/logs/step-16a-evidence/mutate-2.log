@@ -1,0 +1,5 @@
+KILLED     8 N3     importer.py: 'header[-1] == "Total_Pts"' -> 'True'
+KILLED    21 N5     importer.py: 'normalized = unicodedata.normalize("NFC", cell)' -> 'normalized = unicodedata.normalize("NFC", cell).replace("\\t"'
+KILLED    55 P5     importer.py: '        if confidence is not None:\n            raise GroupIm' -> '        if False:\n            raise GroupImportError(f"line '
+KILLED   105 W2     importer.py: 'seen_members.add(member)' -> 'seen_members.add(cells[1])'
+mutants 4, survived 0

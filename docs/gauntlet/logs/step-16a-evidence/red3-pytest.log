@@ -1,0 +1,74 @@
+>           raise GroupImportError("database import failed") from exc
+E           nflpi.group.importer.GroupImportError: database import failed
+E           psycopg.OperationalError: sending query and params failed: number of parameters must be between 0 and 65535
+E           sqlalchemy.exc.OperationalError: (psycopg.OperationalError) sending query and params failed: number of parameters must be between 0 and 65
+>           raise GroupImportError("database import failed") from exc
+E           nflpi.group.importer.GroupImportError: database import failed
+FAILED tests/test_group.py::test_p4_a_matchup_that_is_not_one_game_of_that_week_is_refused[1,Ann A,1,Buf,3.5,Mia,Buf-1,Ann A,1,Buf,3.5,Dal,Buf]
+FAILED tests/test_group.py::test_p4_a_matchup_that_is_not_one_game_of_that_week_is_refused[1,Ann A,1,Buf,3.5,Mia,Buf-1,Ann A,1,Xyz,3.5,Mia,Mia]
+FAILED tests/test_group.py::test_p4_a_matchup_that_is_not_one_game_of_that_week_is_refused[1,Ann A,1,Buf,3.5,Mia,Buf-1,Ann A,1,Buf,3.5,Buf,Buf]
+FAILED tests/test_group.py::test_p4_a_matchup_that_is_not_one_game_of_that_week_is_refused[2,Ann A,2,Buf,10.0,NE,Buf-1,Ann A,2,Buf,10.0,NE,Buf]
+FAILED tests/test_group.py::test_p4_a_matchup_that_is_not_one_game_of_that_week_is_refused[1,Ann A,1,Buf,3.5,Mia,Buf-1,Ann A,1, Buf,3.5,Mia,Buf]
+FAILED tests/test_group.py::test_p4_two_games_with_the_same_teams_in_one_week_are_not_exactly_one_game
+FAILED tests/test_group.py::test_p4_games_of_another_season_never_match - ass...
+FAILED tests/test_group.py::test_p5_pick_side_and_confidence_must_agree[Buf,Favorite,3-Mia,Favorite,3-pick]
+FAILED tests/test_group.py::test_p5_pick_side_and_confidence_must_agree[NYJ,Underdog,1-NE,Underdog,1-pick]
+FAILED tests/test_group.py::test_p5_pick_side_and_confidence_must_agree[Buf,Favorite,3-KC,Favorite,3-pick]
+FAILED tests/test_group.py::test_p5_pick_side_and_confidence_must_agree[Buf,Favorite,3-Buf,favorite,3-side]
+FAILED tests/test_group.py::test_p5_pick_side_and_confidence_must_agree[Buf,Favorite,3-Buf,,3-side]
+FAILED tests/test_group.py::test_p5_pick_side_and_confidence_must_agree[Mia,,none,,5-Mia,Buf,none,,5-pick]
+FAILED tests/test_group.py::test_p5_pick_side_and_confidence_must_agree[Mia,,none,,5-Mia,,none,2,5-confidence]
+FAILED tests/test_group.py::test_p5_pick_side_and_confidence_must_agree[Buf,Favorite,3-,Favorite,3-pick]
+FAILED tests/test_group.py::test_p5_pick_side_and_confidence_must_agree[Buf,Favorite,3-Buf,Favorite,-confidence]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[1,Ann A,1,Buf-0,Ann A,1,Buf-week]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[1,Ann A,1,Buf-23,Ann A,1,Buf-week]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[1,Ann A,1,Buf-1,Ann A,0,Buf-game]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[1,Ann A,1,Buf-1,Ann A,17,Buf-game]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[Buf,Favorite,3,5-Buf,Favorite,0,5-confidence]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[Buf,Favorite,3,5-Buf,Favorite,17,5-confidence]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[Buf,Favorite,3,5-Buf,Favorite,3,137-total]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[Buf,3.5,Mia,Buf-Buf,100,Mia,Buf-spread]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[Buf,3.5,Mia,Buf-Buf,-3.5,Mia,Buf-spread]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[Buf,3.5,Mia,Buf-Buf,3.55,Mia,Buf-spread]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[Buf,3.5,Mia,Buf-Buf,3.,Mia,Buf-spread]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[Buf,3.5,Mia,Buf-Buf,,Mia,Buf-spread]
+FAILED tests/test_group.py::test_p6_numbers_outside_their_bounds_are_refused[Buf,3.5,Mia,Buf-Buf,nan,Mia,Buf-spread]
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only[+1]
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only[1.0]
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only[1_0]
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only[ 1]
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only[1 ]
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only[\u0661]
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only[] - a...
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only[one]
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only[0x1]
+FAILED tests/test_group.py::test_p7_a_whole_number_is_plain_digits_only["1\n"]
+FAILED tests/test_group.py::test_p8_one_row_per_member_and_game - assert not ...
+FAILED tests/test_group.py::test_p9_a_member_uses_each_confidence_number_once_a_week
+FAILED tests/test_group.py::test_n4_a_row_with_the_wrong_number_of_cells_is_refused_with_its_line[1,Ann A,1,Buf,3.5,Mia,Buf,Favorite,3,5,9]
+FAILED tests/test_group.py::test_n4_a_row_with_the_wrong_number_of_cells_is_refused_with_its_line[1,Ann A,1,Buf,3.5,Mia,Buf,Favorite,3]
+FAILED tests/test_group.py::test_n4_a_row_with_the_wrong_number_of_cells_is_refused_with_its_line[]
+FAILED tests/test_group.py::test_n4_a_file_with_no_rows_is_refused - assert n...
+FAILED tests/test_group.py::test_n5_names_are_cleaned_before_they_are_stored[Jose\u0301-Jos\xe9]
+FAILED tests/test_group.py::test_n6_a_name_that_is_empty_or_over_64_characters_after_cleaning_is_refused[]
+FAILED tests/test_group.py::test_n6_a_name_that_is_empty_or_over_64_characters_after_cleaning_is_refused[   ]
+FAILED tests/test_group.py::test_n6_a_name_that_is_empty_or_over_64_characters_after_cleaning_is_refused[\x00\u200b]
+FAILED tests/test_group.py::test_n6_a_name_that_is_empty_or_over_64_characters_after_cleaning_is_refused[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+FAILED tests/test_group.py::test_n7_a_bad_row_refuses_the_whole_file_and_keeps_what_was_stored
+FAILED tests/test_group.py::test_n8_an_error_names_the_line_and_never_echoes_a_cell_or_a_member_name
+FAILED tests/test_group.py::test_n10_imported_at_is_the_time_of_the_last_import_that_wrote_the_row
+FAILED tests/test_group.py::test_n12_a_database_failure_is_not_reported_as_a_bad_file_and_carries_no_stored_values
+FAILED tests/test_group.py::test_q4_a_tie_with_no_rank_goes_by_name_ignoring_letter_case
+FAILED tests/test_group.py::test_n11_a_big_valid_file_under_the_cap_is_stored_whole
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows0-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows1-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows2-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows3-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows4-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows5-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows6-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows7-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows8-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows9-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Conf
+FAILED tests/test_group.py::test_the_first_problem_in_the_frozen_order_is_the_one_reported[rows10-Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Con
+67 failed, 65 passed in 5.90s
