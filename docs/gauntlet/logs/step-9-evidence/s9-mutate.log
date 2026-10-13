@@ -1,5 +1,5 @@
 CAUGHT   S1 home/road swapped
-SURVIVED  S1 zero total allowed
+CAUGHT   S1 zero total allowed
 CAUGHT   S1 spread equal to total refused
 CAUGHT   S1 spread larger than total allowed
 CAUGHT   S1 non-finite spread allowed
@@ -14,7 +14,7 @@ CAUGHT   S2 pair rule on one half
 CAUGHT   S2 pair rule rounds both up
 CAUGHT   S2 pair rule rounds the home side down
 CAUGHT   S4 first n games, not last n
-SURVIVED  S4 unfinished game counted
+CAUGHT   S4 unfinished game counted
 CAUGHT   S4 missing road score counted
 CAUGHT   S4 points for and against swapped
 CAUGHT   S4 window is 8
@@ -69,4 +69,4 @@ CAUGHT   S13 slots are all games
 CAUGHT   S13 season rows use every game
 CAUGHT   S14 unpredicted games kept
 CAUGHT   S15 reads the environment
-69 of 71 caught
+71 of 71 caught
