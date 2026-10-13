@@ -186,12 +186,17 @@ test("A3 a push that reaches the phone shows the alert, and tapping it opens the
   await cdp.send("ServiceWorker.enable");
   const registrationId = await running;
   // The browser's debug channel now and then drops a push without an error or any worker event (about 1 run in 10
-  // here, measured). So the push is sent again while nothing has been shown. The last check is exact: a push that
-  // arrived twice would fail it.
-  await expect(async () => {
-    if ((await shown()).length === 0) await cdp.send("ServiceWorker.deliverPushMessage", { origin: new URL(page.url()).origin, registrationId, data: JSON.stringify(alert) });
-    await expect.poll(shown, { timeout: 2_000 }).not.toEqual([]);
-  }, "a push reached the worker").toPass({ timeout: 15_000 });
+  // here). So the push is sent again while nothing has been shown: at most twice, and each re-send is written on the
+  // test report. The last check is exact: a push that arrived twice would fail it. A worker that drops real pushes
+  // is not ruled out by this test; that needs the real iPhone check.
+  const deliver = () => cdp.send("ServiceWorker.deliverPushMessage", { origin: new URL(page.url()).origin, registrationId, data: JSON.stringify(alert) });
+  const arrived = () => expect.poll(shown, { timeout: 3_000 }).not.toEqual([]).then(() => true, () => false);
+  await deliver();
+  for (let resend = 1; resend <= 2 && !(await arrived()); resend++) {
+    test.info().annotations.push({ type: "push re-sent", description: `re-send ${resend} of 2: the debug channel dropped the push` });
+    await deliver();
+  }
+  await expect.poll(shown, { message: "a push reached the worker" }).not.toEqual([]);
   expect(await shown(), "the worker showed the alert, once").toEqual([alert]);
 
   // A stand-in for the tap: the browser gives no way to tap a real notification. A made-up event cannot focus a

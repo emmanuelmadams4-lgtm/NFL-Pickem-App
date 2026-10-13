@@ -193,3 +193,40 @@ Final gate on `e3b049d` (the last commit that changes code, tests or screenshots
 `final-a` is not a product failure and not a flaky test: the Mac went into low-power sleep at 21:43:05 and woke at 21:57:49 local time (`pmset -g log`: "Entering Sleep state due to 'Low Power Sleep' ... Charge:1%"), 14.7 minutes, in the middle of E11 light, which then took 14.9 minutes and lost its page. `caffeinate -i` stops idle sleep, not a sleep forced by an empty battery. The machine was on mains power for `final-b` and `final-c`. Logs: `step-7-evidence/final-{a,b,c}-*.log`.
 
 Lane guard on `e3b049d`: `python3 ~/.claude/bin/lane-guard.py check ~/.claude/plans/nfl-pickem-lanes/lanes.md alerts 696c64f --repo .` printed `OK`.
+
+### Review round 1: security PASS, fresh critic FAIL
+
+Commit names in sections 1 to 5 above are from before the branch was moved onto the new main `d88d74e` (step 8a landed under it; the integrator asked for it; no conflict). The same commits now have new names; `git log d88d74e..lane/alerts` lists them in the same order.
+
+* **Security review (Dwight, read-only, at the old `6e777ae`): PASS, no CRITICAL, no HIGH**; 5 MEDIUM, 6 LOW; step 6 follow-up R7 confirmed fixed by P23.
+* **Fresh critic (Angela, new, three gate runs `critic5-angela-{a,b,c}`): FAIL.** Runs a and c green (126 / 100 passed), run b red on E4. Blocking: B1 the gate went red; B2 a second reminder on the same game day once the first game is final (she reproduced it); B3 the step 6 follow-up fix in `sync.ts` threw away other games' stored picks when the retry was refused too. She upheld my design rulings except critic 2's point 3 in part (a forgotten device should be told what to do), and found my proof for point 6 wrong (the accessibility test never renders the "Alerts off" chip).
+* **Integrator's rulings:** all three blockers stand; E4: find the cause, no wider timeout; also fix the exact 7 point move and record-before-send; a third FAIL goes to him.
+
+| Finding | Red test first | Fix | Proof |
+|---|---|---|---|
+| B2 second reminder | `test_n2_no_second_reminder_once_the_days_first_game_is_over` | work order 7 (`wo-7.md`; gpt-6-sol, medium; **two tries**) | backend 203 passed (`wo7-pytest.log`) |
+| Security S1a: any `https://` address could be stored, so a leaked token could make the server call private addresses | 10 refused and 4 accepted addresses, `test_s1a_*` | work order 7: only the four real push services, no port, no user info | same |
+| Security S2: a failed send logged too little | `test_s2_*` | work order 7: the exception's class name, never the address | same |
+| Critic S4: an exact 7 point move gave no alert (0.57 − 0.50 is 0.0699… in floating point) | `test_n1_an_exact_seven_point_move_*`, `test_n1_a_six_and_a_half_point_move_*` | work order 7: the difference is rounded to 4 places | same |
+| Security S3 / critic S1: an alert was recorded as sent before it was sent | `test_n3_an_alert_that_reached_no_device_is_not_recorded_as_sent` | work order 7, try 2: recorded only when a device got it, as reminders already did | same |
+| Design critic 2 point 3, as ruled by the critic | `test_n6_a_device_the_push_service_forgot_is_told_what_to_do` | work order 7: "…Turn alerts off and on again." | same |
+| B3 pick queue | P23b (`red-wo8.log`) | work order 8 (`wo-8.md`; gpt-6-sol, high, try 1): a refused write drops only the stale copy of the changed game | P22, P23, P23b green (`red-wo8b.log`) |
+| Integrator's condition on B3's last resort | P23c (`red-wo8b.log`) | work order 8b (`wo-8b.md`; gpt-6-luna, medium, try 1): a clear notice on screen | see section 5, round 2 |
+| Critic S5: my A3 re-send had no cap | none (a test change) | at most two re-sends, each written on the test report | alerts file 10 times: 90 of 90 (`alerts-loop2.log`, load 15) |
+
+Work order 7 try 1 failed through **my** spec, not the builder: I wrote "whatever their status", and a postponed game became the day's first. An existing test caught it (`test_postponed_game_keeps_its_status_and_gets_no_reminder_or_pick_lock`). Try 2 excludes postponed games.
+
+**The integrator's ruling on B3's last resort (2026-10-13):** when storage refuses every write and still holds an older pick for the same game, the stored queue is removed, because sending a wrong pick is worse than losing the waiting ones; accepted on the condition that he is told on screen (work order 8b, test P23c).
+
+**B1, the red gate (E4).** The cause is the machine, not the test and not the page. Evidence `e4-compare.log`: the committed E4 and a rewrite of mine that fakes only the date, 15 runs each, interleaved, at load average 30 to 40: 6 of 15 and 8 of 15 passed, and 14 of the 16 failures are the plain wait for the board (`step2.spec.ts:53`, 5 s), before any clock code. At load 62 the test server did not start within 180 s. The load came mostly from another project's crash-looping containers, which the integrator stopped with the owner's yes, plus six lanes running tests. My first explanation (the test clock also drives the data library's timers) was **wrong**; I restored the committed test. Rule since then (integrator): one machine-wide lock `res:gate` for any full test run, the load is recorded beside each run, no wider timeouts.
+
+**Mistakes of mine in this round, for the record:** (1) eight CPU-load processes I started for an E4 loop were not stopped by my script and ran about 30 minutes (`e4-loop.log` is from that run; it proves nothing about E4); an alerts loop that ran under them was thrown away. (2) One P23 run tested a web build from before the change, because the test server does not rebuild; rerun after a build. (3) One short P22/P23 run started although my `res:gate` lock had been refused (a chaining error in my command); its result was thrown away.
+
+**Numbers in section 3 without a saved log** (the critic is right): "2 of 6 runs", "1 of 10 still red" and "15 of 15" for E4 were read off my terminal and not kept. `alerts-loop.log` (20 of 20) is kept. The E4 "15 of 15" is also overtaken by `e4-compare.log`.
+
+**Carried, not built in this step, with the reason:**
+* A cap on stored devices (security S1b): with the allowlist only real push services can be stored; one user, a handful of devices.
+* Two worker processes in the same minute could both send a reminder (critic S2): needs a database constraint or lock; today one worker runs.
+* On a server key change the old subscription is removed before the new one exists; if the new one then fails, alerts stay off until he opens Settings (security S4, critic S3). A browser cannot hold both, so the order cannot be swapped. On the real iPhone checklist.
+* A dropped alert is retried only if the same change is reported again; the prediction engine reports a change once. A real retry needs a queue (models and a migration: lane stars' files).
+* Security lows S5 to S10 and the critic's lows (address in the unsubscribe query string, token in `curl`'s arguments in `smoke.sh`, "Delivered to 2 devices" counts all devices, both QBs changing names one team, the "Alerts off" chip has no accessibility check).

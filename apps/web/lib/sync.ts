@@ -75,6 +75,7 @@ type Queue = Record<string, string | null>;
 
 let snapshot: Queue | null = null;
 let volatileQueue: Queue | null = null;
+let storedQueueDropped = false;
 const listeners = new Set<() => void>();
 let listeningForStorage = false;
 
@@ -110,6 +111,7 @@ function readQueue(): Queue {
 
 function writeQueue(q: Queue): boolean {
   listenForStorage();
+  storedQueueDropped = false;
   const value = JSON.stringify(q);
   const stored = safeSet(QUEUE_KEY, value);
   if (!stored) {
@@ -118,13 +120,20 @@ function writeQueue(q: Queue): boolean {
       !Object.prototype.hasOwnProperty.call(q, gameId) || q[gameId] !== team;
     const fallback = Object.fromEntries(Object.entries(previous).filter(([gameId, team]) => !stale(gameId, team))) as Queue;
     if (Object.keys(fallback).length !== Object.keys(previous).length && !safeSet(QUEUE_KEY, JSON.stringify(fallback))) {
-      if (Object.entries(readStoredQueue()).some(([gameId, team]) => stale(gameId, team))) safeRemove(QUEUE_KEY);
+      if (Object.entries(readStoredQueue()).some(([gameId, team]) => stale(gameId, team))) {
+        storedQueueDropped = true;
+        safeRemove(QUEUE_KEY);
+      }
     }
   }
   snapshot = q;
   volatileQueue = stored ? null : q;
   listeners.forEach((l) => l());
   return stored;
+}
+
+export function lastQueueWriteDroppedStored(): boolean {
+  return storedQueueDropped;
 }
 
 export function queuePick(gameId: string, team: string | null): boolean {
