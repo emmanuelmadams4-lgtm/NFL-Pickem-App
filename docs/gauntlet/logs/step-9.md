@@ -104,3 +104,36 @@ A positive gain would mean the candidate was closer than the line. **Nothing shi
 | `.copy()` after `add_features`, which already returns a new frame | Remove dead code | same | S5 and S6 tests still green |
 
 `JEV: model:scores:wo-3 -> luna 0.86 (sure), effort medium 0.37 (unsure)`; the coordinator took `low` from the skill's effort table for cleanup, because the full test file, the mutation pass and the gate all check it. Commit `b190371`. After the cleanup the real-data report is byte-identical to the one before it (`cmp` on `s9-report.json`). No change needed, with reasons: `summary` stays one function (splitting the method loop from the comparison loop would add a second pass over the same arrays); `BLEND_FEATURES` keeps its frozen name (carried). Left as findings: section 6.
+
+## 5. VERIFICATION
+Takeover note: the first lead stopped on a usage limit at mutation 69 of 71. A second coordinator (hive temp "Meredith") finished the step. Rebased on `main@eed7c61` (13 commits, no conflicts, no owned file touched by main); every number below is on the rebased code.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Missing tests (zero total line, a scheduled row that has scores) | added, `f8fe4f2` (WO-4, Codex `gpt-6-luna`) | `wo-4.md` |
+| Critic 1 (new `ecc:code-reviewer`) on `f887870` | FAIL S11 (a "first winner" change survived), FAIL S15 (substring denylist) | fixed in WO-5 `2f89a26` (a direct `pick_winner` test, S15 as an import allowlist plus name ban) |
+| Critic 2 (new) on `3c27f4d` | FAIL S4 (default window 16 not pinned), S11 (total tolerance), S14 (stats-only missing value), S15 (more access routes) | fixed in WO-6 `0e3d910` |
+| Critic 3 (new) on `f310796` | FAIL S4 (a playoff game in the form history), S11 (`total_mean >= 0` -> `total_ci[1] >= 0` survived) | god's ruling: one last round, two tests only, then a delta critic; fixed in WO-7 `91d166f` |
+| Critic 4 (new, delta brief) on `1367616` | PASS: production code unchanged since `0e3d910`; the S4 and S11 tests each fail on the described wrong change; gate green | its own report (reviews folder `s9-critic4.md`) |
+| Mutation pass | 82 of 82 caught on `91d166f` (was 69 of 71) | `s9-mutate.log` |
+| Gate, twice by the coordinator on `91d166f` | 429 passed, ruff clean, `alembic upgrade` and `alembic check` clean, `npm run gen:api` no drift | `s9-final1-gate.log`, `s9-final2-gate.log` |
+| Gate by critic 4 on `1367616` (only evidence logs differ from `91d166f`) | 429 passed, same lines | `s9-critic4-*.log` |
+| Security (Dwight, hive agent `dwight-mv5mkpow`) | PASS at `f887870`, no CRITICAL, HIGH or MEDIUM; both modules import only dataclasses, math, numpy, pandas, zoneinfo and project elo/features/metrics; no file, network, database, env or subprocess access; no secrets; later commits changed tests and evidence only | his message to the coordinator |
+| `lane-guard.py check lanes.md scores main` | OK | run on `1367616` |
+| Jev job 4 | `JEV: passed -> 0.49 (unsure)` on a first fact list that said "test failed" for tests that correctly catch a wrong change; the facts were reworded (a boundary case, not a pass-through) and re-asked: `JEV: passed -> 0.90` (sure, at or above 0.8) | `$TMPDIR` fact files; both answers recorded here |
+
+Result unchanged by all of this: nothing ships; the line-implied score stays the answer (`scores.tiebreak_score`). **Ship rule used:** the stricter one (god's ruling): a candidate must win on team score AND its total-points gain must not be worse. Under the looser rule (team score only) nothing ships either: the stats model is wholly below zero and the blend's interval (-0.051 to +0.027) includes zero.
+
+EFFORT: VERIFICATION high (critics, one gate at a time). STRIKES: none. CLIMBS: none (all Codex work on `gpt-6-luna`, `gpt-6-sol` for WO-1).
+
+## 6. CARRIED ITEMS AND LANDING
+**By the final reviewer's ruling (god, 2026-10-13): any wrong change that survives outside the frozen clauses, and the items below, are advisory and carried. They are not defects of this step.**
+* S15 ban list is a name list, not exhaustive: add `fromfile`, `memmap`, `ExcelFile`, `HDFStore`, `eval`, `exec`, `__import__`, `compile`.
+* S12 weekday cases: add Tuesday, Wednesday and Friday as "not a slot".
+* From critic 1 and the silent-failure review: `ScoreModel.fit` accepts features+1 rows and `lstsq` hides collinear columns (F6); infinite values accepted in `fit` (F7); a season with no test rows gives `n=0` with null numbers (F5); `is_tiebreak_slot` reads a naive kickoff in the machine's zone (F9, the games table stores aware times); `features.qb_changes` turns a missing QB into 0.0 (F10, lane model's file, for the integrator); bool inputs, `entry(nan)` raises, `games <= 0` (F12); `tiebreak_slots` carries its own `wins` (F13); the `BLEND_FEATURES` name clashes in meaning with another module's name.
+* From Dwight: `wins` gates on the team interval only and total on the mean (this is the frozen S11 rule); `excluded` is one total, not per season or cause; a final game with no score is skipped in form history without a count; default Elo settings were fixed before the test seasons; `s9-mutate.py` writes a mutant just outside its try/finally (LOW).
+* Statistics, said plainly: two candidates tested against one benchmark with no multiplicity correction; the benchmark is the closing line (the owner does not have it mid-week); the average miss is about 7 points a team and 10 on the total for every method, so a typed score is a best guess, never a "lock".
+* Critic 2 and 3 non-failing notes: dropping `game_id` from the kickoff sort key is not pinned (the fixture has no tied kickoffs).
+* Next step if wired to an API route or the display: send that commit for its own security review (Dwight's request).
+
+**Landing:** not done here. The step is landing-ready on `lane/scores`; god integrates (no push, PR or merge from this lane). Wiring the score into the API, the sheet or the screen is a later step (nothing calls these modules yet).
