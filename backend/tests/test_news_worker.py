@@ -272,7 +272,8 @@ def test_w7_each_wake_skipped_because_a_run_is_still_alive_is_warned_about(monke
 
 
 def test_w9_the_sweep_also_runs_on_every_wake_not_only_at_start_up(session, monkeypatch):
-    session.add(IngestionRun(source="espn", dataset="news:espn", started_at=T0 - timedelta(minutes=30), status="running"))
+    started = T0 - timedelta(minutes=30)
+    session.add(IngestionRun(source="espn", dataset="news:espn", started_at=started, status="running"))
     session.commit()
     monkeypatch.setattr(news_worker, "news_step", lambda *a, **k: None)
     monkeypatch.setattr(news_worker, "sweep_stale_runs", lambda s, n: calls.append(1) or 0)
