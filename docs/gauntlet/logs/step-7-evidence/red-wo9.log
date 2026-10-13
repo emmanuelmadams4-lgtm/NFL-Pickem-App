@@ -1,0 +1,10 @@
+E       AssertionError: assert ('alert pred:2023_04_MIA_LV:qb:' in 'WARNING  nflpi.notify.push:push.py:94 web push failed for push.example.test (503)\n')
+E        +  where 'WARNING  nflpi.notify.push:push.py:94 web push failed for push.example.test (503)\n' = <_pytest.logging.LogCaptureFixture object at 0x115e651d0>.text
+WARNING  nflpi.notify.push:push.py:94 web push failed for push.example.test (503)
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://evil.com\\.push.apple.com/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://169.254.169.254\\.push.apple.com/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://127.0.0.1\\.fcm.googleapis.com/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://web.push.apple.com/a\tb]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://web.push.apple.com/abc\n]
+FAILED tests/test_alerts.py::test_n3_an_alert_that_reached_no_device_says_so_in_the_log
+6 failed, 33 passed in 9.17s

@@ -340,6 +340,15 @@ KEYS = {"p256dh": "B" * 87, "auth": "a" * 22}
     "https://web.push.apple.com:8443/x",
     "https://user@web.push.apple.com/x",
     "https://web.push.apple.com@127.0.0.1/x",
+    # Security delta: the address parser and the HTTP library disagree about a backslash; the library would connect
+    # to the part before it. Whitespace and control characters are refused for the same reason.
+    "https://evil.com\\.push.apple.com/x",
+    "https://169.254.169.254\\.push.apple.com/x",
+    "https://127.0.0.1\\.fcm.googleapis.com/x",
+    "https://evil.com\\@push.apple.com/x",
+    "https://web.push.apple.com/a\tb",
+    "https://web.push.apple.com/abc\n",
+    "https://WEB.push.apple.com /x",
 ])
 def test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service(session, client, endpoint):
     """Security S1a: the server sends to the stored address, so only real push services may be stored."""
@@ -356,6 +365,12 @@ def test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service(session, cl
 def test_s1a_subscribe_accepts_the_real_push_services(session, client, endpoint):
     assert client.post("/api/push/subscribe", json={"endpoint": endpoint, "keys": KEYS}).status_code == 204
     assert subscriptions(session) == 1
+    # The library that sends the alert connects to the same host the check approved.
+    from urllib.parse import urlsplit
+
+    from urllib3.util import parse_url
+
+    assert parse_url(endpoint).host == urlsplit(endpoint).hostname
 
 
 def test_s2_an_unexpected_send_failure_logs_its_kind_and_never_the_address(session, pushes, monkeypatch, caplog):  # noqa: F811
@@ -394,3 +409,17 @@ def test_n3_an_alert_that_reached_no_device_is_not_recorded_as_sent(loaded, push
     assert push.alert_prediction_changes(loaded, events) == 1
     assert push.alert_prediction_changes(loaded, events) == 0  # delivered once: not sent again
     assert len(pushes.calls) == 2  # the failed try and the delivered one
+
+
+def test_n3_an_alert_that_reached_no_device_says_so_in_the_log(loaded, pushes, monkeypatch, caplog):  # noqa: F811
+    """Security delta F1: nothing is retried, so the miss must at least be written down, with the alert's key."""
+    monkeypatch.setattr(get_settings(), "alert_move_threshold", 0.99)
+    subscribe(loaded)
+    game = week4_game(loaded)
+    game.home_qb = "Backup One"
+    loaded.commit()
+    events = engine.refresh_predictions(loaded, game_ids=[game.game_id])
+    pushes.fail = http_error(503)
+    with caplog.at_level("WARNING"):
+        assert push.alert_prediction_changes(loaded, events) == 0
+    assert f"alert pred:{game.game_id}:qb:" in caplog.text and "reached 0 devices" in caplog.text
