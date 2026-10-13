@@ -89,15 +89,30 @@ def test_a1_only_a_new_alert_status_on_a_star_of_an_upcoming_game_is_a_change(wo
     assert star_alerts.run(world, now) == {"immediate": 0, "summary": 0}
 
 
-def test_a1_a_status_that_moves_between_alert_statuses_is_a_new_change_each_time(world, pushes):  # noqa: F811
+def test_a1_a_status_that_moves_between_alert_statuses_is_a_new_change_each_round(world, pushes):  # noqa: F811
     now = KICKOFF - timedelta(minutes=60)
-    report(world, "W1", "Jaylen Waddle", "MIA", "Questionable")
-    report(world, "W1", "Jaylen Waddle", "MIA", "Doubtful")
-    report(world, "W1", "Jaylen Waddle", "MIA", "Questionable")
-    assert star_alerts.run(world, now)["immediate"] == 3
+    for status, expected in (("Questionable", 1), ("Doubtful", 1), ("Questionable", 1)):
+        report(world, "W1", "Jaylen Waddle", "MIA", status)
+        assert star_alerts.run(world, now)["immediate"] == expected
     assert [m["title"] for m in sent(pushes)] == ["Star questionable: Jaylen Waddle (MIA)",
                                                   "Star doubtful: Jaylen Waddle (MIA)",
                                                   "Star questionable: Jaylen Waddle (MIA)"]
+
+
+def test_a1b_changes_seen_in_one_round_collapse_to_the_newest_status(world, pushes):  # noqa: F811
+    report(world, "W1", "Jaylen Waddle", "MIA", "Questionable")
+    report(world, "W1", "Jaylen Waddle", "MIA", "Doubtful")
+    report(world, "W1", "Jaylen Waddle", "MIA", "Questionable")
+    assert star_alerts.run(world, KICKOFF - timedelta(minutes=60))["immediate"] == 1
+    assert [m["title"] for m in sent(pushes)] == ["Star questionable: Jaylen Waddle (MIA)"]
+
+
+def test_a1b_a_status_the_player_no_longer_has_is_not_alerted_or_summarised(world, pushes):  # noqa: F811
+    report(world, "W1", "Jaylen Waddle", "MIA", "Questionable", observed=MORNING - timedelta(hours=3))
+    report(world, "W1", "Jaylen Waddle", "MIA", None, observed=MORNING - timedelta(hours=1))  # cleared since
+    assert star_alerts.run(world, KICKOFF - timedelta(minutes=60)) == {"immediate": 0, "summary": 0}
+    assert star_alerts.run(world, MORNING) == {"immediate": 0, "summary": 0}
+    assert pushes.calls == []
 
 
 # A2 ---------------------------------------------------------------------------------------------------------------
@@ -475,3 +490,21 @@ def test_a8_the_name_is_cut_at_forty_characters(world, pushes):  # noqa: F811
     report(world, "W1", "x", "MIA", "Out")
     star_alerts.run(world, KICKOFF - timedelta(minutes=30))
     assert sent(pushes)[0]["title"] == "Star out: " + "N" * 40 + " (MIA)"
+
+
+def test_a3b_a_repeated_quarterback_status_is_alerted_even_when_step_7_keyed_the_first_one(world, pushes):  # noqa: F811
+    now = KICKOFF - timedelta(minutes=60)
+    report(world, "A1", "Josh Allen", "BUF", "Questionable", position="QB")
+    world.add(Notification(kind="injury", game_id=None, dedupe_key=f"inj:{SEASON}:{WEEK}:A1:Questionable", payload={}))
+    world.commit()
+    assert star_alerts.run(world, now)["immediate"] == 0  # step 7 sent that one
+    report(world, "A1", "Josh Allen", "BUF", "Out", position="QB")
+    assert star_alerts.run(world, now)["immediate"] == 1
+    report(world, "A1", "Josh Allen", "BUF", "Questionable", position="QB")  # the same status again, a new change
+    assert star_alerts.run(world, now)["immediate"] == 1
+
+
+def test_a4_the_time_to_live_is_at_least_one_second(world, pushes):  # noqa: F811
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out")
+    star_alerts.run(world, KICKOFF - timedelta(milliseconds=500))
+    assert pushes.calls[0]["ttl"] == 1
