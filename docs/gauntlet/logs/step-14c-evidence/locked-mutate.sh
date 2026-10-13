@@ -15,4 +15,4 @@ done
 echo "$(date +%H:%M:%S) holding $got; running mutation sweep"
 ( cd "$here/../../../../backend" && uv run python "$here/mutate.py" > "$here/mutate.log" 2> "$here/mutate.err" ); rc=$?
 $C -C $R --session modelc unlock $got >/dev/null 2>&1
-echo "$(date +%H:%M:%S) released $got; mutation sweep exit=$rc"; tail -3 "$here/run-$stage.err"
+echo "$(date +%H:%M:%S) released $got; mutation sweep exit=$rc"; tail -1 "$here/mutate.log"
