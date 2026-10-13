@@ -373,3 +373,20 @@ class SourceStatus(Base):
     last_error: Mapped[str | None] = mapped_column(String(200))
     credits_left: Mapped[int | None] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class QbObservation(Base):
+    """A club's projected starting quarterback as our ingestion saw it.
+
+    A row is appended only when the name changes (games.home_qb/away_qb are overwritten each run, so the history
+    lives here).
+    """
+
+    __tablename__ = "qb_observations"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    game_id: Mapped[str] = mapped_column(ForeignKey("games.game_id"))
+    side: Mapped[str] = mapped_column(String(4))  # home | away
+    qb: Mapped[str | None] = mapped_column(String(64))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_qb_obs_game", "game_id", "side", "id"),)

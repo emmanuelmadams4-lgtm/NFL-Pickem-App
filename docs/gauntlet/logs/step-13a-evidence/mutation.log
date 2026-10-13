@@ -1,0 +1,13 @@
+CAUGHT   T3 qb unchanged inserts | FAILED tests/test_timing.py::test_unchanged_quarterback_does_not_move_last_changed - AssertionError: assert {'first_seen'...y='Etc/UTC'))} == {
+CAUGHT   T4/T5 qb change ignored | FAILED tests/test_timing.py::test_changed_quarterback_moves_last_changed_and_never_first_seen - AssertionError: assert {'first_seen'...y='Etc/U
+CAUGHT   T1 line unchanged inserts | FAILED tests/test_timing.py::test_unchanged_line_on_a_new_run_does_not_move_last_changed - AssertionError: assert {'first_seen'...y='Etc/UTC'))
+CAUGHT   T2 line change ignored | FAILED tests/test_timing.py::test_changed_line_moves_last_changed_and_never_first_seen - AssertionError: assert {'first_seen'...y='Etc/UTC'))} 
+CAUGHT   T6 injury unchanged inserts | FAILED tests/test_timing.py::test_injury_rows_keep_first_seen_and_move_last_changed_only_on_a_change - AssertionError: assert {'first_seen'...y
+CAUGHT   T5 qb first_seen counts blank | FAILED tests/test_timing.py::test_blank_quarterback_stays_blank_and_is_not_first_seen - AssertionError: assert {'first_seen'...y='Etc/UTC'))} =
+CAUGHT   T8/T9 snapshot pregame filter off | FAILED tests/test_timing.py::test_a_line_first_seen_after_kickoff_is_not_a_pregame_line - assert -1.0 is None 1 failed, 
+CAUGHT   T10/T11 qb pregame filter off | FAILED tests/test_timing.py::test_a_quarterback_seen_only_after_kickoff_counts_as_blank_pregame - AssertionError: assert ('BUF QB1', 'MIA QB1',
+CAUGHT   T7 oldest snapshot not newest | FAILED tests/test_timing.py::test_line_age_is_kickoff_minus_the_last_pregame_snapshot - assert 100.0 == 30.0 1 failed, 6
+CAUGHT   T12 missing line read as zero age | FAILED tests/test_timing.py::test_median_skips_games_without_a_line_and_is_none_when_all_are_missing - assert 50.0 == 100.0 1 fai
+CAUGHT   T13 blank either->both | FAILED tests/test_timing.py::test_week_report_counts_blank_quarterbacks_and_the_median - assert 1 == 2 1 failed, 12 pass
+SURVIVED T12 empty-string qb not blank | 13 passed in 1.96s
+survivors: 1

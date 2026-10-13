@@ -1,0 +1,10 @@
+HEAD f03694d (rebased on main 7c8a3d0)
+pytest exit=0
+1222 passed in 183.36s (0:03:03)
+[1;32mAll checks passed![0m
+ruff exit=0
+upgrade exit=0
+No new upgrade operations detected.
+check exit=0
+gen:api exit=0
+api drift lines:        0

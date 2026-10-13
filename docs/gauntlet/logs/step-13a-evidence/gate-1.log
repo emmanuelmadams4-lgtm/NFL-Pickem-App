@@ -1,0 +1,10 @@
+HEAD a706007
+pytest exit=0
+[32m[32m[1m1203 passed[0m[32m in 315.17s (0:05:15)[0m[0m
+[1;32mAll checks passed![0m
+ruff exit=0
+upgrade exit=0
+No new upgrade operations detected.
+check exit=0
+downgrade exit=0
+reupgrade exit=0

@@ -1,0 +1,9 @@
+HEAD f03694d (rebased on main 7c8a3d0), second run
+pytest exit=0
+1222 passed in 170.13s (0:02:50)
+All checks passed!
+ruff done
+upgrade exit=0
+No new upgrade operations detected.
+check exit=0
+FINISHED
