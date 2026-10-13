@@ -185,7 +185,11 @@ self.addEventListener("notificationclick", (event) => {
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
       if (open) {
-        await open.focus();
+        try {
+          await open.focus();
+        } catch {
+          /* Navigation can still succeed when focus is refused. */
+        }
         if ("navigate" in open && open.url !== target) {
           try {
             await open.navigate(target);

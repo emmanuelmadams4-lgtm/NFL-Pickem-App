@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ago } from "@nflpi/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
@@ -8,6 +8,21 @@ import { flushPicks, isServerReachable, pendingCount, useOnline, useServerReacha
 import { safeGet, safeSet } from "@/lib/fmt";
 import { useToast } from "@/components/toast";
 import { Button, Card } from "@/components/ui";
+import { useMeta } from "@/lib/queries";
+import { keepPushSubscription } from "@/lib/push";
+
+/** Restores this device's existing push subscription once its server key is known. */
+export function PushKeepAlive() {
+  const api = useApi();
+  const { data: meta } = useMeta();
+  const ran = useRef(false);
+  useEffect(() => {
+    if (!meta || ran.current) return;
+    ran.current = true;
+    void keepPushSubscription(api, meta.push_public_key);
+  }, [api, meta]);
+  return null;
+}
 
 /** Registers the service worker in production builds only. */
 export function ServiceWorkerRegister() {

@@ -8,7 +8,7 @@ import { useApi } from "@/lib/api";
 import { useSelection } from "@/lib/selection";
 import { useToast } from "@/components/toast";
 import { FreshnessIndicator } from "@/components/freshness";
-import { OfflineBanner, PickSync } from "@/components/pwa";
+import { OfflineBanner, PickSync, PushKeepAlive } from "@/components/pwa";
 import { SeasonPicker, WeekPicker } from "@/components/pickers";
 import { Button, cx, errorMessage } from "@/components/ui";
 import { BarChart, Calendar, Gear, Refresh } from "@/components/icons";
@@ -87,6 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       <PickSync />
+      <PushKeepAlive />
 
       <header className="sticky top-0 z-30 border-b border-border bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-bg/80">
         <div className="mx-auto flex min-h-[52px] max-w-[1360px] items-center gap-x-3 px-4 sm:gap-x-6 lg:min-h-14 lg:px-5">
