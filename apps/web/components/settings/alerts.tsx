@@ -31,7 +31,7 @@ export function AlertsSection({ meta }: { meta: Meta }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testBusy, setTestBusy] = useState(false);
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ text: string; problem: boolean } | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -108,7 +108,7 @@ export function AlertsSection({ meta }: { meta: Meta }) {
     try {
       const result: PushTestOut = await api.pushTest();
       if (!result.configured || result.devices === 0) {
-        setTestResult("The server has no device to send to. Turn alerts off and on again.");
+        setTestResult({ text: "The server has no device to send to. Turn alerts off and on again.", problem: true });
       } else {
         const summary = result.delivered === result.devices
           ? `Delivered to ${result.delivered} ${result.delivered === 1 ? "device" : "devices"}.`
@@ -117,9 +117,9 @@ export function AlertsSection({ meta }: { meta: Meta }) {
             : `Delivered to ${result.delivered} of ${result.devices} devices.`;
         const failures = result.results.filter((item) => !item.ok)
           .map((item) => ` ${item.host}: ${item.error ?? "Not delivered."}${item.status === null ? "" : ` (${item.status})`}`);
-        setTestResult(summary + failures.join(""));
+        setTestResult({ text: summary + failures.join(""), problem: result.delivered !== result.devices });
       }
-      await qc.invalidateQueries({ queryKey: keys.meta });
+      void qc.invalidateQueries({ queryKey: keys.meta });
     } catch (e) {
       setTestResult(null);
       setError(`Could not send the test alert. ${errorMessage(e)}`);
@@ -166,6 +166,9 @@ export function AlertsSection({ meta }: { meta: Meta }) {
             </Button>
           )}
         </div>
+        {info.subscribed && testResult && (
+          <p role="status" className={`text-sm ${testResult.problem ? "text-bad" : "text-subtle"}`}>{testResult.text}</p>
+        )}
         {info.permission === "denied" && <p className="text-xs text-warn">Notifications are blocked for this app. Allow them in your device settings first.</p>}
         <p className="text-xs text-subtle">
           {meta.push_subscriptions} {meta.push_subscriptions === 1 ? "device is" : "devices are"} subscribed on the server.
@@ -186,7 +189,6 @@ export function AlertsSection({ meta }: { meta: Meta }) {
         </div>
         <div className="min-w-0">
           {toggle}
-          {testResult && <p role="status" className="mt-2 text-sm text-subtle">{testResult}</p>}
           {error && (
             <p role="alert" className="mt-2 text-sm text-bad">
               {error}
