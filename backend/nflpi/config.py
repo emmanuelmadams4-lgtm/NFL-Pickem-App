@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    odds_api_key: str = ""  # The Odds API key (server .env only)
     database_url: str = "postgresql+psycopg://nflpi:nflpi@localhost:5432/nflpi"
     # Single-user access token. Every /api route except /api/health requires it.
     app_access_token: str = ""

@@ -1,0 +1,5 @@
+PASS pytest exit=0 :: 521 passed in 65.08s (0:01:05)
+PASS ruff exit=0 :: All checks passed!
+PASS alembic exit=0 :: No new upgrade operations detected.
+PASS genapi exit=0 :: no drift
+PASS keyscan exit=0 :: key text found in no file
