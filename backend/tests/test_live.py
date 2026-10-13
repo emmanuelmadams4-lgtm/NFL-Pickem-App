@@ -15,12 +15,13 @@ from pathlib import Path
 
 import httpx
 import pytest
-from nflpi.ingestion.live import espn, fetch, run, store
 from sqlalchemy import inspect, select
 
 from nflpi.config import Settings
 from nflpi.db import get_engine
+from nflpi.ingestion.live import espn, fetch, kalshi, oddsapi, run, store
 from nflpi.models import Game, IngestionRun, LiveState, MarketQuote, SourceStatus
+from nflpi.predictions.market import implied_prob, novig_home_prob
 
 FIXTURES = Path(__file__).parent / "fixtures" / "live"
 PUBLIC_IP = "93.184.216.34"
@@ -832,3 +833,513 @@ def test_the_configured_odds_key_is_in_no_fixture_and_no_doc(monkeypatch):
     root = Path(__file__).parents[2]
     files = [*FIXTURES.glob("*"), *root.glob("docs/**/*.md")]
     assert key == "" or not any(key in f.read_text(errors="ignore") for f in files)
+
+
+# ---------------------------------------------------------------- Kalshi market quotes (15b)
+
+KNOW = datetime(2026, 10, 13, 7, 0, tzinfo=UTC)
+FOUR_GAMES = [  # away, home, kickoff: the four games both the recorded Kalshi and Odds API replies contain
+    ("SEA", "DEN", datetime(2026, 10, 16, 0, 15, tzinfo=UTC)),
+    ("HOU", "JAX", datetime(2026, 10, 18, 13, 30, tzinfo=UTC)),
+    ("ARI", "LA", datetime(2026, 10, 18, 20, 5, tzinfo=UTC)),
+    ("BUF", "LV", datetime(2026, 10, 18, 20, 25, tzinfo=UTC)),
+]
+
+
+def seed_four(session) -> dict[str, Game]:
+    return {f"{a}_{h}": seed_game(session, a, h, k, status="scheduled") for a, h, k in FOUR_GAMES}
+
+
+def quote_rows(session, source: str | None = None) -> list[MarketQuote]:
+    stmt = select(MarketQuote).order_by(MarketQuote.id)
+    if source:
+        stmt = stmt.where(MarketQuote.source == source)
+    return list(session.scalars(stmt))
+
+
+def kalshi_routes(data=None) -> dict:
+    return {kalshi.markets_url(): data if data is not None else recorded("kalshi_markets.json")}
+
+
+def test_the_kalshi_url_is_the_exact_open_nfl_game_series_and_a_cursor_is_encoded():
+    assert kalshi.markets_url() == (
+        "https://external-api.kalshi.com/trade-api/v2/markets?series_ticker=KXNFLGAME&status=open&limit=200"
+    )
+    assert kalshi.markets_url("abc_DEF-12=").endswith("&cursor=abc_DEF-12%3D")
+    for bad in ("", "a b", "a&b=1", "x" * 201, "ab\n", "٣"):
+        with pytest.raises(ValueError):
+            kalshi.markets_url(bad)
+
+
+def test_kalshi_codes_map_to_ours_and_all_32_clubs_are_known():
+    assert kalshi.TEAM_CODES["JAC"] == "JAX" and kalshi.TEAM_CODES["LAR"] == "LA"
+    assert len(kalshi.TEAM_CODES) == 32 and len(set(kalshi.TEAM_CODES.values())) == 32
+
+
+def test_the_recorded_kalshi_markets_become_one_normalised_quote_per_game(session):
+    games = seed_four(session)
+    get = fake_get(kalshi_routes())
+    result = run.refresh_kalshi_quotes(session, get=get, now=KNOW)
+    assert (result.source, result.status, result.inserted, result.skipped) == ("kalshi", "ok", 4, 0)
+    assert get.calls == [kalshi.markets_url()]
+    rows = {r.game_id: r for r in quote_rows(session)}
+    den = rows[games["SEA_DEN"].game_id]  # SEA 0.59/0.60 and DEN 0.40/0.41: mids 0.595 and 0.405 sum to 1
+    assert (den.source, den.kind, den.fetched_at) == ("kalshi", "pregame", KNOW)
+    assert den.home_prob == pytest.approx(0.405) and den.away_prob == pytest.approx(0.595)
+    assert (den.raw_yes_bid, den.raw_yes_ask) == (0.40, 0.41) and den.overround == pytest.approx(0.0)
+    assert den.home_ml is None and den.away_ml is None
+    lv = rows[games["BUF_LV"].game_id]  # LV 0.31/0.32 and BUF 0.69/0.70: mids 0.315 + 0.695 = 1.01
+    assert lv.home_prob == pytest.approx(0.315 / 1.01) and lv.away_prob == pytest.approx(0.695 / 1.01)
+    assert lv.overround == pytest.approx(0.01) and (lv.raw_yes_bid, lv.raw_yes_ask) == (0.31, 0.32)
+    assert lv.home_prob + lv.away_prob == pytest.approx(1.0)
+
+
+def test_kalshi_team_codes_that_differ_from_ours_still_match(session):
+    games = seed_four(session)  # Kalshi says LAR and JAC, we say LA and JAX
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
+    by_game = {r.game_id: r for r in quote_rows(session)}
+    assert by_game[games["ARI_LA"].game_id].home_prob == pytest.approx(0.845)
+    assert by_game[games["HOU_JAX"].game_id].home_prob == pytest.approx(0.57)
+
+
+def test_kalshi_is_pregame_before_kickoff_and_live_after_and_an_old_source_time_becomes_null(session):
+    games = seed_four(session)
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=datetime(2026, 10, 16, 1, 0, tzinfo=UTC))
+    rows = {r.game_id: r for r in quote_rows(session)}
+    assert rows[games["SEA_DEN"].game_id].kind == "live" and rows[games["BUF_LV"].game_id].kind == "pregame"
+    assert rows[games["SEA_DEN"].game_id].source_ts is None  # the recorded time is over seven days old by then
+
+
+def test_a_kalshi_quote_has_a_source_time_inside_the_window(session):
+    seed_four(session)
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
+    for row in quote_rows(session):
+        assert row.source_ts is None or KNOW - timedelta(days=7) <= row.source_ts <= KNOW + timedelta(days=1)
+    assert any(r.source_ts is not None for r in quote_rows(session))
+
+
+def test_an_unchanged_kalshi_quote_adds_no_row_and_a_changed_price_adds_one(session):
+    seed_four(session)
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW + timedelta(minutes=2))
+    assert len(quote_rows(session)) == 4
+    moved = recorded("kalshi_markets.json")
+    next(m for m in moved["markets"] if m["ticker"].endswith("SEADEN-DEN"))["yes_ask_dollars"] = "0.4300"
+    result = run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes(moved)), now=KNOW + timedelta(minutes=4))
+    assert result.inserted == 1 and len(quote_rows(session)) == 5
+    assert quote_rows(session)[-1].raw_yes_ask == 0.43
+
+
+def test_a_kalshi_event_with_no_game_is_skipped_and_counted_not_guessed(session):
+    games = seed_four(session)
+    session.delete(games["BUF_LV"])
+    session.commit()
+    result = run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
+    assert (result.inserted, result.skipped) == (3, 1)
+
+
+def _edit(fn):
+    data = recorded("kalshi_markets.json")
+    fn(data["markets"])
+    return data
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        lambda ms: ms.remove(next(m for m in ms if m["ticker"].endswith("SEADEN-SEA"))),  # only one team priced
+        lambda ms: ms.append(copy.deepcopy(next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")))),  # twice
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(status="closed"),
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(yes_bid_dollars="0.9000"),  # >ask
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(yes_ask_dollars="1.2000"),
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(yes_ask_dollars="nan"),
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(yes_ask_dollars=None),
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(yes_bid_dollars=0.59),
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(yes_ask_dollars="0.6000\n"),
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(yes_ask_dollars="٠.٦"),
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(
+            event_ticker="KXNFLGAME-26OCT15SEA"
+        ),
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(
+            ticker="KXNFLGAME-26OCT15SEADEN-XXX"
+        ),
+        lambda ms: next(m for m in ms if m["ticker"].endswith("SEADEN-SEA")).update(ticker=None),
+    ],
+)
+def test_a_kalshi_event_that_cannot_be_priced_cleanly_is_skipped_and_the_rest_are_stored(session, edit):
+    games = seed_four(session)
+    result = run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes(_edit(edit))), now=KNOW)
+    stored = {r.game_id for r in quote_rows(session)}
+    assert games["SEA_DEN"].game_id not in stored and len(stored) == 3 and result.skipped >= 1
+
+
+def test_kalshi_pages_are_followed_with_the_cursor_up_to_three_pages(session):
+    seed_four(session)
+    full = recorded("kalshi_markets.json")
+    a, b, c, d = (full["markets"][i : i + 2] for i in (0, 2, 4, 6))
+    routes = {
+        kalshi.markets_url(): {"cursor": "p2", "markets": a},
+        kalshi.markets_url("p2"): {"cursor": "p3", "markets": b},
+        kalshi.markets_url("p3"): {"cursor": "p4", "markets": c},
+        kalshi.markets_url("p4"): {"cursor": "", "markets": d},
+    }
+    get = fake_get(routes)
+    run.refresh_kalshi_quotes(session, get=get, now=KNOW)
+    assert get.calls == [kalshi.markets_url(), kalshi.markets_url("p2"), kalshi.markets_url("p3")]  # page 4 never asked
+    assert len(quote_rows(session)) == 3  # the BUF/LV pair is on the page we did not read
+
+
+@pytest.mark.parametrize("cursor", ["p1", "a b", "x" * 201, "p&q=1", "", None, 5])
+def test_a_repeated_empty_or_bad_cursor_ends_the_paging(session, cursor):
+    seed_four(session)
+    full = recorded("kalshi_markets.json")
+    routes = {kalshi.markets_url(): {"cursor": cursor, "markets": full["markets"]}}
+    get = fake_get(routes | {kalshi.markets_url("p1"): {"cursor": "p1", "markets": []}})
+    run.refresh_kalshi_quotes(session, get=get, now=KNOW)
+    assert len(get.calls) <= 2 and len(quote_rows(session)) == 4
+
+
+@pytest.mark.parametrize(
+    "bad", [[], "x", {"markets": "no"}, {"markets": [None, 1]} | {"x": 1}, {"markets": [{}] * 501}]
+)
+def test_a_malformed_kalshi_reply_fails_the_run_and_keeps_old_rows(session, bad):
+    seed_four(session)
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
+    result = run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes(bad)), now=KNOW + timedelta(minutes=5))
+    assert result.status == "failed" and len(quote_rows(session)) == 4
+
+
+def test_kalshi_logs_a_run_keeps_its_own_status_and_waits_a_minute(session):
+    seed_four(session)
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
+    (log,) = session.scalars(select(IngestionRun)).all()
+    assert (log.source, log.dataset, log.status, log.rows) == ("kalshi", "market_quotes", "ok", 4)
+    assert session.get(SourceStatus, "kalshi").blocked_until == KNOW + timedelta(seconds=60)
+    quiet = fake_get({})
+    assert run.refresh_kalshi_quotes(session, get=quiet, now=KNOW + timedelta(seconds=59)).status == "skipped"
+    assert quiet.calls == []
+
+
+def test_a_kalshi_block_stops_that_source_only_and_never_retries(session):
+    seed_four(session)
+    get = fake_get({kalshi.markets_url(): fetch.Blocked("status 429")})
+    result = run.refresh_kalshi_quotes(session, get=get, now=KNOW)
+    assert result.status == "failed" and get.calls == [kalshi.markets_url()] and quote_rows(session) == []
+    status = session.get(SourceStatus, "kalshi")
+    assert (status.consecutive_failures, status.blocked_until) == (1, KNOW + timedelta(minutes=15))
+    assert session.get(SourceStatus, "espn_live") is None  # the other sources carry on
+
+
+def test_the_sources_back_off_independently(session):
+    seed_recorded_games(session)
+    run.refresh_kalshi_quotes(session, get=fake_get({kalshi.markets_url(): fetch.FetchError("status 500")}), now=KNOW)
+    assert run.refresh_live_games(session, get=fake_get(recorded_routes()), now=KNOW).status == "ok"
+
+
+# ---------------------------------------------------------------- The Odds API quotes (15c)
+
+KEY = "Zk9QmW3xTt7LpR2vYc8N"  # a made-up key: letters and digits, long enough to pass the format check
+ODDS_HOST = "api.the-odds-api.com"
+ODDS_PATH = "/v4/sports/americanfootball_nfl/odds"
+ODDS_NOW = datetime(2026, 10, 13, 7, 0, tzinfo=UTC)
+
+
+def odds_routes(data=None, headers: dict | None = None) -> dict:
+    return {
+        oddsapi.odds_url(KEY): (data if data is not None else recorded("odds_api_h2h.json")),
+        "_headers": headers if headers is not None else recorded("odds_api_headers.json"),
+    }
+
+
+def odds_get(routes: dict):
+    calls: list[str] = []
+
+    def get(url: str) -> fetch.JsonResult:
+        calls.append(url)
+        reply = routes[url]
+        if isinstance(reply, Exception):
+            raise reply
+        return fetch.JsonResult(200, copy.deepcopy(reply), dict(routes.get("_headers", {})))
+
+    get.calls = calls
+    return get
+
+
+def refresh_odds(session, routes=None, *, now=ODDS_NOW, key=KEY):
+    get = odds_get(routes or odds_routes())
+    return run.refresh_odds_quotes(session, get=get, now=now, api_key=key), get
+
+
+def test_the_odds_url_asks_for_us_h2h_american_odds_in_one_call_and_encodes_the_key():
+    url = oddsapi.odds_url(KEY)
+    assert url.startswith("https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds?")
+    from urllib.parse import parse_qs, urlsplit
+
+    assert parse_qs(urlsplit(url).query) == {
+        "regions": ["us"], "markets": ["h2h"], "oddsFormat": ["american"], "apiKey": [KEY],
+    }  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "",
+        None,
+        "short",
+        "has space abcdefghijkl",
+        "abcdefghijklmnop&x=1",
+        "abc\ndefghijklmnop",
+        "a" * 65,
+        "key-with-dash-1234567",
+    ],
+)
+def test_with_no_usable_key_the_odds_adapter_does_nothing_and_says_so(session, key):
+    get = odds_get({})
+    result = run.refresh_odds_quotes(session, get=get, now=ODDS_NOW, api_key=key)
+    assert (result.source, result.status, result.detail) == ("oddsapi", "skipped", "ODDS_API_KEY is not set")
+    assert get.calls == [] and session.scalars(select(IngestionRun)).all() == [] and quote_rows(session) == []
+    with pytest.raises(ValueError):
+        oddsapi.odds_url(key or "")
+
+
+def test_the_key_comes_from_the_setting_when_none_is_passed(session, monkeypatch):
+    from nflpi.config import get_settings
+
+    monkeypatch.setenv("ODDS_API_KEY", KEY)
+    get_settings.cache_clear()
+    try:
+        get = odds_get(odds_routes())
+        assert run.refresh_odds_quotes(session, get=get, now=ODDS_NOW).status == "ok"
+        assert get.calls == [oddsapi.odds_url(KEY)]
+    finally:
+        monkeypatch.delenv("ODDS_API_KEY")
+        get_settings.cache_clear()
+
+
+def test_every_team_name_is_known_once():
+    assert len(oddsapi.TEAM_NAMES) == 32 and len(set(oddsapi.TEAM_NAMES.values())) == 32
+    assert oddsapi.TEAM_NAMES["Los Angeles Rams"] == "LA" and oddsapi.TEAM_NAMES["Washington Commanders"] == "WAS"
+
+
+def test_one_call_stores_one_quote_per_book_per_matched_game(session):
+    games = seed_four(session)
+    result, get = refresh_odds(session)
+    assert get.calls == [oddsapi.odds_url(KEY)]  # one call
+    assert (result.source, result.status, result.inserted) == ("oddsapi", "ok", 9 + 9 + 4 + 4)
+    assert result.skipped == 10  # ten events in the reply have no game in our table
+    den = [r for r in quote_rows(session) if r.game_id == games["SEA_DEN"].game_id]
+    assert len(den) == 9 and {r.source for r in den} >= {"oddsapi:draftkings", "oddsapi:fanduel", "oddsapi:bovada"}
+    dk = next(r for r in den if r.source == "oddsapi:draftkings")
+    assert (dk.home_ml, dk.away_ml, dk.kind) == (130, -155, "pregame")  # outcomes are matched by name, not position
+    assert dk.home_prob == pytest.approx(novig_home_prob(130, -155))
+    assert dk.away_prob == pytest.approx(1 - novig_home_prob(130, -155))
+    assert dk.overround == pytest.approx(implied_prob(130) + implied_prob(-155) - 1)
+    assert dk.source_ts == datetime(2026, 10, 13, 6, 20, 27, tzinfo=UTC) and dk.fetched_at == ODDS_NOW
+    assert dk.raw_yes_bid is None and dk.raw_yes_ask is None
+
+
+def test_an_unchanged_book_line_adds_no_row_and_a_moved_line_adds_one(session):
+    seed_four(session)
+    refresh_odds(session)
+    later = ODDS_NOW + timedelta(hours=6)
+    again, _ = refresh_odds(session, now=later)
+    assert again.inserted == 0 and len(quote_rows(session)) == 26
+    moved = recorded("odds_api_h2h.json")
+    moved[0]["bookmakers"][0]["markets"][0]["outcomes"][0]["price"] = 125
+    result, _ = refresh_odds(session, odds_routes(moved), now=later + timedelta(hours=6))
+    assert result.inserted == 1 and len(quote_rows(session)) == 27
+
+
+def test_a_moneyline_that_is_not_a_real_american_price_skips_that_book_only(session):
+    seed_four(session)
+    bad = recorded("odds_api_h2h.json")
+    outcomes = [b["markets"][0]["outcomes"] for b in bad[0]["bookmakers"][:5]]
+    outcomes[0][0]["price"] = 50  # |x| < 100
+    outcomes[1][0]["price"] = float("nan")
+    outcomes[2][0]["price"] = True
+    outcomes[3][0]["price"] = "130"
+    outcomes[4][0]["price"] = None
+    result, _ = refresh_odds(session, odds_routes(bad))
+    assert result.inserted == 26 - 5
+
+
+@pytest.mark.parametrize(
+    "book_key", ["DraftKings", "draft kings", "a" * 33, "", None, 7, "x\n", "bet<b>", "../x", "dk-1"]
+)
+def test_a_book_name_must_be_a_short_lowercase_word_or_the_book_is_skipped(session, book_key):
+    seed_four(session)
+    bad = recorded("odds_api_h2h.json")
+    bad[0]["bookmakers"][0]["key"] = book_key
+    result, _ = refresh_odds(session, odds_routes(bad))
+    assert result.inserted == 25 and all(r.source.startswith("oddsapi:") for r in quote_rows(session))
+    assert all(len(r.source) <= 32 for r in quote_rows(session))
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        lambda e: e.update(home_team="Denver Broncos II"),
+        lambda e: e.update(away_team="Denver Broncos"),  # both outcomes the same club
+        lambda e: e.update(commence_time="2026-10-30T00:15:00Z"),  # same teams, another day
+        lambda e: e.update(commence_time="not a time"),
+        lambda e: e.update(commence_time=None),
+        lambda e: e.update(home_team=None),
+    ],
+)
+def test_an_odds_event_that_does_not_match_one_game_is_skipped_never_guessed(session, edit):
+    seed_four(session)
+    bad = recorded("odds_api_h2h.json")
+    edit(bad[0])
+    result, _ = refresh_odds(session, odds_routes(bad))
+    assert result.inserted == 26 - 9 and result.skipped == 11
+
+
+def test_outcomes_that_are_not_exactly_the_two_clubs_skip_that_book(session):
+    seed_four(session)
+    bad = recorded("odds_api_h2h.json")
+    bad[0]["bookmakers"][0]["markets"][0]["outcomes"].append({"name": "Draw", "price": 300})
+    bad[0]["bookmakers"][1]["markets"][0]["outcomes"][0]["name"] = "Seattle Seahawks"  # same club twice
+    result, _ = refresh_odds(session, odds_routes(bad))
+    assert result.inserted == 24
+
+
+def test_credits_left_is_saved_and_the_next_call_waits_six_hours(session):
+    seed_four(session)
+    refresh_odds(session)
+    status = session.get(SourceStatus, "oddsapi")
+    assert status.credits_left == 499 and status.blocked_until == ODDS_NOW + timedelta(hours=6)
+    assert status.consecutive_failures == 0 and status.last_ok_at == ODDS_NOW
+    quiet = odds_get({})
+    early = run.refresh_odds_quotes(session, get=quiet, now=ODDS_NOW + timedelta(hours=5, minutes=59), api_key=KEY)
+    assert early.status == "skipped" and quiet.calls == []
+
+
+@pytest.mark.parametrize("header", ["abc", "-5", "1000001", "٣٥٠", "12.5", "", " 300", "300\n", "1" * 8])
+def test_a_credit_header_that_is_not_a_plain_small_number_is_unknown_and_the_floor_still_holds(session, header):
+    seed_four(session)
+    refresh_odds(session, odds_routes(headers={"x-requests-remaining": header}))
+    status = session.get(SourceStatus, "oddsapi")
+    assert status.credits_left is None and status.blocked_until == ODDS_NOW + timedelta(hours=6)
+
+
+def test_a_missing_credit_header_is_unknown_too(session):
+    seed_four(session)
+    refresh_odds(session, odds_routes(headers={}))
+    assert session.get(SourceStatus, "oddsapi").credits_left is None
+
+
+def test_fewer_than_fifty_credits_left_stops_the_source_for_thirty_five_days_after_this_call(session):
+    seed_four(session)
+    result, _ = refresh_odds(session, odds_routes(headers={"x-requests-remaining": "49"}))
+    status = session.get(SourceStatus, "oddsapi")
+    assert result.status == "ok" and len(quote_rows(session)) == 26  # this reply was paid for: keep it
+    assert status.credits_left == 49 and status.blocked_until == ODDS_NOW + timedelta(days=35)
+    quiet = odds_get({})
+    stopped = run.refresh_odds_quotes(session, get=quiet, now=ODDS_NOW + timedelta(days=30), api_key=KEY)
+    assert stopped.status == "skipped" and quiet.calls == []
+
+
+@pytest.mark.parametrize(("left", "calls"), [(49, 0), (50, 1), (None, 1), (500, 1)])
+def test_the_stored_credit_count_is_checked_before_every_call(session, left, calls):
+    seed_four(session)
+    session.add(SourceStatus(source="oddsapi", consecutive_failures=0, credits_left=left, updated_at=ODDS_NOW))
+    session.commit()
+    result, get = refresh_odds(session)
+    assert len(get.calls) == calls and (result.status == "skipped") == (calls == 0)
+    if calls == 0:
+        assert "credit" in result.detail and session.scalars(select(IngestionRun)).all() == []
+
+
+def test_an_odds_block_stops_the_source_and_makes_exactly_one_call(session):
+    seed_four(session)
+    result, get = refresh_odds(session, {oddsapi.odds_url(KEY): fetch.Blocked("status 429")})
+    status = session.get(SourceStatus, "oddsapi")
+    assert result.status == "failed" and len(get.calls) == 1
+    assert status.consecutive_failures == 1 and status.blocked_until >= ODDS_NOW + timedelta(minutes=15)
+
+
+def test_a_malformed_odds_reply_fails_the_run_and_keeps_old_rows(session):
+    seed_four(session)
+    refresh_odds(session)
+    for bad in ({}, "x", [None, 3], [{}] * 101, [{"bookmakers": "no"}]):
+        session.query(SourceStatus).update({"blocked_until": None})
+        session.commit()
+        result, _ = refresh_odds(session, odds_routes(bad), now=ODDS_NOW + timedelta(days=1))
+        assert result.status == "failed" or bad == [{"bookmakers": "no"}]
+    assert len(quote_rows(session)) == 26
+
+
+def test_the_odds_run_is_logged_with_its_own_dataset(session):
+    seed_four(session)
+    refresh_odds(session)
+    (log,) = session.scalars(select(IngestionRun)).all()
+    assert (log.source, log.dataset, log.status, log.rows, log.error) == ("oddsapi", "market_quotes", "ok", 26, None)
+
+
+# ---------------------------------------------------------------- the key never leaves the request (E1, E2)
+
+
+def _odds_web(kind: str) -> Web:
+    def route(request: httpx.Request) -> httpx.Response:
+        if kind == "timeout":
+            raise httpx.ReadTimeout(f"timed out: {request.url}")
+        if kind == "401":
+            return httpx.Response(401, headers=JSON, content=b'{"message": "bad key %s"}' % KEY.encode())
+        if kind == "badjson":
+            return ok(b"{" + KEY.encode())
+        return ok(json.dumps(recorded("odds_api_h2h.json")).encode(), **{"x-requests-remaining": "480"})
+
+    return Web({(ODDS_HOST, ODDS_PATH): route})
+
+
+def _everything_stored(session) -> str:
+    parts = []
+    for model in (IngestionRun, SourceStatus, MarketQuote):
+        for row in session.scalars(select(model)):
+            parts.append(repr({c.name: getattr(row, c.name) for c in model.__table__.columns}))
+    return "\n".join(parts)
+
+
+@pytest.mark.parametrize("kind", ["ok", "401", "timeout", "badjson"])
+def test_the_key_appears_in_no_log_no_row_and_no_error_on_any_path(session, caplog, kind):
+    import functools
+    import logging
+
+    caplog.set_level(logging.DEBUG)
+    seed_four(session)
+    web = _odds_web(kind)
+    get = functools.partial(fetch.fetch_json, resolver=public_dns, transport=web.transport)
+    result = run.refresh_odds_quotes(session, get=get, now=ODDS_NOW, api_key=KEY)
+    assert any(KEY in str(r.url) for r in web.requests)  # the key really was sent, so the checks below mean something
+    assert result.status == ("ok" if kind == "ok" else "failed")
+    logged = "\n".join(
+        " ".join([r.getMessage(), str(r.args), r.exc_text or "", str(r.exc_info), r.name]) for r in caplog.records
+    )
+    assert KEY not in logged and KEY not in result.detail and KEY not in repr(result)
+    assert KEY not in _everything_stored(session)
+
+
+@pytest.mark.parametrize("kind", ["401", "timeout", "badjson"])
+def test_a_fetch_error_and_its_cause_never_carry_the_key(kind):
+    web = _odds_web(kind)
+    with pytest.raises(fetch.FetchError) as caught:
+        fetch.fetch_json(oddsapi.odds_url(KEY), resolver=public_dns, transport=web.transport)
+    err = caught.value
+    assert KEY not in repr(err) and KEY not in str(err) and err.__cause__ is None
+    assert "".join(__import__("traceback").format_exception(err)).count(KEY) == 0
+
+
+def test_the_http_client_does_not_log_the_key_at_info(session, caplog):
+    import functools
+    import logging
+
+    caplog.set_level(logging.INFO)
+    seed_four(session)
+    web = _odds_web("ok")
+    run.refresh_odds_quotes(
+        session,
+        get=functools.partial(fetch.fetch_json, resolver=public_dns, transport=web.transport),
+        now=ODDS_NOW,
+        api_key=KEY,
+    )
+    assert KEY not in "\n".join(r.getMessage() for r in caplog.records)

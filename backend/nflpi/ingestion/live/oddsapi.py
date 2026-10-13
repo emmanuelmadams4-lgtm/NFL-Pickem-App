@@ -1,0 +1,1 @@
+"""Odds API data ingestion."""

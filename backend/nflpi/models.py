@@ -319,3 +319,57 @@ class NewsItem(Base):
         UniqueConstraint("source", "title_sha256", name="uq_news_source_title"),
         Index("ix_news_fetched", "fetched_at"),
     )
+
+
+class LiveState(Base):
+    """Insert-only live game state snapshots."""
+
+    __tablename__ = "live_states"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    game_id: Mapped[str] = mapped_column(ForeignKey("games.game_id"), nullable=False)
+    espn_event_id: Mapped[str] = mapped_column(String(16), nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    state: Mapped[str] = mapped_column(String(4), nullable=False)  # pre | in | post
+    home_score: Mapped[int | None] = mapped_column(Integer)
+    away_score: Mapped[int | None] = mapped_column(Integer)
+    period: Mapped[int | None] = mapped_column(Integer)
+    clock: Mapped[str | None] = mapped_column(String(8))
+    home_wp: Mapped[float | None] = mapped_column(Float)
+    tie_wp: Mapped[float | None] = mapped_column(Float)
+    last_play_id: Mapped[str | None] = mapped_column(String(24))
+
+    __table_args__ = (Index("ix_live_game", "game_id", "id"),)
+
+
+class MarketQuote(Base):
+    """Insert-only market quote snapshots."""
+
+    __tablename__ = "market_quotes"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    game_id: Mapped[str] = mapped_column(ForeignKey("games.game_id"), nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)
+    kind: Mapped[str] = mapped_column(String(8), nullable=False)  # pregame | live
+    home_prob: Mapped[float | None] = mapped_column(Float)
+    away_prob: Mapped[float | None] = mapped_column(Float)
+    raw_yes_bid: Mapped[float | None] = mapped_column(Float)
+    raw_yes_ask: Mapped[float | None] = mapped_column(Float)
+    overround: Mapped[float | None] = mapped_column(Float)
+    home_ml: Mapped[float | None] = mapped_column(Float)
+    away_ml: Mapped[float | None] = mapped_column(Float)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_quotes_game_source", "game_id", "source", "id"),)
+
+
+class SourceStatus(Base):
+    """One mutable row per source (back-off and credit memory)."""
+
+    __tablename__ = "source_status"
+    source: Mapped[str] = mapped_column(String(16), primary_key=True)
+    consecutive_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    blocked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_ok_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(String(200))
+    credits_left: Mapped[int | None] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
