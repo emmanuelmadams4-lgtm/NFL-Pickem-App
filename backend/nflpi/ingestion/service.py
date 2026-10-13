@@ -4,7 +4,7 @@ import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import and_, case, delete, func, select
+from sqlalchemy import and_, case, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -101,7 +101,11 @@ def upsert_games(session: Session, games: list[dict], observed_at: datetime) -> 
     return len(rows)
 
 
-def ingest_schedules(session: Session, rows: list[dict[str, str]] | None = None) -> IngestionRun:
+def ingest_schedules(
+    session: Session,
+    rows: list[dict[str, str]] | None = None,
+    head_coaches: dict[str, str] | None = None,
+) -> IngestionRun:
     settings = get_settings()
 
     def job() -> int:
@@ -109,7 +113,35 @@ def ingest_schedules(session: Session, rows: list[dict[str, str]] | None = None)
         games = nflverse.parse_games(data, settings.first_season)
         return upsert_games(session, games, datetime.now(UTC))
 
-    return run_logged(session, nflverse.SOURCE, "schedules", job)
+    run = run_logged(session, nflverse.SOURCE, "schedules", job)
+    if rows is None or head_coaches is not None:
+        ingest_head_coaches(session, head_coaches)
+    return run
+
+
+def ingest_head_coaches(session: Session, coaches: dict[str, str] | None = None) -> IngestionRun:
+    def job() -> int:
+        season = session.scalar(select(func.max(Game.season)))
+        if season is None:
+            raise RuntimeError("no games loaded")
+        current_coaches = coaches if coaches is not None else nflverse.fetch_head_coaches(season)
+        changed = 0
+        for abbr, name in current_coaches.items():
+            for team_side in (Game.home_team, Game.away_team):
+                result = session.execute(
+                    update(Game)
+                    .where(
+                        Game.season == season,
+                        team_side == abbr,
+                        (Game.home_coach if team_side is Game.home_team else Game.away_coach).is_distinct_from(name),
+                    )
+                    .values(**{"home_coach" if team_side is Game.home_team else "away_coach": name})
+                )
+                changed += result.rowcount or 0
+        session.commit()
+        return changed
+
+    return run_logged(session, "espn", "head_coaches", job)
 
 
 def ingest_teams(session: Session, rows: list[dict[str, str]] | None = None) -> IngestionRun:

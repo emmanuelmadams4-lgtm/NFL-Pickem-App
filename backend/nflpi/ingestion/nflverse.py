@@ -21,6 +21,9 @@ UTC = ZoneInfo("UTC")
 
 # Old franchise codes -> current code, so ratings carry across relocations.
 FRANCHISE = {"OAK": "LV", "SD": "LAC", "STL": "LA", "LAR": "LA"}
+ESPN_TEAMS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams"
+ESPN_COACHES_URL = "https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{season}/teams/{team_id}/coaches?lang=en"
+ESPN_FRANCHISE = {"WSH": "WAS"}
 
 
 def franchise(abbr: str) -> str:
@@ -31,16 +34,45 @@ def fetch_csv(path: str) -> list[dict[str, str]]:
     """Download a release asset with retries. Raises on final failure."""
     settings = get_settings()
     url = f"{settings.nflverse_base}/{path}"
+    return list(csv.DictReader(io.StringIO(_fetch(url, settings).text)))
+
+
+def _fetch(url: str, settings):
     last_error: Exception | None = None
     for attempt in range(settings.http_retries):
         try:
             resp = httpx.get(url, timeout=settings.http_timeout_s, follow_redirects=True)
             resp.raise_for_status()
-            return list(csv.DictReader(io.StringIO(resp.text)))
+            return resp
         except httpx.HTTPError as exc:
             last_error = exc
             time.sleep(2**attempt)
-    raise RuntimeError(f"nflverse download failed for {path}: {last_error}")
+    raise RuntimeError(f"nflverse download failed for {url}: {last_error}")
+
+
+def fetch_json(url: str) -> dict:
+    settings = get_settings()
+    return _fetch(url, settings).json()
+
+
+def fetch_head_coaches(season: int, get=None) -> dict[str, str]:
+    get = get or fetch_json
+    data = get(ESPN_TEAMS_URL)
+    coaches = {}
+    teams = data["sports"][0]["leagues"][0]["teams"]
+    for entry in teams:
+        team = entry["team"]
+        abbr = franchise(ESPN_FRANCHISE.get(team["abbreviation"], team["abbreviation"]))
+        items = get(ESPN_COACHES_URL.format(season=season, team_id=team["id"])).get("items", [])
+        if len(items) != 1:
+            continue
+        coach = get(items[0]["$ref"].replace("http://", "https://"))
+        name = f"{coach['firstName']} {coach['lastName']}".strip()
+        if name:
+            coaches[abbr] = name
+    if not coaches:
+        raise RuntimeError("no head coaches found")
+    return coaches
 
 
 def _num(value: str) -> float | None:

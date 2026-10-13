@@ -133,11 +133,13 @@ def espn_get(coaches: dict[str, list[str]]):
 
     def get(url: str) -> dict:
         if url.endswith("/teams"):
-            return {"sports": [{"leagues": [{"teams": [{"team": {"id": t, "abbreviation": a}} for t, a in ESPN_TEAMS.items()]}]}]}
+            teams = [{"team": {"id": t, "abbreviation": a}} for t, a in ESPN_TEAMS.items()]
+            return {"sports": [{"leagues": [{"teams": teams}]}]}
         if url.endswith("/coaches?lang=en"):
             tid = url.split("/teams/")[1].split("/")[0]
             abbr = next(a for a, i in ids.items() if i == tid)
-            return {"items": [{"$ref": f"http://espn.test/coaches/{abbr}/{n}?lang=en"} for n in range(len(coaches[abbr]))]}
+            refs = [f"http://espn.test/coaches/{abbr}/{n}?lang=en" for n in range(len(coaches[abbr]))]
+            return {"items": [{"$ref": ref} for ref in refs]}
         abbr, n = url.split("/coaches/")[1].split("?")[0].split("/")
         first, last = coaches[abbr][int(n)].split(" ", 1)
         return {"firstName": first, "lastName": last}
@@ -146,9 +148,15 @@ def espn_get(coaches: dict[str, list[str]]):
 
 
 def test_head_coaches_come_back_under_our_club_codes_and_skip_clubs_with_two_listed():
-    coaches = {"BUF": ["Joe Brady"], "LV": ["Klint Kubiak"], "LAR": ["Sean McVay"], "WSH": ["Dan Quinn"], "ARI": ["A One", "B Two"]}
+    coaches = {
+        "BUF": ["Joe Brady"],
+        "LV": ["Klint Kubiak"],
+        "LAR": ["Sean McVay"],
+        "WSH": ["Dan Quinn"],
+        "ARI": ["A One", "B Two"],  # two listed: interim or unclear
+    }
     got = nflverse.fetch_head_coaches(2026, get=espn_get(coaches))
-    assert got == {"BUF": "Joe Brady", "LV": "Klint Kubiak", "LA": "Sean McVay", "WAS": "Dan Quinn"}  # ARI: interim, unclear
+    assert got == {"BUF": "Joe Brady", "LV": "Klint Kubiak", "LA": "Sean McVay", "WAS": "Dan Quinn"}
 
 
 def test_current_season_coaches_are_replaced_and_other_seasons_are_left_alone(session):
@@ -179,7 +187,8 @@ def test_a_failed_coach_feed_keeps_the_feed_names_and_is_logged(session, monkeyp
     def down(url):
         raise RuntimeError("espn down")
 
+    service.ingest_schedules(session, schedule_rows())
     monkeypatch.setattr(nflverse, "fetch_json", down)
     run = service.ingest_head_coaches(session)
     assert run.status == "failed" and "espn down" in run.error
-    assert service.ingest_schedules(session, schedule_rows()).status == "ok"  # offline schedule load still works
+    assert session.scalar(select(Game.home_coach).where(Game.season == CURRENT, Game.home_team == "BUF")) == "BUF Coach"
