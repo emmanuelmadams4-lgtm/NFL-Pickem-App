@@ -291,8 +291,8 @@ def test_a_failed_directory_cleanup_does_not_throw_away_a_good_answer(setup, mon
     real = providers.tempfile.TemporaryDirectory
 
     class CleanupFails(real):
-        def __exit__(self, *args):
-            super().__exit__(*args)
+        def cleanup(self):
+            super().cleanup()
             raise OSError("child still writing")
 
     monkeypatch.setattr(providers.tempfile, "TemporaryDirectory", lambda **kw: CleanupFails(**kw))
