@@ -65,13 +65,15 @@ def item(title="Bills win", link="https://www.espn.com/nfl/story/_/id/1", desc="
     return f"<item><title>{title}</title>{link_tag}<description>{desc}</description><pubDate>{date}</pubDate></item>"
 
 
-def web_for(source, feed: bytes, robots: bytes = b"User-agent: *\nDisallow: /private/\n", **extra) -> Web:
+def web_for(
+    source, feed: bytes, robots: bytes = b"User-agent: *\nDisallow: /private/\n", extra: dict | None = None
+) -> Web:
     url = httpx.URL(source.url)
     routes = {
         (source.host, "/robots.txt"): httpx.Response(200, headers=TEXT, content=robots),
         (source.host, url.path): httpx.Response(200, headers=XML, content=feed),
     }
-    routes.update(extra)
+    routes.update(extra or {})
     return Web(routes)
 
 
@@ -396,7 +398,7 @@ def test_robots_unreachable_means_denied():
 
 @pytest.mark.parametrize("status", [204, 206, 404, 410])
 def test_only_200_and_304_count_as_a_good_feed_answer(status):
-    web = web_for(ESPN, b"", **{(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(status, headers=XML)})
+    web = web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(status, headers=XML)})
     with pytest.raises(fetch.FetchError):
         fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport)
 
@@ -416,7 +418,7 @@ def test_validators_are_sent_and_a_304_is_a_clean_empty_result():
         seen.update(request.headers)
         return httpx.Response(304)
 
-    web = web_for(ESPN, b"", **{(ESPN.host, "/espn/rss/nfl/news"): not_modified})
+    web = web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): not_modified})
     result = fetch.fetch_feed(
         ESPN,
         resolver=public_dns,
@@ -431,7 +433,7 @@ def test_validators_are_sent_and_a_304_is_a_clean_empty_result():
 def test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent(bad):
     headers = XML | {"etag": bad, "last-modified": bad}
     web = web_for(
-        ESPN, b"", **{(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
+        ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
     )
     result = fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport)
     assert result.etag is None and result.last_modified is None
@@ -445,7 +447,7 @@ def test_validators_that_are_long_or_have_control_characters_are_never_saved_or_
 def test_the_result_carries_the_new_validators():
     headers = XML | {"etag": '"v2"', "last-modified": "Tue, 02 Jan 2025 00:00:00 GMT"}
     web = web_for(
-        ESPN, b"", **{(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
+        ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
     )
     result = fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport)
     assert result.etag == '"v2"' and result.last_modified == "Tue, 02 Jan 2025 00:00:00 GMT"
@@ -845,7 +847,7 @@ def test_a_poll_after_thirty_minutes_is_idempotent_and_uses_the_saved_validators
             else httpx.Response(200, headers=headers, content=feed)
         )
 
-    web = web_for(ESPN, feed, **{(ESPN.host, "/espn/rss/nfl/news"): serve})
+    web = web_for(ESPN, feed, extra={(ESPN.host, "/espn/rss/nfl/news"): serve})
     (first,) = go(session, web, sources=(ESPN,))
     assert first.rows == 1 and session.get(AppSetting, "news:espn:validators").value["etag"] == '"v1"'
     (second,) = go(session, web, now=RECORDED_AT + timedelta(minutes=31), sources=(ESPN,))
@@ -870,7 +872,7 @@ def test_at_most_one_hundred_items_are_stored_per_poll(session):
 
 @pytest.mark.parametrize("status", [403, 429])
 def test_a_block_stops_that_source_for_24_hours_and_never_retries_in_a_loop(session, status):
-    web = web_for(ESPN, b"", **{(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(status)})
+    web = web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(status)})
     (made,) = go(session, web, sources=(ESPN,))
     assert made.status == "failed" and made.error.startswith("blocked:")
     sent = len(web.requests)
@@ -883,7 +885,7 @@ def test_a_block_stops_that_source_for_24_hours_and_never_retries_in_a_loop(sess
 def test_run_errors_hold_at_most_forty_characters_of_what_the_server_said(session):
     long_location = "https://www.nbcsports.com/" + "y" * 200
     web = web_for(
-        ESPN, b"", **{(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(301, headers={"location": long_location})}
+        ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(301, headers={"location": long_location})}
     )
     (made,) = go(session, web, sources=(ESPN,))
     assert "yyyyy" * 9 not in made.error and len(made.error) <= 100
@@ -903,7 +905,7 @@ def test_nothing_else_the_feed_names_is_ever_fetched(session):
 
 
 def test_a_block_changes_nothing_about_how_we_ask(session):
-    web = web_for(ESPN, b"", **{(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(403)})
+    web = web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(403)})
     go(session, web, sources=(ESPN,))
     go(session, web, now=RECORDED_AT + timedelta(hours=25), sources=(ESPN,))
     agents = {r.headers["user-agent"] for r in web.requests}
@@ -946,7 +948,7 @@ def test_robots_deny_off_host_redirect_and_private_address_are_all_blocks(sessio
 
 @pytest.mark.parametrize("status", [500, 503])
 def test_a_server_error_fails_the_run_but_is_not_a_block_and_retries_next_window(session, status):
-    web = web_for(ESPN, b"", **{(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(status)})
+    web = web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(status)})
     (made,) = go(session, web, sources=(ESPN,))
     assert made.status == "failed" and not made.error.startswith("blocked:")
     assert go(session, web, now=RECORDED_AT + timedelta(minutes=10), sources=(ESPN,)) == []
@@ -993,7 +995,7 @@ def test_pruning_runs_after_a_good_poll_only(session):
         )
     ]
     store.store_items(session, "espn", old, names, RECORDED_AT - timedelta(days=45))
-    bad = web_for(ESPN, b"", **{(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(500)})
+    bad = web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(500)})
     go(session, bad, sources=(ESPN,))
     assert len(rows(session)) == 1
     go(session, web_for(ESPN, feed_xml(item())), now=RECORDED_AT + timedelta(minutes=31), sources=(ESPN,))

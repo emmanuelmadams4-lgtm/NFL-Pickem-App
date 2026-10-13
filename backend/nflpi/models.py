@@ -298,3 +298,24 @@ class GroupStanding(Base):
     points: Mapped[int] = mapped_column(Integer)
     rank: Mapped[int | None] = mapped_column(Integer)
     imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class NewsItem(Base):
+    __tablename__ = "news_items"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source: Mapped[str] = mapped_column(String(32))
+    title: Mapped[str] = mapped_column(String(200))
+    title_sha256: Mapped[str] = mapped_column(String(64))
+    url_canonical: Mapped[str] = mapped_column(String(2048))
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    extract: Mapped[str] = mapped_column(String(300))
+    team_ids: Mapped[list[str]] = mapped_column(JSON)
+    player_ids: Mapped[list[str]] = mapped_column(JSON)
+    tags: Mapped[list[str]] = mapped_column(JSON)
+
+    __table_args__ = (
+        UniqueConstraint("url_canonical", name="uq_news_url"),
+        UniqueConstraint("source", "title_sha256", name="uq_news_source_title"),
+        Index("ix_news_fetched", "fetched_at"),
+    )
