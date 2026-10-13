@@ -1,0 +1,29 @@
+[32m.[0m[31mF[0m[31m                                                                       [100%][0m
+=================================== FAILURES ===================================
+[31m[1m_______________ test_n3_a_first_named_starter_is_not_a_qb_change _______________[0m
+
+loaded = <sqlalchemy.orm.session.Session object at 0x116573770>
+pushes = <tests.test_hardening.FakeWebPush object at 0x116673d90>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1164ff360>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n3_a_first_named_starter_is_not_a_qb_change[39;49;00m(loaded, pushes, monkeypatch):  [90m# noqa: F811[39;49;00m[90m[39;49;00m
+    [90m    [39;49;00m[33m"""No starter known, then one is named: that is news about the lineup, not a change of QB."""[39;49;00m[90m[39;49;00m
+        monkeypatch.setattr(get_settings(), [33m"[39;49;00m[33malert_move_threshold[39;49;00m[33m"[39;49;00m, [94m0.99[39;49;00m)[90m[39;49;00m
+        subscribe(loaded)[90m[39;49;00m
+        game = week4_game(loaded)[90m[39;49;00m
+        game.home_qb = [94mNone[39;49;00m[90m[39;49;00m
+        loaded.commit()[90m[39;49;00m
+        push.alert_prediction_changes(loaded, engine.refresh_predictions(loaded, game_ids=[game.game_id]))[90m[39;49;00m
+        game.home_qb = [33m"[39;49;00m[33mNamed Starter[39;49;00m[33m"[39;49;00m[90m[39;49;00m
+        loaded.commit()[90m[39;49;00m
+        push.alert_prediction_changes(loaded, engine.refresh_predictions(loaded, game_ids=[game.game_id]))[90m[39;49;00m
+>       [94massert[39;49;00m [a[[33m"[39;49;00m[33mtitle[39;49;00m[33m"[39;49;00m] [94mfor[39;49;00m a [95min[39;49;00m sent(pushes) [94mif[39;49;00m a[[33m"[39;49;00m[33mtitle[39;49;00m[33m"[39;49;00m].startswith([33m"[39;49;00m[33mQB change[39;49;00m[33m"[39;49;00m)] == [][90m[39;49;00m
+[1m[31mE       AssertionError: assert ['QB change: MIA @ LV'] == [][0m
+[1m[31mE         [0m
+[1m[31mE         Left contains one more item: [0m[33m'[39;49;00m[33mQB change: MIA @ LV[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_alerts.py[0m:143: AssertionError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n3_a_first_named_starter_is_not_a_qb_change[0m - AssertionError: assert ['QB change: MIA @ LV'] == []
+[31m[31m[1m1 failed[0m, [32m1 passed[0m, [33m9 deselected[0m[31m in 2.68s[0m[0m

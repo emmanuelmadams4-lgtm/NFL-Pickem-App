@@ -100,3 +100,25 @@ D25 star alerts and morning summary (need step 8's star list). Per-kind switches
 ### Existing tests the D19 rule changes
 
 `backend/tests/test_api.py::test_push_subscribe_alerts_and_reminders_are_deduplicated` and the reminder tests in `backend/tests/test_hardening.py` (A5, A6, A12) pin the old per-game "No pick yet" rule. They are rewritten to the D19 rule in work order 2 by me, not by the builder; what each one guards (time to live, urgency, retry after a failed send, a gone subscription, rescheduled kickoff, postponed, no clock time) is kept.
+
+## 3. IMPLEMENTATION
+
+Builder: Ryan (Codex). Each work order is a file in the evidence folder; I read the real diff, checked scope and reran the proof myself (Ryan cannot bind ports or reach the test database).
+
+| Work order | What | Model, effort, try | Commit | My proof |
+|---|---|---|---|---|
+| 1 (`wo-1.md`) | Step 6 follow-ups: pick queue drops the older stored copy after a refused write (P23); offline banner shows the age of the data on screen (P24) | gpt-6-sol, high, try 1 (Jev `model:alerts:wo-1`: sol 1.0, high 1.0) | `30bb253` | `gate.sh wo1`: browser tests 91 passed, typecheck 0. Server tests 13 red on purpose (work order 2). |
+
+Model choice for work order 2: Jev settled effort (high, 1.0) and split on the rung, so a Sonnet advisor answered: gpt-6-sol, no split, confidence 0.7 (it said it read the work order only). Work order 3: Jev `model:alerts:wo-3`, sol 0.99, high 0.98.
+
+### Browser tests for alerts (`apps/web/e2e/alerts.spec.ts`, commit `16ca7cc`)
+
+* Headless Chromium has no push service. The device's subscription is a stand-in kept in `localStorage` (the test replaces `getSubscription`, `subscribe` and `unsubscribe`); a push reaches the service worker through the browser's debug protocol (`ServiceWorker.deliverPushMessage`).
+* Checked, not assumed: the default headless shell refuses notifications even when the test grants them (`Notification.permission` reads `denied`). The full browser in its new headless mode (`channel: "chromium"`) grants them and shows the notification. CI installs it already (`npx playwright install --with-deps chromium`). The spec uses that channel.
+* Checked: a synthetic tap cannot focus a window (`InvalidAccessError: Not allowed to focus a window`), and today's handler stops there. The worker can still send the window to the link (`navigate` succeeded in a probe). So A3 asks that a refused focus does not stop the navigation; it is a real hardening, not only a test need.
+* `scripts/e2e-server.sh` now makes a throwaway push key pair on every run (never stored), so the test server reports push as configured.
+* Red proof, `red-wo3.log`: 6 failed, 2 passed. A1 no subscription sent on open; A2 the old key is kept; A3 the alert shows, the tap leaves the page on `/`; A4 "Game day reminder" not found; A5 (dark, light) no "Send test alert" button. The 2 that pass are guards (alerts off: nothing sent, no button).
+
+### Design brief for the Alerts section (Design Gauntlet)
+
+One existing section of Settings, no new screen. Added: one secondary button ("Send test alert") beside "Turn off alerts", shown only while alerts are on; one result line under it (`role="status"`, plain words, replaced by each new result). Reworded: "Kickoff reminder" becomes "Game day reminder" with the help text "One alert on each game day, before that day's first kickoff." Existing tokens and components only (`Button`, `Chip`, `Notice`, `text-subtle`, `text-bad`); no new colour, size or component, so `design.md` gets no durable change. The exact words are in `wo-3.md` section D and pinned by test A4.

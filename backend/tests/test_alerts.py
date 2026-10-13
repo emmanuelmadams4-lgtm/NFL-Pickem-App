@@ -129,6 +129,20 @@ def test_n3_a_starting_qb_change_is_alerted_even_when_the_win_chance_barely_move
     assert alert["url"] == f"/game/?id={game.game_id}"
 
 
+def test_n3_a_first_named_starter_is_not_a_qb_change(loaded, pushes, monkeypatch):  # noqa: F811
+    """No starter known, then one is named: that is news about the lineup, not a change of QB."""
+    monkeypatch.setattr(get_settings(), "alert_move_threshold", 0.99)
+    subscribe(loaded)
+    game = week4_game(loaded)
+    game.home_qb = None
+    loaded.commit()
+    push.alert_prediction_changes(loaded, engine.refresh_predictions(loaded, game_ids=[game.game_id]))
+    game.home_qb = "Named Starter"
+    loaded.commit()
+    push.alert_prediction_changes(loaded, engine.refresh_predictions(loaded, game_ids=[game.game_id]))
+    assert [a["title"] for a in sent(pushes) if a["title"].startswith("QB change")] == []
+
+
 def test_n4_a_label_change_is_alerted_even_when_the_win_chance_barely_moves(loaded, pushes, monkeypatch):  # noqa: F811
     monkeypatch.setattr(get_settings(), "alert_move_threshold", 0.99)
     subscribe(loaded)
