@@ -59,21 +59,15 @@ def offence_defence(rows: list[dict]) -> pd.DataFrame:
     for game_id, sides in games.items():
         if len(sides) != 2 or sides[0][1] == sides[1][1]:
             continue
-        try:
-            (first_i, first_team, first_plays, first_epa, first_success) = sides[0]
-            (second_i, second_team, second_plays, second_epa, second_success) = sides[1]
-            first_plays, first_epa, first_success = map(float, (first_plays, first_epa, first_success))
-            second_plays, second_epa, second_success = map(float, (second_plays, second_epa, second_success))
-        except (TypeError, ValueError):
+        parsed = [(index, team, *map(float, values)) for index, team, *values in sides]
+        if any(plays <= 0 or not all(map(math.isfinite, (plays, epa, success)))
+               for _, _, plays, epa, success in parsed):
             continue
-        if (first_plays <= 0 or second_plays <= 0 or
-                not all(map(math.isfinite, (first_plays, first_epa, first_success,
-                                            second_plays, second_epa, second_success)))):
-            continue
-        first_off_epa, second_off_epa = first_epa / first_plays, second_epa / second_plays
-        first_off_sr, second_off_sr = first_success / first_plays, second_success / second_plays
-        result.extend(((first_i, game_id, first_team, first_off_epa, second_off_epa, first_off_sr, second_off_sr),
-                       (second_i, game_id, second_team, second_off_epa, first_off_epa, second_off_sr, first_off_sr)))
+        for side, opponent in (parsed, parsed[::-1]):
+            index, team, plays, epa, success = side
+            _, _, opp_plays, opp_epa, opp_success = opponent
+            result.append((index, game_id, team, epa / plays, opp_epa / opp_plays,
+                           success / plays, opp_success / opp_plays))
     result.sort(key=lambda row: row[0])
     return pd.DataFrame([row[1:] for row in result],
                         columns=["game_id", "team", "off_epa", "def_epa", "off_sr", "def_sr"])
