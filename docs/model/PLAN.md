@@ -1,6 +1,6 @@
 # Step 18 plan: what exists, what is missing, and how the rest is cut
 
-Step 18a, lane `audit`, 2026-10-13. It reads the owner's brief (`docs/model/OWNER_BRIEF_2026-10-13.md`, cited as "brief §N") against the code on main at `589aa3b`, under owner decision D68. Companion files: `docs/model/AUDIT.md` (findings, cited here as A1 to A12) and `docs/model/REPOS.md`.
+Step 18a, lane `audit`, 2026-10-13. It reads the owner's brief (`docs/model/OWNER_BRIEF_2026-10-13.md`, cited as "brief §N") against the code on main at `b4d42d0`, under owner decision D68. Companion files: `docs/model/AUDIT.md` (findings, cited here as A1 to A12) and `docs/model/REPOS.md`.
 
 **In one line:** the win model and its test bench are sound and already cover most of brief §6, §10 and §12; what is missing is everything about spreads, totals and betting value (§3, §7, §8, §9), a point-in-time data layer with a feature dictionary (§4, §5), and a single evaluation report with saved run records (§10, §11). Seven lane-sized steps follow, 18d to 18j.
 

@@ -1,6 +1,6 @@
 # Audit of the current model (owner brief, section 1)
 
-Step 18a, lane `audit`, 2026-10-13. Code audited: main at `589aa3b` (the audit began at `c55827f`; the model, bench and ingestion files are identical in both). No model code was changed. Brief: `docs/model/OWNER_BRIEF_2026-10-13.md` section 1, read under owner decision D68.
+Step 18a, lane `audit`, 2026-10-13. Code audited: main at `b4d42d0` (the audit began at `c55827f`; the model, bench and ingestion files are identical in both). No model code was changed. Brief: `docs/model/OWNER_BRIEF_2026-10-13.md` section 1, read under owner decision D68.
 
 ## The answer in five lines
 

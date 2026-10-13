@@ -1,6 +1,6 @@
 # Step 18a: audit of the current model, the six-repository check, and the plan for the rest of step 18
 
-Lane `audit`, branch `lane/audit`, started from main `c55827f`, rebased onto main `589aa3b` before the final gate (commit names below are as rebased), coord task #30, tier **T1** (documents and one test file; no model change). Coordinator Oscar (hive `worker-audit`, Opus), 2026-10-13, one Gauntlet Loop ONE_SHOT session. Owner brief: `docs/model/OWNER_BRIEF_2026-10-13.md` sections 1 and 2; owner decision D68.
+Lane `audit`, branch `lane/audit`, started from main `c55827f`, moved onto main three times as other lanes landed (`11cc401`, `589aa3b`, then `b4d42d0`); commit names below are as of the branch on `b4d42d0`, except `d2a6f7b` and `639f430`, which name the commits the critics and the gate actually ran on, coord task #30, tier **T1** (documents and one test file; no model change). Coordinator Oscar (hive `worker-audit`, Opus), 2026-10-13, one Gauntlet Loop ONE_SHOT session. Owner brief: `docs/model/OWNER_BRIEF_2026-10-13.md` sections 1 and 2; owner decision D68.
 
 **Result in three lines.** The model is not broken and is well calibrated, but it is the market's closing number in all but 2% of games, and it ties the market: nothing measured shows it beating the market (`docs/model/AUDIT.md`). Of the six repositories one is a possible later dependency, two give ideas, three are rejected; none shows a technique that beats the current model (`docs/model/REPOS.md`). The rest of step 18 is cut into seven lane-sized steps, 18d to 18j, with the rules for judging spread and totals forecasts written before any test (`docs/model/PLAN.md`).
 
@@ -53,7 +53,7 @@ Public seam (from the dispatch): `analytics.backtest.predict_season` (bench) and
 
 * **Document rules (from the dispatch, checked by the critic).** Every finding in `AUDIT.md` is VERIFIED (file and line, plus a test or a command with output) or HYPOTHESIS (names the test that would settle it). Every repository row carries the commit and the license as read from the clone. No 2026 game, line, injury or result is made up.
 * **Red.** These tests assert properties the code is expected to have, so "red first" is not possible without a defect. Red was produced the honest way: planted defects (ten by the end: M1 to M10) (`step-18a-evidence/mutate.py`), each of which must make at least one test fail. Had a test failed on the unchanged code, it would have been kept as a strict `xfail` and reported to the integrator as `AUDIT CRITICAL` (none did).
-* **S4 was added after the first run** (commit `b0fdc07`), when the line-timing finding (AUDIT A6) needed its own proof. It adds a clause; it changes none.
+* **S4 was added after the first run** (commit `3ddcff3`), when the line-timing finding (AUDIT A6) needed its own proof. It adds a clause; it changes none.
 * **Gate.** `docs/gauntlet/logs/step-18a-evidence/gate.sh <label>`: full `pytest` on the lane's own database (`nflpi-lane-model-db`, port 15442; a skipped test fails the gate), `ruff` on `nflpi tests migrations` and the evidence scripts, `alembic upgrade head` then `alembic check` on a fresh scratch database, `npm run gen:api` with no drift. One full run on the final commit, the audit test file twice in a row, and the planted-defect sweep.
 * **Baseline.** `tests/test_model.py` on `c55827f`: 34 passed (`~/.claude/plans/nfl-pickem-lanes/logs/step-18a-c55827f-baseline-test_model.log`).
 
@@ -63,15 +63,15 @@ Public seam (from the dispatch): `analytics.backtest.predict_season` (bench) and
 |---|---|---|
 | Six repositories cloned shallow into the session scratch folder, outside the repository; never run | coordinator | six commits and licenses read from the clones (table in `REPOS.md`) |
 | One reader per repository | 4 Sonnet + 2 Haiku subagents, read only, in parallel | reports in `step-18a-evidence/repos/`. The coordinator re-checked every commit and license and spot-checked the claims marked ✔ in `REPOS.md`. One reader claim was wrong (nfl-predictions does report log loss) and is corrected in the report and the table |
-| `backend/tests/test_model_audit.py` (the spec) | coordinator | 5 tests green on the first run (`bb3c5d6`), 6 after S4 (`b0fdc07`) |
+| `backend/tests/test_model_audit.py` (the spec) | coordinator | 5 tests green on the first run (`a3d57f1`), 6 after S4 (`3ddcff3`) |
 | Work order 1 (`step-18a-evidence/wo-1.md`): `audit_numbers.py`, `mutate.py` | Claude Sonnet builder (Codex refused), try 1 of 2 | delivered ruff-clean. The builder found that pytest's colour codes hid the `FAILED` lines and added `--color=no`. The coordinator read both files, then added three planted defects to the list himself (M7, M8, M9: the list is spec data, not code) |
 | `blend_vs_market.py` (30 lines, one lookup) | coordinator | written directly: smaller than a work order, recorded here as the exception the roster allows |
 | Bench numbers | coordinator, under `res:gate-c` | `audit-numbers.json`: 3,649 games, market 66.57% / 0.6094, blend 66.46% / 0.6107, equal to step 14's stored numbers |
-| `AUDIT.md`, `REPOS.md`, `PLAN.md` | coordinator | commits `b0fdc07`, `76b9c4d` |
+| `AUDIT.md`, `REPOS.md`, `PLAN.md` | coordinator | commits `3ddcff3`, `97bc97f` |
 
 **BUILD:** `IMPLEMENTATION_PROVIDER: CLAUDE (Codex refused the default model)`, `BUILD_RUNG: sonnet (try 1 of 2)`, `CLIMBS: none`.
 
-**Review fan-out (T1, trivial tier: `ecc:code-reviewer` on the four new code files, read only).** Verdict **WARN** on `76b9c4d`: no test found that passes with its clause broken; 0 critical, 0 high, 4 medium, 6 low (`step-18a-evidence/reviews/code-reviewer-1.md`). Each finding and what was done:
+**Review fan-out (T1, trivial tier: `ecc:code-reviewer` on the four new code files, read only).** Verdict **WARN** on `97bc97f`: no test found that passes with its clause broken; 0 critical, 0 high, 4 medium, 6 low (`step-18a-evidence/reviews/code-reviewer-1.md`). Each finding and what was done:
 
 | Finding | Done |
 |---|---|
@@ -85,11 +85,11 @@ Public seam (from the dispatch): `analytics.backtest.predict_season` (bench) and
 | LOW calibration slope uses a regularized fit | noted in `AUDIT.md` A4 (effect under 0.01) |
 | LOW `mutate.py` counted only `FAILED` lines; end check flagged an already dirty tree | fixed in 1b (`ERROR` lines count; refuses a dirty tree at start) |
 
-Work order 1b (`wo-1b.md`): Claude Sonnet builder, try 2 of 2 on the rung, six changes in the two scripts, commit `5b796ae`. The coordinator read the diff and reran every proof (section 5). One lapse, stated plainly: both builders' own proof runs of `mutate.py` (about 90 seconds each) ran without a machine lock, because the work orders allowed one run and did not name the lock; every coordinator run held one.
+Work order 1b (`wo-1b.md`): Claude Sonnet builder, try 2 of 2 on the rung, six changes in the two scripts, commit `178b389`. The coordinator read the diff and reran every proof (section 5). One lapse, stated plainly: both builders' own proof runs of `mutate.py` (about 90 seconds each) ran without a machine lock, because the work orders allowed one run and did not name the lock; every coordinator run held one.
 
 ## 4. CLEANUP
 
-Scope: the four code files this step added (`backend/tests/test_model_audit.py` and the three scripts in the evidence folder). An explicit `/refactor` read after the review fixes, on `5b796ae`:
+Scope: the four code files this step added (`backend/tests/test_model_audit.py` and the three scripts in the evidence folder). An explicit `/refactor` read after the review fixes, on `178b389`:
 
 * **No change needed.** `test_model_audit.py` repeats two five-line helpers that also exist in `tests/test_model.py` (`frame`, `_flip_scores`). Kept on purpose: that file belongs to lane modelc and may change under this one; importing from it would tie the audit's proof to another lane's test file.
 * **No change needed.** `audit_numbers.py` and `blend_vs_market.py` both build the bench frame the way `jobs.backtest` does (seven lines each). Kept: each script must run alone as evidence, and a shared helper would be a third file for seven lines.
@@ -106,8 +106,9 @@ All on the lane's own database (`nflpi-lane-model-db`, port 15442). Raw logs are
 |---|---|---|
 | Audit test file, twice in a row, on the final test code | 6 passed, 6 passed | `step-18a-final-audit-run1.log`, `-run2.log` |
 | Planted-defect sweep, coordinator's run under `res:gate-b` | **10 of 10 KILLED**, no file left changed | `step-18a-evidence/mutation.log` |
-| **Full gate, one run on `639f430`** under `res:gate-b` | **PASS**: `pytest` 1,462 passed in 614 s, 0 failed, 0 skipped; `ruff` all checks passed; `alembic upgrade head` then `check` on a fresh scratch database: no new upgrade operations; `npm run gen:api`: no drift | `step-18a-final2.out`, `step-18a-final2-*.log` |
+| **Full gate, one run on `639f430` (named `dc5bd7b` since the last branch move)** under `res:gate-b` | **PASS**: `pytest` 1,462 passed in 614 s, 0 failed, 0 skipped; `ruff` all checks passed; `alembic upgrade head` then `check` on a fresh scratch database: no new upgrade operations; `npm run gen:api`: no drift | `step-18a-final2.out`, `step-18a-final2-*.log` |
 | Bench numbers reproduce the stored ones | 3,649 games, market 0.6094, blend 0.6107 (equal to step 14) | `step-18a-evidence/audit-numbers.json` |
+| **Full gate again after the last branch move** (main went from `589aa3b` to `b4d42d0`: the Group screen landed) | GATE3_PLACEHOLDER | `step-18a-final3.out`, `step-18a-final3-*.log` |
 | Lane guard | `OK` | `python3 ~/.claude/bin/lane-guard.py check …/lanes.md audit main` |
 
 An earlier full-gate run on the previous candidate was stopped by the coordinator after 15 minutes without a result, because the test file was about to change and the run was holding a machine lock others were waiting for; it proves nothing and is not counted.
@@ -116,8 +117,8 @@ An earlier full-gate run on the previous candidate was stopped by the coordinato
 
 | Round | Commit | Verdict | What it did |
 |---|---|---|---|
-| 1 | `d2a6f7b` (same content as `8e8670e`) | **FAIL on one rule** | Re-derived six VERIFIED findings (A9, A10, A4, A6, A8, A2/A3, plus A13/A14 arithmetic): all confirmed. All six repository rows match the clones (commit, date, license). Test file: 6 passed. Every clause S1 to S4 has a test and a killed defect. The failure: two HYPOTHESIS claims (A6, A8) were worded as fact in the summary's point 4 and in the "Realistic cutoffs" paragraph, and A8's "little" was an inference. Report: `step-18a-evidence/reviews/critic-1.md` |
-| fix, once | `957a1c0` | | The three places reworded; every document searched for the same fault. Its advisory was also taken: the score rewrite in the S1 tests now changes the total as well as the winner, and planted defect M10 (total points in a feature) proves it on both paths |
+| 1 | `d2a6f7b` (same content as `1f94f1b`) | **FAIL on one rule** | Re-derived six VERIFIED findings (A9, A10, A4, A6, A8, A2/A3, plus A13/A14 arithmetic): all confirmed. All six repository rows match the clones (commit, date, license). Test file: 6 passed. Every clause S1 to S4 has a test and a killed defect. The failure: two HYPOTHESIS claims (A6, A8) were worded as fact in the summary's point 4 and in the "Realistic cutoffs" paragraph, and A8's "little" was an inference. Report: `step-18a-evidence/reviews/critic-1.md` |
+| fix, once | `b79f81c` | | The three places reworded; every document searched for the same fault. Its advisory was also taken: the score rewrite in the S1 tests now changes the total as well as the winner, and planted defect M10 (total points in a feature) proves it on both paths |
 | 2 (delta brief) | `639f430` | **PASS** | Read all of `AUDIT.md` again for the failed rule, checked A9 and A10's numbers in the evidence files, the test change, all ten killed defects, the citations after the branch move, and one repository claim the first critic could not confirm. Test file: 6 passed. Report: `step-18a-evidence/reviews/critic-2.md` |
 
 **After critic 2, documents only.** Its three advisory notes were taken by softening three sentences in `AUDIT.md` (A4: the size of the regularization effect is no longer claimed; the 2022 to 2025 gap is no longer called chance; A10: "should change"). No code or test changed after the gate: `git diff --stat 639f430 HEAD` lists only `docs/`.
