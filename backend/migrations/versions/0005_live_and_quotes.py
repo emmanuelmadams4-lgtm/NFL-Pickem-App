@@ -3,9 +3,9 @@
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0006"
-# Integrator will re-point this at landing; main has no 0004/0005 yet.
-down_revision = "0003"
+revision = "0005"
+# Numbers are taken at landing time: 0005 was the next free number on main eed7c61 (0004 = group picks).
+down_revision = "0004"
 branch_labels = None
 depends_on = None
 
