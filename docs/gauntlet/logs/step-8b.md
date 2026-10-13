@@ -178,7 +178,7 @@ That is every variant: six, frozen before the first run. Nothing else was run on
 
 ### Notes
 
-* **The input points the right way and is small.** One fit on the tune seasons only (diagnostic, `tune_only_weights`) gives each extra star out a weight of about -0.076 on the home side's log-odds: roughly 1.9 points of win chance at an even game, on top of what the line says. With the reserve lists the weight is -0.052. The quarterback input adds -0.042 and made every variant worse: the model's quarterback-change flag and the line already cover it.
+* **The input points the right way and is small.** One fit on the tune seasons only (diagnostic, `tune_only_weights`) gives each extra star out a weight of about -0.076 on the home side's log-odds: roughly 1.9 points of win chance at an even game, on top of what the line says. With the reserve lists the weight is -0.052 (count variant; the weighted variant carried to the confirm seasons has -0.035). The quarterback input adds -0.042 and made every variant worse: the model's quarterback-change flag and the line already cover it.
 * **Candidate A learned from 2009 on.** For 2012 it had 3 seasons to learn from, 10 from 2019. No scored game lacked a report input (0 missing). 1,068 of 3,649 scored games had a non-zero count (about 29%).
 * **Candidate B is the blend until 2019.** Reserve lists are usable from 2016, a fit needs 3 seasons, so 1,784 tune games (2012 to 2018) equal the blend exactly and its tune numbers come from 2019 to 2021 only (781 games). It was worse than the blend there and the less bad variant was carried to the confirm seasons as the protocol says. On the confirm seasons it learned from 6 to 9 seasons.
 * **Joins checked on every run** (reviewer findings H1, H2, M1): every season's Out or Doubtful rows match stars (98 to 178 per season, 9% to 16% of rows); every club code in the report and roster files is one the schedule has; 8 of 7,298 scored club-games had no report row that week (read as nobody out); every season file holds weeks 1 to 17; no injury row lacks a player id (383 stat rows and 140 roster rows do: club totals and unnamed entries, skipped).
@@ -215,3 +215,21 @@ Explicit scope-locked refactor pass on the touched code (`/refactor` rules: beha
 * **Remaining findings, classified:** all advisory, listed under "Carried" above.
 * **Mutation sweep** (`s8b-mutate.py`, `mutate.log`): 79 mutants of `star_backtest.py`; 77 caught on the first complete run, 2 survived: L2 (a tie between offence and defence score must go to offence) and F7 (the away side's reserve count must also include its own report). Both were real gaps, not equivalent mutants. One assertion each added to the existing tests (commit after `79c3739`); each of the two mutants re-applied by hand now fails a test (79 of 79 caught).
 * **Rebase:** the branch was rebased on `main` e51ac48 (no conflicts; this lane's files are disjoint from the step 15 changes).
+
+## 5. VERIFICATION
+
+Fresh critic `ecc:mle-reviewer` (no build transcript), run on `f172d4b`: **PASS**. Its three first checks all passed:
+
+1. No future data: PASS. Five hand-made leaks (`season - 1` to `season`; `_train_rows(..., season + 1, ...)`; kickoff guard replaced by `True`; the previous week's report indexed under this week; `predict_season` window + 1) each failed a named test.
+2. Confirm seasons never used for tuning: PASS. In `final.json` and `run-1.json` each candidate's `chosen` is the variant with the largest tune gain; `backtest.evaluate` chooses it and raises if tune and confirm overlap; the six scored variants equal the protocol.
+3. Reported numbers equal the stored files: PASS. Every cell of both tables was compared with `final.json`; `run-1.json` and `final.json` agree on all result keys.
+
+Critic's gate on `f172d4b`: pytest 957 passed; ruff All checks passed; alembic No new upgrade operations detected; gen:api no drift. X1: `git diff --stat main..HEAD -- backend` shows only the two new files. Every clause L1 to L3, F1 to F7, P1 to P4 and X1 is pinned by a caught mutant; F8 and P5 are pinned indirectly (named tests). The critic ran 8 of its own mutants, all caught.
+
+Advisories carried (none open against a clause): the log's header and Baseline still name the old base a71e112 (history; the branch was rebased onto e51ac48); the protocol says stats files 2008 to 2024 while the runner loads 2008 to 2025 (no 2026 game is scored); 2025 report rows have no time (disclosed); the runner script has no tests (it stops on bad input). One wording fix made from the critic's list: the -0.052 weight is the count variant, the weighted reserve variant is -0.035.
+
+**Jev job 4** ("did the review truly pass?"): 0.78. That is between 0.1 and 0.8, so by the rule the advisor decides; the coordinator did not spend an advisor call and passes the decision to the integrator, with every gate green and the critic PASS.
+
+## 6. LANDING
+
+Branch `lane/starb`, rebased on main e51ac48, not pushed. Files: `backend/nflpi/analytics/star_backtest.py`, `backend/tests/test_star_backtest.py`, `docs/gauntlet/logs/step-8b*`. `lane-guard check` against `lanes.md`: OK. No seam change needed: nothing ships, so `engine.py` is unchanged. Security review not required (no auth, user input, database query, file write or new network path). The gate runs twice on the final commit (see the done message for the numbers).
