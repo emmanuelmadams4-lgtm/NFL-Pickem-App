@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 
 from nflpi.analytics.stars import stars_out
 from nflpi.ingestion import nflverse, service
@@ -381,6 +381,10 @@ def _without(rows: list[dict], column: str) -> list[dict]:
         "long_bad_value",
         "stat_column_all_na",
         "club_missing_from_one_file",
+        "club_missing_from_snaps",
+        "stat_column_all_blank",
+        "short_stat_row",
+        "short_snap_row",
     ],
 )
 def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
@@ -441,12 +445,28 @@ def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
         stats = [r | {"def_safeties": "NA"} for r in stats]
     elif case == "club_missing_from_one_file":  # a cut stats file: the Jets' week 2 rows are gone
         stats = [r for r in stats if not (r["team"] == "NYJ" and r["week"] == "2")]
+    elif case == "club_missing_from_snaps":  # the other way round: the snap file lost the Jets' week 2
+        snaps = [r for r in snaps if not (r["team"] == "NYJ" and r["week"] == "2")]
+    elif case == "stat_column_all_blank":  # blank in every row, not only "NA"
+        stats = [r | {"def_safeties": ""} for r in stats]
+    elif case == "short_stat_row":  # csv gives None for the cells a short row lacks
+        stats[1] = stats[1] | {"team": None}
+    elif case == "short_snap_row":
+        snaps[0] = snaps[0] | {"pfr_player_id": None}
     run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
     assert run.status == "failed"
     assert "y" * 41 not in run.error
     assert run.error
     if case.startswith("missing_"):  # the logged error names the file
         assert ("snap_counts" if case == "missing_snap_column" else "stats_player_week") in run.error
+    named = {
+        "club_missing_from_one_file": "stats_player_week lacks (2, NYJ)",
+        "club_missing_from_snaps": "snap_counts lacks (2, NYJ)",
+        "stat_column_all_blank": "def_safeties",
+        "short_stat_row": "stats_player_week",
+        "short_snap_row": "snap_counts",
+    }
+    assert named.get(case, "") in run.error
     assert stars(session, 3, "KC") == before
     assert session.scalar(select(func.count()).select_from(TeamStar)) == 20
 
@@ -706,3 +726,69 @@ def test_tiebreaks_and_the_rarer_weights(session):
         ("def", 1, "Safety Guy", "00-064", "S", 20, 8.0, 9.0),
         ("def", 2, "Tackler Tom", "00-065", "LB", 20, 7.0, 8.0),
     ]
+
+
+# Clauses the second critic found unpinned (S11, S21, S22)
+
+
+def test_stars_out_orders_a_club_by_slot_then_rank(session):
+    game_id = _game(session, SEASON, 3, "NYJ", "KC")
+    # Stored out of order on purpose: the answer must not depend on the order of the rows.
+    for n, (slot, rank) in enumerate([("def", 2), ("off", 2), ("def", 1), ("qb", 1), ("off", 1)]):
+        session.add(
+            TeamStar(
+                season=SEASON,
+                week=3,
+                team="KC",
+                slot=slot,
+                rank=rank,
+                player_id=f"00-9{n}",
+                player=f"{slot} {rank}",
+                position=None,
+                snaps=1,
+                production=1.0,
+                score=1.0,
+                source="test",
+                computed_at=NOW,
+            )
+        )
+        session.commit()
+        _injury(session, 3, "KC", f"00-9{n}", f"{slot} {rank}", "Out", 1)
+    # Read the table in the order it was written, so only the function's own sort can give the right answer.
+    for scan in ("indexscan", "indexonlyscan", "bitmapscan"):
+        session.execute(text(f"SET LOCAL enable_{scan} = off"))
+    result = stars_out(session, game_id, now=NOW)
+    assert [(r["slot"], r["rank"]) for r in result["out"]] == [
+        ("qb", 1),
+        ("off", 1),
+        ("off", 2),
+        ("def", 1),
+        ("def", 2),
+    ]
+
+
+def test_same_name_twins_are_not_joined_and_a_quarterback_needs_no_snap_row(session):
+    long_name, long_passer = "L" * 70, "Q" * 70
+    data = (
+        [
+            snap(1, "SEA", "TwiN09", "Twin Name", "WR", off=40),  # not in the id file; two stats players share the name
+            snap(1, "SF", "LonN01", long_name, "WR", off=10),
+        ],
+        [
+            stat(1, "SEA", "00-070", "Twin Name", "WR", receiving_yards=100),
+            stat(1, "SEA", "00-071", "Twin Name", "WR", receiving_yards=50),
+            stat(1, "SEA", "00-072", long_passer, "QB", attempts=12),  # no snap row at all
+            stat(1, "SF", "00-073", long_name, "WR", receiving_yards=200),
+        ],
+        [{"pfr_id": "LonN01", "gsis_id": "00-073"}],
+    )
+    assert ingest(session, data=data).status == "ok"
+    # Two league ids carry the name, so the snap rows are joined to neither: each twin keeps 0 snaps,
+    # and the snap-only third (0.1 x 40 = 4.0) ranks below both.
+    assert stars(session, 2, "SEA") == [
+        ("qb", 1, "Q" * 64, "00-072", "QB", 0, 12.0, 0.0),
+        ("off", 1, "Twin Name", "00-070", "WR", 0, 10.0, 10.0),
+        ("off", 2, "Twin Name", "00-071", "WR", 0, 5.0, 5.0),
+    ]
+    # A name longer than the column is cut to 64 characters in both files: 0.1 x 10 + 200/10 = 21.0.
+    assert stars(session, 2, "SF") == [("off", 1, "L" * 64, "00-073", "WR", 10, 20.0, 21.0)]

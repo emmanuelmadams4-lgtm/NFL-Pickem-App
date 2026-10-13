@@ -12,7 +12,8 @@ run() { # name, command...
   echo "$([ $rc = 0 ] && echo PASS || echo FAIL) $name exit=$rc :: $(grep -E 'passed|failed|error|All checks|Found|drift|No new upgrade|downgrade ok' "$here/$label-$name.log" | tail -1 | cut -c1-160)"
   [ $rc = 0 ] || fail=1
 }
-run pytest bash -c 'cd backend && uv run pytest -q'
+# A skipped test is a failure here: nothing in this suite may be skipped.
+run pytest bash -c 'cd backend && out=$(uv run pytest -q 2>&1); rc=$?; echo "$out"; if echo "$out" | grep -qi skipped; then echo "error: skipped tests"; exit 1; fi; exit $rc'
 run ruff bash -c 'cd backend && uvx ruff check nflpi tests migrations'
 # Migrations on a fresh, empty database: up to head, models match, down to nothing, up again, models match.
 run alembic bash -c "docker exec nflpi-lane-stars-db psql -q -U nflpi -d postgres -c 'drop database if exists nflpi_alembic' -c 'create database nflpi_alembic' \

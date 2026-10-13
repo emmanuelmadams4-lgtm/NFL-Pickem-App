@@ -1,0 +1,11 @@
+control: no mutation (control): 48 passed in 2.32s
+KILLED: S11 slot order reversed: 1 failed, 47 passed in 2.37s
+KILLED: S11 rank dropped from the sort: 1 failed, 47 passed in 3.34s
+KILLED: S24 stats-has-pair-snaps-lack branch off: 1 failed, 47 passed in 2.77s
+KILLED: S26 AttributeError not wrapped: 2 failed, 46 passed in 2.20s
+KILLED: S21 any name match joins: 1 failed, 47 passed in 1.76s
+KILLED: S25 only NA counts as blank: 1 failed, 47 passed in 1.66s
+KILLED: S22 quarterback needs snaps: 1 failed, 47 passed in 2.39s
+KILLED: name cut removed (stats): 1 failed, 47 passed in 1.79s
+KILLED: name cut removed (snaps): 1 failed, 47 passed in 2.37s
+9 mutations, 0 survived
