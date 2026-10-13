@@ -265,6 +265,14 @@ test("E4 a rejected token signs the owner out, on an upload and on a read", asyn
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });
 
+test("E4b a rejected token on a group read signs the owner out too", async ({ page }) => {
+  await page.addInitScript((t) => localStorage.setItem("nflpi_token", t), TOKEN);
+  await page.route("**/api/group/standings*", (route) => route.fulfill({ status: 401, json: { detail: "Invalid token" } }));
+  await page.goto(`/group/?season=${SEASON}&week=3`);
+  await expect(page.getByText("Your token was rejected by the server. Sign in again.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+});
+
 test("E5 an error with no body, or with text that is not ours to show, gets a fixed message", async ({ page }) => {
   let reply: { status: number; json?: unknown; body?: string } = { status: 502, body: "" };
   await page.route("**/api/group/import*", (route) => route.fulfill(reply));
@@ -369,7 +377,9 @@ test("R1 on a phone nothing scrolls sideways and the controls are thumb-sized", 
     await expect(page.getByText(/^(Totals count weeks|No standings for week)/)).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   }
-  await chooser(page).setInputFiles(csvFile("a.csv", "x"));
+  await chooser(page).setInputFiles(csvFile(`${"a-very-long-yahoo-export-file-name-".repeat(4)}.csv`, "x"));
+  await expect(confirmPanel(page)).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   for (const name of ["Upload file", "Choose another file"]) {
     const box = await page.getByRole("button", { name }).boundingBox();
     expect(box?.height ?? 0, name).toBeGreaterThanOrEqual(44);

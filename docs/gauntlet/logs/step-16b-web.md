@@ -74,8 +74,8 @@ Executable gate: `apps/web/e2e/group.spec.ts` (clauses below, one test each; it 
 
 | ID | Clause | Check |
 |---|---|---|
-| E4 | A 401 on the upload or on a group read signs out like every other request ("Your token was rejected by the server. Sign in again.") | E4 |
-| E5 | An error with an empty body shows "Upload failed (HTTP nnn). Try again."; server text is shown only for a 422 whose detail is a string; every other status or a list-form detail shows "The server could not read this file." | E5 |
+| E4 | A 401 on the upload or on a group read signs out like every other request ("Your token was rejected by the server. Sign in again.") | E4 (upload), E4b (read) |
+| E5 | A 5xx other than 500 shows "Upload failed (HTTP nnn). Try again." whatever the body; server text is shown only for a 422 whose detail is a string; every other status or a list-form detail shows "The server could not read this file." | E5 |
 | E6 | A timeout (60 s) says there was no answer, that the file may have been saved, and reloads the tables. **No browser check** (it needs a 60 s wait); carried gap | none |
 
 Advisories carried, not built: collapsing the standings to a top ten; showing the detected file kind before saving (the server cannot tell without saving); per-member "x of 32" wording; explaining a null rank beyond the en dash; picks above standings on the page (the owner's order is kept: upload, standings, picks).
