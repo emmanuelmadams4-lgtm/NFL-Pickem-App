@@ -11,7 +11,7 @@ import { FreshnessIndicator } from "@/components/freshness";
 import { OfflineBanner, PickSync, PushKeepAlive } from "@/components/pwa";
 import { SeasonPicker, WeekPicker } from "@/components/pickers";
 import { Button, cx, errorMessage } from "@/components/ui";
-import { BarChart, Calendar, Gear, Refresh } from "@/components/icons";
+import { BarChart, Calendar, Gear, People, Refresh } from "@/components/icons";
 import { useOnline } from "@/lib/sync";
 
 const REFRESH_WAIT_MS = 20_000;
@@ -58,6 +58,7 @@ function RefreshButton() {
 const DESKTOP_NAV = [
   { label: "Week", match: (p: string) => p === "/" || p.startsWith("/game") || p.startsWith("/sheet") },
   { label: "Results", match: (p: string) => p.startsWith("/performance") },
+  { label: "Group", match: (p: string) => p.startsWith("/group") },
   { label: "Backtest", match: (p: string) => p.startsWith("/backtest") },
   { label: "Settings", match: (p: string) => p.startsWith("/settings") },
 ];
@@ -65,6 +66,7 @@ const DESKTOP_NAV = [
 const TABS = [
   { label: "Week", Icon: Calendar, match: (p: string) => p === "/" || p.startsWith("/game") || p.startsWith("/sheet") },
   { label: "Results", Icon: BarChart, match: (p: string) => p.startsWith("/performance") || p.startsWith("/backtest") },
+  { label: "Group", Icon: People, match: (p: string) => p.startsWith("/group") },
   { label: "Settings", Icon: Gear, match: (p: string) => p.startsWith("/settings") },
 ];
 
@@ -77,6 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hrefs: Record<string, string> = {
     Week: `/${qs}`,
     Results: `/performance/?season=${season}`,
+    Group: `/group/${qs}`,
     Backtest: "/backtest/",
     Settings: "/settings/",
   };

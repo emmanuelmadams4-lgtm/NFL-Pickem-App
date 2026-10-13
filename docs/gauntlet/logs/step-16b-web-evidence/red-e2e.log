@@ -1,0 +1,128 @@
+[WebServer] ingestion open-meteo/weather failed
+[WebServer]     raise RuntimeError("Open-Meteo unreachable (e2e fixture)")
+[WebServer] RuntimeError: Open-Meteo unreachable (e2e fixture)
+  ✘   1 e2e/group.spec.ts:53:5 › N1 a Group entry in the main navigation opens the page, on the desktop bar and the phone tab bar (30.1s)
+  ✘   2 e2e/group.spec.ts:65:5 › S1 standings list rank, member, the week's points and the running total, and say which weeks are counted (5.2s)
+  ✘   3 e2e/group.spec.ts:79:5 › S2 a week with no standings says so in words (5.2s)
+  ✘   4 e2e/group.spec.ts:85:5 › S3 a member name is shown as plain text, never as markup (5.2s)
+  ✘   5 e2e/group.spec.ts:92:5 › P1 each game shows how many members picked each side, the share and the mean confidence points (5.3s)
+  ✘   6 e2e/group.spec.ts:108:5 › P2 next to each game stands the app's own pick, from data the page already loads (5.3s)
+  ✘   7 e2e/group.spec.ts:118:5 › P3 empty states: a game nobody picked, a season with no group data, a week with no games (5.2s)
+  ✘   8 e2e/group.spec.ts:138:5 › X1 the spread is never shown or used as a score (5.2s)
+  ✘   9 e2e/group.spec.ts:149:5 › PV1 member names never reach the console or browser storage (5.2s)
+  ✘  10 e2e/group.spec.ts:167:5 › U1 a picks file is shown for confirmation with its season, sent as raw bytes only after confirming, and the screen refreshes (5.2s)
+  ✘  11 e2e/group.spec.ts:195:5 › U2 the season can be changed in the confirm step and the chosen season is the one sent (5.2s)
+  ✘  12 e2e/group.spec.ts:213:5 › U3 a weekly performance file is described in words and the standings show it (5.2s)
+  ✘  13 e2e/group.spec.ts:224:5 › E1 the server's own 422 message is shown as is, and the file stays ready for another try (5.2s)
+  ✘  14 e2e/group.spec.ts:237:5 › E2 a 413 and a 500 get their own plain messages, and a retry after a 500 works (5.2s)
+  ✘  15 e2e/group.spec.ts:257:5 › E3 a file over the 1,000,000 byte cap is refused on the page without being sent (5.2s)
+  ✘  16 e2e/group.spec.ts:270:5 › L1 each section fails on its own with a retry, and an error is never shown as 'no data' (5.2s)
+  ✘  17 e2e/group.spec.ts:281:5 › L2 a late answer for an earlier week never replaces the week now shown (5.2s)
+  ✘  18 e2e/group.spec.ts:294:5 › R2 thirty-two members with a very long name fit a phone and clear the tab bar (5.2s)
+  ✘  19 e2e/group.spec.ts:313:7 › A1 the page has no accessibility violations (dark): data, confirm step, error (5.2s)
+  ✘  20 e2e/group.spec.ts:313:7 › A1 the page has no accessibility violations (light): data, confirm step, error (5.2s)
+  ✘  21 e2e/group.spec.ts:332:5 › R1 on a phone nothing scrolls sideways and the controls are thumb-sized (5.2s)
+    Error: locator.click: Test timeout of 30000ms exceeded.
+      - waiting for getByRole('link', { name: 'Group', exact: true })
+    Error Context: test-results/group-N1-a-Group-entry-in--94349-p-bar-and-the-phone-tab-bar/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-S1-standings-list-ra-94fd8-say-which-weeks-are-counted/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-S2-a-week-with-no-standings-says-so-in-words/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-S3-a-member-name-is--9003e--plain-text-never-as-markup/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-P1-each-game-shows-h-2c234--the-mean-confidence-points/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-P2-next-to-each-game-4ac4c-data-the-page-already-loads/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-P3-empty-states-a-ga-569f2-p-data-a-week-with-no-games/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-X1-the-spread-is-never-shown-or-used-as-a-score/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-PV1-member-names-nev-ec012--console-or-browser-storage/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-U1-a-picks-file-is-s-70c47-ng-and-the-screen-refreshes/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-U2-the-season-can-be-e5a4f-osen-season-is-the-one-sent/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-U3-a-weekly-performa-fb93a-s-and-the-standings-show-it/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-E1-the-server-s-own--6c342-stays-ready-for-another-try/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-E2-a-413-and-a-500-g-ed58a-d-a-retry-after-a-500-works/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-E3-a-file-over-the-1-eae68-the-page-without-being-sent/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-L1-each-section-fail-657d9--is-never-shown-as-no-data-/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-L2-a-late-answer-for-8f489-replaces-the-week-now-shown/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-R2-thirty-two-member-7f6f1-phone-and-clear-the-tab-bar/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-A1-the-page-has-no-a-2ecbe-ark-data-confirm-step-error/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-A1-the-page-has-no-a-94d24-ght-data-confirm-step-error/error-context.md
+    Error: expect(locator).toBeVisible() failed
+    Error: element(s) not found
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Group', level: 1 })
+    Error Context: test-results/group-R1-on-a-phone-nothin-ca288-he-controls-are-thumb-sized/error-context.md
+  21 failed

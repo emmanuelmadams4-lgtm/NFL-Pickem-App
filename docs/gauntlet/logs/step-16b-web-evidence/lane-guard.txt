@@ -1,0 +1,5 @@
+OUT OF LANE: apps/web/components/app-shell.tsx: owned by lane web
+OUT OF LANE: apps/web/components/icons.tsx: owned by lane web
+OUT OF LANE: backend/tests/e2e_seed.py: owned by lane web
+OUT OF LANE: packages/shared/src/client.ts: owned by lane web
+4 problem(s)

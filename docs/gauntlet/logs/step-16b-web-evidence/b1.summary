@@ -1,0 +1,6 @@
+pytest exit=0 [32m[32m[1m1190 passed[0m[32m in 203.47s (0:03:23)[0m[0m
+ruff exit=0
+alembic exit=0
+gen:api no-drift exit=0
+typecheck exit=0
+HEAD 76487b8
