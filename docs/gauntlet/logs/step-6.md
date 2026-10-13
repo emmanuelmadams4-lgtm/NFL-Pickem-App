@@ -1,7 +1,7 @@
 # Step 6 of 14 — iPhone PWA (T2), lane `pwa`
 
 Coordinator: Jim (hive `jim-mv5mje0k`). Builder: Ryan (Codex dev, hive `ryan-mv5mjwq1`). Reviewers: Dwight (security), Angela (review and fresh critic).
-Branch `lane/pwa`, base `main@9d41cb0`. State file: `~/.claude/plans/nfl-pickem-lanes/lane-pwa.md`. Evidence and logs: `docs/gauntlet/logs/step-6-evidence/`.
+Branch `lane/pwa`, base `main@3d87fa0` (started on `9d41cb0`, moved onto `3d87fa0` in section 3b). State file: `~/.claude/plans/nfl-pickem-lanes/lane-pwa.md`. Evidence and logs: `docs/gauntlet/logs/step-6-evidence/`.
 
 ## What this step builds, in plain words
 
@@ -336,7 +336,7 @@ Blocking, F-1 (High): if he saves his rank while the page's first scorecard requ
 
 ### Work order 9, try 1 (Ryan, Codex gpt-6-sol, effort medium) — `step-6-evidence/wo-9.md`
 
-Red test U3c first, commit `5ea3b2f` (`red-critic3.log`): **1 failed**, at "the scorecard shows what was just saved, not the answer from before the save" (expected "Leader 55 points", the row showed "Leader 61 points"); U3 and U3b passed in the same run. The test holds the first scorecard answer until the save has returned, so it does not depend on timing.
+Red test U3c first, commit `5ea3b2f` (`red-critic3.log`): **1 failed**, at "the scorecard shows what was just saved, not the answer from before the save" (expected "Leader 55 points", the row showed "Leader 61 points"); U3 and U3b passed in the same run. The test holds the first scorecard answer until the save has returned, so it cannot go falsely red. It releases the held answer when the save has returned, not when the app has started its refetch, so it could in theory pass without exercising the fix (critic 4, C4-1).
 
 Model pick: Jev `model:pwa:wo-9` → sol 0.98, effort medium 0.92 (follow). Diff inspected: one line in `apps/web/components/performance/scorecard.tsx`, in scope (`await qc.cancelQueries(...)` before `invalidateQueries`). Commit `7a90207`.
 
@@ -346,7 +346,29 @@ Work orders in this step: nine, eleven tries in all (work orders 1 and 8 used tw
 
 Added to the not-fixed list for the integrator: Dwight R7 (**Medium**, same as Angela F-3; his fix sketch: on a refused write, remove the key and write once more; add a reload step to P22), R8; Angela F-2.
 
+### Fourth fresh critic, Angela (on `cede804`) — `reviews/critic-angela-4.md`
+
+**PASS.** New critic, no history. Her own gate, three times in a row (logs `critic4-angela-{a,b,c}-*.log`): pytest 115 passed · ruff clean · gen:api no drift · typecheck 0 · e2e **89 passed, 0 failed, 2 skipped**, identical per-test results each time. Lane guard OK. She checked the fix against the installed query-core 5.104.2, confirmed U3c fails on the old code, no test weakened, every criterion passes, stages 1 to 5 match their evidence. She does not ask for another security pass for the one scorecard line. Advisory only: C4-1 (U3c release point; wording corrected above), C4-2 (U3's last assertion is empty for the seed; older than this step), C4-3, C4-4 (header base; corrected). Her PASS covers `cede804` and docs-only commits after it.
+
+### Did the review truly pass (Jev, Job 4)
+
+Jev `review:pwa:step-6-landing`: "no", confidence 0.34, so route advisor. Sonnet advisor, read-only, given the log and the three latest reports: **yes, 0.8**. Its reasons: the only product change since the security PASS is the one `cancelQueries` line, which touches no auth, storage, request or input; the critic rule is met on the committed HEAD; the two open Mediums may be deferred only if they are first in the follow-up queue. That is how they are reported to god.
+
+### First in the follow-up queue (Medium, not fixed in this step)
+
+1. Dwight R7, same as Angela F-3: if the phone refuses every queue write and the app is closed before a good write, an older stored pick is sent on next open. Rare; he is told "Keep the app open until it syncs". Fix sketch and test step are in `reviews/security-dwight-3.md`.
+2. Angela F6: the banner's "showing data from" time is the last server reply of any kind, not the age of what is on screen.
+
 ### Pending, not PASS
 
-* A new fresh critic on the commit that adds this text: the result is appended below when it arrives. Dwight is not asked again: the only code change since his PASS is the one line in `scorecard.tsx`, which touches no auth, input handling, storage or request path.
 * The owner's check on his iPhone (Add to Home Screen, open offline, update prompt, a pick with Tailscale off): **PENDING**. It needs the live app rebuilt from this branch, which god does after landing. Angela asks him to watch app launch with Tailscale off (C1).
+
+## 6. LANDING
+
+**NEEDS god.** I do not push, open a pull request or merge; god does, on the owner's standing yes.
+
+* Landing-ready: branch `lane/pwa`, base `main@3d87fa0` (main has not moved: 0 commits behind). Last code commit `7a90207`; the commits after it are docs and evidence only, this one included.
+* Evidence for that code: my gate twice (`wo9-*`, `final4-*`), critic 4 PASS with three more green runs, Dwight PASS for landing on security at `9670cdf`, lane guard `OK`.
+* Merged: nothing yet. Deployed: nothing. The live app on this Mac is untouched; god rebuilds it once after the merge.
+* For god after landing: remove the lane's test database container `nflpi-lane-pwa-db` (127.0.0.1:15436); schedule the two Mediums above first, then the Low items listed in section 5.
+* The owner's iPhone check stays **PENDING** until it is run on the rebuilt live app. A local PASS is not a device PASS.
