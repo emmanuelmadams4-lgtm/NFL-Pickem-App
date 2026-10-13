@@ -41,7 +41,7 @@ def run_source(
     session: Session,
     *,
     status_key: str,
-    run_source: str,
+    ingestion_source: str,
     dataset: str,
     now: datetime,
     min_interval: timedelta,
@@ -51,33 +51,41 @@ def run_source(
     until = store.source_blocked_until(session, status_key)
     if until is not None and until > now:
         return RefreshResult(status_key, "skipped", detail=f"backing off until {until.isoformat()}")
-    run = IngestionRun(source=run_source, dataset=dataset, status="running", started_at=now)
+    run = IngestionRun(source=ingestion_source, dataset=dataset, status="running", started_at=now)
     session.add(run)
     session.commit()
     run_id = run.id
     try:
         inserted, skipped, blocking_error = job()
+        run.rows, run.finished_at = inserted, now
+        if blocking_error is not None:
+            error = safe_error(blocking_error)
+            run.status, run.error = "failed", error
+            store.mark_failed(session, status_key, now, error, floor)
+            result = RefreshResult(status_key, "failed", inserted, skipped, error)
+        else:
+            run.status = "ok"
+            store.mark_ok(session, status_key, now, min_interval)
+            result = RefreshResult(status_key, "ok", inserted, skipped)
+        session.commit()
     except Exception as exc:
         session.rollback()
-        run = session.get(IngestionRun, run_id)
         error = safe_error(exc)
-        run.status, run.error, run.finished_at = "failed", error, now
-        store.mark_failed(session, status_key, now, error, floor)
-        session.commit()
+        for attempt in range(2):
+            try:
+                run = session.get(IngestionRun, run_id)
+                run.status, run.error, run.finished_at = "failed", error, now
+                store.mark_failed(session, status_key, now, error, floor)
+                session.commit()
+                break
+            except Exception:
+                session.rollback()
+                if attempt == 1:
+                    raise
         log.warning("%s refresh failed: %s", status_key, error)
         return RefreshResult(status_key, "failed", detail=error)
-    run.rows, run.finished_at = inserted, now
     if blocking_error is not None:
-        error = safe_error(blocking_error)
-        run.status, run.error = "failed", error
-        store.mark_failed(session, status_key, now, error, floor)
         log.warning("%s refresh failed: %s", status_key, error)
-        result = RefreshResult(status_key, "failed", inserted, skipped, error)
-    else:
-        run.status = "ok"
-        store.mark_ok(session, status_key, now, min_interval)
-        result = RefreshResult(status_key, "ok", inserted, skipped)
-    session.commit()
     return result
 
 
@@ -196,7 +204,7 @@ def refresh_live_games(
     return run_source(
         session,
         status_key="espn_live",
-        run_source="espn",
+        ingestion_source="espn",
         dataset="live_scores",
         now=now,
         min_interval=ESPN_MIN_INTERVAL,
@@ -226,8 +234,6 @@ def _save_kalshi(session: Session, markets: list[kalshi.Market], game: Game, now
     home, away = by_team[game.home_team], by_team[game.away_team]
     home_mid, away_mid = (home.bid + home.ask) / 2, (away.bid + away.ask) / 2
     total = home_mid + away_mid
-    if total == 0:
-        return False
     updated = max(home.updated_time, away.updated_time) if home.updated_time and away.updated_time else None
     return store.add_quote(
         session,
@@ -249,6 +255,7 @@ def _save_kalshi(session: Session, markets: list[kalshi.Market], game: Game, now
 def _kalshi_job(session: Session, get: Callable[[str], fetch.JsonResult], now: datetime) -> tuple[int, int, None]:
     grouped: dict[str, list[kalshi.Market]] = {}
     skipped, cursor = 0, None
+    seen_cursors: set[str] = set()
     for page in range(3):
         data = get(kalshi.markets_url(cursor)).data
         markets = kalshi.parse_markets(data)
@@ -257,12 +264,15 @@ def _kalshi_job(session: Session, get: Callable[[str], fetch.JsonResult], now: d
             grouped.setdefault(market.event_ticker, []).append(market)
         next_cursor = data.get("cursor")
         if (
-            page == 2
-            or not isinstance(next_cursor, str)
+            not isinstance(next_cursor, str)
             or kalshi.CURSOR.fullmatch(next_cursor) is None
-            or next_cursor == cursor
+            or next_cursor in seen_cursors
         ):
             break
+        if page == 2:
+            log.warning("kalshi: more pages than the 3 read")
+            break
+        seen_cursors.add(next_cursor)
         cursor = next_cursor
     games = _quote_candidates(session, now)
     inserted = 0
@@ -296,7 +306,7 @@ def refresh_kalshi_quotes(
     return run_source(
         session,
         status_key="kalshi",
-        run_source="kalshi",
+        ingestion_source="kalshi",
         dataset="market_quotes",
         now=now,
         min_interval=KALSHI_MIN_INTERVAL,
@@ -368,17 +378,19 @@ def refresh_odds_quotes(
     if not isinstance(key, str) or oddsapi.KEY.fullmatch(key) is None:
         return RefreshResult("oddsapi", "skipped", detail="ODDS_API_KEY is not set")
     now = datetime.now(UTC) if now is None else now.astimezone(UTC)
-    until = store.source_blocked_until(session, "oddsapi")
-    if until is not None and until > now:
-        return RefreshResult("oddsapi", "skipped", detail=f"backing off until {until.isoformat()}")
     status = session.get(SourceStatus, "oddsapi")
-    if status is not None and status.credits_left is not None and status.credits_left < 50:
+    if (
+        status is not None
+        and status.credits_left is not None
+        and status.credits_left < 50
+        and (status.last_ok_at is None or now < status.last_ok_at + timedelta(days=35))
+    ):
         return RefreshResult("oddsapi", "skipped", detail="credits low")
     credits: list[int | None] = [None]
     result = run_source(
         session,
         status_key="oddsapi",
-        run_source="oddsapi",
+        ingestion_source="oddsapi",
         dataset="market_quotes",
         now=now,
         min_interval=ODDS_MIN_INTERVAL,
@@ -386,7 +398,13 @@ def refresh_odds_quotes(
         job=lambda: _odds_job(session, get, now, key, credits),
     )
     if result.status == "ok":
-        store.mark_ok(session, "oddsapi", now, ODDS_MIN_INTERVAL, credits_left=credits[0])
+        store.mark_ok(
+            session,
+            "oddsapi",
+            now,
+            ODDS_MIN_INTERVAL,
+            credits_left=credits[0] if credits[0] is not None else store.UNSET,
+        )
         if credits[0] is not None and credits[0] < 50:
             store.mark_stopped(session, "oddsapi", now, now + timedelta(days=35), credits[0])
         session.commit()

@@ -12,6 +12,8 @@ KEY = re.compile(r"[A-Za-z0-9]{16,64}")
 BOOK_KEY = re.compile(r"[a-z0-9_]{1,24}")
 CREDIT = re.compile(r"[0-9]{1,7}")
 UTC_TIME = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z")
+# Three unusable items suggest the whole reply changed format.
+SHAPE_FAILURE_THRESHOLD = 3
 TEAM_NAMES = {
     "Arizona Cardinals": "ARI",
     "Atlanta Falcons": "ATL",
@@ -133,4 +135,7 @@ def parse_events(data: Any) -> tuple[list[Event], int]:
     if data and not any(isinstance(item, dict) for item in data):
         raise ValueError("shape")
     parsed = [_event(item) for item in data]
-    return [event for event, _ in parsed if event is not None], sum(skipped for _, skipped in parsed)
+    usable = [event for event, _ in parsed if event is not None]
+    if len(data) >= SHAPE_FAILURE_THRESHOLD and not usable:
+        raise ValueError("shape")
+    return usable, sum(skipped for _, skipped in parsed)

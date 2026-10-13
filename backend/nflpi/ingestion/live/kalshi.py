@@ -10,6 +10,8 @@ MARKETS_URL = "https://external-api.kalshi.com/trade-api/v2/markets?series_ticke
 CURSOR = re.compile(r"[A-Za-z0-9_=-]{1,200}")
 TICKER = re.compile(r"KXNFLGAME-([0-9]{2})([A-Z]{3})([0-9]{2})([A-Z]{4,6})-([A-Z]{2,3})")
 PRICE = re.compile(r"[01]\.[0-9]{1,4}")
+# Three unusable items suggest the whole reply changed format.
+SHAPE_FAILURE_THRESHOLD = 3
 MONTHS = {
     month: number
     for number, month in enumerate(
@@ -94,7 +96,7 @@ def _market(item: dict) -> Market | None:
     if PRICE.fullmatch(bid) is None or PRICE.fullmatch(ask) is None:
         return None
     bid_value, ask_value = float(bid), float(ask)
-    if not 0 <= bid_value <= ask_value <= 1:
+    if not 0 <= bid_value <= ask_value <= 1 or (bid_value == 0 and ask_value == 1):
         return None
     return Market(item["event_ticker"], match[5], bid_value, ask_value, _time(item.get("updated_time")))
 
@@ -106,7 +108,10 @@ def parse_markets(data: Any) -> list[Market]:
     if items and not any(isinstance(item, dict) for item in items):
         raise ValueError("shape")
     markets = [_market(item) for item in items if isinstance(item, dict)]
-    return [market for market in markets if market is not None]
+    usable = [market for market in markets if market is not None]
+    if len(items) >= SHAPE_FAILURE_THRESHOLD and not usable:
+        raise ValueError("shape")
+    return usable
 
 
 def event_parts(event_ticker: str) -> tuple[date, tuple[str, str]] | None:

@@ -12,6 +12,8 @@ _ID = re.compile(r"[0-9]{1,12}")
 _PLAY_ID = re.compile(r"[0-9]{1,20}")
 _SCORE = re.compile(r"[0-9]{1,3}")
 _CLOCK = re.compile(r"[0-9]{1,2}:[0-9]{2}")
+# Three unusable items suggest the whole reply changed format.
+SHAPE_FAILURE_THRESHOLD = 3
 TEAM_CODES = {
     code: code
     for code in (
@@ -150,10 +152,11 @@ def parse_scoreboard(data: Any) -> tuple[list[Event], int]:
     if not isinstance(data, dict) or not isinstance(data.get("events"), list) or len(data["events"]) > 40:
         raise ValueError("shape")
     items = data["events"]
-    if items and not any(isinstance(item, dict) for item in items):
-        raise ValueError("shape")
     events = [_event(item) for item in items]
-    return [event for event in events if event is not None], sum(event is None for event in events)
+    usable = [event for event in events if event is not None]
+    if len(items) >= SHAPE_FAILURE_THRESHOLD and not usable:
+        raise ValueError("shape")
+    return usable, sum(event is None for event in events)
 
 
 def _probability(value: Any) -> float | None:

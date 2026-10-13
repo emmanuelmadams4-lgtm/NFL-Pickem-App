@@ -11,7 +11,7 @@ BACKOFF_FIRST = timedelta(minutes=15)
 BACKOFF_MAX = timedelta(hours=24)
 UNSET = object()
 _LIVE_VALUES = ("state", "home_score", "away_score", "period", "clock", "home_wp", "tie_wp", "last_play_id")
-_QUOTE_VALUES = ("home_prob", "away_prob", "raw_yes_bid", "raw_yes_ask", "overround", "home_ml", "away_ml")
+_QUOTE_VALUES = ("kind", "home_prob", "away_prob", "raw_yes_bid", "raw_yes_ask", "overround", "home_ml", "away_ml")
 
 
 def live_states_for(session: Session, game_ids: list[str]) -> dict[str, LiveState]:
@@ -87,7 +87,7 @@ def add_quote(
         .order_by(MarketQuote.id.desc())
         .limit(1)
     )
-    values = (home_prob, away_prob, raw_yes_bid, raw_yes_ask, overround, home_ml, away_ml)
+    values = (kind, home_prob, away_prob, raw_yes_bid, raw_yes_ask, overround, home_ml, away_ml)
     if previous is not None and tuple(getattr(previous, name) for name in _QUOTE_VALUES) == values:
         return False
     session.add(
@@ -148,7 +148,7 @@ def mark_failed(
 ) -> None:
     row = _status(session, source, now)
     row.consecutive_failures += 1
-    delay = min(BACKOFF_FIRST * (2 ** (row.consecutive_failures - 1)), BACKOFF_MAX)
+    delay = min(BACKOFF_FIRST * 2 ** min(row.consecutive_failures - 1, 7), BACKOFF_MAX)
     row.blocked_until = now + max(floor, delay)
     row.last_error = error[:200]
     row.updated_at = now
