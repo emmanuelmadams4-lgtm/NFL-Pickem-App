@@ -8,9 +8,10 @@ import pandas as pd
 
 from nflpi.analytics.metrics import bootstrap_ci
 from nflpi.predictions.elo import EloParams
-from nflpi.predictions.scores import BLEND_FEATURES, STATS_FEATURES, ScoreModel, add_score_features, entry
+from nflpi.predictions.scores import BLEND_FEATURES, STATS_FEATURES, ScoreModel, add_score_features, entry_pair
 
 METHODS = ["implied", "stats", "blend"]
+MIN_SHIP_GAMES = 200
 LABELS = {
     "implied": "Closing line implied score",
     "stats": "Stats model without the line",
@@ -33,20 +34,26 @@ def predict_season(frame: pd.DataFrame, season: int, window: int) -> pd.DataFram
         "stats": ScoreModel.fit(train, STATS_FEATURES),
         "blend": ScoreModel.fit(train, BLEND_FEATURES),
     }
-    for side in ("home", "away"):
-        test[f"pred_implied_{side}"] = np.array(
-            [entry(value) if pd.notna(value) else np.nan for value in test[f"implied_{side}"]], dtype=float
-        )
+    implied = [
+        entry_pair(home, away) if pd.notna(home) and pd.notna(away) else (np.nan, np.nan)
+        for home, away in zip(test["implied_home"], test["implied_away"], strict=True)
+    ]
+    test["pred_implied_home"] = np.array([pair[0] for pair in implied], dtype=float)
+    test["pred_implied_away"] = np.array([pair[1] for pair in implied], dtype=float)
     for method, model in models.items():
         home, away = model.predict(test)
-        for side, values in (("home", home), ("away", away)):
-            test[f"pred_{method}_{side}"] = np.array(
-                [entry(value) if np.isfinite(value) else np.nan for value in values], dtype=float
-            )
+        pairs = [entry_pair(h, a) if np.isfinite(h) and np.isfinite(a) else (np.nan, np.nan)
+                 for h, a in zip(home, away, strict=True)]
+        test[f"pred_{method}_home"] = np.array([pair[0] for pair in pairs], dtype=float)
+        test[f"pred_{method}_away"] = np.array([pair[1] for pair in pairs], dtype=float)
     return test
 
 
 def summary(preds: pd.DataFrame) -> dict:
+    required = [f"pred_{method}_{side}" for method in METHODS for side in ("home", "away")]
+    required.extend(("home_score", "away_score"))
+    if preds[required].isna().any().any():
+        raise ValueError("Summary inputs contain missing values")
     n = len(preds)
     errors: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     methods = []
@@ -70,7 +77,7 @@ def summary(preds: pd.DataFrame) -> dict:
         total_mean = float(total_gain.mean()) if n else None
         comparisons.append({"candidate": candidate, "team_mae_gain": float(team_gain.mean()) if n else None,
                             "team_ci": team_ci, "total_mae_gain": total_mean, "total_ci": total_ci,
-                            "wins": bool(n and team_ci[0] > 0 and total_mean >= 0)})
+                            "wins": bool(n >= MIN_SHIP_GAMES and team_ci[0] > 0 and total_mean >= 0)})
     return {"games": n, "methods": methods, "comparisons": comparisons}
 
 
@@ -80,10 +87,15 @@ def pick_winner(comparisons: list[dict]) -> str | None:
 
 
 def run_score_backtest(df: pd.DataFrame, seasons: list[int], window: int = 10) -> dict:
-    frame = add_score_features(df, EloParams())
+    if not seasons or len(set(seasons)) != len(seasons):
+        raise ValueError("seasons must be non-empty and unique")
+    ordered = df.sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)
+    frame = add_score_features(ordered, EloParams())
     predictions = pd.concat([predict_season(frame, season, window) for season in seasons], ignore_index=True)
     prediction_cols = [f"pred_{method}_{side}" for method in METHODS for side in ("home", "away")]
+    tested = len(predictions)
     predictions = predictions.dropna(subset=prediction_cols)
+    excluded = tested - len(predictions)
     overall = summary(predictions)
     by_season = []
     for season in seasons:
@@ -100,4 +112,5 @@ def run_score_backtest(df: pd.DataFrame, seasons: list[int], window: int = 10) -
         "by_season": by_season,
         "tiebreak_slots": summary(predictions.loc[slots]),
         "ships": pick_winner(overall["comparisons"]),
+        "excluded": int(excluded),
     }

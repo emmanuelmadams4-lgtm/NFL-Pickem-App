@@ -424,7 +424,8 @@ def test_s12_tiebreak_slot_is_sunday_night_or_monday_in_eastern_time(weekday, ki
 def test_s13_backtest_report_on_the_fixture_matches_an_independent_count():
     df = frame()
     report = sb.run_score_backtest(df, [2021, 2022], window=3)
-    assert set(report) == {"seasons", "games", "methods", "comparisons", "by_season", "tiebreak_slots", "ships", "excluded"}
+    keys = {"seasons", "games", "methods", "comparisons", "by_season", "tiebreak_slots", "ships", "excluded"}
+    assert set(report) == keys
     assert report["excluded"] == 0
     tested = df[df["season"].isin([2021, 2022]) & (df["status"] == "final") & (df["game_type"] == "REG")]
     assert report["seasons"] == [2021, 2022] and report["games"] == len(tested) > 0

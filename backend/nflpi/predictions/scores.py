@@ -28,11 +28,18 @@ def entry(points: float) -> int:
     return max(0, floor(points + 0.5))
 
 
+def entry_pair(home: float, away: float) -> tuple[int, int]:
+    if home % 1 == 0.5 and away % 1 == 0.5:
+        return entry(home), max(0, floor(away))
+    return entry(home), entry(away)
+
+
 def tiebreak_score(spread_line: float | None, total_line: float | None) -> dict | None:
     implied = implied_score(spread_line, total_line)
     if implied is None:
         return None
-    return {"home": entry(implied[0]), "away": entry(implied[1]), "method": "line_implied"}
+    home, away = entry_pair(*implied)
+    return {"home": home, "away": away, "method": "line_implied"}
 
 
 def scoring_form(df: pd.DataFrame, games: int = FORM_GAMES) -> dict[str, list[float]]:

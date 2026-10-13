@@ -23,8 +23,11 @@ def main(games_csv: str, report_json: str) -> int:
                 continue
             spread, line_total = float(r["spread_line"]), float(r["total_line"])
             home, away = int(r["home_score"]), int(r["away_score"])
-            pred_home = math.floor((line_total + spread) / 2 + 0.5)
-            pred_away = math.floor((line_total - spread) / 2 + 0.5)
+            raw_home, raw_away = (line_total + spread) / 2, (line_total - spread) / 2
+            pred_home = math.floor(raw_home + 0.5)
+            # pair rule (S2): when both halves end in .5 the road number rounds down, so the total is kept
+            both_half = raw_home % 1 == 0.5 and raw_away % 1 == 0.5
+            pred_away = math.floor(raw_away) if both_half else math.floor(raw_away + 0.5)
             team_miss = (abs(pred_home - home) + abs(pred_away - away)) / 2
             total_miss = abs(pred_home + pred_away - home - away)
             team[r["season"]].append(team_miss)
