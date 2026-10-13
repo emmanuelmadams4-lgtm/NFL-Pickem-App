@@ -75,10 +75,21 @@ Advisories carried, not built: collapsing the standings to a top ten; showing th
 Out of the gate on purpose: Dwight's security review of the form and name rendering; design critics; repo gate (§ 5).
 
 ## 3. IMPLEMENTATION
-(filled in as it happens)
+* **RED (checkpoint SPECIFICATION):** spec and seed committed (`ba9b8c8`, amended `a8aef46` after the UX architect critic). Run against the base tree with the production files removed: `step-16b-web-evidence/red-e2e.log`: **21 failed**, every one at `getByRole('link'|'heading', { name: 'Group' })` not found = no Group page. Right reason. (A first red attempt failed at `next build` only because `node_modules` was empty in the fresh worktree; `npm ci`, rerun.)
+* **Build ladder:** Codex was probed once (`gpt-6-luna` answered), so Codex built; no Claude subagent wrote code; the coordinator wrote only the spec, seed and logs.
+
+| WO | What | Model, effort | Result |
+|---|---|---|---|
+| 1 | client methods, `lib/group.ts`, `People` icon, nav entries, empty page | gpt-6-luna, low, try 1 | built; typecheck green (re-run by me after `npm ci`) |
+| 2 | the screen: upload panel, standings, group picks, page | gpt-6-sol, medium, try 1 | built; first spec run 18 of 21 green |
+| 3 | spaces between the numbers of a side row (P1) | gpt-6-luna, low, try 1 | built |
+
+Red-for-the-right-reason after WO-2 (`g1-e2e.log`): P1, U1, L1 failed. Not the builder: P1 text was glued ("MIA2 of 450%", fixed by WO-3), U1 asked Playwright to read a `File` body it cannot read (spec now checks `content-length` and that the server accepted the raw CSV), L1 used week 3 where nobody has picks (spec now expects the week-3 empty message). **Spec corrections after a red run are mine; recorded here.** Then `f1`: full `npm run e2e` **123 passed**, 0 failed (`f1-e2e.log`).
+* **Privacy design found in PLANNING and enforced by PV1:** group replies never go through React Query (its cache is saved to `localStorage`).
+* No existing page, component (other than the two granted lines in `app-shell.tsx` and the appended icon), spec or `design.md` was edited. Seam note carried to god: `apps/web/public/sw.js` `PRECACHE_PAGES` does not list `/group/` (the page still opens online; offline first open would need that line; lane web's file).
 
 ## 4. CLEANUP
-(pending)
+Scope-locked `/refactor` read of the touched code after the build: `lib/group.ts` (66 lines), four components (27, 38, 60, 93 lines), nav and icon edits. **No change needed**: no duplicated block (the three load states are different per section), no dead export (every export of `lib/group.ts` is used), the `sending` ref beside the `loading` state is deliberate (a double tap in one tick must send once, clause U2), every value is a design token, no file near the size limit. Edits after the design critic and the security review are listed in § 5.
 
 ## 5. VERIFICATION
 (pending)
