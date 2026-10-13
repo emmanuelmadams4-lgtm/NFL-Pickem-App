@@ -162,6 +162,13 @@ def test_u7_the_season_must_be_a_year_between_2000_and_2100(client, games, seaso
     assert stored(games) == ({}, {})
 
 
+def test_u7_a_422_never_echoes_the_file(client, games):
+    for path in ("/api/group/import?season=abc", "/api/group/import"):
+        reply = client.post(path, content=PICKS)
+        assert reply.status_code == 422
+        assert not any(name in reply.text for name in NAMES)
+
+
 def test_u7_a_missing_season_is_422(client, games):
     assert client.post("/api/group/import", content=PICKS).status_code == 422
 
