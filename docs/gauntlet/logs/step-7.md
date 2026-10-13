@@ -290,7 +290,7 @@ CI on `044e173`: browser tests green on two runs and red on one (P20, P22, P23, 
 
 | Proof | Log | Load before | Result |
 |---|---|---|---|
-| Red: the old P19 cleanup plus a 3 s pause after going online, then P20 | `red-p19.log` | 4.79 | P19 passes, the server logs `PUT /api/picks/2023_04_MIA_LV`, P20 fails after 1.5 min waiting for "Pick LV Team" |
+| Red: the old P19 cleanup plus a 3 s pause after going online, then P20 | `red-p19.log` | 4.79 | P19 passes, the server logs `PUT /api/picks/2023_04_MIA_LV`, P20 hits its 90 s timeout and prints the same cleanup error as CI (`apiRequestContext.delete: Target page, context or browser has been closed`); the page snapshot Playwright saved for it showed the button as "LV Team picked" (snapshot read by me, not kept in the repo) |
 | Green: the whole file with the fixed P19, twice | `p19-fix.log` | 6.32 | 31 passed, twice; P19 shows its PUT and then its DELETE |
 
 **Fix, test only** (`apps/web/e2e/pwa.spec.ts`, P19's cleanup): wait until the server has the pick (the same 25 s bound P20 uses for the same send), then delete it. No production code, no timeout widened. P19 now also proves that a pick kept in memory is sent once he is back online. Typecheck 0. Lane-guard OK.
