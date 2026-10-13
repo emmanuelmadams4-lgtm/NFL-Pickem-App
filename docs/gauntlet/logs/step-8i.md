@@ -39,3 +39,7 @@ Out of the frozen clauses and carried: the triggers named under PLANNING; per-al
 Choice of hour (A6): 8 AM Eastern. It lands after the Wednesday-to-Friday practice reports are in, before the 9:30 AM London kickoffs' own 90-minute window, and early enough that a Sunday-noon change is seen over breakfast. It is a setting because the owner never chose it.
 
 Gate: `cd backend && DATABASE_URL=postgresql+psycopg://nflpi:nflpi@127.0.0.1:15438/nflpi_staralerts uv run pytest -q && uvx ruff check nflpi tests migrations && uv run alembic check`; `npm run gen:api` shows no drift. Tests: `backend/tests/test_star_alerts.py` (new file, mine).
+
+## 3. IMPLEMENTATION
+
+* **Provider.** `codex exec` run once with no model flag (14:55 UTC, `codex-cli 0.156.1`): refused with `The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account.` (status 400, twice). Codex counts as unavailable; work order 1 (`step-8i-evidence/wo-1.md`) went to a Sonnet subagent (Claude rung 1, try 1 of 2). The coordinator wrote the spec and the tests, and inspects the diff and reruns every proof itself. EFFORT: build at low (a hand-traced test list is the contract).
