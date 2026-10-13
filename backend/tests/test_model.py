@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 from sqlalchemy import select
 
 from nflpi.analytics.backtest import _elo_frames, candidate_preds, evaluate, inseason_blend, predict_season
@@ -162,6 +163,20 @@ def test_a_candidate_ships_only_with_a_gain_interval_above_zero_and_no_accuracy_
     assert unsure["accuracy_diff"] == 0 and unsure["ships"] is False
 
 
+def test_paired_gain_refuses_missing_or_empty_input():
+    y = np.array([1.0, 0.0])
+    good = np.array([0.6, 0.4])
+    for new, old, outcome in (
+        (np.array([np.nan, 0.4]), good, y),  # a missing pick must never be scored as a wrong pick
+        (good, np.array([0.6, np.inf]), y),
+        (good, good, np.array([1.0, np.nan])),
+        (good[:0], good[:0], y[:0]),  # no games: no verdict
+        (good[:1], good, y),
+    ):
+        with pytest.raises(ValueError):
+            paired_gain(new, old, outcome)
+
+
 def _flip_scores(df: pd.DataFrame, mask: pd.Series) -> pd.DataFrame:
     out = df.copy()
     out.loc[mask, ["home_score", "away_score"]] = out.loc[mask, ["away_score", "home_score"]].to_numpy()
@@ -273,6 +288,10 @@ def test_team_game_epa_is_net_epa_per_play_and_leaves_out_incomplete_games():
         _epa_row("g3", "B", 0, 0, 0, 0, 0),  # zero plays
         _epa_row("g4", "A", "NA", 5, 30, 0, 10),  # missing value
         _epa_row("g4", "B", 1, 1, 30, "", 10),
+        _epa_row("g5", "A", "nan", 5, 30, 0, 10),  # a not-a-number must not reach a rating
+        _epa_row("g5", "B", 1, 1, 30, 0, 10),
+        _epa_row("g6", "A", 1, "inf", 30, 0, 10),
+        _epa_row("g6", "B", 1, 1, 30, 0, 10),
     ]
     got = team_game_epa(rows)
     assert list(got.columns) == ["game_id", "team", "net_epa"]
@@ -302,6 +321,9 @@ def test_epa_diff_is_a_pregame_weighted_mean_of_earlier_games():
     assert np.isclose(epa_diff(df, epa, half_life=2).to_numpy()[2], 2 * (0.4 + slower * 0.2) / (1 + slower))
     # A game with no EPA rows leaves both ratings where they were.
     assert np.isclose(epa_diff(df, epa[epa["game_id"] != "g2"], half_life=1).to_numpy()[2], 0.4)
+    # Rows out of kickoff order would let a later game leak into an earlier rating: refuse them.
+    with pytest.raises(ValueError):
+        epa_diff(df.iloc[::-1], epa, half_life=1)
 
 
 def test_epa_candidate_fits_on_past_seasons_and_falls_back_to_the_blend_when_missing(monkeypatch):
