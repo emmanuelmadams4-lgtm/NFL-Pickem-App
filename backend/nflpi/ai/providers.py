@@ -15,6 +15,15 @@ from nflpi.config import get_settings
 SDK_TIMEOUT_S = 120.0
 
 
+def _run_sync(make_coro):
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(make_coro())
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(lambda: asyncio.run(make_coro())).result()
+
+
 class AIError(RuntimeError):
     pass
 
@@ -75,11 +84,10 @@ class ClaudeSdkProvider:
             model=self.model,
             max_turns=5 if json_schema else 2,
             effort="medium" if json_schema else "low",
+            output_format={"type": "json_schema", "schema": json_schema} if json_schema else None,
             stderr=lambda _line: None,
             env={"CLAUDE_CODE_OAUTH_TOKEN": self.token, "ANTHROPIC_API_KEY": "", "ANTHROPIC_AUTH_TOKEN": ""},
         )
-        if json_schema:
-            options.output_format = {"type": "json_schema", "schema": json_schema}
 
         async def last_result() -> ResultMessage | None:
             last = None
@@ -92,13 +100,7 @@ class ClaudeSdkProvider:
             return await asyncio.wait_for(last_result(), SDK_TIMEOUT_S)
 
         try:
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                result = asyncio.run(run())
-            else:
-                with ThreadPoolExecutor(max_workers=1) as pool:
-                    result = pool.submit(lambda: asyncio.run(run())).result()
+            result = _run_sync(run)
         except Exception as exc:  # noqa: BLE001 - every SDK failure becomes AIError
             raise AIError(f"Claude sign-in route failed: {type(exc).__name__}") from None
 
@@ -134,21 +136,25 @@ class ClaudeRouter:
                         "Claude sign-in failed and may have expired; run claude setup-token and set "
                         "CLAUDE_CODE_OAUTH_TOKEN on the server"
                     ) from None
-                logging.getLogger("nflpi.ai").warning("Claude %s route failed: %s", self.sdk.route, type(exc).__name__)
+                logging.getLogger("nflpi.ai").warning(
+                    "Claude sign-in route failed, falling back to the API key route: %s", str(exc)
+                )
             else:
                 self.route, self.model = "sdk", self.sdk.model
                 return answer
 
         if self.api:
             self.route, self.model = "api", self.api.model
-            if self.sdk:
-                try:
-                    return self.api.complete(system, user, json_schema, max_tokens)
-                except AIError as exc:
+            try:
+                return self.api.complete(system, user, json_schema, max_tokens)
+            except AIError as exc:
+                if self.sdk:
                     raise AIError(f"Claude sign-in and API key routes failed; API key route: {exc}") from None
-                except Exception:
+                raise
+            except Exception:
+                if self.sdk:
                     raise AIError("Claude sign-in and API key routes failed") from None
-            return self.api.complete(system, user, json_schema, max_tokens)
+                raise
         raise AIError("Claude is not configured")
 
     def __repr__(self) -> str:
