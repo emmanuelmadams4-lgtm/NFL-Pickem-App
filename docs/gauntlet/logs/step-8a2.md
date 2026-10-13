@@ -149,3 +149,22 @@ Diff inspection: both diffs touch only lane web's files; no untracked extras; no
 **Open seam (sent to god twice):** the freshness list (`STALE_HOURS`) lives in `backend/nflpi/ingestion/service.py`, not lane web's file. Two entries are needed (`stars`, `head_coaches`). Until granted, `test_freshness_lists_the_star_list_and_the_head_coaches` and browser ST8 stay red.
 
 Screenshots: `~/.claude/plans/nfl-pickem-lanes-logs/step-8a2/before-*.png` (baseline build, `shots-before.log`) and `after-*.png` (HEAD of work order 2), board and two game screens at phone, tablet and desktop.
+
+| WO-3 (`wo-3.md`), try 1 | `f3c5e21` | Seam granted by the integrator (hive message 08276f): two settings in `config.py`, two `STALE_HOURS` entries in `ingestion/service.py` | Diff is exactly four lines. `test_api.py`: the freshness test is green (`red-3-api.log`: 10 passed; the 1 failure is the next red test). Browser ST8 is proven in the next browser run. |
+
+### Design review, round 1 (three fresh critics in parallel, read-only, on `4657935`)
+
+Reports: `step-8a2-evidence/reviews/ux-critic-1.md`, `visual-critic-1.md`, `impl-critic-1.md`. No finding was dropped silently:
+
+| Decision | Findings | What |
+|---|---|---|
+| Accepted, red test first | U1, V12, I3 (Critical) | The "no star list" note also shows when the other club has stars listed, and names the club (ST2 assertion) |
+| Accepted, red test first | U2, I7 | Club in front of each name on the card (ST1 assertion) |
+| Accepted, red test first | I1, I2 | The API marks a star named in the QB alert (`StarStatus.qb_alert`); the card stops matching display text; star quarterbacks' alerts come first (`red-3-api.log`) |
+| Accepted, red test first | U4, V1, I4 | "Full injury report" heading; club names one level below both headings (ST4 assertions) |
+| Accepted, by inspection and screenshots | U5, V2, I5, U6, V4, V3, U7, V6, U8, V8 (age on the label line), V7, V10, V11, I6, I9, I10, I11, I13, I14, I15 | One chip style for one status; no slot word; inline week note; no dashed box for "no list"; plain-text status on the card; small fixes |
+| Rejected | U3 | Per-club "report not in": the week's report arrives whole, so when it holds one club of a game a club with no entry is truly not on it |
+| Rejected | U9, V9 | Totals, or folding the quarterback into the stars line: he is named with his club one line above |
+| Rejected | V5 (tooltip), V8 (truncate or surname only), I8, I12 | Both notes are owner wording (D24, D27) and stay visible; names are never cut; group label is what the tests and screen readers use; no shared helper for two call sites |
+
+Work order 4 (`wo-4.md`) carries the accepted items. Red tests committed in `f197494`.
