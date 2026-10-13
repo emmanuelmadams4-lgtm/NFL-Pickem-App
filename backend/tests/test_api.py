@@ -172,6 +172,7 @@ def test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them
     before = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json())
     game = before.games[0]
     assert (game.stars_out.out, game.stars_out.reports_seen) == ([], 0)  # nothing known yet: an empty line, said so
+    assert game.stars_out.no_list == [game.away.abbr, game.home.abbr]  # neither club has a star list: said, away first
 
     _seed_stars(loaded, game)
     after = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json())
@@ -182,6 +183,7 @@ def test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them
         (game.home.abbr, "Ron Runner", "RB", "off", "Out"),  # control characters never reach the web
     ]
     assert row.stars_out.reports_seen == 4
+    assert row.stars_out.no_list == []  # both clubs have a list now (the away club's is a week older)
     assert row.stars_out.out[1].observed_at == game.kickoff_utc - timedelta(hours=30)
     assert row.prediction == game.prediction and row.sheet == game.sheet  # a star out never moves the pick (D24)
     clubs = {game.away.abbr, game.home.abbr}

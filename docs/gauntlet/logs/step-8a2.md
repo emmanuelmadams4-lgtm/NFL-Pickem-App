@@ -83,7 +83,7 @@ STATES:           row: none out (no line) · 1 to 3 out · more than 3 · long n
 ### Frozen contract (API, additive)
 
 ```text
-GameSummary.stars_out : { out: StarStatus[], reports_seen: int, checked_at: datetime|null }
+GameSummary.stars_out : { out: StarStatus[], reports_seen: int, checked_at: datetime|null, no_list: string[] }
 GameDetail.stars      : [TeamStars(away), TeamStars(home)]      (GameDetail also carries stars_out)
 TeamStars             : { team, stars_week: int|null, stars: StarStatus[] }   stars_week null = no list for this club
 StarStatus            : { team, player, position|null, slot: "qb"|"off"|"def", rank, status|null, injury|null,
@@ -122,10 +122,15 @@ Operational:
 
 Subjective (Design Gauntlet): blind A/B of the game screen against the "before" capture is a win or a tie; no Critical or Structural finding open.
 
+### Spec amendment after the freeze (before any web code)
+
+* **`StarsOut.no_list: string[]`** (clubs of this game with no star list, away first). ST3, as amended by the UX review, needs the row to say "No star list yet"; the contract frozen an hour earlier gave the row no way to know. Red first: two new assertions in `test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them` (`red-2-api.log`). Built in work order 2.
+* **Correction to my own red test (work order 1):** it asserted that the other week-4 games list nobody. A fixture club plays twice in week 4, so its star is rightly listed on both of its games. The assertion now says: another game lists a star only when his club plays in it.
+
 ### First failing tests (red for the intended reason)
 
 * `red-1-stars.log`: 8 failed, 62 passed. B1 lists only the Jets' star (the club with the newer list); B2 `game_stars` does not exist; B3 six spellings unmatched.
 * `red-1-api.log`: 3 failed, 7 passed. B4 `GameSummary` has no `stars_out`; B6 `ingest_stars` never called; F1 the two datasets are missing.
-* `red-1-e2e.log`: the browser spec against the baseline build (recorded below when the run returns).
+* `red-1-e2e.log` (load 10.08 before): all 17 browser tests of `stars.spec.ts` fail against the baseline web build: no "Stars out" group, no "Star players" heading, no `stars` row in Settings.
 
 **Seed for the browser tests** (`backend/tests/e2e_seed.py`, `STAR_LISTS`): made-up players in the app's own domain: KC (week 4 list; Out, Doubtful, Questionable), NE (week 3 list), BUF (four out, one very long name), MIA and LV with no list; reports first seen three hours ago; one ok run each for `stars` and `head_coaches` so the freshness indicator does not change for the existing tests.
