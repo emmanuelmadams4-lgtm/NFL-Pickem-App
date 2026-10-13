@@ -651,3 +651,80 @@ def test_calibration_pulls_an_overconfident_blend_back_to_the_truth():
     extreme = preds[preds["season"] <= 2020].assign(home_win=lambda d: (d["p_blend"] > 0.5).astype(float))
     sure = bt.calibrated(extreme, "isotonic")[extreme["season"] == 2020]
     assert sure.min() == 0.01 and sure.max() == 0.99
+
+
+# ---- Step 14b idea 5: offence and defence split with success rate (clauses E1 to E3) ----
+
+
+def _split_row(game_id: str, team: str, plays: float, epa: float, success: float) -> dict:
+    return {"game_id": game_id, "team": team, "plays": plays, "epa": epa, "success": success}
+
+
+def test_offence_defence_gives_each_team_its_own_rates_and_its_opponents():
+    got = ft.offence_defence([
+        _split_row("g1", "KC", 50, 10.0, 25),  # 0.2 EPA per play, half the plays succeed
+        _split_row("g1", "BUF", 40, -4.0, 16),  # -0.1 EPA per play, 40% succeed
+        _split_row("g2", "KC", 60, 6.0, 30),
+        _split_row("g2", "LV", 0, 0.0, 0),  # no plays on one side: the game is left out for both teams
+        _split_row("g3", "MIA", 55, 5.5, 22),  # only one side in the file: left out
+    ])
+    assert list(got.columns) == ["game_id", "team", "off_epa", "def_epa", "off_sr", "def_sr"]
+    assert got[["game_id", "team"]].to_numpy().tolist() == [["g1", "KC"], ["g1", "BUF"]]
+    assert np.allclose(got[["off_epa", "def_epa", "off_sr", "def_sr"]].to_numpy(),
+                       [[0.2, -0.1, 0.5, 0.4], [-0.1, 0.2, 0.4, 0.5]])  # allowed = what the opponent's offence did
+
+
+def _fixture_split(df: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    for g in df[df["status"] == "final"].itertuples():
+        if "LV" in (g.home_team, g.away_team):
+            continue  # LV never gets a rating
+        rows += [_split_row(g.game_id, g.home_team, 60, g.home_score / 4 - 5, 20 + g.home_score / 2),
+                 _split_row(g.game_id, g.away_team, 60, g.away_score / 4 - 5, 20 + g.away_score / 2)]
+    return ft.offence_defence(rows)
+
+
+def test_split_preds_fit_on_past_seasons_and_fall_back_to_the_blend_without_a_rating(monkeypatch):
+    df = lines_frame()
+    split = _fixture_split(df)
+    seen = []
+    real_fit = LogitModel.fit.__func__
+
+    def spy(cls, train, features, weights=None):
+        seen.append((list(features), set(train["season"])))
+        return real_fit(cls, train, features)
+
+    monkeypatch.setattr(LogitModel, "fit", classmethod(spy))
+    preds = bt.split_preds(df, [2022], split, window=3)
+    base = bt.idea_preds(df, [2022], window=3)
+    assert list(preds["game_id"]) == list(base["game_id"]) and np.allclose(preds["p_blend"], base["p_blend"])
+    assert bt.SPLIT_HALF_LIVES == (4, 8, 16)
+    lv = (preds["home_team"] == "LV") | (preds["away_team"] == "LV")
+    assert lv.any() and not lv.all()
+    for h in (4, 8, 16):
+        epa = [f"off_epa_diff_{h}", f"def_epa_diff_{h}"]
+        rate = [f"off_sr_diff_{h}", f"def_sr_diff_{h}"]
+        for col, extra in ((f"p_split_{h}", epa), (f"p_split_sr_{h}", epa + rate)):
+            fits = [seasons for features, seasons in seen if features == [*BLEND_FEATURES, *extra]]
+            assert len(fits) == 1 and fits[0] == {2019, 2020, 2021}  # never the test season
+            assert preds[col].between(0, 1).all()
+            assert np.allclose(preds.loc[lv, col], preds.loc[lv, "p_blend"])  # no rating: the blend's own number
+            assert not np.allclose(preds.loc[~lv, col], preds.loc[~lv, "p_blend"])
+        # Each input is a pregame rating difference, home minus away, on a fixed scale (EPA x 10, success rate x 20).
+        for name, source, scale in ((epa[0], "off_epa", 10), (epa[1], "def_epa", 10),
+                                    (rate[0], "off_sr", 20), (rate[1], "def_sr", 20)):
+            want = scale * epa_diff(df, split[["game_id", "team", source]].rename(columns={source: "net_epa"}), h)
+            assert np.allclose(preds[name], want[df["game_id"].isin(preds["game_id"])], equal_nan=True)
+    assert preds.loc[lv, "off_epa_diff_4"].isna().all()  # missing stays missing
+
+
+def test_split_preds_never_use_a_result_from_the_test_week_or_later():
+    df = lines_frame()
+    got = bt.split_preds(df, [2022], _fixture_split(df), window=3)
+    cols = [col for col in got if col.startswith("p_split_")]
+    week5 = df.loc[(df["season"] == 2022) & (df["week"] == 5), "kickoff_utc"].min()
+    later = _flip_scores(df, df["kickoff_utc"] >= week5)
+    after = bt.split_preds(later, [2022], _fixture_split(later), window=3)
+    early = (got["week"] < 5).to_numpy()
+    assert len(cols) == 6 and early.any()
+    assert all(np.allclose(got.loc[early, col], after.loc[early, col]) for col in cols)

@@ -118,3 +118,17 @@ Twelve tests in `backend/tests/test_model.py`, written by the coordinator before
 ### Baseline
 
 `tests/test_model.py` on `eed7c61`: 19 passed (`baseline-test_model.log`). The full gate on `main` at `eed7c61` is the integrator's CI run (green, PR #10). The full gate runs here twice on the final commit.
+
+### Addendum: idea 5, frozen 2026-10-13 before its first run
+
+The gate opened by the frozen meaning of "signal": idea 2a (tune +0.00004, confirm +0.00023) and idea 4 (tune +0.00008, confirm +0.00020) gained on both periods. Both gains are about five times smaller than what the confirm set can detect, so this is signal by the letter of the rule, not evidence of a real effect. The rule was frozen before the results, so idea 5 runs.
+
+| ID | Clause |
+|---|---|
+| E1 | `features.offence_defence(rows)`: per team and game, offence EPA per play and success rate from that team's own scrimmage plays; the defence values are what the opponent's offence did in the same game. A game without two usable sides is left out for both teams. |
+| E2 | `backtest.split_preds`: each input is a pregame rating (weighted mean of earlier games only, the step 14 `epa_diff` rule, half-life 4, 8 or 16 games), home minus away, on a fixed scale (EPA x 10, success rate x 20). Fits use the seasons before the test season only. A game where a team has no rating keeps the blend's number. |
+| E3 | No number for a game moves when the result of a game in that week or later changes. |
+
+Protocol: candidate `offence_defence_split`, six variants fixed here: offence and defence EPA ratings at half-life 4, 8, 16 games (`p_split_<h>`), and the same plus offence and defence success-rate ratings (`p_split_sr_<h>`). Chosen on the tune seasons, scored once on the confirm seasons, same ship rule. If it does not ship, the step stops: no further variant.
+Data: nflverse play-by-play 2002 to 2025 (`pbp/play_by_play_<season>.csv.gz`), read by the evidence script through the app's own download function (same host, timeout and retries); plays counted are passes and runs with an EPA value; `success` is nflverse's own 0/1 column. Step 14's team-week file has no success rate, which is why play-by-play is needed. The scales are fixed numbers chosen so each input varies by about one unit (the fit penalises large weights); they are not fitted.
+Red: `red-2.log` (three tests, `AttributeError`: the functions do not exist).
