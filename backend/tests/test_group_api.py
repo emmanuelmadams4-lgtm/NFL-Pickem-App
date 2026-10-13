@@ -35,9 +35,9 @@ WEEK1_STANDINGS = b"Rank,Team,Wk1,Total_Pts\r\n1,Ann A,6,6\r\n2,Bo's Picks,5,5\r
 
 @pytest.fixture
 def games(session):
-    for season, week, away, home in GAMES:
+    for index, (season, week, away, home) in enumerate(GAMES):  # earlier in the list kicks off later
         session.add(Game(game_id=f"{season}_{week:02d}_{away}_{home}", season=season, week=week, game_type="REG",
-                         kickoff_utc=datetime(season, 9, 10 + week, 17, tzinfo=UTC), weekday="Sunday",
+                         kickoff_utc=datetime(season, 9, 10 + week, 20 - index, tzinfo=UTC), weekday="Sunday",
                          away_team=away, home_team=home, status="final", source="test"))
     session.commit()
     return session
@@ -222,9 +222,9 @@ def test_s2_a_game_nobody_picked_is_there_with_missing_not_zero(client, games):
 
 def test_s3_games_are_in_kickoff_order_with_the_kickoff_shown(client, games):
     body = client.get(f"/api/group/shares?season={SEASON}&week=1").json()
-    kickoffs = [g["kickoff_utc"] for g in body["games"]]
-    assert all(kickoffs) and kickoffs == sorted(kickoffs)
-    assert [g["game_id"] for g in body["games"]] == sorted(g["game_id"] for g in body["games"])  # ties by id
+    assert [g["game_id"] for g in body["games"]] == ["2023_01_LV_KC", "2023_01_NYJ_NE", "2023_01_MIA_BUF"]
+    assert [g["kickoff_utc"] for g in body["games"]] == [
+        "2023-09-11T18:00:00Z", "2023-09-11T19:00:00Z", "2023-09-11T20:00:00Z"]
 
 
 def test_s4_a_week_with_no_games_is_an_empty_list_and_bounds_are_checked(client, games):
