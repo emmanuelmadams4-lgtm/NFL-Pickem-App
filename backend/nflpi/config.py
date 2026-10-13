@@ -41,9 +41,6 @@ class Settings(BaseSettings):
     ai_daily_call_limit: int = 60
     ai_max_retries: int = 2
 
-    def __repr_args__(self) -> list[tuple[str | None, object]]:
-        return [(name, value) for name, value in super().__repr_args__() if name != "anthropic_api_key"]
-
     # Web Push (PWA). Make keys with: python -m nflpi.jobs vapid
     vapid_public_key: str = ""
     vapid_private_key: str = ""
@@ -52,6 +49,9 @@ class Settings(BaseSettings):
 
     # News
     news_contact: str = ""
+
+    def __repr_args__(self) -> list[tuple[str | None, object]]:
+        return [(name, value) for name, value in super().__repr_args__() if name != "anthropic_api_key"]
 
 
 @lru_cache

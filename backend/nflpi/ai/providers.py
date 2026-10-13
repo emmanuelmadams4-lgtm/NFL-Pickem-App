@@ -8,7 +8,7 @@ from typing import Protocol
 
 import anthropic
 import httpx
-from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKError, ResultMessage, query
+from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 
 from nflpi.config import get_settings
 
@@ -99,7 +99,7 @@ class ClaudeSdkProvider:
             else:
                 with ThreadPoolExecutor(max_workers=1) as pool:
                     result = pool.submit(lambda: asyncio.run(run())).result()
-        except (ClaudeSDKError, TimeoutError, OSError) as exc:
+        except Exception as exc:  # noqa: BLE001 - every SDK failure becomes AIError
             raise AIError(f"Claude sign-in route failed: {type(exc).__name__}") from None
 
         if result is None or result.is_error or result.subtype != "success":
@@ -144,6 +144,8 @@ class ClaudeRouter:
             if self.sdk:
                 try:
                     return self.api.complete(system, user, json_schema, max_tokens)
+                except AIError as exc:
+                    raise AIError(f"Claude sign-in and API key routes failed; API key route: {exc}") from None
                 except Exception:
                     raise AIError("Claude sign-in and API key routes failed") from None
             return self.api.complete(system, user, json_schema, max_tokens)
@@ -195,5 +197,7 @@ def get_provider(name: str) -> AIProvider:
 
 def available() -> dict[str, bool]:
     s = get_settings()
-    return {"claude": bool(s.claude_code_oauth_token.get_secret_value() or s.anthropic_api_key),
-            "jev": bool(s.openrouter_api_key)}
+    return {
+        "claude": bool(s.claude_code_oauth_token.get_secret_value() or s.anthropic_api_key),
+        "jev": bool(s.openrouter_api_key),
+    }
