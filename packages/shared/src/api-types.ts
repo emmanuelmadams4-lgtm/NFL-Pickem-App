@@ -336,6 +336,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live */
+        get: operations["live_api_live_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -675,6 +692,59 @@ export interface components {
              * Format: date-time
              */
             observed_at: string;
+        };
+        /** LiveGameOut */
+        LiveGameOut: {
+            /** Game Id */
+            game_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "in" | "post" | "lost";
+            /** Home Team */
+            home_team: string;
+            /** Away Team */
+            away_team: string;
+            /** Home Score */
+            home_score: number | null;
+            /** Away Score */
+            away_score: number | null;
+            /** Period */
+            period: number | null;
+            /** Clock */
+            clock: string | null;
+            /**
+             * Home Win Prob
+             * @description ESPN's home win probability; null means none right now
+             */
+            home_win_prob: number | null;
+            /**
+             * Kalshi Home Prob
+             * @description Kalshi's fresh live home price; null when unavailable
+             */
+            kalshi_home_prob: number | null;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description When this game's numbers last changed
+             */
+            updated_at: string;
+        };
+        /** LiveOut */
+        LiveOut: {
+            /** Games */
+            games: components["schemas"]["LiveGameOut"][];
+            /**
+             * Stale
+             * @description True when the last good ESPN poll is missing or over 2 minutes old
+             */
+            stale: boolean;
+            /**
+             * Last Confirmed At
+             * @description Time of the last good ESPN live poll, if any
+             */
+            last_confirmed_at: string | null;
         };
         /** MarketOut */
         MarketOut: {
@@ -1900,6 +1970,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetFreshness"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    live_api_live_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveOut"];
                 };
             };
             /** @description Validation Error */
