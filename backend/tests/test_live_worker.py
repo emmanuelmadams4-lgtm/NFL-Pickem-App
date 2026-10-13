@@ -225,7 +225,7 @@ def test_a_31_day_month_with_a_game_every_day_stays_far_under_the_odds_budget(se
 
 
 def test_a_restarted_worker_cannot_spend_a_second_odds_credit_inside_the_6_hour_floor(session):
-    buf_la(session, T0 + timedelta(hours=1))
+    buf_la(session, T0 + timedelta(hours=3))
     net = Net()
     step(session, T0, live_worker.Schedule(), net)
     assert net.count("odds") == 1

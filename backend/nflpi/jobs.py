@@ -19,6 +19,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from nflpi import live_worker
 from nflpi.analytics.backtest import run_backtest
 from nflpi.analytics.metrics import EARLY_WEEK_END, UNCERTAINTY_GAP, UPSET_GAP
 from nflpi.db import acquire_refresh_lock, release_refresh_lock, session_factory
@@ -153,6 +154,7 @@ def loop() -> None:
     next_refresh = 0.0
     next_tick = time.monotonic()
     refresh_thread: threading.Thread | None = None
+    live_worker.start()
 
     def refresh_cycle() -> None:
         nonlocal next_refresh
