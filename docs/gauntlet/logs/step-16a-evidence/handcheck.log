@@ -1,0 +1,11 @@
+PASS import results [('picks', 2528), ('standings', 160)]
+PASS second import changes nothing 
+PASS stored picks equal the file rows 2528 of 2528, different 0
+PASS no-pick rows stored as missing 82
+PASS stored weekly points and rank equal the file rows 160, different 0
+PASS game_shares equal an independent tally games 79 (app listed 79), wrong sides 0
+PASS straight winners x confidence equals Yahoo's weekly points member-weeks 160, different 0
+PASS picks file week totals equal the weekly file different rows 0
+PASS standings() per week equal the file (totals, order, last-week rank = Yahoo's order) weeks 5, members 32, problems 0
+members 32, games with results 77, weeks Wk1..Wk5
+HAND CHECK PASS

@@ -128,7 +128,13 @@ Commit `8bac149` (WO-4, `gpt-6-luna` medium; try 2 at `high`). The coordinator's
 Proof after the edit: `tests/test_group.py` 134 passed; ruff clean.
 
 ## 5. VERIFICATION
-(pending)
+Tested commit: `c04949c` (last commit that changes code or tests).
+* **Mutation pass** (`s16a-mutate.py`, 124 single wrong changes, one per frozen clause or more): run 1 killed 120 (`mutate-1.log`); 1 survivor was an equivalent change, 3 were test gaps, closed with tests; rerun of the four: all killed (`mutate-2.log`).
+* **Gate twice in a row on `c04949c`** (`final-gate-summary.log`, logs `final1-*.log`, `final2-*.log`): both runs `PASS pytest exit=0` 308 passed, `PASS ruff exit=0`, `PASS alembic exit=0` (up, check, down, up, check on an empty database), `PASS genapi exit=0` no drift.
+* **Hand check H1 on `c04949c`** (`handcheck.log`, the owner's two real files, lane database `nflpi_hand`): 2,528 pick rows and 160 weekly rows stored, 0 different from an independent count; 82 no-pick rows stored as missing; `game_shares` equal an independent tally on 79 games; straight winners x confidence equals Yahoo's weekly points for all 160 member-weeks; `standings()` equals the file for 5 weeks x 32 members, week 5 in Yahoo's rank order; a second import changes nothing. **PASS.**
+* **Names:** every file changed on this branch scanned for the 32 real member names: 0 hits.
+* **Dwight (required security review):** PASS at `af18571`, then **PASS at `8bac149`** on the delta, no CRITICAL, HIGH or MEDIUM; nothing to fix before landing. `c04949c` adds tests and logs only. His open advice (carried): normalise names once more after the strip (L2), `hide_parameters=True` in `db.py` (seam), case and look-alike names (G3), a re-import never deletes (G5), wave 5 route items.
+* **NOT DONE (the coordinator hit its usage limit here):** the ONE new critic (brief ready: `~/.claude/plans/nfl-pickem-lanes/wo/group-critic-1.md`), Jev job 4, the final `lane-guard check` (last run after IMPLEMENTATION: only the two granted seams). The step is NOT landing-ready until those run.
 
 ## 6. LANDING
 (pending: the lane does not push; the integrator lands)
