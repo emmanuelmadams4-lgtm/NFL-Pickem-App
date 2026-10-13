@@ -737,7 +737,7 @@ export interface components {
             games: components["schemas"]["LiveGameOut"][];
             /**
              * Stale
-             * @description True when the last good ESPN poll is missing or over 2 minutes old
+             * @description True when a game is in play or lost and the last good ESPN poll is missing or over 2 minutes old
              */
             stale: boolean;
             /**

@@ -302,9 +302,24 @@ def test_stale_means_the_last_good_espn_poll_is_missing_or_more_than_two_minutes
         assert datetime.fromisoformat(data["last_confirmed_at"]) == NOW - age
 
 
-def test_a_quiet_slate_is_an_empty_list_and_stale(session, client):
+def test_a_quiet_slate_is_an_empty_list_and_nothing_is_stale(session, client):
     data = body(client)
-    assert data["games"] == [] and data["stale"] is True and data["last_confirmed_at"] is None
+    assert data["games"] == [] and data["stale"] is False and data["last_confirmed_at"] is None
+
+
+def test_finals_alone_are_never_stale_however_old_the_last_poll_is(session, client):
+    """The worker makes no calls once every game is final, so an old poll then is expected, not a fault."""
+    game(session, "f", datetime(2026, 10, 13, 17, 0, tzinfo=UTC), "post")
+    confirm(session, "espn_live", NOW - timedelta(hours=5))
+    data = body(client)
+    assert data["stale"] is False and data["last_confirmed_at"] is not None
+
+
+def test_a_lost_game_with_an_old_poll_is_stale_and_so_is_a_final_beside_a_live_game(session, client):
+    game(session, "f", datetime(2026, 10, 13, 17, 0, tzinfo=UTC), "post", home="WAS", away="NYG")
+    game(session, "l", NOW - timedelta(hours=1), "lost", home="DAL", away="TB", home_wp=None)
+    confirm(session, "espn_live", NOW - timedelta(minutes=10))
+    assert body(client)["stale"] is True
 
 
 # ------------------------------------------------------------------------------------------- A8

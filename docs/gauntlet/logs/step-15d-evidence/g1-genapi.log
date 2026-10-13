@@ -1,0 +1,344 @@
+
+> gen:api
+> cd backend && uv run python -c "import json; from nflpi.api.main import app; print(json.dumps(app.openapi(), indent=1))" > ../packages/shared/openapi.json && cd .. && npx --yes openapi-typescript@7.13.0 packages/shared/openapi.json -o packages/shared/src/api-types.ts
+
+✨ [1mopenapi-typescript 7.13.0[22m
+🚀 [32mpackages/shared/openapi.json → [1mpackages/shared/src/api-types.ts[22m[39m [2m[66ms][22m
+diff --git a/packages/shared/openapi.json b/packages/shared/openapi.json
+index 1f91f88..1381033 100644
+--- a/packages/shared/openapi.json
++++ b/packages/shared/openapi.json
+@@ -1169,6 +1169,52 @@
+      }
+     }
+    }
++  },
++  "/api/live": {
++   "get": {
++    "summary": "Live",
++    "operationId": "live_api_live_get",
++    "parameters": [
++     {
++      "name": "authorization",
++      "in": "header",
++      "required": false,
++      "schema": {
++       "anyOf": [
++        {
++         "type": "string"
++        },
++        {
++         "type": "null"
++        }
++       ],
++       "title": "Authorization"
++      }
++     }
++    ],
++    "responses": {
++     "200": {
++      "description": "Successful Response",
++      "content": {
++       "application/json": {
++        "schema": {
++         "$ref": "#/components/schemas/LiveOut"
++        }
++       }
++      }
++     },
++     "422": {
++      "description": "Validation Error",
++      "content": {
++       "application/json": {
++        "schema": {
++         "$ref": "#/components/schemas/HTTPValidationError"
++        }
++       }
++      }
++     }
++    }
++   }
+   }
+  },
+  "components": {
+@@ -2236,6 +2282,156 @@
+     ],
+     "title": "InjuryOut"
+    },
++   "LiveGameOut": {
++    "properties": {
++     "game_id": {
++      "type": "string",
++      "title": "Game Id"
++     },
++     "state": {
++      "type": "string",
++      "enum": [
++       "in",
++       "post",
++       "lost"
++      ],
++      "title": "State"
++     },
++     "home_team": {
++      "type": "string",
++      "title": "Home Team"
++     },
++     "away_team": {
++      "type": "string",
++      "title": "Away Team"
++     },
++     "home_score": {
++      "anyOf": [
++       {
++        "type": "integer"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Home Score"
++     },
++     "away_score": {
++      "anyOf": [
++       {
++        "type": "integer"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Away Score"
++     },
++     "period": {
++      "anyOf": [
++       {
++        "type": "integer"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Period"
++     },
++     "clock": {
++      "anyOf": [
++       {
++        "type": "string"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Clock"
++     },
++     "home_win_prob": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Home Win Prob",
++      "description": "ESPN's home win probability; null means none right now"
++     },
++     "kalshi_home_prob": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Kalshi Home Prob",
++      "description": "Kalshi's fresh live home price; null when unavailable"
++     },
++     "updated_at": {
++      "type": "string",
++      "format": "date-time",
++      "title": "Updated At",
++      "description": "When this game's numbers last changed"
++     }
++    },
++    "type": "object",
++    "required": [
++     "game_id",
++     "state",
++     "home_team",
++     "away_team",
++     "home_score",
++     "away_score",
++     "period",
++     "clock",
++     "home_win_prob",
++     "kalshi_home_prob",
++     "updated_at"
++    ],
++    "title": "LiveGameOut"
++   },
++   "LiveOut": {
++    "properties": {
++     "games": {
++      "items": {
++       "$ref": "#/components/schemas/LiveGameOut"
++      },
++      "type": "array",
++      "title": "Games"
++     },
++     "stale": {
++      "type": "boolean",
++      "title": "Stale",
++      "description": "True when the last good ESPN poll is missing or over 2 minutes old"
++     },
++     "last_confirmed_at": {
++      "anyOf": [
++       {
++        "type": "string",
++        "format": "date-time"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Last Confirmed At",
++      "description": "Time of the last good ESPN live poll, if any"
++     }
++    },
++    "type": "object",
++    "required": [
++     "games",
++     "stale",
++     "last_confirmed_at"
++    ],
++    "title": "LiveOut"
++   },
+    "MarketOut": {
+     "properties": {
+      "observed_at": {
+diff --git a/packages/shared/src/api-types.ts b/packages/shared/src/api-types.ts
+index 7780b19..1225640 100644
+--- a/packages/shared/src/api-types.ts
++++ b/packages/shared/src/api-types.ts
+@@ -336,6 +336,23 @@ export interface paths {
+         patch?: never;
+         trace?: never;
+     };
++    "/api/live": {
++        parameters: {
++            query?: never;
++            header?: never;
++            path?: never;
++            cookie?: never;
++        };
++        /** Live */
++        get: operations["live_api_live_get"];
++        put?: never;
++        post?: never;
++        delete?: never;
++        options?: never;
++        head?: never;
++        patch?: never;
++        trace?: never;
++    };
+ }
+ export type webhooks = Record<string, never>;
+ export interface components {
+@@ -676,6 +693,59 @@ export interface components {
+              */
+             observed_at: string;
+         };
++        /** LiveGameOut */
++        LiveGameOut: {
++            /** Game Id */
++            game_id: string;
++            /**
++             * State
++             * @enum {string}
++             */
++            state: "in" | "post" | "lost";
++            /** Home Team */
++            home_team: string;
++            /** Away Team */
++            away_team: string;
++            /** Home Score */
++            home_score: number | null;
++            /** Away Score */
++            away_score: number | null;
++            /** Period */
++            period: number | null;
++            /** Clock */
++            clock: string | null;
++            /**
++             * Home Win Prob
++             * @description ESPN's home win probability; null means none right now
++             */
++            home_win_prob: number | null;
++            /**
++             * Kalshi Home Prob
++             * @description Kalshi's fresh live home price; null when unavailable
++             */
++            kalshi_home_prob: number | null;
++            /**
++             * Updated At
++             * Format: date-time
++             * @description When this game's numbers last changed
++             */
++            updated_at: string;
++        };
++        /** LiveOut */
++        LiveOut: {
++            /** Games */
++            games: components["schemas"]["LiveGameOut"][];
++            /**
++             * Stale
++             * @description True when the last good ESPN poll is missing or over 2 minutes old
++             */
++            stale: boolean;
++            /**
++             * Last Confirmed At
++             * @description Time of the last good ESPN live poll, if any
++             */
++            last_confirmed_at: string | null;
++        };
+         /** MarketOut */
+         MarketOut: {
+             /**
+@@ -1913,4 +1983,35 @@ export interface operations {
+             };
+         };
+     };
++    live_api_live_get: {
++        parameters: {
++            query?: never;
++            header?: {
++                authorization?: string | null;
++            };
++            path?: never;
++            cookie?: never;
++        };
++        requestBody?: never;
++        responses: {
++            /** @description Successful Response */
++            200: {
++                headers: {
++                    [name: string]: unknown;
++                };
++                content: {
++                    "application/json": components["schemas"]["LiveOut"];
++                };
++            };
++            /** @description Validation Error */
++            422: {
++                headers: {
++                    [name: string]: unknown;
++                };
++                content: {
++                    "application/json": components["schemas"]["HTTPValidationError"];
++                };
++            };
++        };
++    };
+ }

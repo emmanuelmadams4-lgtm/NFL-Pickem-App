@@ -38,7 +38,9 @@ class LiveGameOut(BaseModel):
 
 class LiveOut(BaseModel):
     games: list[LiveGameOut]
-    stale: bool = Field(description="True when the last good ESPN poll is missing or over 2 minutes old")
+    stale: bool = Field(
+        description="True when a game is in play or lost and the last good ESPN poll is missing or over 2 minutes old"
+    )
     last_confirmed_at: datetime | None = Field(description="Time of the last good ESPN live poll, if any")
 
 
@@ -110,4 +112,5 @@ def live(session: Annotated[Session, Depends(get_session)]) -> LiveOut:
         for game in kept
     ]
     last = store.last_confirmed(session, "espn_live")
-    return LiveOut(games=games, stale=last is None or now - last > STALE_AFTER, last_confirmed_at=last)
+    playing = any(game.state in ("in", "lost") for game in games)
+    return LiveOut(games=games, stale=playing and (last is None or now - last > STALE_AFTER), last_confirmed_at=last)
