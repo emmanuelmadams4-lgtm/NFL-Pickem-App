@@ -181,19 +181,16 @@ def test_n4_news_adds_exactly_one_system_line_saying_it_is_data(loaded, pick_gam
 
 def test_n5_only_title_source_age_and_extract_reach_the_model(loaded, pick_game):
     gid, _, home = pick_game
-    seed(
-        loaded,
-        row("Plain title", "A short extract.", teams=(home,), minutes=180, url="https://www.espn.com/nfl/story/_/id/SECRETURL", tags=("injury",)),
-    )  # fmt: skip
+    url = "https://www.espn.com/nfl/story/_/id/SECRETURL"
+    seed(loaded, row("Plain title", "A short extract.", teams=(home,), minutes=180, url=url, tags=("injury",)))
     spy = Spy()
     research.answer_question(loaded, gid, "Who wins?", provider=spy)
     user = spy.sent[0][1]
-    assert "SECRETURL" not in user and "00-0012345" not in user and "injury" not in json.loads(
-        user.split("Evidence pack (JSON):\n")[1].split("\n\nQuestion")[0]
-    )["news"]["items"][0]
+    news_part = json.loads(user.split("Evidence pack (JSON):\n")[1].split("\n\nQuestion")[0])["news"]["items"][0]
+    assert "SECRETURL" not in user and "00-0012345" not in user and "injury" not in news_part
     item = research.evidence_pack(loaded, gid)["news"]["items"][0]
     lines = item.split("\n")[1:5]
-    assert lines[0] == "source: ESPN" and re.fullmatch(r"age: \d+ hours", lines[1])  # age is against the real clock here
+    assert lines[0] == "source: ESPN" and re.fullmatch(r"age: \d+ hours", lines[1])  # real clock here
     assert lines[2:] == ["title: Plain title", "extract: A short extract."]
 
 
