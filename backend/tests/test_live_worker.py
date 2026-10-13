@@ -4,6 +4,7 @@ No test touches the network or a real clock: every source call goes to a fake `g
 """
 
 import copy
+import functools
 import logging
 import threading
 import time
@@ -13,10 +14,12 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import func, select
 
+import httpx
+
 from nflpi import jobs, live_worker
 from nflpi.ingestion.live import espn, fetch, run, store
 from nflpi.models import Game, IngestionRun, LiveState, SourceStatus
-from tests.test_live import KEY, in_progress, recorded, seed_game
+from tests.test_live import JSON, KEY, in_progress, public_dns, recorded, seed_game
 
 T0 = datetime(2026, 10, 13, 1, 15, tzinfo=UTC)  # one hour after the recorded BUF @ LA kickoff (00:15 UTC)
 KICKOFF = datetime(2026, 10, 13, 0, 15, tzinfo=UTC)
@@ -221,6 +224,18 @@ def test_a_31_day_month_with_a_game_every_day_stays_far_under_the_odds_budget(se
     assert net.credits >= 500 - 124 and net.credits >= 50
 
 
+def test_a_restarted_worker_cannot_spend_a_second_odds_credit_inside_the_6_hour_floor(session):
+    buf_la(session, T0 + timedelta(hours=1))
+    net = Net()
+    step(session, T0, live_worker.Schedule(), net)
+    assert net.count("odds") == 1
+    for minutes in (1, 59, 5 * 60 + 59):  # the old worker object is gone; a new one starts with no memory
+        step(session, T0 + timedelta(minutes=minutes), live_worker.Schedule(), net)
+    assert net.count("odds") == 1
+    step(session, T0 + timedelta(hours=6), live_worker.Schedule(), net)
+    assert net.count("odds") == 2
+
+
 def test_a_credit_header_below_50_stops_the_odds_api_for_35_days(session):
     for day in range(45):
         seed_game(
@@ -303,6 +318,8 @@ def test_the_sweep_fails_old_running_rows_of_the_live_sources_and_nothing_else(s
             IngestionRun(source="espn", dataset="live_scores", status="running", started_at=fresh),
             IngestionRun(source="espn", dataset="live_scores", status="ok", started_at=old),
             IngestionRun(source="nflverse", dataset="games", status="running", started_at=old),
+            IngestionRun(source="espn", dataset="head_coaches", status="running", started_at=old),
+            IngestionRun(source="kalshi", dataset="games", status="running", started_at=old),
         ]
     )
     session.commit()
@@ -311,6 +328,8 @@ def test_the_sweep_fails_old_running_rows_of_the_live_sources_and_nothing_else(s
     assert rows[("espn", old, "failed")].error == "interrupted"
     assert rows[("kalshi", old, "failed")].finished_at == T0
     assert ("espn", fresh, "running") in rows and ("nflverse", old, "running") in rows
+    assert ("espn", old, "running") in rows  # the head_coaches row the main loop owns
+    assert ("kalshi", old, "running") in rows  # a kalshi row of another dataset
     assert ("espn", old, "ok") in rows
     assert live_worker.sweep_stale_runs(session, T0) == 0
 
@@ -331,6 +350,38 @@ def test_one_source_blowing_up_does_not_stop_the_others_and_its_message_is_never
     assert KEY not in caplog.text and "secret" not in caplog.text
     assert "RuntimeError" in caplog.text
     assert {r.source for r in result.results} == {"kalshi", "oddsapi"}
+
+
+def test_through_the_real_fetch_path_with_every_logger_turned_up_the_key_never_reaches_a_log(session, caplog):
+    buf_la(session, T0 + timedelta(hours=1))
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        body = b"[]" if "the-odds-api.com" in request.headers["host"] else b'{"markets": [], "cursor": ""}'
+        return httpx.Response(200, headers=JSON | {"x-requests-remaining": "499"}, content=body)
+
+    get = functools.partial(fetch.fetch_json, resolver=public_dns, transport=httpx.MockTransport(handler))
+    for name in ("", "httpx", "httpcore", "nflpi"):
+        caplog.set_level(logging.DEBUG, logger=name)
+    step(session, T0, net=get)
+    assert any("apiKey=" + KEY in str(r.url) for r in seen)  # the key really was sent
+    assert KEY not in caplog.text and "apiKey=" not in caplog.text
+    stored = " ".join(f"{r.error} {r.dataset}" for r in session.scalars(select(IngestionRun)))
+    assert KEY not in stored
+
+
+def test_the_job_logging_setup_cannot_turn_the_http_loggers_back_up():
+    assert logging.getLogger("httpx").getEffectiveLevel() >= logging.WARNING
+    assert logging.getLogger("httpcore").getEffectiveLevel() >= logging.WARNING
+    source = open(jobs.__file__).read()
+    assert "httpx" not in source and "httpcore" not in source
+
+
+def test_the_thread_says_when_it_starts(session, caplog):
+    with caplog.at_level(logging.INFO, logger="nflpi.live_worker"):
+        live_worker.run_forever(threading.Event(), get=Net(), wait=lambda s: True)
+    assert "live worker started" in caplog.text
 
 
 def test_a_broken_window_query_is_logged_by_class_and_returns_normally(session, monkeypatch, caplog):

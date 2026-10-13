@@ -145,8 +145,8 @@ def test_a_missing_score_period_or_clock_is_null_not_zero(session, client):
 
 def test_kalshi_shows_the_newest_live_quote_while_the_game_is_on_and_kalshi_was_heard_from_lately(session, client):
     g = game(session, "k", NOW - timedelta(hours=1), "in")
-    quote(session, g, prob=0.4, at=NOW - timedelta(minutes=30))
-    quote(session, g, prob=0.7, at=NOW - timedelta(minutes=20))
+    quote(session, g, prob=0.4, at=NOW - timedelta(minutes=10))
+    quote(session, g, prob=0.7, at=NOW - timedelta(minutes=5))
     confirm(session, "kalshi", NOW - timedelta(minutes=4, seconds=59))
     assert body(client)["games"][0]["kalshi_home_prob"] == 0.7
 
@@ -162,6 +162,16 @@ def test_kalshi_is_null_when_kalshi_was_never_heard_from(session, client):
     g = game(session, "k", NOW - timedelta(hours=1), "in")
     quote(session, g)
     assert body(client)["games"][0]["kalshi_home_prob"] is None
+
+
+@pytest.mark.parametrize(("age", "shown"), [(timedelta(minutes=14, seconds=59), True), (timedelta(minutes=15), True),
+                                           (timedelta(minutes=15, seconds=1), False)])
+def test_a_quote_row_over_15_minutes_old_is_not_shown_even_if_kalshi_was_just_polled(session, client, age, shown):
+    """An unchanged poll adds no row and a one-sided late-game market adds none either: the row's age bounds both."""
+    g = game(session, "k", NOW - timedelta(hours=1), "in")
+    quote(session, g, prob=0.7, at=NOW - age)
+    confirm(session, "kalshi", NOW)
+    assert body(client)["games"][0]["kalshi_home_prob"] == (0.7 if shown else None)
 
 
 def test_a_pregame_quote_is_never_shown_as_live(session, client):
@@ -180,8 +190,8 @@ def test_a_finished_game_shows_no_kalshi_number(session, client):
 
 def test_a_newest_quote_without_a_price_is_null_not_the_older_price(session, client):
     g = game(session, "k", NOW - timedelta(hours=1), "in")
-    quote(session, g, prob=0.7, at=NOW - timedelta(minutes=20))
-    quote(session, g, prob=None, at=NOW - timedelta(minutes=10))
+    quote(session, g, prob=0.7, at=NOW - timedelta(minutes=10))
+    quote(session, g, prob=None, at=NOW - timedelta(minutes=5))
     confirm(session, "kalshi", NOW)
     assert body(client)["games"][0]["kalshi_home_prob"] is None
 

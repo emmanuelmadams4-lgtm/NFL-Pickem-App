@@ -21,10 +21,19 @@ It runs in its OWN daemon thread started from `jobs.loop` (one call). A hung sou
 * **A1** no / wrong token: 401 (same dependency). **A2** exactly one route, GET only.
 * **A3 which games.** Newest `live_states` row per game; returned when state is `in` or `lost` and kickoff is within 8 h, or `post` and the kickoff day (US Eastern) is today (Eastern). `pre` games, old finished games and a stuck `in` older than 8 h are not returned. Ordered by kickoff then game id; **at most 20 games** (the reply size is bounded).
 * **A4** per game: `game_id, state, home_team, away_team, home_score, away_score, period, clock, home_win_prob, kalshi_home_prob, updated_at`. `home_win_prob` is ESPN's number as stored; a null stays null, **never 0.5** (a stored 0.0 or 0.5 is ESPN's own and is passed through).
-* **A5 Kalshi.** `kalshi_home_prob` = newest `kalshi` quote of kind `live` (its `home_prob`, null stays null), only when the game state is `in` and `last_confirmed('kalshi')` is at most 5 min old (an unchanged poll adds no row, so row time is not freshness: same lesson as 15a I2). Otherwise null. A `pregame` quote is never shown as live.
+* **A5 Kalshi.** `kalshi_home_prob` = newest `kalshi` quote of kind `live` (its `home_prob`, null stays null), only when the game state is `in`, `last_confirmed('kalshi')` is at most 5 min old AND the quote row itself is at most 15 min old (an unchanged poll adds no row, so row time is not freshness: same lesson as 15a I2). Otherwise null. A `pregame` quote is never shown as live.
 * **A6 stale.** Reply-level `stale` = `last_confirmed('espn_live')` is missing or MORE than 120 s old (exactly 120 s is not stale). Reply also carries `last_confirmed_at`. `updated_at` per game is when that game's numbers last changed.
 * **A7** a `lost` game is returned with its last numbers and `home_win_prob` null.
 * **A8 read only.** The route writes nothing and makes no network call; the reply holds no key, URL or error text.
 
 ## Security notes for Dwight
 Auth: unchanged dependency. Input: none (no parameters). DB: ORM only. External calls: all through the 15a fetch guard (hosts, DNS pin, caps). Log: class names only. Reply: bounded, validated strings only (15a stores only fullmatch-checked strings).
+
+## Dwight's design review (PASS to build, H1-H5) and how each is folded in
+* H1 restart test (a new worker object at now+1 min, no second Odds call): added, `test_a_restarted_worker_cannot_spend...`.
+* H2 a skipped or failed summary stores `home_win_prob` null: decided NOT to carry the old value forward (missing stays missing, 15a rule). Contract for the web: `home_win_prob: null` on a game in play means "no probability right now"; the next good poll (about 30 s) restores it. One fetch is up to about 40 s worst case (DNS 5 s + connect 10 s + 20 s body), so one run is at most about 85 s; still bounded.
+* H3 sweep matches source AND dataset (espn/live_scores, kalshi/market_quotes, oddsapi/market_quotes): test with a running `head_coaches` row.
+* H4 DEBUG-on-every-logger test through the real fetch path; jobs.py never touches the http loggers.
+* H5 `kalshi_home_prob` also needs the quote ROW to be at most 15 min old (A5 amended).
+* H6 (owner yes for Kalshi/Odds): recorded as D59 in OWNER_DECISIONS_2026-10-12.md ("Kalshi is fine", Odds key supplied); no new setting. For god.
+* LOW: first ESPN back-off stays 15 min (15a rule); the thread logs "live worker started"; the API reads the newest row only for games in the kickoff window.
