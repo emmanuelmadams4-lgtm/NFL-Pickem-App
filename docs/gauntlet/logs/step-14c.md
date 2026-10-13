@@ -98,3 +98,81 @@ Operational layer: `run.py <stage>` runs from a clean checkout against live nflv
 ### First failing tests
 
 `backend/tests/test_model_c.py`, written by the coordinator before any production code. Red for the intended reason (`red-1.log`): `ImportError: cannot import name 'model_c' from 'nflpi.analytics'`. The 34 step 14, 14b tests in `test_model.py` still pass (`baseline-test_model.log`).
+
+## 3. IMPLEMENTATION
+
+Provider: the dispatch said try Codex once. `codex exec` with the default model refused: `The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account` (`step-14c-evidence/codex-wo1.log`). Per the dispatch, each bounded work order then went to a Sonnet subagent (never Opus for building, never the critic). The coordinator wrote the spec and the tests first, read every diff, and reran the proof itself.
+
+| Work order | Builder | Result | Commit |
+|---|---|---|---|
+| WO-1 trees, stack, `evaluate_c` (`wo-1.md`) | Sonnet subagent, try 1 | 10 tests green after I fixed one flaw in my own test data (the stacked test's "earlier results teach 2022" check used a case where the weight stays at 1 either way) | `b18f017` |
+| WO-2 margin, explosive, points (`wo-2.md`) | Sonnet subagent, try 1 | 12 of 13 green; the 13th failed because **my test was wrong** (I asserted that the oracle order has more expected points than the sort; the sort maximises expected points by definition). I corrected the test, not the code | `b18f017` |
+
+CLIMBS: none. STRIKES: none. Jev was not asked for model picks: the dispatch fixed the builder (Sonnet after the Codex refusal). EFFORT: session setting unchanged. After both work orders: `tests/test_model_c.py` 22 passed (`green-1.log`), ruff clean. The 34 earlier `test_model.py` tests are untouched and green.
+
+## 4. What the real data says
+
+Run: `cd backend && uv run python ../docs/gauntlet/logs/step-14c-evidence/run.py <stage>`, against live nflverse files, 2026-10-13, one stage at a time in the dispatch's order, each under a gate lock (`locked-stage.sh`). Stored: `run-<stage>.json` (trees, stack, margin, explosive, points). Walk-forward, window 10 seasons, 3,649 regular-season games with a closing line, 2012 to 2025; tune 2,565 games; confirm 1,084 games in 72 season-weeks. Run time: trees 107 s, stack 150 s, margin 3 s, explosive 73 s (24 seasons of play-by-play, 12,998 team-games, 6,499 rated games), points 6 s.
+
+**Baseline check (operational layer):** market 66.57%, log loss 0.6094; blend 66.46%, 0.6107. On the confirm seasons: market 67.80%, 0.6082; blend 67.53%, 0.6095. Equal to step 14's stored numbers; the runner stops if they ever differ. No scored game lacked a spread, total or margin input (`scored_games_missing_an_input` is 0 in every file).
+
+Gain = how much lower the idea's log loss is than the blend's (positive is better). Interval = paired bootstrap, 95%, game by game (this is the rule). "By week" = the same when whole season-weeks are resampled (beside it, never decides). Label (owner brief D68, section 6): **market-informed** = the model reads the closing line or a number derived from it; **football-only** = it does not.
+
+### Verdict table
+
+**Read this first: the confirm set is 1,084 games. It cannot show a gain under about 0.001 log loss. Every "No" below means "no gain this test can see", not "proven useless". This is the eighth or later confirm look: steps 14, 14b, 8b and this step have each looked at the confirm seasons for 2, 5, 2 and 6 candidates, 15 in all. For one candidate a pass at this rule is a roughly 1 in 40 false alarm; across 15 looks, if none of the ideas were real, there would be about a 1 in 3 chance that at least one passes by luck (somewhat less, since the candidates overlap). So a narrow pass would have been "needs the owner", not a win. None passed.**
+
+| # | Candidate | Label | Chosen on 2012 to 2021 | Tune gain | Confirm gain | Interval (the rule) | Interval by week | Accuracy change | Ships |
+|---|---|---|---|---|---|---|---|---|---|
+| 1a | Boosted trees, blend's five inputs | market-informed | depth 2, leaf 30 | -0.00448 | **-0.00664** | -0.01183 to -0.00118 | -0.01219 to -0.00083 | +0.18 points | **No** (clearly worse) |
+| 1b | Boosted trees, wider set (line, total, rest, roof, weather, division) | market-informed | depth 2, leaf 30 | -0.00453 | -0.00552 | -0.01119 to +0.00033 | -0.01165 to +0.00108 | -0.46 points | **No** |
+| 2 | Stacked blend: blend and best tree, one weight fitted on prior seasons | market-informed | fitted weight (tree: 1a's winner) | -0.00027 | -0.00062 | -0.00152 to +0.00037 | -0.00157 to +0.00043 | -0.28 points | **No** |
+| 3a | Margin model turned into a win chance (alone) | `p_m_line` market-informed; `p_m_stats` football-only | line-based margin | -0.00026 | +0.00014 | -0.00428 to +0.00440 | -0.00380 to +0.00404 | +0.65 points | **No** |
+| 3b | Margin and total as extra inputs to the blend | market-informed | stats margin and total | +0.00068 | -0.00093 | -0.00406 to +0.00236 | -0.00431 to +0.00212 | -0.55 points | **No** |
+| 4 | Explosive-play rate rating | market-informed (added to the blend) | half-life 16 games | -0.00003 | -0.00008 | -0.00046 to +0.00031 | -0.00046 to +0.00028 | -0.28 points | **No** |
+| 5 | Confidence points order | n/a (no probability changes) | | | | | | | **Finding, below** |
+
+**In plain words:** none of the candidates beats the current model, so **the live model does not change** and there is no seam for the integrator. The trees are not just "no gain": on the confirm seasons the tree on the blend's own inputs is clearly worse (interval wholly below zero). That fits the review's warning that trees overfit about 250 games a season; the stacked blend (which gives the tree only 5% to 25% of the weight, per season) comes out at zero within noise, which is what a blend of "same as today" and "worse" should do. Nobody should read the margin model's `+0.00014` or the margin-input tune gain of `+0.00068` as a signal: the first has an interval of plus or minus 0.0043, and the second turned into `-0.00093` on the confirm seasons.
+
+### Every variant tried (tune seasons, 2,565 games, beside the confirm seasons, 1,084 games)
+
+Confirm gains for non-chosen variants are descriptive point values; they chose nothing and nothing was added or dropped after seeing them. The gap is tune minus confirm (a large positive gap = it looked better in tuning than it was).
+
+| Candidate | Variant | Tune gain | Confirm gain | Gap |
+|---|---|---|---|---|
+| 1a | core, depth 2, leaf 30 (chosen) | -0.00448 | -0.00664 | +0.00216 |
+| 1a | core, depth 2, leaf 80 | -0.00686 | -0.00664 | -0.00022 |
+| 1a | core, depth 3, leaf 30 | -0.00553 | -0.00740 | +0.00187 |
+| 1a | core, depth 3, leaf 80 | -0.00655 | -0.00710 | +0.00055 |
+| 1b | wide, depth 2, leaf 30 (chosen) | -0.00453 | -0.00552 | +0.00099 |
+| 1b | wide, depth 2, leaf 80 | -0.00503 | -0.00583 | +0.00080 |
+| 1b | wide, depth 3, leaf 30 | -0.00652 | -0.01077 | +0.00426 |
+| 1b | wide, depth 3, leaf 80 | -0.00855 | -0.01488 | +0.00633 |
+| 2 | fitted weight (chosen) | -0.00027 | -0.00062 | +0.00035 |
+| 2 | fixed one half | -0.00066 | -0.00228 | +0.00163 |
+| 3a | stats margin, no line (football-only) | -0.01544 | -0.02156 | +0.00612 |
+| 3a | line margin (chosen) | -0.00026 | +0.00014 | -0.00040 |
+| 3b | + stats margin | -0.00006 | +0.00003 | -0.00009 |
+| 3b | + stats margin and total (chosen) | +0.00068 | -0.00093 | +0.00161 |
+| 3b | + line margin | -0.00011 | +0.00058 | -0.00069 |
+| 4 | half-life 4 games | -0.00017 | -0.00020 | +0.00003 |
+| 4 | half-life 8 games | -0.00008 | -0.00012 | +0.00004 |
+| 4 | half-life 16 games (chosen) | -0.00003 | -0.00008 | +0.00006 |
+
+That is every variant: 8 tree settings, 2 stack variants, 5 margin variants, 3 explosive half-lives. Nothing else was scored. Wider trees overfit more (gap grows with depth: +0.00426 and +0.00633 for depth 3). The stack weights fitted on prior seasons ran from 0.05 to 0.25 (`run-stack.json`).
+
+Notes: the tree on the wider set uses temperature and wind **as recorded at the game** (a forecast stand-in, labelled in the assumptions); it still lost. The margin model's football-only variant (`p_m_stats`, no betting line at all) is 0.0154 log loss worse than the blend on the tune seasons, the same size of gap that step 9 found between the stats model and the line. Trees, margin and explosive stages scored every game with every input present (0 fallbacks to the blend's number except coincidences where the two numbers matched: `variant_columns_equal_to_blend` in each file).
+
+### Idea 5: confidence points (a finding for the pick sheet; no probability changes)
+
+Setting: each week of the 3,649 scored games (243 weeks, about 15 games a week; only games with a closing line are scored) gets points from the week's size down to 1. Today's sheet orders by win chance, highest first, and only swaps two neighbours less than one point apart when the AI's evidence disagrees (`sheet.order`). Without that AI evidence the sheet **is** the pure sort (clause P2, tested). Per week, 2012 to 2025, with the confirm seasons beside it:
+
+| Order | Expected points per week | Actual points per week (all) | Actual, confirm seasons | Sort minus this order, actual (all), 95% by week |
+|---|---|---|---|---|
+| Pure sort by our win chance (today's sheet without AI evidence) | 86.41 | 86.87 | 87.71 | |
+| Sort by the market's win chance | 86.26 | 87.03 | 88.06 | -0.16 (-0.47 to +0.16) |
+| Earliest kickoff gets the most points | 80.32 | 80.89 | 82.93 | +5.98 (+4.56 to +7.47) |
+| Lowest chance gets the most points | 74.26 | 73.81 | 76.39 | +13.07 (+11.14 to +15.12) |
+| Perfect hindsight (right picks first) | 84.84 (not a real order) | 103.84 | 105.42 | -16.97 |
+
+What the owner can conclude: ordering by win chance is worth about 6 points a week over ordering by kickoff, and the gap's interval is well above zero. Sorting by the market's chance instead of ours is a statistical tie (-0.16, interval spans zero). The AI tie-break can give up at most **0.017 expected points a week** (the "swap ceiling": every neighbouring pair closer than one point swapped) and it cannot be replayed in the past because no AI evidence was stored for past seasons, so its actual effect is unmeasured and small by construction. What the owner cannot conclude: whether going against the crowd (pick shares) pays in his group; that needs his group's pick shares, which this bench does not have. Hindsight at 103.84 is the ceiling no order can reach; the sort sits at 83% of it.
