@@ -192,6 +192,24 @@ def stars(session, week: int, team: str, season: int = SEASON) -> list[tuple]:
     ]
 
 
+def _star(season: int, week: int, team: str, slot: str, rank: int, player_id: str | None, player: str) -> TeamStar:
+    return TeamStar(
+        season=season,
+        week=week,
+        team=team,
+        slot=slot,
+        rank=rank,
+        player_id=player_id,
+        player=player,
+        position=None,
+        snaps=1,
+        production=1.0,
+        score=1.0,
+        source="test",
+        computed_at=NOW,
+    )
+
+
 def recorded(name: str) -> list[dict]:
     with open(FIXTURES / name, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
@@ -385,6 +403,12 @@ def _without(rows: list[dict], column: str) -> list[dict]:
         "stat_column_all_blank",
         "short_stat_row",
         "short_snap_row",
+        "snap_week_zero",
+        "stat_week_too_high",
+        "negative_defense_snaps",
+        "defense_snaps_too_many",
+        "stat_nan",
+        "stat_too_negative",
     ],
 )
 def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
@@ -453,6 +477,18 @@ def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
         stats[1] = stats[1] | {"team": None}
     elif case == "short_snap_row":
         snaps[0] = snaps[0] | {"pfr_player_id": None}
+    elif case == "snap_week_zero":
+        snaps[0] = snaps[0] | {"week": "0"}
+    elif case == "stat_week_too_high":
+        stats[1] = stats[1] | {"week": "23"}
+    elif case == "negative_defense_snaps":
+        snaps[0] = snaps[0] | {"defense_snaps": "-1"}
+    elif case == "defense_snaps_too_many":
+        snaps[0] = snaps[0] | {"defense_snaps": "301"}
+    elif case == "stat_nan":
+        stats[1] = stats[1] | {"def_sacks": "nan"}
+    elif case == "stat_too_negative":
+        stats[1] = stats[1] | {"rushing_yards": "-1001"}
     run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
     assert run.status == "failed"
     assert "y" * 41 not in run.error
@@ -465,6 +501,21 @@ def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
         "stat_column_all_blank": "def_safeties",
         "short_stat_row": "stats_player_week",
         "short_snap_row": "snap_counts",
+        # the week check itself must speak, not a later check that happens to fail too
+        "week_out_of_range": "week outside 1..22: 23",
+        "stat_week_out_of_range": "week outside 1..22: 0",
+        "snap_week_zero": "week outside 1..22: 0",
+        "stat_week_too_high": "week outside 1..22: 23",
+        "club_code_too_long": "invalid club",
+        "blank_team": "invalid club",
+        "negative_snaps": "snap count outside allowed range",
+        "snaps_too_many": "snap count outside allowed range",
+        "negative_defense_snaps": "snap count outside allowed range",
+        "defense_snaps_too_many": "snap count outside allowed range",
+        "stat_infinite": "invalid star statistic",
+        "stat_nan": "invalid star statistic",
+        "stat_too_big": "invalid star statistic",
+        "stat_too_negative": "invalid star statistic",
     }
     assert named.get(case, "") in run.error
     assert stars(session, 3, "KC") == before
@@ -551,12 +602,17 @@ def test_stars_out_lists_stars_whose_latest_report_is_out_or_doubtful(session):
     _injury(session, 3, "KC", "00-003", "Ron Runner", "Out", 50)  # a star: out first ...
     _injury(session, 3, "KC", "00-003", "Ron Runner", "Questionable", 5)  # ... then upgraded: not listed
     _injury(session, 3, "KC", "00-004", "Cal Catch", "Questionable", 4)  # a star, only questionable
+    _injury(session, 3, "KC", "00-004", "Cal Catch", "Out", 1, season=2022)  # another season's report: not read
+    _injury(session, 3, "MIA", "00-040", "Trade Guy", "Out", 1)  # a club that is not in this game: not counted
     _injury(session, 3, "KC", "00-006", "Tom Tackle", "Out", 4)  # out, but not a star
     _injury(session, 2, "KC", "00-001", "Pat Passer", "Out", 200)  # last week's report: not this game
     _injury(session, 3, "KC", "00-008", "Russ Rush", None, 4, practice_status="Limited")  # practice note only
     _injury(session, 3, "NYJ", "00-041", "Stay Put", "Doubtful", 2, injury="Ankle")  # a star, doubtful
     session.add(
         IngestionRun(source="nflverse", dataset="injuries", status="ok", finished_at=NOW - timedelta(hours=1), rows=1)
+    )
+    session.add(
+        IngestionRun(source="nflverse", dataset="injuries", status="ok", finished_at=NOW - timedelta(hours=5), rows=1)
     )
     session.add(IngestionRun(source="nflverse", dataset="injuries", status="failed", finished_at=NOW, error="boom"))
     session.commit()
@@ -620,6 +676,8 @@ def test_stars_out_matches_by_name_when_either_side_has_no_id(session):
 def test_stars_out_uses_the_latest_earlier_list_and_says_which(session):
     ingest(session)
     later = _game(session, SEASON, 5, "NYJ", "KC")  # no list for week 5: the week 3 list is the newest
+    session.add(_star(2022, 5, "KC", "def", 1, "00-009", "Cory Corner"))  # another season's list: never used
+    session.commit()
     _injury(session, 5, "KC", "00-009", "Cory Corner", "Out", 1)
     result = stars_out(session, later, now=NOW)
     assert result["stars_week"] == 3
@@ -636,6 +694,15 @@ def test_stars_out_uses_the_latest_earlier_list_and_says_which(session):
         "reports_seen": 1,
         "out": [],
     }
+
+
+def test_stars_out_never_matches_a_name_across_clubs(session):
+    ingest(session)
+    game_id = _game(session, SEASON, 2, "LV", "NE")
+    # Able Tackle is a Raiders star with no league id. A Patriot of the same name is out: not the star.
+    _injury(session, 2, "NE", None, "Able Tackle", "Out", 3)
+    result = stars_out(session, game_id, now=NOW)
+    assert (result["reports_seen"], result["out"]) == (1, [])
 
 
 def test_stars_out_rejects_an_unknown_game(session):
@@ -735,23 +802,7 @@ def test_stars_out_orders_a_club_by_slot_then_rank(session):
     game_id = _game(session, SEASON, 3, "NYJ", "KC")
     # Stored out of order on purpose: the answer must not depend on the order of the rows.
     for n, (slot, rank) in enumerate([("def", 2), ("off", 2), ("def", 1), ("qb", 1), ("off", 1)]):
-        session.add(
-            TeamStar(
-                season=SEASON,
-                week=3,
-                team="KC",
-                slot=slot,
-                rank=rank,
-                player_id=f"00-9{n}",
-                player=f"{slot} {rank}",
-                position=None,
-                snaps=1,
-                production=1.0,
-                score=1.0,
-                source="test",
-                computed_at=NOW,
-            )
-        )
+        session.add(_star(SEASON, 3, "KC", slot, rank, f"00-9{n}", f"{slot} {rank}"))
         session.commit()
         _injury(session, 3, "KC", f"00-9{n}", f"{slot} {rank}", "Out", 1)
     # Read the table in the order it was written, so only the function's own sort can give the right answer.
@@ -773,6 +824,8 @@ def test_same_name_twins_are_not_joined_and_a_quarterback_needs_no_snap_row(sess
         [
             snap(1, "SEA", "TwiN09", "Twin Name", "WR", off=40),  # not in the id file; two stats players share the name
             snap(1, "SF", "LonN01", long_name, "WR", off=10),
+            snap(1, "SF", "UnoG01", "Un One", "G", off=20),  # two players missing from the id file at one club
+            snap(1, "SF", "UnoG02", "Un Two", "G", off=30),
         ],
         [
             stat(1, "SEA", "00-070", "Twin Name", "WR", receiving_yards=100),
@@ -791,4 +844,38 @@ def test_same_name_twins_are_not_joined_and_a_quarterback_needs_no_snap_row(sess
         ("off", 2, "Twin Name", "00-071", "WR", 0, 5.0, 5.0),
     ]
     # A name longer than the column is cut to 64 characters in both files: 0.1 x 10 + 200/10 = 21.0.
-    assert stars(session, 2, "SF") == [("off", 1, "L" * 64, "00-073", "WR", 10, 20.0, 21.0)]
+    # The two with no id stay two players: Un Two 0.1 x 30 = 3.0 beats Un One 2.0, not one player on 5.0.
+    assert stars(session, 2, "SF") == [
+        ("off", 1, "L" * 64, "00-073", "WR", 10, 20.0, 21.0),
+        ("off", 2, "Un Two", None, "G", 30, 0.0, 3.0),
+    ]
+
+
+def test_equal_players_are_ranked_by_name_and_week_22_is_read(session):
+    # Written Z, M, A on purpose: only the name rule can put them A, M.
+    snaps = [snap(22, "ATL", f"{name[:3]}X01", name, pos, off=off, de=de) for name, pos, off, de in [
+        ("Zed Qb", "QB", 50, 0), ("Abe Qb", "QB", 50, 0), ("Max Rb", "RB", 300, 0),
+        ("Zoe Wr", "WR", 30, 0), ("Mia Wr", "WR", 30, 0), ("Ann Wr", "WR", 30, 0),
+        ("Zak Lb", "LB", 0, 40), ("Moe Lb", "LB", 0, 40), ("Bob Lb", "LB", 0, 40),
+    ]]  # fmt: skip
+    stats = [
+        stat(22, "ATL", "00-081", "Zed Qb", "QB", attempts=10),
+        stat(22, "ATL", "00-080", "Abe Qb", "QB", attempts=10),
+        stat(22, "ATL", "00-082", "Max Rb", "RB", rushing_yards=1000),  # 300 snaps and 1,000 yards: the limits
+    ]
+    ids = [
+        {"pfr_id": "ZedX01", "gsis_id": "00-081"},
+        {"pfr_id": "AbeX01", "gsis_id": "00-080"},
+        {"pfr_id": "MaxX01", "gsis_id": "00-082"},
+    ]
+    assert ingest(session, data=(snaps, stats, ids)).status == "ok"  # week 22 is the last week allowed
+    assert stars(session, 23, "ATL") == [
+        ("qb", 1, "Abe Qb", "00-080", "QB", 50, 10.0, 50.0),
+        ("off", 1, "Max Rb", "00-082", "RB", 300, 100.0, 130.0),  # 0.1 x 300 + 1000/10
+        ("off", 2, "Ann Wr", None, "WR", 30, 0.0, 3.0),
+        ("def", 1, "Bob Lb", None, "LB", 40, 0.0, 2.0),
+        ("def", 2, "Moe Lb", None, "LB", 40, 0.0, 2.0),
+    ]
+    stored = session.scalars(select(TeamStar)).all()
+    assert {r.source for r in stored} == {"nflverse"}
+    assert all(r.computed_at is not None for r in stored)
