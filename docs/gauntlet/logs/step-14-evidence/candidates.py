@@ -33,9 +33,11 @@ def baseline(rows: pd.DataFrame) -> dict:
 print(json.dumps({
     "games": len(preds),
     "epa_games": int(epa["game_id"].nunique()),
+    "epa_rows": len(epa_rows),
+    "epa_missing_scored_games": int(preds["epa_diff_4"].isna().sum()),
     "baseline": baseline(preds),
     "baseline_confirm": baseline(confirm),
     "candidates": evaluate(preds, {"inseason_refit": ["p_inseason"],
                                    "epa_rating": [f"p_epa_{h}" for h in EPA_HALF_LIVES]},
                            tune=list(range(2012, 2022)), confirm=list(range(2022, 2026))),
-}, indent=1))
+}, indent=1, allow_nan=False))

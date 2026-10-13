@@ -93,6 +93,7 @@ Functional layer:
 | S10 | `epa_diff`: before each game, a team's rating is the weighted mean of its net EPA per play in earlier games only, weight halving every `half_life` games; the feature is home rating minus away rating; a team with no earlier rated game gives a missing value (never an invented one). |
 | S11 | The EPA candidate fits on seasons before the test season only, and falls back to the baseline blend probability where the feature is missing. |
 | S12 | Nothing existing changes: `BASE_FEATURES`, `BLEND_FEATURES`, `run_backtest` output and every existing test stay as they are. |
+| S13 | Added after review round 1 (tightening only): `paired_gain` raises `ValueError` on empty input, unequal lengths or any non-finite value, so a missing prediction is never scored as a wrong pick. S9 also treats a non-finite value ("nan", "inf") as missing. S10 also refuses rows that are not in kickoff order. |
 
 User-facing layer: N/A (no screen in this lane). The owner-facing output is this log's plain-words verdict and the table in section 3.
 Operational layer: `candidates.py` runs from a clean checkout against live nflverse files, prints the verdict table and exits non-zero on a download failure. Its baseline numbers must match the documented ones (market 66.6%, blend 66.5%, 2012 to 2025).
@@ -125,3 +126,53 @@ The suite takes 26 minutes tonight because six lanes share the machine (load ave
 `tests/test_model.py` is run; the full gate runs on the final commit.
 
 Commit: `a27cfd0` (this section, the gate script, the first failing tests).
+
+## 3. IMPLEMENTATION
+
+Provider: Codex, one bounded work order at a time, prompt on stdin. Models picked through `decide.sh` (decision desk). The coordinator read every diff and reran the proof itself each time.
+
+| Work order | Model, effort | JEV | Result | Commit |
+|---|---|---|---|---|
+| WO-1 harness + in-season refit (`wo-1.md`) | gpt-6-sol, medium, try 1 | sol 0.82, medium 0.92: follow | 14 of 15 tests passed. Codex stopped and reported that one test of mine was wrong: it flipped every week 3 result, and Elo rightly moves between games of one week. That was the coordinator's fault, not the builder's (Build Ladder rule 2): I fixed the test (flip only from the last game of the week on) and added an "own result" check. No second try was needed. | `b8c2f6c` |
+| WO-2 EPA rating (`wo-2.md`) | gpt-6-sol, medium, try 1 | sol 0.82, medium 0.97: follow | 18 passed, first try. | `2c4ece6` |
+| WO-3 review fixes + cleanup (`wo-3.md`) | gpt-6-luna, medium, try 1 | luna 0.83: follow. Effort unsure (medium 0.48): I took medium, the higher option, instead of paying for an advisor call on an effort level. | see section 4 | see section 4 |
+
+CLIMBS: none. STRIKES: none. No Codex limit was hit.
+
+### What the real data says
+
+Run: `cd backend && uv run python ../docs/gauntlet/logs/step-14-evidence/candidates.py` against live nflverse files, 2026-10-13. Raw output of the final code: `step-14-evidence/run-3-candidates.json` (section 4). Walk-forward, window 10 seasons, 3,649 regular-season games with a closing line, 2012 to 2025.
+
+**Baseline check (operational layer):** market 66.57% accuracy, log loss 0.6094; blend 66.46%, log loss 0.6107. This matches the documented 66.6% / 0.609 and 66.5%.
+On 2022 to 2025 (1,084 games): market 67.80%, 0.6082; blend 67.53%, 0.6095.
+
+Gain = how much lower the candidate's log loss is than the blend's (positive is better). Interval = paired bootstrap, 95%.
+
+| Candidate | Variant | Tune 2012 to 2021 (2,565 games): gain, interval | Accuracy change (tune) | Chosen | Confirm 2022 to 2025 (1,084 games): gain, interval | Accuracy change (confirm), interval | Ships |
+|---|---|---|---|---|---|---|---|
+| 1. In-season refit | (one) | -0.00015, -0.00058 to +0.00028 | -0.04 points | yes | **+0.00035, -0.00029 to +0.00100** | 0.00 points, -0.37 to +0.37 | **No** |
+| 2. EPA rating | half-life 4 games | +0.00019, -0.00007 to +0.00043 | -0.16 points | yes | **-0.00041, -0.00171 to +0.00086** | +0.37 points, -0.28 to +1.02 | **No** |
+| | half-life 8 games | +0.00012, -0.00022 to +0.00044 | -0.23 points | no | not scored (by the protocol) | | |
+| | half-life 16 games | -0.00015, -0.00034 to +0.00005 | 0.00 points | no | not scored (by the protocol) | | |
+
+Every variant tried is in this table: four in all. Nothing else was run.
+
+**Verdict, in plain words:** neither idea beats the current model. Both intervals include zero, so by the plan's rule neither ships and **the live model does not change**. The size of the effect is also tiny: three to four parts in ten thousand of log loss, where the market itself sits 13 parts ahead of the blend. Refitting weekly barely moves the weights because one season adds about 270 games to about 2,700. The closing line already knows what EPA knows.
+
+**Data note:** nflverse has 12,990 team-game rows for 2002 to 2025. 6,491 of 6,499 finished games got an EPA value. The 8 left out are Jacksonville home games in 2002, where the source file has one row instead of two; they are left out, not guessed. No game scored in the test (2012 on) lacked a rating (`epa_missing_scored_games`, section 4).
+
+### Review round 1 (on `2c4ece6`, before cleanup)
+
+| Reviewer | Verdict | Report |
+|---|---|---|
+| `ecc:code-reviewer` | APPROVE. No leak, no wrong maths, no misalignment. 1 MEDIUM, 3 LOW | `~/.claude/plans/nfl-pickem-lanes-reviews/s14-r1-code-reviewer.md` |
+| `ecc:silent-failure-hunter` | 4 HIGH, 4 MEDIUM, 3 LOW, all about missing values passing silently | `~/.claude/plans/nfl-pickem-lanes-reviews/s14-r1-silent-failure-hunter.md` |
+| Dwight (security) | see section 5 | |
+
+Rulings (each accepted finding went back to a failing test first, commit `a3a7a80`, log `red-3.log`):
+
+* Accepted, mapped to the project rule "missing stays missing": `paired_gain` refuses missing or empty input (S13); "nan" and "inf" EPA values count as missing (S9); `epa_diff` refuses rows out of kickoff order (S10); the script prints with `allow_nan=False` and reports how many rows it read, kept and scored without a rating.
+* Kept as frozen: the EPA candidate falls back to the blend where the rating is missing (S11). The count is now printed, and it is 0 for the scored games.
+* Carried, advisory: per-reason drop counts in `team_game_epa`; a unique `game_id` check; a count of tied games; a check that tune and confirm seasons do not overlap; `fetch_csv` does not chain the original error (lane coaches owns that file).
+
+AGENTS: `ecc:code-reviewer`, `ecc:silent-failure-hunter` ran. `ecc:security-reviewer` not run: the security review is Dwight's by the dispatch. `ecc:python-reviewer`, `ecc:pr-test-analyzer` not run: work item is "standard" size (no security surface, public API or new dependency). `ecc:planner`, `ecc:architect`, `ecc:code-explorer` not run: the plan and the six seam files were given by the dispatch.

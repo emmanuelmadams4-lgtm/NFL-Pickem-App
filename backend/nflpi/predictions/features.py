@@ -1,5 +1,7 @@
 """Pre-game features. Every value here is known before kickoff."""
 
+import math
+
 import numpy as np
 import pandas as pd
 
@@ -19,6 +21,8 @@ def team_game_epa(rows: list[dict]) -> pd.DataFrame:
         if any(value in ("", "NA") for value in values):
             continue
         passing, rushing, attempts, sacks, carries = map(float, values)
+        if not all(math.isfinite(value) for value in (passing, rushing, attempts, sacks, carries)):
+            continue
         plays = attempts + sacks + carries
         if plays == 0:
             continue
@@ -37,7 +41,9 @@ def team_game_epa(rows: list[dict]) -> pd.DataFrame:
 
 
 def epa_diff(df: pd.DataFrame, epa: pd.DataFrame, half_life: float) -> pd.Series:
-    """Return the pregame difference between decayed team EPA ratings."""
+    """Return pregame EPA difference; kickoff rows must be ordered."""
+    if not df["kickoff_utc"].is_monotonic_increasing:
+        raise ValueError("kickoff_utc must be in non-decreasing order")
     decay = 0.5 ** (1 / half_life)
     by_game = {game_id: list(zip(group["team"], group["net_epa"], strict=True))
                for game_id, group in epa.groupby("game_id", sort=False)}

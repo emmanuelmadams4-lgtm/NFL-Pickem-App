@@ -58,11 +58,19 @@ def tune_elo(frames: dict[EloParams, pd.DataFrame], seasons: list[int]) -> EloPa
     return min(ELO_GRID, key=loss)
 
 
-def predict_season(frames: dict[EloParams, pd.DataFrame], season: int, window: int) -> pd.DataFrame:
+def _train_rows(
+    frames: dict[EloParams, pd.DataFrame], season: int, window: int
+) -> tuple[EloParams, pd.DataFrame]:
     train_seasons = list(range(season - window, season))
     params = tune_elo(frames, train_seasons)
+    frame = frames[params]
+    train = frame[frame["season"].isin(train_seasons) & frame["home_win"].notna()]
+    return params, train
+
+
+def predict_season(frames: dict[EloParams, pd.DataFrame], season: int, window: int) -> pd.DataFrame:
+    params, train = _train_rows(frames, season, window)
     f = frames[params]
-    train = f[f["season"].isin(train_seasons) & f["home_win"].notna()]
     test = f[(f["season"] == season) & (f["game_type"] == "REG") & f["home_win"].notna()].copy()
 
     home_rate = train.loc[train["home_field"] == 1, "home_win"].mean()
@@ -83,9 +91,8 @@ def predict_season(frames: dict[EloParams, pd.DataFrame], season: int, window: i
 
 def inseason_blend(frames: dict[EloParams, pd.DataFrame], season: int, window: int) -> pd.Series:
     """Refit the blend before each test week using games already played."""
-    train_seasons = list(range(season - window, season))
-    f = frames[tune_elo(frames, train_seasons)]
-    train = f[f["season"].isin(train_seasons) & f["home_win"].notna()]
+    params, train = _train_rows(frames, season, window)
+    f = frames[params]
     test = f[(f["season"] == season) & (f["game_type"] == "REG") & f["home_win"].notna()].copy()
     preds = pd.Series(np.nan, index=test.index, dtype=float)
     for _, games in test.groupby("week", sort=False):
@@ -102,7 +109,7 @@ def inseason_blend(frames: dict[EloParams, pd.DataFrame], season: int, window: i
 def candidate_preds(
     df: pd.DataFrame, seasons: list[int], window: int = 10, epa: pd.DataFrame | None = None
 ) -> pd.DataFrame:
-    """Score market games with the season blend and candidate refit."""
+    """Score market games with the in-season blend and EPA rating candidates."""
     frames = _elo_frames(df)
     if epa is not None:
         differences = {h: epa_diff(df, epa, h) for h in EPA_HALF_LIVES}
@@ -113,9 +120,7 @@ def candidate_preds(
         test = predict_season(frames, season, window)
         test["p_inseason"] = inseason_blend(frames, season, window)
         if epa is not None:
-            train_seasons = list(range(season - window, season))
-            f = frames[tune_elo(frames, train_seasons)]
-            train = f[f["season"].isin(train_seasons) & f["home_win"].notna()]
+            _, train = _train_rows(frames, season, window)
             for h in EPA_HALF_LIVES:
                 feature = f"epa_diff_{h}"
                 model = LogitModel.fit(train.dropna(subset=["market_logit"]), [*BLEND_FEATURES, feature])

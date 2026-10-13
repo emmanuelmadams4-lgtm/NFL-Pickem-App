@@ -1,6 +1,8 @@
 {
  "games": 3649,
  "epa_games": 6491,
+ "epa_rows": 12990,
+ "epa_missing_scored_games": 0,
  "baseline": {
   "market": {
    "n": 3649,
