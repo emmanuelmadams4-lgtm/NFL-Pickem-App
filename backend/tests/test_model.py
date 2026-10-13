@@ -441,6 +441,12 @@ def test_evaluate_can_cluster_by_week_and_refuses_overlapping_seasons():
     assert got["confirm"] == want and "ships_cluster" in got["variants"][0]["tune"]
     assert got["ships"] is want["ships"] and got["ships"] is plain["ships"]  # the verdict stays the game-level rule
     assert set(plain["confirm"]) == PLAIN_KEYS
+    # Sure game by game, not sure week by week: the verdict is still the game-level one.
+    step = np.repeat(np.where(np.arange(20) % 5 < 3, 0.1, -0.1), 10)
+    split_verdict = pd.DataFrame({"season": np.repeat([2020, 2021], 200), "week": np.tile(np.repeat(np.arange(20), 10), 2),
+                                  "home_win": 1.0, "p_blend": 0.6, "p_a": np.tile(0.6 * np.exp(step), 2)})
+    by_week = evaluate(split_verdict, {"x": ["p_a"]}, tune=[2020], confirm=[2021], cluster=["season", "week"])[0]
+    assert by_week["confirm"]["ships_cluster"] is False and by_week["ships"] is True
     with pytest.raises(ValueError):  # a season cannot be tuned on and confirmed on
         evaluate(preds, {"x": ["p_a"]}, tune=[2020, 2021], confirm=[2021])
 

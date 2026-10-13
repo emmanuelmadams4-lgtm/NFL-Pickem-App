@@ -5,7 +5,9 @@ Run from backend/ with the lane's test database, holding the machine's gate lock
         ../docs/gauntlet/logs/step-14b-evidence/s14b-mutate.py
 Each change is made in the working tree, tested, and undone. Exit code 1 if any change survives.
 Not mutated, because the change cannot be seen from outside (NumPy raises the same ValueError one line later):
-the two `len(clusters)` checks. Not mutated: `if h + a == 1: return h` (every formula returns h there anyway).
+the two `len(clusters)` checks, and the non-finite half of the weights check (scikit-learn refuses a NaN weight
+with the same ValueError; that mutant survived the first sweep for this reason and was removed).
+Not mutated: `if h + a == 1: return h` (every formula returns h there anyway).
 """
 # ruff: noqa: E501  (the strings below must match source lines exactly)
 
@@ -49,7 +51,6 @@ MUTANTS = [  # clause, file, old, new
     ("D3", F, "devig_home_prob(h, a, method) if not (pd.isna(h) or pd.isna(a)) else np.nan", "devig_home_prob(h, a, method) if not (pd.isna(h) or pd.isna(a)) else 0.5"),
     ("R1", L, "sample_weight=weights.loc[train.index] if weights is not None else None)", "sample_weight=None)"),
     ("R1", L, "if weights is not None and (not np.isfinite(weights).all() or (weights < 0).any()):", "if weights is not None and not np.isfinite(weights).all():"),
-    ("R1", L, "if weights is not None and (not np.isfinite(weights).all() or (weights < 0).any()):", "if weights is not None and (weights < 0).any():"),
     ("V1", B, 'return preds[preds["p_market"].notna()]', "return preds"),
     ("V2", B, "train_seasons = list(range(season - window, season))", "train_seasons = list(range(season - window, season + 1))"),
     ("V3", B, 'model = LogitModel.fit(train, [f"market_logit_{method}", *BASE_FEATURES])', 'model = LogitModel.fit(train, ["market_logit", *BASE_FEATURES])'),
