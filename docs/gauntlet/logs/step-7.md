@@ -110,6 +110,8 @@ Builder: Ryan (Codex). Each work order is a file in the evidence folder; I read 
 | 1 (`wo-1.md`) | Step 6 follow-ups: pick queue drops the older stored copy after a refused write (P23); offline banner shows the age of the data on screen (P24) | gpt-6-sol, high, try 1 (Jev `model:alerts:wo-1`: sol 1.0, high 1.0) | `30bb253` | `gate.sh wo1`: browser tests 91 passed, typecheck 0. Server tests 13 red on purpose (work order 2). |
 | 2 (`wo-2.md`) | Server side: threshold 0.07 (N1), one reminder per game day (N2), QB and label change alerts (N3, N4), none after kickoff (N5), `POST /api/push/test` (N6, N7) | gpt-6-sol, high, try 1 | `6ce6d72` | `gate.sh wo2`: pytest 125 passed, ruff clean, typecheck 0, browser tests 93 passed; the 6 alerts browser tests red on purpose (work order 3). The gate's "no drift" line read FAIL because the generated API files were not committed yet; rerun after the commit: no drift. |
 | 2b (`wo-2b.md`) | A first-named starter is not a QB change. Found by me reading work order 2's diff: my work order text allowed "no starter before, one named now", which would send one alert per game when the week's starters are first posted. Red test first (`red-wo2b.log`). | gpt-6-sol, medium, try 1 (Jev `model:alerts:wo-2b`: sol 0.97, medium 0.96) | `79ad694` | pytest 126 passed, ruff clean (`wo2b-pytest.log`). |
+| 3 (`wo-3.md`) | Phone side: subscription re-sent on every open and re-made when the server's key changed (A1, A2), tap opens the game even when focus is refused (A3), "Send test alert" with the result in words and the reminder reworded (A4), accessibility (A5) | gpt-6-sol, high, try 1 (Jev `model:alerts:wo-3`: sol 0.99, high 0.98) | `b201bb4` | `gate.sh wo3`, all five stages green: pytest 126 passed, ruff clean, no API drift, typecheck 0, browser tests 99 passed, 2 skipped. |
+| 4 (`wo-4.md`) | `scripts/smoke.sh`, the after-deploy check (O1) | gpt-6-luna, medium, try 1 (Jev split 0.61 to 0.39; Sonnet advisor: luna, medium, 0.72, having read the work order and the proof script) | `ad2336c` | `smoke-proof.sh` against the lane test server (`smoke-proof.log`): PASS. Right token exit 0 and five PASS lines; wrong token exit 1 with the later checks still run; `--push` with no device FAIL and exit 1; no token or no address exit 2; the token is never printed. |
 
 Model choice for work order 2: Jev settled effort (high, 1.0) and split on the rung, so a Sonnet advisor answered: gpt-6-sol, no split, confidence 0.7 (it said it read the work order only). Work order 3: Jev `model:alerts:wo-3`, sol 0.99, high 0.98.
 
@@ -131,3 +133,13 @@ One existing section of Settings, no new screen. Added: one secondary button ("S
 * `POST /api/push/test` has no rate limit of its own (token required, single user). For Dwight to rate.
 * The subscribe route accepts any `https://` address; an allowlist of push-service hosts is not built. For Dwight to rate.
 * When both starters change in one refresh, the alert names the home side only. Accepted: one alert per game per change.
+
+### Design review of the Alerts section
+
+Screenshots at 393px, dark and light, of each state (alerts on, delivered, refused, off): `step-7-evidence/shots/after-alerts-*.png`, taken with a throwaway test file that is not in the repo. "Before" is step 6's `step-6-evidence/shots/after-settings-393.png`.
+
+**Design critic 1** (fresh Sonnet subagent, read-only; `reviews/design-critic-1.md`): **FAIL**, on Structural findings. My rulings:
+
+* Accepted, red test first (`red-wo3b.log`), work order 3b: a refusal looked the same as a success (now the `text-bad` token); the result sat under the device count (now directly under the buttons); the button stayed busy while the device count was re-read (now free when the result shows).
+* Rejected, with the reason in the report: dropping the push service's host and status from a refusal. The roadmap row asks for the push service's status on screen.
+* Deferred: for a moment after opening, Settings can show "0 devices are subscribed" beside "Alerts on", until the count is re-read.
