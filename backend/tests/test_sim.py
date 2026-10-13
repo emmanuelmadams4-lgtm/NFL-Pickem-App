@@ -214,7 +214,10 @@ def test_learn_params_is_invariant_to_row_order():
     two = learn_params(*(c[order] for c in cols), target_season=2009)
     for field in dataclasses.fields(SimParams):
         x, y = getattr(one, field.name), getattr(two, field.name)
-        np.testing.assert_allclose(x, y, rtol=1e-12, err_msg=field.name)
+        if isinstance(x, str | bool):
+            assert x == y, field.name
+        else:
+            np.testing.assert_allclose(x, y, rtol=1e-12, err_msg=field.name)
 
 
 def test_learn_params_refuses_too_few_games_or_no_overtime():
