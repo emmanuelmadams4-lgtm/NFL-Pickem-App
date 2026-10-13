@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ago } from "@nflpi/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
-import { flushPicks, isServerReachable, lastNetworkSync, pendingCount, useOnline, useServerReachable } from "@/lib/sync";
+import { flushPicks, isServerReachable, pendingCount, useOnline, useServerReachable } from "@/lib/sync";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { useToast } from "@/components/toast";
 import { Button, Card } from "@/components/ui";
@@ -89,9 +89,17 @@ export function OfflineBanner() {
 
   useEffect(() => {
     if (online && reachable) return;
-    // Prefer the last real network sync; fall back to the freshest cached query.
-    const fromCache = qc.getQueryCache().getAll().reduce((m, q) => Math.max(m, q.state.dataUpdatedAt), 0);
-    setAt(lastNetworkSync() ?? (fromCache || null));
+    const cache = qc.getQueryCache();
+    const update = () => {
+      const oldest = cache.getAll().reduce((time, query) => (
+        query.getObserversCount() > 0 && query.state.data !== undefined && query.state.dataUpdatedAt > 0
+          ? Math.min(time, query.state.dataUpdatedAt)
+          : time
+      ), Infinity);
+      setAt(Number.isFinite(oldest) ? oldest : null);
+    };
+    update();
+    return cache.subscribe(update);
   }, [online, reachable, qc]);
 
   if (online && reachable) return null;
