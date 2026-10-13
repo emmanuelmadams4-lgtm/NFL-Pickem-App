@@ -159,8 +159,19 @@ def ingest_injuries(
 def _parse_star_file(rows: list[dict[str, str]], parser: Callable, name: str, *args) -> object:
     try:
         return parser(rows, *args)
-    except (KeyError, ValueError) as exc:
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
         raise ValueError(f"{name}: {exc!r}") from exc
+
+
+def _check_star_file_pairs(parsed_snaps: list[dict], parsed_stats: list[dict]) -> None:
+    snap_pairs = {(row["week"], row["team"]) for row in parsed_snaps}
+    stat_pairs = {(row["week"], row["team"]) for row in parsed_stats}
+    if snap_pairs - stat_pairs:
+        week, club = min(snap_pairs - stat_pairs)
+        raise RuntimeError(f"stats_player_week lacks ({week}, {club})")
+    if stat_pairs - snap_pairs:
+        week, club = min(stat_pairs - snap_pairs)
+        raise RuntimeError(f"snap_counts lacks ({week}, {club})")
 
 
 def _check_stars_against_stored(session: Session, season: int, ranked: list[dict]) -> None:
@@ -195,8 +206,7 @@ def ingest_stars(
         ids = _parse_star_file(player_rows, nflverse.parse_star_players, "players")
         if not parsed_snaps or not parsed_stats or not ids:
             raise RuntimeError("incomplete star files; keeping existing season")
-        if max(row["week"] for row in parsed_snaps) != max(row["week"] for row in parsed_stats):
-            raise RuntimeError("snap and stat files end in different weeks")
+        _check_star_file_pairs(parsed_snaps, parsed_stats)
         ranked = rank_stars(season, parsed_snaps, parsed_stats, ids, datetime.now(UTC))
         if not ranked:
             raise RuntimeError("no stars ranked; keeping existing season")

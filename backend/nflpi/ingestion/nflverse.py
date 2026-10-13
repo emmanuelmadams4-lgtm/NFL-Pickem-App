@@ -252,13 +252,14 @@ def parse_star_snaps(rows: list[dict[str, str]], season: int) -> list[dict]:
 def parse_star_stats(rows: list[dict[str, str]], season: int) -> list[dict]:
     out = []
     seen = set()
+    present_stats = set()
     for row in rows:
         if _star_int(row["season"], "season") != season:
             continue
-        week, team = _star_week(row["week"]), _star_club(row["team"])
         player_id = _star_id(row["player_id"])
         if not player_id:
             continue
+        week, team = _star_week(row["week"]), _star_club(row["team"])
         key = (player_id, week, team)
         if key in seen:
             raise ValueError("duplicate stat row")
@@ -271,7 +272,12 @@ def parse_star_stats(rows: list[dict[str, str]], season: int) -> list[dict]:
             "position": row["position"].strip()[:8] or None,
         }
         record.update({name: _star_number(row[name]) for name in STAR_STATS})
+        present_stats.update(name for name in STAR_STATS if row[name] not in ("", "NA"))
         out.append(record)
+    if out:
+        for name in STAR_STATS:
+            if name not in present_stats:
+                raise ValueError(f"star statistic column all blank: {name}")
     return out
 
 
