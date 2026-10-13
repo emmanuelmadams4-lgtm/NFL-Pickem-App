@@ -516,6 +516,39 @@ test("P23 after the phone refused to store the queue, reopening the app does not
   }
 });
 
+test("P23b a refused write does not throw away a waiting pick for another game that was safely stored", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const [a, b] = open;
+  const serverPick = async (id: string) => (await board(request)).games.find((x) => x.game_id === id)!.my_pick;
+  const storedQueue = () => page.evaluate(() => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}") as Record<string, string | null>);
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    // A waiting pick for game B is safely stored, then storage stops taking writes that add anything.
+    await page.evaluate(([id, team]) => {
+      localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team }));
+      const real = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k: string, v: string) {
+        if (k === "nflpi_pick_queue" && v.length > (localStorage.getItem(k) ?? "").length) throw new DOMException("full", "QuotaExceededError");
+        return real.call(this, k, v);
+      };
+    }, [b.game_id, b.away.abbr]);
+    await context.setOffline(true);
+    await pickGroup(page, a).getByRole("button", { name: `Pick ${a.home.name}` }).click();
+    await expect(pickGroup(page, a).getByRole("button", { name: `${a.home.name} picked` })).toBeVisible();
+    // Closing the app now leaves only storage: game B's waiting pick must still be there.
+    expect((await storedQueue())[b.game_id], "game B's stored pick survived the refused write").toBe(b.away.abbr);
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await expect.poll(() => serverPick(b.game_id), { message: "game B's waiting pick is sent" }).toBe(b.away.abbr);
+    await expect.poll(() => serverPick(a.game_id), { message: "the new pick is sent" }).toBe(a.home.abbr);
+  } finally {
+    await context.setOffline(false);
+    for (const g of [a, b]) expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
 test("P24 offline banner: 'showing data from' is the age of the data on screen, not of the last server reply", async ({ page }) => {
   await signIn(page);
   await page.goto("/");

@@ -1,0 +1,38 @@
+
+[2mRunning [22m2[2m tests using [22m1[2m worker[22m
+
+  [32m✓[39m  [2m1 [22me2e/pwa.spec.ts:483:5 › P23 after the phone refused to store the queue, reopening the app does not send an older stored pick[2m (6.1s)[22m
+  [31m✘[39m  [2m2 [22m[31me2e/pwa.spec.ts:519:5 › P23b a refused write does not throw away a waiting pick for another game that was safely stored[39m[2m (792ms)[22m
+
+
+[31m  1) e2e/pwa.spec.ts:519:5 › P23b a refused write does not throw away a waiting pick for another game that was safely stored [39m
+
+    Error: game B's stored pick survived the refused write
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m"NE"[39m
+    Received: [31mundefined[39m
+
+    [0m [90m 539 |[39m     [36mawait[39m expect(pickGroup(page[33m,[39m a)[33m.[39mgetByRole([32m"button"[39m[33m,[39m { name[33m:[39m [32m`${a.home.name} picked`[39m }))[33m.[39mtoBeVisible()[33m;[39m
+     [90m 540 |[39m     [90m// Closing the app now leaves only storage: game B's waiting pick must still be there.[39m
+    [31m[1m>[22m[39m[90m 541 |[39m     expect(([36mawait[39m storedQueue())[b[33m.[39mgame_id][33m,[39m [32m"game B's stored pick survived the refused write"[39m)[33m.[39mtoBe(b[33m.[39maway[33m.[39mabbr)[33m;[39m
+     [90m     |[39m                                                                                                 [31m[1m^[22m[39m
+     [90m 542 |[39m     [36mawait[39m context[33m.[39msetOffline([36mfalse[39m)[33m;[39m
+     [90m 543 |[39m     [36mawait[39m page[33m.[39mevaluate(() [33m=>[39m window[33m.[39mdispatchEvent([36mnew[39m [33mEvent[39m([32m"online"[39m)))[33m;[39m
+     [90m 544 |[39m     [36mawait[39m expect[33m.[39mpoll(() [33m=>[39m serverPick(b[33m.[39mgame_id)[33m,[39m { message[33m:[39m [32m"game B's waiting pick is sent"[39m })[33m.[39mtoBe(b[33m.[39maway[33m.[39mabbr)[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/pwa.spec.ts:541:97[22m
+
+[2m    Error Context: test-results/pwa-P23b-a-refused-write-d-ca8b0-game-that-was-safely-stored/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/pwa-P23b-a-refused-write-d-ca8b0-game-that-was-safely-stored/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/pwa-P23b-a-refused-write-d-ca8b0-game-that-was-safely-stored/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  1 failed[39m
+[31m    e2e/pwa.spec.ts:519:5 › P23b a refused write does not throw away a waiting pick for another game that was safely stored [39m
+[32m  1 passed[39m[2m (23.6s)[22m
