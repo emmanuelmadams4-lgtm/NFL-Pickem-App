@@ -30,6 +30,26 @@ ESPN_FRANCHISE = {"WSH": "WAS"}
 MAX_COACH_NAME_LENGTH = 64
 
 
+def _is_espn_link(url: str) -> bool:
+    parsed = urlsplit(url)
+    return (
+        parsed.scheme == "https"
+        and parsed.hostname == ESPN_COACHES_HOST
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.port in (None, 443)
+    )
+
+
+def _clean_name(first, last) -> str | None:
+    if not isinstance(first, str) or not isinstance(last, str):
+        return None
+    name = " ".join(
+        "".join(char for char in f"{first} {last}" if not unicodedata.category(char).startswith("C")).split()
+    )
+    return name if name and len(name) <= MAX_COACH_NAME_LENGTH else None
+
+
 def franchise(abbr: str) -> str:
     return FRANCHISE.get(abbr, abbr)
 
@@ -82,23 +102,12 @@ def fetch_head_coaches(season: int, get=None) -> dict[str, str]:
             if len(items) != 1:
                 continue
             url = items[0]["$ref"].replace("http://", "https://")
-            parsed = urlsplit(url)
-            if (
-                parsed.scheme != "https"
-                or parsed.hostname != ESPN_COACHES_HOST
-                or parsed.username is not None
-                or parsed.password is not None
-                or parsed.port not in (None, 443)
-            ):
+            if not _is_espn_link(url):
                 continue
             coach = get(url)
             first, last = coach["firstName"], coach["lastName"]
-            if not isinstance(first, str) or not isinstance(last, str):
-                continue
-            name = " ".join(
-                "".join(char for char in f"{first} {last}" if not unicodedata.category(char).startswith("C")).split()
-            )
-            if name and len(name) <= MAX_COACH_NAME_LENGTH:
+            name = _clean_name(first, last)
+            if name is not None:
                 coaches[abbr] = name
         except (KeyError, TypeError) as exc:
             raise RuntimeError(f"unexpected ESPN reply for {abbr}: {exc!r}") from exc
