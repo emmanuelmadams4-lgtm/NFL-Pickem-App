@@ -1,0 +1,46 @@
+ 0:11  up 13 days, 13:05, 1 user, load averages: 12.08 19.73 29.84
+
+Running 4 tests using 1 worker
+
+  ✓  1 e2e/pwa.spec.ts:451:5 › P22 while the phone cannot store the queue, an older stored pick never comes back over a newer one (4.5s)
+  ✓  2 e2e/pwa.spec.ts:483:5 › P23 after the phone refused to store the queue, reopening the app does not send an older stored pick (4.0s)
+  ✓  3 e2e/pwa.spec.ts:519:5 › P23b a refused write does not throw away a waiting pick for another game that was safely stored (881ms)
+  ✘  4 e2e/pwa.spec.ts:552:5 › P23c when the phone can store nothing and the stored queue had to be dropped, he is told to keep the app open or re-enter the picks (5.8s)
+
+
+  1) e2e/pwa.spec.ts:552:5 › P23c when the phone can store nothing and the stored queue had to be dropped, he is told to keep the app open or re-enter the picks 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Waiting picks could not be stored on this phone. Keep the app open until they sync, or enter them again when you are online.')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText('Waiting picks could not be stored on this phone. Keep the app open until they sync, or enter them again when you are online.')
+
+
+      570 |     // The older copy of game A must not survive, so the stored queue is gone, and game B's pick with it.
+      571 |     expect(await page.evaluate(() => localStorage.getItem("nflpi_pick_queue")), "the stale stored queue was dropped").toBeNull();
+    > 572 |     await expect(page.getByText("Waiting picks could not be stored on this phone. Keep the app open until they sync, or enter them again when you are online.")).toBeVisible();
+          |                                                                                                                                                                  ^
+      573 |   } finally {
+      574 |     await context.setOffline(false);
+      575 |     for (const g of [a, b]) expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+        at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/pwa.spec.ts:572:162
+
+    Error Context: test-results/pwa-P23c-when-the-phone-ca-e479a--open-or-re-enter-the-picks/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/pwa-P23c-when-the-phone-ca-e479a--open-or-re-enter-the-picks/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/pwa-P23c-when-the-phone-ca-e479a--open-or-re-enter-the-picks/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    e2e/pwa.spec.ts:552:5 › P23c when the phone can store nothing and the stored queue had to be dropped, he is told to keep the app open or re-enter the picks 
+  3 passed (26.0s)

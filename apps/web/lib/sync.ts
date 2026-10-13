@@ -111,10 +111,15 @@ function readQueue(): Queue {
 function writeQueue(q: Queue): boolean {
   listenForStorage();
   const value = JSON.stringify(q);
-  let stored = safeSet(QUEUE_KEY, value);
+  const stored = safeSet(QUEUE_KEY, value);
   if (!stored) {
-    safeRemove(QUEUE_KEY);
-    stored = safeSet(QUEUE_KEY, value);
+    const previous = readStoredQueue();
+    const stale = (gameId: string, team: string | null) =>
+      !Object.prototype.hasOwnProperty.call(q, gameId) || q[gameId] !== team;
+    const fallback = Object.fromEntries(Object.entries(previous).filter(([gameId, team]) => !stale(gameId, team))) as Queue;
+    if (Object.keys(fallback).length !== Object.keys(previous).length && !safeSet(QUEUE_KEY, JSON.stringify(fallback))) {
+      if (Object.entries(readStoredQueue()).some(([gameId, team]) => stale(gameId, team))) safeRemove(QUEUE_KEY);
+    }
   }
   snapshot = q;
   volatileQueue = stored ? null : q;
