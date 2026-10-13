@@ -175,6 +175,13 @@ def test_p6_numbers_at_their_bounds_are_accepted(games):
     assert stored_picks(games) == {("2023_22_MIA_BUF", "Ann A"): ("BUF", 16), ("2023_22_MIA_BUF", "Cy!!"): ("MIA", 1)}
 
 
+def test_p7_leading_zeros_are_still_plain_digits_however_many(games):
+    row = f"{'0' * 5000}1,Ann A,001,Buf,3.5,Mia,Buf,Favorite,03,005"
+    assert import_group_csv(games, SEASON, picks(row)).rows == 1
+    assert stored_picks(games) == {("2023_01_MIA_BUF", "Ann A"): ("BUF", 3)}
+    refused(games, picks(row.replace("Favorite,03", f"Favorite,{'0' * 5000}17")), "line 2: .*confidence")
+
+
 @pytest.mark.parametrize("bad", ["+1", "1.0", "1_0", " 1", "1 ", "\u0661", "", "one", "0x1", '"1\n"'])
 def test_p7_a_whole_number_is_plain_digits_only(games, bad):
     refused(games, picks(f"{bad},Ann A,1,Buf,3.5,Mia,Buf,Favorite,3,5"), "week")

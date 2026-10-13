@@ -38,15 +38,11 @@ class ImportResult(NamedTuple):
 
 
 def _number(cell: str, label: str, minimum: int, maximum: int, line: int) -> int:
-    if not re.fullmatch(r"[0-9]+", cell):
-        raise GroupImportError(f"line {line}: {label} is invalid")
     digits = cell.lstrip("0") or "0"
-    if len(digits) > len(str(maximum)):
+    if (not re.fullmatch(r"[0-9]+", cell) or len(digits) > len(str(maximum))
+            or not minimum <= int(digits) <= maximum):
         raise GroupImportError(f"line {line}: {label} is invalid")
-    value = int(digits)
-    if not minimum <= value <= maximum:
-        raise GroupImportError(f"line {line}: {label} is invalid")
-    return value
+    return int(digits)
 
 
 def _name(cell: str, line: int) -> str:
@@ -98,9 +94,10 @@ def _games(session: Session, season: int) -> dict[tuple[int, frozenset[str]], li
 
 def _pick_row(
     cells: list[str], line: int, matches: dict[tuple[int, frozenset[str]], list[str]]
-) -> tuple[dict, int, int | None]:
+) -> tuple[dict, int]:
     week = _number(cells[0], "week", 1, MAX_WEEKS, line)
     member = _name(cells[1], line)
+    # Game and Week_Total_Pts are checked, never stored; scoring uses straight winners with confidence points (P10).
     _number(cells[2], "game", 1, MAX_GAMES, line)
     favored = franchise(cells[3].upper())
     if not re.fullmatch(SPREAD_PATTERN, cells[4]):
@@ -109,7 +106,7 @@ def _pick_row(
     confidence = _number(cells[8], "confidence", 1, MAX_CONFIDENCE, line) if cells[8] else None
     _number(cells[9], "total", 0, MAX_POINTS, line)
     games = matches.get((week, frozenset((favored, underdog))), [])
-    if favored == underdog or len(games) != 1:
+    if len(games) != 1:
         raise GroupImportError(f"line {line}: no game matches this matchup")
     side = cells[7]
     if side not in ("Favorite", "Underdog", "none"):
@@ -127,20 +124,19 @@ def _pick_row(
         if confidence is None:
             raise GroupImportError(f"line {line}: confidence is missing")
     value = {"game_id": games[0], "member": member, "picked_team": picked_team, "confidence": confidence}
-    return value, week, confidence
+    return value, week
 
 
-def _pick_rows(
-    rows: Iterator[list[str]], width: int, session: Session, season: int
-) -> list[dict]:
+def _pick_rows(rows: Iterator[list[str]], session: Session, season: int) -> list[dict]:
     matches = _games(session, season)
     values = []
     seen_games: set[tuple[str, str]] = set()
     seen_confidence: set[tuple[str, int, int]] = set()
     for line, cells in _rows(rows):
-        if len(cells) != width:
+        if len(cells) != len(PICKS_HEADER):
             raise GroupImportError(f"line {line}: wrong number of cells")
-        value, week, confidence = _pick_row(cells, line, matches)
+        value, week = _pick_row(cells, line, matches)
+        confidence = value["confidence"]
         game_key = (value["game_id"], value["member"])
         if game_key in seen_games:
             raise GroupImportError(f"line {line}: entry appears twice")
@@ -208,7 +204,7 @@ def import_group_csv(session: Session, season: int, data: bytes) -> ImportResult
     kind, weeks, rows = _csv_rows(text)
     try:
         if kind == "picks":
-            values = _pick_rows(rows, len(PICKS_HEADER), session, season)
+            values = _pick_rows(rows, session, season)
             _write_picks(session, values)
         else:
             values = _standing_rows(rows, weeks, season)
