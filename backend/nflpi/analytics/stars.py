@@ -189,12 +189,19 @@ def _star_report(star: TeamStar, reports: list[InjuryReport]) -> InjuryReport | 
             and (
                 report.player_id == star.player_id
                 if report.player_id and star.player_id
-                else report.player == star.player
+                else _normal_name(report.player) == _normal_name(star.player)
             )
         ),
         key=lambda report: report.id,
         default=None,
     )
+
+
+def _normal_name(name: str) -> str:
+    words = name.lower().replace(".", "").replace("'", "").replace("’", "").split()
+    if words and words[-1] in {"jr", "sr", "ii", "iii", "iv", "v"}:
+        words.pop()
+    return " ".join(words)
 
 
 def _listed_star(star: TeamStar, report: InjuryReport, now: datetime) -> dict:
@@ -213,6 +220,53 @@ def _listed_star(star: TeamStar, report: InjuryReport, now: datetime) -> dict:
     )
 
 
+def _game_star_data(
+    session: Session, game_id: str
+) -> tuple[Game, list[tuple[str, int | None, list[TeamStar]]], list[InjuryReport], datetime | None]:
+    game = session.get(Game, game_id)
+    if game is None:
+        raise LookupError(game_id)
+    lists = []
+    for team in (game.away_team, game.home_team):
+        week = session.scalar(
+            select(func.max(TeamStar.week)).where(
+                TeamStar.season == game.season, TeamStar.week <= game.week, TeamStar.team == team
+            )
+        )
+        rows = session.scalars(
+            select(TeamStar).where(TeamStar.season == game.season, TeamStar.week == week, TeamStar.team == team)
+        ).all() if week is not None else []
+        rows.sort(key=lambda star: (SLOT_ORDER[star.slot], star.rank))
+        lists.append((team, week, rows))
+    checked_at = session.scalar(
+        select(func.max(IngestionRun.finished_at)).where(
+            IngestionRun.dataset == "injuries", IngestionRun.status == "ok"
+        )
+    )
+    return game, lists, _current_reports(session, game), checked_at
+
+
+def game_stars(session: Session, game_id: str, now: datetime | None = None) -> dict:
+    """List each club's current stars and their newest game-status report."""
+    now = now or datetime.now(UTC)
+    game, lists, reports, checked_at = _game_star_data(session, game_id)
+    teams = []
+    for team, week, stars in lists:
+        rows = []
+        for star in stars:
+            report = _star_report(star, reports)
+            status = report.report_status if report and report.report_status else None
+            rows.append(dict(
+                team=team, player=star.player, position=star.position, slot=star.slot, rank=star.rank,
+                status=status, injury=report.injury if status else None,
+                observed_at=report.observed_at if status else None,
+                age_hours=round((now - report.observed_at).total_seconds() / 3600, 1) if status else None,
+            ))
+        teams.append(dict(team=team, stars_week=week, stars=rows))
+    return dict(game_id=game_id, season=game.season, week=game.week, reports_seen=len(reports),
+                checked_at=checked_at, teams=teams)
+
+
 def stars_out(session: Session, game_id: str, now: datetime | None = None) -> dict:
     """Find out and doubtful stars for a game's latest star list.
     `out` lists stars whose newest report says Out or Doubtful.
@@ -220,21 +274,8 @@ def stars_out(session: Session, game_id: str, now: datetime | None = None) -> di
     `age_hours` starts at `observed_at`, when this app first saw that status; `stars_week` is the list used.
     """
     now = now or datetime.now(UTC)
-    game = session.get(Game, game_id)
-    if game is None:
-        raise LookupError(game_id)
-    teams = (game.away_team, game.home_team)
-    stars_week = session.scalar(
-        select(func.max(TeamStar.week)).where(
-            TeamStar.season == game.season, TeamStar.week <= game.week, TeamStar.team.in_(teams)
-        )
-    )
-    checked_at = session.scalar(
-        select(func.max(IngestionRun.finished_at)).where(
-            IngestionRun.dataset == "injuries", IngestionRun.status == "ok"
-        )
-    )
-    reports = _current_reports(session, game)
+    game, lists, reports, checked_at = _game_star_data(session, game_id)
+    stars_week = max((week for _, week, _ in lists if week is not None), default=None)
     result = dict(
         game_id=game_id,
         season=game.season,
@@ -244,15 +285,9 @@ def stars_out(session: Session, game_id: str, now: datetime | None = None) -> di
         reports_seen=len(reports),
         out=[],
     )
-    if stars_week is None:
-        return result
-    stars = session.scalars(
-        select(TeamStar).where(TeamStar.season == game.season, TeamStar.week == stars_week, TeamStar.team.in_(teams))
-    ).all()
-    stars.sort(key=lambda star: (teams.index(star.team), SLOT_ORDER[star.slot], star.rank))
-    for star in stars:
-        report = _star_report(star, reports)
-        if report is None or (report.report_status or "").lower() not in OUT_STATUSES:
-            continue
-        result["out"].append(_listed_star(star, report, now))
+    for _, _, stars in lists:
+        for star in stars:
+            report = _star_report(star, reports)
+            if report is not None and (report.report_status or "").lower() in OUT_STATUSES:
+                result["out"].append(_listed_star(star, report, now))
     return result

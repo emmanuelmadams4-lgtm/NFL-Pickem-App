@@ -71,6 +71,29 @@ class SheetOut(BaseModel):
     differs: bool
 
 
+class StarStatus(BaseModel):
+    team: str
+    player: str
+    position: str | None
+    slot: Literal["qb", "off", "def"]
+    rank: int
+    status: str | None
+    injury: str | None
+    observed_at: datetime | None
+
+
+class StarsOut(BaseModel):
+    out: list[StarStatus]
+    reports_seen: int
+    checked_at: datetime | None
+
+
+class TeamStars(BaseModel):
+    team: str
+    stars_week: int | None
+    stars: list[StarStatus]
+
+
 class GameSummary(BaseModel):
     game_id: str
     season: int
@@ -98,6 +121,7 @@ class GameSummary(BaseModel):
     qb_not_projected: bool
     qb_alerts: list[str]
     injury_count: int
+    stars_out: StarsOut
     weather: WeatherOut | None
 
 
@@ -216,6 +240,7 @@ class GameDetail(GameSummary):
     home_form: TeamForm
     away_form: TeamForm
     injuries: list[InjuryOut]
+    stars: list[TeamStars]
     market_history: list[MarketOut]
     prediction_history: list[PredictionOut]
     meetings: list[MeetingOut]

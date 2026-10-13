@@ -1,0 +1,1746 @@
+HEAD d3de1a2 load: load averages: 10.08 7.20 5.97
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  3 failed[39m
+[31m    e2e/zz-shots.spec.ts:6:7 › shots phone [2m─────────────────────────────────────────────────────────[22m[39m
+[31m    e2e/zz-shots.spec.ts:6:7 › shots tablet [2m────────────────────────────────────────────────────────[22m[39m
+[31m    e2e/zz-shots.spec.ts:6:7 › shots desktop [2m───────────────────────────────────────────────────────[22m[39m
+[2m[WebServer] [22mingestion open-meteo/weather failed
+[2m[WebServer] [22mTraceback (most recent call last):
+[2m[WebServer] [22m  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/backend/nflpi/ingestion/service.py", line 37, in run_logged
+[2m[WebServer] [22m    run.rows = job()
+[2m[WebServer] [22m               ~~~^^
+[2m[WebServer] [22m  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/backend/tests/e2e_seed.py", line 17, in _weather_outage
+[2m[WebServer] [22m    raise RuntimeError("Open-Meteo unreachable (e2e fixture)")
+[2m[WebServer] [22mRuntimeError: Open-Meteo unreachable (e2e fixture)
+[2m[WebServer] [22me2e seed ready: TBD game 2023_04_BUF_MIA
+[2m[WebServer] [22mINFO:     Started server process [19799]
+[2m[WebServer] [22mINFO:     Waiting for application startup.
+[2m[WebServer] [22mINFO:     Application startup complete.
+[2m[WebServer] [22mINFO:     Uvicorn running on http://127.0.0.1:8123 (Press CTRL+C to quit)
+[2m[WebServer] [22mINFO:     127.0.0.1:64133 - "GET /api/health HTTP/1.1" 200 OK
+
+[2mRunning [22m17[2m tests using [22m1[2m worker[22m
+
+[2m[WebServer] [22mINFO:     127.0.0.1:64140 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64143 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64144 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64143 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64143 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64144 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64143 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64143 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64144 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64143 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64146 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64143 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64141 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64145 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_BUF_MIA&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64142 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m 1 [22m[31me2e/stars.spec.ts:42:9 › phone › ST1 the row names the stars who are out or doubtful, with how long ago that was seen[39m[2m (15.7s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64193 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64194 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64195 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64194 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64195 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64194 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64195 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64195 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64195 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64195 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64195 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64198 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64199 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64197 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64195 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64195 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64194 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64194 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64194 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64196 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64194 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_BUF_MIA&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64194 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64194 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m 2 [22m[31me2e/stars.spec.ts:57:9 › phone › ST2 more than three: three names, then how many more; a QB already in the QB alert is not repeated; a long name never widens the page[39m[2m (15.6s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64272 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64274 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64276 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64277 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64274 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64276 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64277 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64277 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64276 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64277 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64277 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64276 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64277 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64276 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64277 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64276 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64276 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64275 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64277 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64273 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64274 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64274 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64278 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64274 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64274 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_MIA_LV&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64274 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64274 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m 3 [22m[31me2e/stars.spec.ts:72:9 › phone › ST3 the row is silent only when it is known that no star is out; not known is said[39m[2m (5.9s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64282 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64283 - "GET /game/?id=2023_04_NE_KC HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64284 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64283 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64287 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64286 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64284 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64283 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64287 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64286 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64283 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64286 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64286 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64286 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64283 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64286 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64283 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64287 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64284 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64287 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64283 - "GET /__next._tree.txt?season=2023&week=4&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64284 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64287 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64284 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64283 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64287 - "GET /performance/__next._tree.txt?season=2023&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64284 - "GET /settings/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=P9KqRZrU8y1SFrrw HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64287 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=t8NenERvI-CP2I8q HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64287 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=R7GK3Zz4-dZJGHXB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64288 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64284 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64284 - "GET /performance/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64285 - "GET /__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64286 - "GET /api/games/2023_04_NE_KC HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64286 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+  [31m✘[39m  [2m 4 [22m[31me2e/stars.spec.ts:92:9 › phone › ST4 the game screen lists both clubs' five stars with each one's status, and says when a list is older[39m[2m (15.4s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64305 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64306 - "GET /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64306 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64307 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64308 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64311 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64310 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64306 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64310 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64308 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64307 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64311 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64310 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64306 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64311 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64306 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64311 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64310 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64311 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64310 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64310 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64311 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64308 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64306 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64307 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64308 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64307 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64306 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64308 - "GET /__next._tree.txt?season=2023&week=4&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64307 - "GET /performance/__next._tree.txt?season=2023&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64311 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64306 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64311 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=P9KqRZrU8y1SFrrw HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64308 - "GET /settings/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64307 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=t8NenERvI-CP2I8q HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64311 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64307 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=R7GK3Zz4-dZJGHXB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64306 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64308 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64308 - "GET /performance/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64309 - "GET /__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64310 - "GET /api/games/2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64310 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+  [31m✘[39m  [2m 5 [22m[31me2e/stars.spec.ts:120:9 › phone › ST5 a club with no star list says so[39m[2m (15.9s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64356 - "GET /api/weeks/2023/5 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /game/?id=2023_05_NE_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64358 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64362 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64361 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64358 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64361 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64358 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64361 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64358 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64358 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64362 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64358 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64362 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "GET /__next._tree.txt?season=2023&week=4&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64358 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /settings/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /performance/__next._tree.txt?season=2023&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=P9KqRZrU8y1SFrrw HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=t8NenERvI-CP2I8q HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64362 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=R7GK3Zz4-dZJGHXB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64358 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64359 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64362 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64358 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64357 - "GET /__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64362 - "GET /performance/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64360 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64361 - "GET /api/games/2023_05_NE_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64361 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+  [31m✘[39m  [2m 6 [22m[31me2e/stars.spec.ts:129:9 › phone › ST6 before the week's first injury report, the screen says the report is not out yet[39m[2m (15.6s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64436 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64440 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64443 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64440 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64443 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64443 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64443 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64443 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64442 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64443 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64437 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64441 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64443 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64440 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64440 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64440 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64439 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64440 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_BUF_MIA&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64440 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64440 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m 7 [22m[31me2e/stars.spec.ts:140:11 › phone › ST7 accessibility (dark): no serious or critical axe issue on the board or the game screen[39m[2m (15.6s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64478 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64479 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64479 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64480 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64480 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64479 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64480 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64480 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64480 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64480 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64479 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64479 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64479 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64483 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64479 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64482 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64484 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64480 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64480 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64480 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_MIA_LV&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64481 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m 8 [22m[31me2e/stars.spec.ts:140:11 › phone › ST7 accessibility (light): no serious or critical axe issue on the board or the game screen[39m[2m (15.5s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64514 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64518 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64519 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64518 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64519 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64519 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64519 - "HEAD /backtest/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64519 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /backtest/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64519 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64519 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /backtest/__next.backtest.__PAGE__.txt?_rsc=0AI988yqZlycOzSV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64519 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64522 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64518 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "HEAD /game/?id=2023_04_MIA_BUF HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64518 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "HEAD /game/?id=2023_04_NE_KC HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64517 - "GET /game/__next._tree.txt?id=2023_04_MIA_BUF&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64518 - "GET /game/__next._tree.txt?id=2023_04_NE_KC&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64521 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_MIA_BUF&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64520 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m 9 [22m[31me2e/stars.spec.ts:42:9 › desktop › ST1 the row names the stars who are out or doubtful, with how long ago that was seen[39m[2m (15.4s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64538 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64541 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64545 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64541 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64541 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64541 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64541 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64541 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64545 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "HEAD /backtest/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64545 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64545 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /backtest/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64545 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64545 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "GET /backtest/__next.backtest.__PAGE__.txt?_rsc=0AI988yqZlycOzSV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64545 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64539 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64545 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64541 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64541 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "HEAD /game/?id=2023_04_MIA_BUF HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "HEAD /game/?id=2023_04_NE_KC HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64541 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64540 - "GET /game/__next._tree.txt?id=2023_04_MIA_BUF&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64544 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /game/__next._tree.txt?id=2023_04_NE_KC&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_BUF_MIA&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64542 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m10 [22m[31me2e/stars.spec.ts:57:9 › desktop › ST2 more than three: three names, then how many more; a QB already in the QB alert is not repeated; a long name never widens the page[39m[2m (15.3s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64598 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64601 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64604 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64601 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64601 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64601 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "HEAD /backtest/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64604 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64601 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64604 - "GET /backtest/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64601 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64604 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64601 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64604 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /backtest/__next.backtest.__PAGE__.txt?_rsc=0AI988yqZlycOzSV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64601 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64603 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64604 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64601 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64604 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "HEAD /game/?id=2023_04_NE_KC HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64604 - "HEAD /game/?id=2023_04_MIA_BUF HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64604 - "GET /game/__next._tree.txt?id=2023_04_NE_KC&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64599 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64602 - "GET /game/__next._tree.txt?id=2023_04_MIA_BUF&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_NE_KC&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64600 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m11 [22m[31me2e/stars.spec.ts:72:9 › desktop › ST3 the row is silent only when it is known that no star is out; not known is said[39m[2m (5.4s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64613 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /game/?id=2023_04_NE_KC HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64616 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64619 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64617 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64616 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64618 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64617 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64616 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64618 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64617 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64617 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64618 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64618 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64618 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64617 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64619 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64616 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "HEAD /backtest/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64617 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64616 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64619 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /performance/__next._tree.txt?season=2023&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /__next._tree.txt?season=2023&week=4&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64619 - "GET /backtest/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64616 - "GET /settings/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=t8NenERvI-CP2I8q HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64617 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=P9KqRZrU8y1SFrrw HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64619 - "GET /backtest/__next.backtest.__PAGE__.txt?_rsc=CYEGCLzthz4cD1rg HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64617 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=R7GK3Zz4-dZJGHXB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64615 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64619 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64616 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64619 - "GET /performance/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64614 - "GET /__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64618 - "GET /api/games/2023_04_NE_KC HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64618 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+  [31m✘[39m  [2m12 [22m[31me2e/stars.spec.ts:92:9 › desktop › ST4 the game screen lists both clubs' five stars with each one's status, and says when a list is older[39m[2m (15.2s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64642 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64644 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64647 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64644 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64647 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64644 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64647 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "HEAD /backtest/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64647 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64644 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64647 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64644 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64647 - "GET /__next._tree.txt?season=2023&week=4&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "GET /performance/__next._tree.txt?season=2023&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /backtest/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=P9KqRZrU8y1SFrrw HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64644 - "GET /backtest/__next.backtest.__PAGE__.txt?_rsc=CYEGCLzthz4cD1rg HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=t8NenERvI-CP2I8q HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64647 - "GET /settings/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64645 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64647 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64648 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=R7GK3Zz4-dZJGHXB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64644 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64646 - "GET /performance/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64644 - "GET /__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /api/games/2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64643 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+  [31m✘[39m  [2m13 [22m[31me2e/stars.spec.ts:120:9 › desktop › ST5 a club with no star list says so[39m[2m (15.6s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64721 - "GET /api/weeks/2023/5 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64722 - "GET /game/?id=2023_05_NE_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64722 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64724 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64725 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64726 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64722 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64725 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64726 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64724 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64725 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64724 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64724 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64725 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64724 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64724 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64725 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64722 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64726 - "HEAD /backtest/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64726 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64722 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /__next._tree.txt?season=2023&week=4&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64725 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64726 - "GET /backtest/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64725 - "GET /performance/__next._tree.txt?season=2023&_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64722 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /settings/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64726 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64722 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=P9KqRZrU8y1SFrrw HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=t8NenERvI-CP2I8q HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64725 - "GET /backtest/__next.backtest.__PAGE__.txt?_rsc=CYEGCLzthz4cD1rg HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64723 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=R7GK3Zz4-dZJGHXB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64722 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64727 - "GET /__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64722 - "GET /performance/__next._tree.txt?_rsc=6NoqQ4qWGr9VckuM HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64724 - "GET /api/games/2023_05_NE_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64724 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+  [31m✘[39m  [2m14 [22m[31me2e/stars.spec.ts:129:9 › desktop › ST6 before the week's first injury report, the screen says the report is not out yet[39m[2m (15.5s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64804 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64808 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64810 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64808 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64808 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64808 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64808 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64810 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64810 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64810 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "HEAD /backtest/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64810 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /backtest/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64810 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64810 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64810 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /backtest/__next.backtest.__PAGE__.txt?_rsc=0AI988yqZlycOzSV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64810 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64806 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64808 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64808 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "HEAD /game/?id=2023_04_MIA_BUF HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "HEAD /game/?id=2023_04_NE_KC HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64808 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64809 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /game/__next._tree.txt?id=2023_04_MIA_BUF&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64805 - "GET /game/__next._tree.txt?id=2023_04_NE_KC&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_BUF_MIA&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64807 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m15 [22m[31me2e/stars.spec.ts:140:11 › desktop › ST7 accessibility (dark): no serious or critical axe issue on the board or the game screen[39m[2m (15.3s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64871 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64873 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64873 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64878 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64873 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64873 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64873 - "HEAD /backtest/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64873 - "GET /performance/__next._tree.txt?season=2023&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /backtest/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /settings/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64873 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=8nTjltbQWvg6NcbE HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "HEAD /sheet/?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64873 - "GET /backtest/__next.backtest.__PAGE__.txt?_rsc=0AI988yqZlycOzSV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /sheet/__next._tree.txt?season=2023&week=4&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=52EL1GeLu30QacdG HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=DROqpzYuhFJcAG-b HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /sheet/__next.sheet.__PAGE__.txt?season=2023&week=4&_rsc=2fc8SAT4_waTNX-Z HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64874 - "GET /performance/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "HEAD /sheet/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /sheet/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64878 - "GET /api/weeks/2023/4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "HEAD /game/?id=2023_04_NE_KC HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "HEAD /game/?id=2023_04_MIA_LV HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64878 - "HEAD /game/?id=2023_04_BUF_MIA HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "HEAD /game/?id=2023_04_MIA_BUF HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64877 - "GET /game/__next._tree.txt?id=2023_04_NE_KC&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64876 - "GET /game/__next._tree.txt?id=2023_04_MIA_LV&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64878 - "GET /game/__next._tree.txt?id=2023_04_BUF_MIA&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /game/__next._tree.txt?id=2023_04_MIA_BUF&_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /game/__next.game.__PAGE__.txt?id=2023_04_NE_KC&_rsc=ftTrMQF0lAApnFgB HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "HEAD /game/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64875 - "GET /game/__next._tree.txt?_rsc=5CB68i4pnAekjehf HTTP/1.1" 200 OK
+  [31m✘[39m  [2m16 [22m[31me2e/stars.spec.ts:140:11 › desktop › ST7 accessibility (light): no serious or critical axe issue on the board or the game screen[39m[2m (15.3s)[22m
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64927 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64929 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64930 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64927 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64929 - "GET /_next/static/chunks/2fpmte1zocdr9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /_next/static/chunks/19jvpl41t3adg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /_next/static/chunks/3myf8-7_9zhc9.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64929 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64929 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64929 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64927 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64927 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64929 - "HEAD /backtest/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /__next._tree.txt?season=2023&week=4&_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64929 - "GET /performance/__next._tree.txt?season=2023&_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "HEAD /settings/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64930 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /settings/__next._tree.txt?_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64927 - "GET /backtest/__next._tree.txt?_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=5KNeiubrJ3RjeXz7 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64929 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=cdk-OvPaaQdzy3F4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64928 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64926 - "GET /backtest/__next.backtest.__PAGE__.txt?_rsc=OEeqBBK3RXAeNu_4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64927 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=STmVY4j0xRDbRMWT HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64929 - "HEAD /performance/ HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "HEAD / HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:64925 - "GET /__next._tree.txt?_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:64927 - "GET /performance/__next._tree.txt?_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+  [31m✘[39m  [2m17 [22m[31me2e/stars.spec.ts:154:5 › ST8 Settings shows when the star list and the head coaches were last refreshed[39m[2m (5.6s)[22m
+
+
+[31m  1) e2e/stars.spec.ts:42:9 › phone › ST1 the row names the stars who are out or doubtful, with how long ago that was seen [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: NE Team at KC Team' }) }).getByRole('group', { name: 'Stars out' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: NE Team at KC Team' }) }).getByRole('group', { name: 'Stars out' })[22m
+
+
+    [0m [90m 44 |[39m       [36mawait[39m open(page[33m,[39m [32m"/"[39m)[33m;[39m
+     [90m 45 |[39m       [36mconst[39m line [33m=[39m card(page[33m,[39m g)[33m.[39mgetByRole([32m"group"[39m[33m,[39m { name[33m:[39m [32m"Stars out"[39m })[33m;[39m
+    [31m[1m>[22m[39m[90m 46 |[39m       [36mawait[39m expect(line)[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m    |[39m                          [31m[1m^[22m[39m
+     [90m 47 |[39m       [36mawait[39m expect(line)[33m.[39mtoContainText([32m"Cory Corner"[39m)[33m;[39m
+     [90m 48 |[39m       [36mawait[39m expect(line)[33m.[39mtoContainText([32m"CB"[39m)[33m;[39m
+     [90m 49 |[39m       [36mawait[39m expect(line)[33m.[39mtoContainText([32m"Out"[39m)[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:46:26[22m
+
+[2m    Error Context: test-results/stars-phone-ST1-the-row-na-38987--how-long-ago-that-was-seen/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-phone-ST1-the-row-na-38987--how-long-ago-that-was-seen/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-phone-ST1-the-row-na-38987--how-long-ago-that-was-seen/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  2) e2e/stars.spec.ts:57:9 › phone › ST2 more than three: three names, then how many more; a QB already in the QB alert is not repeated; a long name never widens the page [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: BUF Team at MIA Team' }) }).getByRole('group', { name: 'Stars out' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: BUF Team at MIA Team' }) }).getByRole('group', { name: 'Stars out' })[22m
+
+
+    [0m [90m 59 |[39m       [36mawait[39m open(page[33m,[39m [32m"/"[39m)[33m;[39m
+     [90m 60 |[39m       [36mconst[39m line [33m=[39m card(page[33m,[39m g)[33m.[39mgetByRole([32m"group"[39m[33m,[39m { name[33m:[39m [32m"Stars out"[39m })[33m;[39m
+    [31m[1m>[22m[39m[90m 61 |[39m       [36mawait[39m expect(line)[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m    |[39m                          [31m[1m^[22m[39m
+     [90m 62 |[39m       [36mawait[39m expect(card(page[33m,[39m g)[33m,[39m [32m"the QB alert that was there before"[39m)[33m.[39mtoContainText([32m"Jo Thrower"[39m)[33m;[39m
+     [90m 63 |[39m       [36mawait[39m expect(line[33m,[39m [32m"the same man is not shown twice on one card"[39m)[33m.[39mnot[33m.[39mtoContainText([32m"Jo Thrower"[39m)[33m;[39m
+     [90m 64 |[39m       [36mawait[39m expect(line)[33m.[39mtoContainText([32m"Maximilian Featherstonehaugh-Smythe III"[39m)[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:61:26[22m
+
+[2m    Error Context: test-results/stars-phone-ST2-more-than--e38fa--name-never-widens-the-page/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-phone-ST2-more-than--e38fa--name-never-widens-the-page/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-phone-ST2-more-than--e38fa--name-never-widens-the-page/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  3) e2e/stars.spec.ts:72:9 › phone › ST3 the row is silent only when it is known that no star is out; not known is said [39m
+
+    Error: neither club has a star list
+
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: MIA Team at LV Team' }) })
+    Expected substring: [32m"No star list yet"[39m
+    Received string:    [31m"MIAMIAMIA Team1-2VSLVLVLV Team1-1Thu, Oct 15, next kickoff3:31 AMModel pickLV63%Tough matchup · Tough matchups have won 60% since 2012Uncertainty HighHigh uncertaintyHow reliable this estimate is. Separate from win probability.QB change for MIAStats model and market differ by 25%Market MIA 58%Upset watchUpset watchStats model picks LV, the market underdogStats 67% vs market 42% for LVPoints1234Counts as LV, the model's pick, unless you tap a team.MIALV"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - neither club has a star list with timeout 5000ms[22m
+    [2m  - waiting for getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: MIA Team at LV Team' }) })[22m
+    [2m    9 × locator resolved to <li data-testid="game-card" class="relative flex flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-border-strong">…</li>[22m
+    [2m      - unexpected value "MIAMIAMIA Team1-2VSLVLVLV Team1-1Thu, Oct 15, next kickoff3:31 AMModel pickLV63%Tough matchup · Tough matchups have won 60% since 2012Uncertainty HighHigh uncertaintyHow reliable this estimate is. Separate from win probability.QB change for MIAStats model and market differ by 25%Market MIA 58%Upset watchUpset watchStats model picks LV, the market underdogStats 67% vs market 42% for LVPoints1234Counts as LV, the model's pick, unless you tap a team.MIALV"[22m
+
+
+    [0m [90m 76 |[39m       [36mawait[39m expect(noList)[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m 77 |[39m       [36mawait[39m expect(noList[33m.[39mgetByRole([32m"group"[39m[33m,[39m { name[33m:[39m [32m"Stars out"[39m }))[33m.[39mtoHaveCount([35m0[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 78 |[39m       [36mawait[39m expect(noList[33m,[39m [32m"neither club has a star list"[39m)[33m.[39mtoContainText([32m"No star list yet"[39m)[33m;[39m
+     [90m    |[39m                                                            [31m[1m^[22m[39m
+     [90m 79 |[39m
+     [90m 80 |[39m       [36mconst[39m week5 [33m=[39m [36mawait[39m games(request[33m,[39m [35m5[39m)[33m;[39m
+     [90m 81 |[39m       [36mconst[39m next [33m=[39m week5[33m.[39mfind((x) [33m=>[39m [[32m"KC"[39m[33m,[39m [32m"NE"[39m[33m,[39m [32m"BUF"[39m][33m.[39mincludes(x[33m.[39mhome[33m.[39mabbr) [33m&&[39m [[32m"KC"[39m[33m,[39m [32m"NE"[39m[33m,[39m [32m"BUF"[39m][33m.[39mincludes(x[33m.[39maway[33m.[39mabbr))[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:78:60[22m
+
+[2m    Error Context: test-results/stars-phone-ST3-the-row-is-bd22a-ar-is-out-not-known-is-said/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-phone-ST3-the-row-is-bd22a-ar-is-out-not-known-is-said/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-phone-ST3-the-row-is-bd22a-ar-is-out-not-known-is-said/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  4) e2e/stars.spec.ts:92:9 › phone › ST4 the game screen lists both clubs' five stars with each one's status, and says when a list is older [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('#injuries').getByRole('heading', { name: 'Star players' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for locator('#injuries').getByRole('heading', { name: 'Star players' })[22m
+
+
+    [0m [90m 94 |[39m       [36mawait[39m open(page[33m,[39m [32m`/game/?id=${g.game_id}`[39m)[33m;[39m
+     [90m 95 |[39m       [36mconst[39m section [33m=[39m page[33m.[39mlocator([32m"#injuries"[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 96 |[39m       [36mawait[39m expect(section[33m.[39mgetByRole([32m"heading"[39m[33m,[39m { name[33m:[39m [32m"Star players"[39m }))[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m    |[39m                                                                            [31m[1m^[22m[39m
+     [90m 97 |[39m
+     [90m 98 |[39m       [36mconst[39m kc [33m=[39m section[33m.[39mgetByRole([32m"list"[39m[33m,[39m { name[33m:[39m [32m`${g.home.name} star players`[39m })[33m.[39mgetByRole([32m"listitem"[39m)[33m;[39m
+     [90m 99 |[39m       [36mawait[39m expect(kc)[33m.[39mtoHaveCount([35m5[39m)[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:96:76[22m
+
+[2m    Error Context: test-results/stars-phone-ST4-the-game-s-e85c9-d-says-when-a-list-is-older/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-phone-ST4-the-game-s-e85c9-d-says-when-a-list-is-older/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-phone-ST4-the-game-s-e85c9-d-says-when-a-list-is-older/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  5) e2e/stars.spec.ts:120:9 › phone › ST5 a club with no star list says so [2m────────────────────────[22m[39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('#injuries').getByRole('heading', { name: 'Star players' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for locator('#injuries').getByRole('heading', { name: 'Star players' })[22m
+
+
+    [0m [90m 122 |[39m       [36mawait[39m open(page[33m,[39m [32m`/game/?id=${g.game_id}`[39m)[33m;[39m
+     [90m 123 |[39m       [36mconst[39m section [33m=[39m page[33m.[39mlocator([32m"#injuries"[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 124 |[39m       [36mawait[39m expect(section[33m.[39mgetByRole([32m"heading"[39m[33m,[39m { name[33m:[39m [32m"Star players"[39m }))[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m     |[39m                                                                            [31m[1m^[22m[39m
+     [90m 125 |[39m       [36mawait[39m expect(section[33m.[39mgetByText([32m"No star list yet"[39m))[33m.[39mtoHaveCount([35m2[39m)[33m;[39m
+     [90m 126 |[39m       [36mawait[39m expect(section[33m.[39mgetByRole([32m"list"[39m[33m,[39m { name[33m:[39m [35m/star players/[39m }))[33m.[39mtoHaveCount([35m0[39m)[33m;[39m
+     [90m 127 |[39m     })[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:124:76[22m
+
+[2m    Error Context: test-results/stars-phone-ST5-a-club-with-no-star-list-says-so/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-phone-ST5-a-club-with-no-star-list-says-so/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-phone-ST5-a-club-with-no-star-list-says-so/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  6) e2e/stars.spec.ts:129:9 › phone › ST6 before the week's first injury report, the screen says the report is not out yet [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('#injuries').getByRole('heading', { name: 'Star players' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for locator('#injuries').getByRole('heading', { name: 'Star players' })[22m
+
+
+    [0m [90m 132 |[39m       [36mawait[39m open(page[33m,[39m [32m`/game/?id=${next!.game_id}`[39m)[33m;[39m
+     [90m 133 |[39m       [36mconst[39m section [33m=[39m page[33m.[39mlocator([32m"#injuries"[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 134 |[39m       [36mawait[39m expect(section[33m.[39mgetByRole([32m"heading"[39m[33m,[39m { name[33m:[39m [32m"Star players"[39m }))[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m     |[39m                                                                            [31m[1m^[22m[39m
+     [90m 135 |[39m       [36mawait[39m expect(section[33m.[39mgetByText([32m"No injury report yet this week"[39m))[33m.[39mtoBeVisible()[33m;[39m
+     [90m 136 |[39m       [36mawait[39m expect(section[33m.[39mgetByText([32m"Not on injury report"[39m)[33m,[39m [32m"not known is never shown as available"[39m)[33m.[39mtoHaveCount([35m0[39m)[33m;[39m
+     [90m 137 |[39m     })[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:134:76[22m
+
+[2m    Error Context: test-results/stars-phone-ST6-before-the-ca8e4-s-the-report-is-not-out-yet/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-phone-ST6-before-the-ca8e4-s-the-report-is-not-out-yet/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-phone-ST6-before-the-ca8e4-s-the-report-is-not-out-yet/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  7) e2e/stars.spec.ts:140:11 › phone › ST7 accessibility (dark): no serious or critical axe issue on the board or the game screen [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText('Cory Corner').first()
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for getByText('Cory Corner').first()[22m
+
+
+    [0m [90m 143 |[39m         [36mfor[39m ([36mconst[39m path [36mof[39m [[32m"/"[39m[33m,[39m [32m`/game/?id=${g.game_id}`[39m]) {
+     [90m 144 |[39m           [36mawait[39m open(page[33m,[39m path)[33m;[39m
+    [31m[1m>[22m[39m[90m 145 |[39m           [36mawait[39m expect(page[33m.[39mgetByText([32m"Cory Corner"[39m)[33m.[39mfirst())[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m     |[39m                                                               [31m[1m^[22m[39m
+     [90m 146 |[39m           [36mconst[39m { violations } [33m=[39m [36mawait[39m [36mnew[39m [33mAxeBuilder[39m({ page })[33m.[39manalyze()[33m;[39m
+     [90m 147 |[39m           expect(violations[33m.[39mfilter((v) [33m=>[39m v[33m.[39mimpact [33m===[39m [32m"serious"[39m [33m||[39m v[33m.[39mimpact [33m===[39m [32m"critical"[39m)[33m.[39mmap((v) [33m=>[39m [32m`${v.id}: ${v.nodes[0]?.target}`[39m)[33m,[39m path)[33m.[39mtoEqual([])[33m;[39m
+     [90m 148 |[39m         }[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:145:63[22m
+
+[2m    Error Context: test-results/stars-phone-ST7-accessibil-8207a-he-board-or-the-game-screen/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-phone-ST7-accessibil-8207a-he-board-or-the-game-screen/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-phone-ST7-accessibil-8207a-he-board-or-the-game-screen/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  8) e2e/stars.spec.ts:140:11 › phone › ST7 accessibility (light): no serious or critical axe issue on the board or the game screen [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText('Cory Corner').first()
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for getByText('Cory Corner').first()[22m
+
+
+    [0m [90m 143 |[39m         [36mfor[39m ([36mconst[39m path [36mof[39m [[32m"/"[39m[33m,[39m [32m`/game/?id=${g.game_id}`[39m]) {
+     [90m 144 |[39m           [36mawait[39m open(page[33m,[39m path)[33m;[39m
+    [31m[1m>[22m[39m[90m 145 |[39m           [36mawait[39m expect(page[33m.[39mgetByText([32m"Cory Corner"[39m)[33m.[39mfirst())[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m     |[39m                                                               [31m[1m^[22m[39m
+     [90m 146 |[39m           [36mconst[39m { violations } [33m=[39m [36mawait[39m [36mnew[39m [33mAxeBuilder[39m({ page })[33m.[39manalyze()[33m;[39m
+     [90m 147 |[39m           expect(violations[33m.[39mfilter((v) [33m=>[39m v[33m.[39mimpact [33m===[39m [32m"serious"[39m [33m||[39m v[33m.[39mimpact [33m===[39m [32m"critical"[39m)[33m.[39mmap((v) [33m=>[39m [32m`${v.id}: ${v.nodes[0]?.target}`[39m)[33m,[39m path)[33m.[39mtoEqual([])[33m;[39m
+     [90m 148 |[39m         }[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:145:63[22m
+
+[2m    Error Context: test-results/stars-phone-ST7-accessibil-e409e-he-board-or-the-game-screen/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-phone-ST7-accessibil-e409e-he-board-or-the-game-screen/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-phone-ST7-accessibil-e409e-he-board-or-the-game-screen/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  9) e2e/stars.spec.ts:42:9 › desktop › ST1 the row names the stars who are out or doubtful, with how long ago that was seen [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: NE Team at KC Team' }) }).getByRole('group', { name: 'Stars out' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: NE Team at KC Team' }) }).getByRole('group', { name: 'Stars out' })[22m
+
+
+    [0m [90m 44 |[39m       [36mawait[39m open(page[33m,[39m [32m"/"[39m)[33m;[39m
+     [90m 45 |[39m       [36mconst[39m line [33m=[39m card(page[33m,[39m g)[33m.[39mgetByRole([32m"group"[39m[33m,[39m { name[33m:[39m [32m"Stars out"[39m })[33m;[39m
+    [31m[1m>[22m[39m[90m 46 |[39m       [36mawait[39m expect(line)[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m    |[39m                          [31m[1m^[22m[39m
+     [90m 47 |[39m       [36mawait[39m expect(line)[33m.[39mtoContainText([32m"Cory Corner"[39m)[33m;[39m
+     [90m 48 |[39m       [36mawait[39m expect(line)[33m.[39mtoContainText([32m"CB"[39m)[33m;[39m
+     [90m 49 |[39m       [36mawait[39m expect(line)[33m.[39mtoContainText([32m"Out"[39m)[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:46:26[22m
+
+[2m    Error Context: test-results/stars-desktop-ST1-the-row--16b05--how-long-ago-that-was-seen/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-desktop-ST1-the-row--16b05--how-long-ago-that-was-seen/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-desktop-ST1-the-row--16b05--how-long-ago-that-was-seen/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  10) e2e/stars.spec.ts:57:9 › desktop › ST2 more than three: three names, then how many more; a QB already in the QB alert is not repeated; a long name never widens the page [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: BUF Team at MIA Team' }) }).getByRole('group', { name: 'Stars out' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: BUF Team at MIA Team' }) }).getByRole('group', { name: 'Stars out' })[22m
+
+
+    [0m [90m 59 |[39m       [36mawait[39m open(page[33m,[39m [32m"/"[39m)[33m;[39m
+     [90m 60 |[39m       [36mconst[39m line [33m=[39m card(page[33m,[39m g)[33m.[39mgetByRole([32m"group"[39m[33m,[39m { name[33m:[39m [32m"Stars out"[39m })[33m;[39m
+    [31m[1m>[22m[39m[90m 61 |[39m       [36mawait[39m expect(line)[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m    |[39m                          [31m[1m^[22m[39m
+     [90m 62 |[39m       [36mawait[39m expect(card(page[33m,[39m g)[33m,[39m [32m"the QB alert that was there before"[39m)[33m.[39mtoContainText([32m"Jo Thrower"[39m)[33m;[39m
+     [90m 63 |[39m       [36mawait[39m expect(line[33m,[39m [32m"the same man is not shown twice on one card"[39m)[33m.[39mnot[33m.[39mtoContainText([32m"Jo Thrower"[39m)[33m;[39m
+     [90m 64 |[39m       [36mawait[39m expect(line)[33m.[39mtoContainText([32m"Maximilian Featherstonehaugh-Smythe III"[39m)[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:61:26[22m
+
+[2m    Error Context: test-results/stars-desktop-ST2-more-tha-786c8--name-never-widens-the-page/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-desktop-ST2-more-tha-786c8--name-never-widens-the-page/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-desktop-ST2-more-tha-786c8--name-never-widens-the-page/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  11) e2e/stars.spec.ts:72:9 › desktop › ST3 the row is silent only when it is known that no star is out; not known is said [39m
+
+    Error: neither club has a star list
+
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: MIA Team at LV Team' }) })
+    Expected substring: [32m"No star list yet"[39m
+    Received string:    [31m"MIAMIAMIA Team1-2VSLVLVLV Team1-1Thu, Oct 15, next kickoff3:31 AMModel pickLV63%Tough matchup · Tough matchups have won 60% since 2012Uncertainty HighHigh uncertaintyHow reliable this estimate is. Separate from win probability.QB change for MIAStats model and market differ by 25%Market MIA 58%Upset watchUpset watchStats model picks LV, the market underdogStats 67% vs market 42% for LVPoints1234Counts as LV, the model's pick, unless you tap a team.MIALV"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - neither club has a star list with timeout 5000ms[22m
+    [2m  - waiting for getByRole('listitem').filter({ has: getByRole('link', { name: 'Open matchup: MIA Team at LV Team' }) })[22m
+    [2m    9 × locator resolved to <li data-testid="game-card" class="relative flex flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-border-strong">…</li>[22m
+    [2m      - unexpected value "MIAMIAMIA Team1-2VSLVLVLV Team1-1Thu, Oct 15, next kickoff3:31 AMModel pickLV63%Tough matchup · Tough matchups have won 60% since 2012Uncertainty HighHigh uncertaintyHow reliable this estimate is. Separate from win probability.QB change for MIAStats model and market differ by 25%Market MIA 58%Upset watchUpset watchStats model picks LV, the market underdogStats 67% vs market 42% for LVPoints1234Counts as LV, the model's pick, unless you tap a team.MIALV"[22m
+
+
+    [0m [90m 76 |[39m       [36mawait[39m expect(noList)[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m 77 |[39m       [36mawait[39m expect(noList[33m.[39mgetByRole([32m"group"[39m[33m,[39m { name[33m:[39m [32m"Stars out"[39m }))[33m.[39mtoHaveCount([35m0[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 78 |[39m       [36mawait[39m expect(noList[33m,[39m [32m"neither club has a star list"[39m)[33m.[39mtoContainText([32m"No star list yet"[39m)[33m;[39m
+     [90m    |[39m                                                            [31m[1m^[22m[39m
+     [90m 79 |[39m
+     [90m 80 |[39m       [36mconst[39m week5 [33m=[39m [36mawait[39m games(request[33m,[39m [35m5[39m)[33m;[39m
+     [90m 81 |[39m       [36mconst[39m next [33m=[39m week5[33m.[39mfind((x) [33m=>[39m [[32m"KC"[39m[33m,[39m [32m"NE"[39m[33m,[39m [32m"BUF"[39m][33m.[39mincludes(x[33m.[39mhome[33m.[39mabbr) [33m&&[39m [[32m"KC"[39m[33m,[39m [32m"NE"[39m[33m,[39m [32m"BUF"[39m][33m.[39mincludes(x[33m.[39maway[33m.[39mabbr))[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:78:60[22m
+
+[2m    Error Context: test-results/stars-desktop-ST3-the-row--1cf08-ar-is-out-not-known-is-said/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-desktop-ST3-the-row--1cf08-ar-is-out-not-known-is-said/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-desktop-ST3-the-row--1cf08-ar-is-out-not-known-is-said/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  12) e2e/stars.spec.ts:92:9 › desktop › ST4 the game screen lists both clubs' five stars with each one's status, and says when a list is older [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('#injuries').getByRole('heading', { name: 'Star players' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for locator('#injuries').getByRole('heading', { name: 'Star players' })[22m
+
+
+    [0m [90m 94 |[39m       [36mawait[39m open(page[33m,[39m [32m`/game/?id=${g.game_id}`[39m)[33m;[39m
+     [90m 95 |[39m       [36mconst[39m section [33m=[39m page[33m.[39mlocator([32m"#injuries"[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 96 |[39m       [36mawait[39m expect(section[33m.[39mgetByRole([32m"heading"[39m[33m,[39m { name[33m:[39m [32m"Star players"[39m }))[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m    |[39m                                                                            [31m[1m^[22m[39m
+     [90m 97 |[39m
+     [90m 98 |[39m       [36mconst[39m kc [33m=[39m section[33m.[39mgetByRole([32m"list"[39m[33m,[39m { name[33m:[39m [32m`${g.home.name} star players`[39m })[33m.[39mgetByRole([32m"listitem"[39m)[33m;[39m
+     [90m 99 |[39m       [36mawait[39m expect(kc)[33m.[39mtoHaveCount([35m5[39m)[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:96:76[22m
+
+[2m    Error Context: test-results/stars-desktop-ST4-the-game-e7f18-d-says-when-a-list-is-older/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-desktop-ST4-the-game-e7f18-d-says-when-a-list-is-older/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-desktop-ST4-the-game-e7f18-d-says-when-a-list-is-older/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  13) e2e/stars.spec.ts:120:9 › desktop › ST5 a club with no star list says so [2m─────────────────────[22m[39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('#injuries').getByRole('heading', { name: 'Star players' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for locator('#injuries').getByRole('heading', { name: 'Star players' })[22m
+
+
+    [0m [90m 122 |[39m       [36mawait[39m open(page[33m,[39m [32m`/game/?id=${g.game_id}`[39m)[33m;[39m
+     [90m 123 |[39m       [36mconst[39m section [33m=[39m page[33m.[39mlocator([32m"#injuries"[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 124 |[39m       [36mawait[39m expect(section[33m.[39mgetByRole([32m"heading"[39m[33m,[39m { name[33m:[39m [32m"Star players"[39m }))[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m     |[39m                                                                            [31m[1m^[22m[39m
+     [90m 125 |[39m       [36mawait[39m expect(section[33m.[39mgetByText([32m"No star list yet"[39m))[33m.[39mtoHaveCount([35m2[39m)[33m;[39m
+     [90m 126 |[39m       [36mawait[39m expect(section[33m.[39mgetByRole([32m"list"[39m[33m,[39m { name[33m:[39m [35m/star players/[39m }))[33m.[39mtoHaveCount([35m0[39m)[33m;[39m
+     [90m 127 |[39m     })[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:124:76[22m
+
+[2m    Error Context: test-results/stars-desktop-ST5-a-club-with-no-star-list-says-so/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-desktop-ST5-a-club-with-no-star-list-says-so/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-desktop-ST5-a-club-with-no-star-list-says-so/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  14) e2e/stars.spec.ts:129:9 › desktop › ST6 before the week's first injury report, the screen says the report is not out yet [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('#injuries').getByRole('heading', { name: 'Star players' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for locator('#injuries').getByRole('heading', { name: 'Star players' })[22m
+
+
+    [0m [90m 132 |[39m       [36mawait[39m open(page[33m,[39m [32m`/game/?id=${next!.game_id}`[39m)[33m;[39m
+     [90m 133 |[39m       [36mconst[39m section [33m=[39m page[33m.[39mlocator([32m"#injuries"[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 134 |[39m       [36mawait[39m expect(section[33m.[39mgetByRole([32m"heading"[39m[33m,[39m { name[33m:[39m [32m"Star players"[39m }))[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m     |[39m                                                                            [31m[1m^[22m[39m
+     [90m 135 |[39m       [36mawait[39m expect(section[33m.[39mgetByText([32m"No injury report yet this week"[39m))[33m.[39mtoBeVisible()[33m;[39m
+     [90m 136 |[39m       [36mawait[39m expect(section[33m.[39mgetByText([32m"Not on injury report"[39m)[33m,[39m [32m"not known is never shown as available"[39m)[33m.[39mtoHaveCount([35m0[39m)[33m;[39m
+     [90m 137 |[39m     })[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:134:76[22m
+
+[2m    Error Context: test-results/stars-desktop-ST6-before-t-62fea-s-the-report-is-not-out-yet/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-desktop-ST6-before-t-62fea-s-the-report-is-not-out-yet/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-desktop-ST6-before-t-62fea-s-the-report-is-not-out-yet/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  15) e2e/stars.spec.ts:140:11 › desktop › ST7 accessibility (dark): no serious or critical axe issue on the board or the game screen [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText('Cory Corner').first()
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for getByText('Cory Corner').first()[22m
+
+
+    [0m [90m 143 |[39m         [36mfor[39m ([36mconst[39m path [36mof[39m [[32m"/"[39m[33m,[39m [32m`/game/?id=${g.game_id}`[39m]) {
+     [90m 144 |[39m           [36mawait[39m open(page[33m,[39m path)[33m;[39m
+    [31m[1m>[22m[39m[90m 145 |[39m           [36mawait[39m expect(page[33m.[39mgetByText([32m"Cory Corner"[39m)[33m.[39mfirst())[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m     |[39m                                                               [31m[1m^[22m[39m
+     [90m 146 |[39m           [36mconst[39m { violations } [33m=[39m [36mawait[39m [36mnew[39m [33mAxeBuilder[39m({ page })[33m.[39manalyze()[33m;[39m
+     [90m 147 |[39m           expect(violations[33m.[39mfilter((v) [33m=>[39m v[33m.[39mimpact [33m===[39m [32m"serious"[39m [33m||[39m v[33m.[39mimpact [33m===[39m [32m"critical"[39m)[33m.[39mmap((v) [33m=>[39m [32m`${v.id}: ${v.nodes[0]?.target}`[39m)[33m,[39m path)[33m.[39mtoEqual([])[33m;[39m
+     [90m 148 |[39m         }[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:145:63[22m
+
+[2m    Error Context: test-results/stars-desktop-ST7-accessib-9f5d4-he-board-or-the-game-screen/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-desktop-ST7-accessib-9f5d4-he-board-or-the-game-screen/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-desktop-ST7-accessib-9f5d4-he-board-or-the-game-screen/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  16) e2e/stars.spec.ts:140:11 › desktop › ST7 accessibility (light): no serious or critical axe issue on the board or the game screen [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText('Cory Corner').first()
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 15000ms[22m
+    [2m  - waiting for getByText('Cory Corner').first()[22m
+
+
+    [0m [90m 143 |[39m         [36mfor[39m ([36mconst[39m path [36mof[39m [[32m"/"[39m[33m,[39m [32m`/game/?id=${g.game_id}`[39m]) {
+     [90m 144 |[39m           [36mawait[39m open(page[33m,[39m path)[33m;[39m
+    [31m[1m>[22m[39m[90m 145 |[39m           [36mawait[39m expect(page[33m.[39mgetByText([32m"Cory Corner"[39m)[33m.[39mfirst())[33m.[39mtoBeVisible({ timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+     [90m     |[39m                                                               [31m[1m^[22m[39m
+     [90m 146 |[39m           [36mconst[39m { violations } [33m=[39m [36mawait[39m [36mnew[39m [33mAxeBuilder[39m({ page })[33m.[39manalyze()[33m;[39m
+     [90m 147 |[39m           expect(violations[33m.[39mfilter((v) [33m=>[39m v[33m.[39mimpact [33m===[39m [32m"serious"[39m [33m||[39m v[33m.[39mimpact [33m===[39m [32m"critical"[39m)[33m.[39mmap((v) [33m=>[39m [32m`${v.id}: ${v.nodes[0]?.target}`[39m)[33m,[39m path)[33m.[39mtoEqual([])[33m;[39m
+     [90m 148 |[39m         }[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:145:63[22m
+
+[2m    Error Context: test-results/stars-desktop-ST7-accessib-c658a-he-board-or-the-game-screen/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-desktop-ST7-accessib-c658a-he-board-or-the-game-screen/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-desktop-ST7-accessib-c658a-he-board-or-the-game-screen/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  17) e2e/stars.spec.ts:154:5 › ST8 Settings shows when the star list and the head coaches were last refreshed [39m
+
+    Error: the star list has its own row
+
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByRole('listitem').filter({ hasText: /^stars/i })
+    Expected: [32m1[39m
+    Received: [31m0[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - the star list has its own row with timeout 5000ms[22m
+    [2m  - waiting for getByRole('listitem').filter({ hasText: /^stars/i })[22m
+    [2m    9 × locator resolved to 0 elements[22m
+    [2m      - unexpected value "0"[22m
+
+
+    [0m [90m 156 |[39m   [36mconst[39m rows [33m=[39m page[33m.[39mgetByRole([32m"listitem"[39m)[33m;[39m
+     [90m 157 |[39m   [36mawait[39m expect(rows[33m.[39mfilter({ hasText[33m:[39m [35m/^injuries/i[39m }))[33m.[39mtoHaveCount([35m1[39m[33m,[39m { timeout[33m:[39m [35m15[39m_000 })[33m;[39m
+    [31m[1m>[22m[39m[90m 158 |[39m   [36mawait[39m expect(rows[33m.[39mfilter({ hasText[33m:[39m [35m/^stars/i[39m })[33m,[39m [32m"the star list has its own row"[39m)[33m.[39mtoHaveCount([35m1[39m)[33m;[39m
+     [90m     |[39m                                                                                      [31m[1m^[22m[39m
+     [90m 159 |[39m   [36mawait[39m expect(rows[33m.[39mfilter({ hasText[33m:[39m [35m/^head.coaches/i[39m })[33m,[39m [32m"so does the head-coach refresh"[39m)[33m.[39mtoHaveCount([35m1[39m)[33m;[39m
+     [90m 160 |[39m })[33m;[39m
+     [90m 161 |[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web/e2e/stars.spec.ts:158:86[22m
+
+[2m    Error Context: test-results/stars-ST8-Settings-shows-w-053f4-coaches-were-last-refreshed/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/stars-ST8-Settings-shows-w-053f4-coaches-were-last-refreshed/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/stars-ST8-Settings-shows-w-053f4-coaches-were-last-refreshed/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  17 failed[39m
+[31m    e2e/stars.spec.ts:42:9 › phone › ST1 the row names the stars who are out or doubtful, with how long ago that was seen [39m
+[31m    e2e/stars.spec.ts:57:9 › phone › ST2 more than three: three names, then how many more; a QB already in the QB alert is not repeated; a long name never widens the page [39m
+[31m    e2e/stars.spec.ts:72:9 › phone › ST3 the row is silent only when it is known that no star is out; not known is said [39m
+[31m    e2e/stars.spec.ts:92:9 › phone › ST4 the game screen lists both clubs' five stars with each one's status, and says when a list is older [39m
+[31m    e2e/stars.spec.ts:120:9 › phone › ST5 a club with no star list says so [2m─────────────────────────[22m[39m
+[31m    e2e/stars.spec.ts:129:9 › phone › ST6 before the week's first injury report, the screen says the report is not out yet [39m
+[31m    e2e/stars.spec.ts:140:11 › phone › ST7 accessibility (dark): no serious or critical axe issue on the board or the game screen [39m
+[31m    e2e/stars.spec.ts:140:11 › phone › ST7 accessibility (light): no serious or critical axe issue on the board or the game screen [39m
+[31m    e2e/stars.spec.ts:42:9 › desktop › ST1 the row names the stars who are out or doubtful, with how long ago that was seen [39m
+[31m    e2e/stars.spec.ts:57:9 › desktop › ST2 more than three: three names, then how many more; a QB already in the QB alert is not repeated; a long name never widens the page [39m
+[31m    e2e/stars.spec.ts:72:9 › desktop › ST3 the row is silent only when it is known that no star is out; not known is said [39m
+[31m    e2e/stars.spec.ts:92:9 › desktop › ST4 the game screen lists both clubs' five stars with each one's status, and says when a list is older [39m
+[31m    e2e/stars.spec.ts:120:9 › desktop › ST5 a club with no star list says so [2m───────────────────────[22m[39m
+[31m    e2e/stars.spec.ts:129:9 › desktop › ST6 before the week's first injury report, the screen says the report is not out yet [39m
+[31m    e2e/stars.spec.ts:140:11 › desktop › ST7 accessibility (dark): no serious or critical axe issue on the board or the game screen [39m
+[31m    e2e/stars.spec.ts:140:11 › desktop › ST7 accessibility (light): no serious or critical axe issue on the board or the game screen [39m
+[31m    e2e/stars.spec.ts:154:5 › ST8 Settings shows when the star list and the head coaches were last refreshed [39m
+run exit=1

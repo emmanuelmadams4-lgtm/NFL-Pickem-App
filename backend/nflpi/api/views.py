@@ -2,11 +2,13 @@
 
 from collections import defaultdict
 from datetime import UTC, datetime
+from unicodedata import category
 
 import numpy as np
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from nflpi.analytics import stars
 from nflpi.analytics.metrics import calibration, wilson_ci
 from nflpi.api import schemas as s
 from nflpi.ingestion.service import freshness
@@ -27,6 +29,21 @@ from nflpi.models import (
 from nflpi.predictions import sheet
 
 ALERT_STATUSES = ("Out", "Doubtful", "Questionable")
+
+
+def _clean_star_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return " ".join("".join(char for char in value if category(char) not in {"Cc", "Cf"}).split())
+
+
+def _star_status(row: dict) -> s.StarStatus:
+    return s.StarStatus(
+        team=row["team"], player=_clean_star_text(row["player"]) or "",
+        position=_clean_star_text(row["position"]), slot=row["slot"], rank=row["rank"],
+        status=_clean_star_text(row["status"]), injury=_clean_star_text(row["injury"]),
+        observed_at=row["observed_at"],
+    )
 
 
 def now_utc() -> datetime:
@@ -178,6 +195,7 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
             for r in inj.get(team, [])
             if r.position == "QB" and r.report_status in ALERT_STATUSES
         ]
+        star_data = stars.stars_out(session, g.game_id, now)
         out.append(
             s.GameSummary(
                 game_id=g.game_id,
@@ -210,6 +228,10 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                     for team in (g.away_team, g.home_team)
                     for r in inj.get(team, [])
                     if r.report_status in ALERT_STATUSES
+                ),
+                stars_out=s.StarsOut(
+                    out=[_star_status(row) for row in star_data["out"]],
+                    reports_seen=star_data["reports_seen"], checked_at=star_data["checked_at"],
                 ),
                 weather=_weather(g, wx.get(g.game_id)),
             )
@@ -330,11 +352,17 @@ def game_detail(session: Session, game_id: str) -> s.GameDetail | None:
         (r for team in (g.away_team, g.home_team) for r in injuries.get(team, [])),
         key=lambda r: (r.team != g.away_team, rank.get(r.report_status or "", 3), r.position or ""),
     )
+    star_data = stars.game_stars(session, game_id, now)
     return s.GameDetail(
         **base.model_dump(),
         home_form=home_form,
         away_form=away_form,
         injuries=[s.InjuryOut.model_validate(r, from_attributes=True) for r in inj_rows],
+        stars=[
+            s.TeamStars(team=club["team"], stars_week=club["stars_week"],
+                        stars=[_star_status(row) for row in club["stars"]])
+            for club in star_data["teams"]
+        ],
         market_history=[
             s.MarketOut(
                 observed_at=m.observed_at,

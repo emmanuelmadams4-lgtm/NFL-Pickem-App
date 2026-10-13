@@ -631,11 +631,14 @@ export interface components {
             qb_alerts: string[];
             /** Injury Count */
             injury_count: number;
+            stars_out: components["schemas"]["StarsOut"];
             weather: components["schemas"]["WeatherOut"] | null;
             home_form: components["schemas"]["TeamForm"];
             away_form: components["schemas"]["TeamForm"];
             /** Injuries */
             injuries: components["schemas"]["InjuryOut"][];
+            /** Stars */
+            stars: components["schemas"]["TeamStars"][];
             /** Market History */
             market_history: components["schemas"]["MarketOut"][];
             /** Prediction History */
@@ -731,6 +734,7 @@ export interface components {
             qb_alerts: string[];
             /** Injury Count */
             injury_count: number;
+            stars_out: components["schemas"]["StarsOut"];
             weather: components["schemas"]["WeatherOut"] | null;
         };
         /** HTTPValidationError */
@@ -1259,6 +1263,37 @@ export interface components {
             /** Rows */
             rows: components["schemas"]["StandingOut"][];
         };
+        /** StarStatus */
+        StarStatus: {
+            /** Team */
+            team: string;
+            /** Player */
+            player: string;
+            /** Position */
+            position: string | null;
+            /**
+             * Slot
+             * @enum {string}
+             */
+            slot: "qb" | "off" | "def";
+            /** Rank */
+            rank: number;
+            /** Status */
+            status: string | null;
+            /** Injury */
+            injury: string | null;
+            /** Observed At */
+            observed_at: string | null;
+        };
+        /** StarsOut */
+        StarsOut: {
+            /** Out */
+            out: components["schemas"]["StarStatus"][];
+            /** Reports Seen */
+            reports_seen: number;
+            /** Checked At */
+            checked_at: string | null;
+        };
         /** Tally */
         Tally: {
             /** Correct */
@@ -1319,6 +1354,15 @@ export interface components {
             color2: string;
             /** Logo Url */
             logo_url: string;
+        };
+        /** TeamStars */
+        TeamStars: {
+            /** Team */
+            team: string;
+            /** Stars Week */
+            stars_week: number | null;
+            /** Stars */
+            stars: components["schemas"]["StarStatus"][];
         };
         /** ValidationError */
         ValidationError: {

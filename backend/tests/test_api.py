@@ -184,7 +184,10 @@ def test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them
     assert row.stars_out.reports_seen == 4
     assert row.stars_out.out[1].observed_at == game.kickoff_utc - timedelta(hours=30)
     assert row.prediction == game.prediction and row.sheet == game.sheet  # a star out never moves the pick (D24)
-    assert [g.stars_out.out for g in after.games[1:]] == [[], []]  # other games: nobody listed
+    clubs = {game.away.abbr, game.home.abbr}
+    for other in after.games[1:]:  # another game lists a star only when his club plays in it
+        playing = {other.away.abbr, other.home.abbr}
+        assert {r.team for r in other.stars_out.out} <= playing & clubs
 
     detail = s.GameDetail.model_validate(client.get(f"/api/games/{game.game_id}").json())
     away, home = detail.stars
