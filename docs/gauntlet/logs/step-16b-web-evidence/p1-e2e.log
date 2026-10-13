@@ -1,0 +1,3 @@
+[WebServer] RuntimeError: Open-Meteo unreachable (e2e fixture)
+  2 skipped
+  147 passed (4.7m)

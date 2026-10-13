@@ -1,0 +1,7 @@
+pytest exit=0 [32m[32m[1m1293 passed[0m[32m in 280.12s (0:04:40)[0m[0m
+ruff exit=0
+alembic exit=0
+gen:api no-drift exit=0
+typecheck exit=0
+e2e exit=0   2 skipped   147 passed (4.7m) 
+HEAD 78093c2 dirty=       0
