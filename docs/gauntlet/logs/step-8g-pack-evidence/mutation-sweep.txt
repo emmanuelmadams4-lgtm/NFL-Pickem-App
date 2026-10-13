@@ -1,0 +1,25 @@
+M1 no NFKC: CAUGHT | 1 failed, 21 passed in 15.73s
+M2 brackets only < >: CAUGHT | 1 failed, 14 passed in 5.13s
+M3 keep ampersand: CAUGHT | 1 failed, 20 passed in 5.57s
+M4 no final cut: CAUGHT | 1 failed, 32 passed in 4.61s
+M5 no char cap: CAUGHT | 1 failed, 59 passed in 19.07s
+M6 no item cap: CAUGHT | 1 failed, 58 passed in 21.95s
+M7 source from row: CAUGHT | 1 failed, 5 passed in 5.69s
+M8 title raw: CAUGHT | 1 failed, 8 passed in 9.93s
+M9 extract raw: CAUGHT | 1 failed, 8 passed in 4.51s
+M10 empty title kept: CAUGHT | 1 failed, 6 passed in 4.43s
+M11 age unknown -> 0: CAUGHT | 1 failed, 7 passed in 5.75s
+M12 note has bracket: CAUGHT | 1 failed, 34 passed in 11.62s
+M13 system line weak: CAUGHT | 1 failed, 4 passed in 6.04s
+M14 news key always: CAUGHT | 1 failed in 17.14s
+M15 system always extended: CAUGHT | 
+M16 system never extended: CAUGHT | 1 failed, 4 passed in 49.72s
+M17 route query home only: CAUGHT | 1 failed in 10.32s
+M18 query no source allowlist: CAUGHT | 1 failed, 2 passed in 9.26s
+M19 oldest first: CAUGHT | 1 failed in 7.60s
+M20 pack ignores shared query: CAUGHT | 1 failed, 1 passed in 5.10s
+M21 label order: CAUGHT | 1 failed, 1 passed in 6.36s
+M22 future age: CAUGHT | 1 failed, 69 passed in 37.07s
+M23 news errors not caught: CAUGHT | 1 failed, 70 passed in 21.43s
+M24 tag name kept: CAUGHT | 1 failed, 13 passed in 10.25s
+M25 bare except logs message: CAUGHT | 1 failed, 70 passed in 26.05s
