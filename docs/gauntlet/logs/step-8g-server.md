@@ -62,3 +62,19 @@ cd backend && DATABASE_URL=postgresql+psycopg://nflpi:nflpi@127.0.0.1:15441/nflp
  && uvx ruff check nflpi tests migrations && uv run alembic check ; cd .. && npm run gen:api (no drift)
 ```
 Baseline on `main@92adfbc`: recorded in section 3.
+
+## 3. IMPLEMENTATION
+`IMPLEMENTATION_PROVIDER: Claude (Sonnet subagents), because Codex refused.` `codex exec` was tried (twice: the first call had no stdin; the second reached the service): `The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account`; nothing was built by it. `CLIMBS: none. STRIKES: none.` No Fable, no astra, no Opus builder. Builders never critic.
+
+| WO | What | Builder | Result |
+|---|---|---|---|
+| WO-1 `wo-1.md` | `news_worker.py`, 2 lines in `jobs.py` | Sonnet subagent (try 1) | Written to the order; its sandbox blocked `uv`, so I ran the proof: 19 of 21 passed; both failures were mistakes in MY tests (a `json <> json` comparison; an off-by-one in the sweep count), fixed in the tests: 21 passed |
+| WO-2 `wo-2.md` | `api/news.py`, `Source.name`, 2 lines in `api/main.py` | Sonnet subagent (try 1) | Written to the order; I ran the proof: 59 of 59 passed on the first run. One addition by the builder: an item whose source id is unknown is skipped (the SQL already excludes them) |
+
+* **Diff read by me** against the order: only the allowed files; `jobs.py` +2 lines (limit 10); `main.py` +2 lines (limit: one import and one include); no `schemas.py`, `views.py`, `client.ts` or `apps/web` touched. The model of Dwight's M1 (JSONB cast with bound values), M2 (clean_text first, `<`/`>` last), M3 (plain `str | None`, `re.fullmatch`, fixed 422), M4 (the thread opens its own session) are all visible in the code.
+* **Baseline** (before the lane, `main@92adfbc`): the suite on the lane's last-landed base was 1089 tests; after this step the gate shows 1142 passed (53 new).
+* **Proof run of the first full gate** (`g0`, deleted after use because the alembic line was wrong: `alembic check` on the test database, which pytest builds with `create_all`, says "not up to date"; the gate now checks on a fresh scratch database, upgrade head then check, the way step 8c did): `1142 passed in 243 s`, ruff clean, `gen:api` regenerated `openapi.json` and `api-types.ts` (+140 and +88 lines, only the new route and two models). Committed.
+* **Hand check (real network, once each):** see section 5.
+
+## 4. CLEANUP
+Scope-locked `/refactor` read of the three production files this step wrote or changed (`news_worker.py` 115 lines, `api/news.py` 90, the `Source` change). One simplification: the nested `try/except: pass` around `session.rollback()` in the worker's `step()` is gone (the `with` block closes the session, which rolls back); no behaviour change, 21 worker tests and ruff re-run. No change needed: `api/news.py` (one route, one query, named constants, functions under 25 lines), `sources.py` (a defaulted field, no duplication). Left alone on purpose: a row whose title is empty after cleaning is dropped after `LIMIT 5`, so such a reply could hold fewer than 5 (the stored title was already cleaned at ingest, so this needs a hostile row written outside `run_news`; advisory, carried).

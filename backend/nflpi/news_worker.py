@@ -91,11 +91,7 @@ def run_forever(
         with session_factory()() as session:
             try:
                 news_step(session, now(), resolver=resolver, transport=transport, sources=sources)
-            except Exception as exc:  # noqa: BLE001 - keep the news worker alive
-                try:
-                    session.rollback()
-                except Exception:  # noqa: BLE001, S110 - nothing more to do for a broken session
-                    pass
+            except Exception as exc:  # noqa: BLE001 - keep the news worker alive; closing the session rolls back
                 log.warning("news step failed: %s", type(exc).__name__)
 
     sweep()
