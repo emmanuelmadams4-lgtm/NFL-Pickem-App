@@ -46,4 +46,23 @@ AGENTS: ecc:code-reviewer, ecc:security-reviewer, ecc:silent-failure-hunter, ecc
 ## 4. CLEANUP
 `/refactor` pass, scope-locked to the five files this step touched, run as WO-4 on `gpt-6-luna` high (Jev luna 0.64 / sol 0.35 unsure -> lowest; effort xhigh 0.74 -> high). Simplifications: `fetch_guarded` (85 lines, 5 levels) split into `_pin`, `_read_body`, `_handle_response`; `run_news` (70 lines) split into `_is_due` and `_poll`, and the parameter no longer shadows the `sources` module; callables typed; seven parsing limits named; two stale "step 8e/8f" docstrings fixed; one redundant `session.add` removed. No behaviour change: 189 tests, same results, ruff clean. Commit `30133da`.
 
-GATE_AND_VERIFICATION_PLACEHOLDER
+## 5. VERIFICATION
+* **Rebased** on `main@53b1c89` (integrator message 04:38Z; the coach fix touched other files; no conflicts). Code commits after the rebase: `2cb2f77` (WO-3 fixes) and `91b195e` (cleanup) are the last production-code commits; everything after them is documents only. Tested HEAD `1848f0f`.
+* **The gate, run twice in a row on `1848f0f` (nothing else ran on the database; `res:gate` held)** (`final1-*.log`, `final2-*.log`, summaries `final1-summary.txt`, `final2-summary.txt`):
+  * `PASS pytest exit=0 :: 372 passed` (run 1: 99.78 s; run 2: 57.93 s; the script fails the run on any skipped test: none). The news tests are 189 of them.
+  * `PASS ruff exit=0 :: All checks passed!` (`ruff check nflpi tests migrations`)
+  * `PASS alembic exit=0 :: No new upgrade operations detected.` (fresh database: up to head, `alembic check`, down to base, up again, check)
+  * `PASS genapi exit=0 :: no drift` (`npm run gen:api`; this lane changes no API route)
+* **Lane guard** (`python3 ~/.claude/bin/lane-guard.py check lanes.md news 53b1c89 --repo .`, `lane-guard-final.log`), as printed: `OUT OF LANE: backend/nflpi/config.py: owned by lane alerts` (one new setting `news_contact`, granted), `backend/nflpi/models.py: a seam` (class `NewsItem` appended at the end, granted), `backend/pyproject.toml: a seam` and `backend/uv.lock: a seam` (`feedparser` only, granted), `backend/tests/test_hardening.py: owned by lane alerts` (the one migration-list line, granted); `5 problem(s)`. All five are the wave 4 seam grants and nothing else.
+* **Security (Dwight):** design PASS with changes before any code (section 1). Code review: SEE BELOW.
+* **Fresh critic, Dwight's code verdict, Angela's review, Jev verdict:** SEE BELOW.
+
+## 6. LANDING
+Not done by this lane. The integrator lands (no push, PR or merge here). Nothing was deployed; nothing contacts the live app. The module is not called by anything yet (worker/API/web wiring is wave 5), so landing changes no behaviour of the running app except one new empty table once the migration runs.
+
+## Carried to wave 5 and 8g
+* The worker must ingest teams and stars before calling `run_news` (items stored while those tables are empty stay untagged).
+* 8g (AI pack): every news string is data, not instructions: wrap in `<news_item>` delimiters, SYSTEM line, no tools, existing validator; the web renders text only (no `dangerouslyInnerHTML`), links as `rel="noopener noreferrer"`. `clean_text` leaves a literal `<` from double-encoded entities.
+* Advisories: `r1-fanout.md` items 11 to 19; Dwight's L3 (resolver timeout).
+* Wave 5 decision for the owner: whether short nicknames like "Jags" should be aliases (a miss today, never a wrong tie).
+
