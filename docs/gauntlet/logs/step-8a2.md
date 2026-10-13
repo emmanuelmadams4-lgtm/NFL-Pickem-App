@@ -1,7 +1,7 @@
 # Step 8a2: star players and who is out, on screen (lane web)
 
 GAUNTLET_MODE: DIRECT_COORDINATOR · GAUNTLET_PHASE: ONE_SHOT · tier T2 · Design Gauntlet applies
-Dispatch: hive message `2026-10-13T07-16-38-672Z-f56548`. Worktree `.claude/worktrees/lane-web`, branch `lane/web`, base main `a9ed486`. Coordinator Jim; builder Ryan (Codex); security reviewer Dwight; one fresh critic per round.
+Dispatch: hive message `2026-10-13T07-16-38-672Z-f56548`. Worktree `.claude/worktrees/lane-web`, branch `lane/web`, base main `a9ed486` at the start, `7496685` at landing (replayed six times as main moved). Coordinator Jim; builders Ryan (Codex) for work orders 1 to 7 and Claude Sonnet subagents for 8 to 10; security reviewer Dwight; one fresh critic per round.
 
 ## 1. PLANNING
 
@@ -243,7 +243,7 @@ Logs: `g2-a-*.log`, `g2-b-*.log`. Baseline before the step on the old main: `bas
 
 **Lane-guard** (`lane-guard.log`, against `e51ac48`): `OUT OF LANE: backend/nflpi/ingestion/service.py: owned by lane coaches`, 1 problem. That is the one edit the integrator granted (hive message 08276f: two `STALE_HOURS` entries) and said he accepts; no other finding.
 
-Builders: work orders 1 to 7 were all built by Ryan (Codex). None by Claude.
+Builders: work orders 1 to 7 were all built by Ryan (Codex). Work orders 8 to 10 (below) were built by Claude Sonnet subagents.
 
 Correction to the line above: work orders 8 and 9 (below) were built by Claude Sonnet subagents, because Codex ran out of credits about 09:00 UTC on 2026-10-13 (god's rule, hive message c11d28: a Sonnet subagent builds, never Opus; the coordinator still writes the spec and the failing test and reruns every proof; the builder is never the critic).
 
@@ -330,3 +330,30 @@ Fix (tests only, mine; no production code changed):
 Pair g7 is the landing pair. Both replays were clean (no conflict); `npm run gen:api` after each: no drift; packages installed before each pair because main changed `uv.lock`. Browser checks are 123 because of the four new ST3b and ST3c runs. The backend count grows with main (group, live, star bench, sign-in and news lanes). Main has since moved to `173f26b`, a docs-only commit (`docs/gauntlet/STATE.md`).
 
 **Lane-guard** (`lane-guard.log`, against `7496685`): `OUT OF LANE: backend/nflpi/ingestion/service.py: owned by lane timing`, 1 problem. The same granted edit (two `STALE_HOURS` entries); the lane map now names another owner for that file. No other finding.
+
+### Fresh critic, round 3 on `518b54e`: PASS
+
+A new fresh subagent with no transcript. Report and decisions: `reviews/critic-3.md`. Its own gate run (`critic-c-*.log`): pytest 1209 passed, ruff clean, gen:api no drift, typecheck exit 0, browser 123 passed; load before 11.53 16.75 16.78. No major or critical finding; seven minor and two nits, each decided or carried in the report. No code or test changed after this verdict (this log, the report and the critic's gate logs only).
+
+### Did the review truly pass (Jev, Job 4)
+
+`decide.sh nfl-pickem-lanes web review:web:8a2`: Jev scored 0.6, route "advisor" (grey zone). A read-only Sonnet advisor read the criteria, critic 2's report, the fifteen g7 and critic-c logs and ST3 to ST3c: **PASS, confidence 0.85**. Its residual risks: the security reviewer did not see work orders 9 and 10 (fixed strings and one moved note); no live data refresh; light theme by axe only.
+
+## 6. LANDING
+
+Landing-ready, not landed. Pushing, the pull request, the merge and any deploy are the owner's, through god. Nothing was pushed.
+
+* Commit to land: the head of `lane/web` (this log's commit), on main `7496685`. Code and tests last changed at `fb42c50`; everything after is under `docs/`. Main is at `173f26b` (one docs-only commit, `docs/gauntlet/STATE.md`), so a replay before the merge should be clean; if generated files conflict, take one side and run `npm run gen:api`.
+* Gate on `fb42c50`, three green runs: g7-a, g7-b (mine) and critic-c (the critic's): 1209 backend tests, lint clean, no API type drift, typecheck 0, 123 browser checks.
+* Dwight: PASS (rounds 1 to 3). Fresh critic 3: PASS. Advisor on Job 4: PASS 0.85.
+* Lane-guard: one finding, the granted `ingestion/service.py` edit.
+* `design.md`: no durable change (existing tokens and chip tones only; no new element type).
+* Deployed: nothing. A local PASS is not a deployed PASS; after deploy the Settings freshness rows `stars` and `head_coaches` and one game screen should be looked at on the real data.
+
+Carried, for god:
+1. `/api/health` now reads "degraded" when the star list is over 8 days old or the head coaches over 30, also before week 1. If that should not page anyone in the off-season, it is one line in a later step.
+2. The known defence gap (Chris Jones 4th for Kansas City 2025) is shown as the data has it; not re-ranked here.
+3. A club with no report rows reads "Not on injury report" once the other club has any (assumption: the weekly report arrives whole).
+4. For the next step that touches the card or `stars.spec.ts` (step 15): type the replaced `stars_out` object, one server test for the silent state, two nits in `game-card.tsx`, one in `views.py`.
+5. `game_stars` is read twice for a game screen (step 13, speed).
+6. Flaky browser check P6 in `pwa.spec.ts` (seen once in CI on main, not in any of this step's runs): fix in the test when that file is next touched.
