@@ -98,7 +98,7 @@ def pushes(monkeypatch) -> FakeWebPush:
 
 @pytest.fixture
 def reminder_game(session, client, pushes):
-    """One unpicked game kicking off at KICKOFF and a 60-minute reminder window. No subscription yet."""
+    """One game kicking off at KICKOFF (its day's first) and a 60-minute reminder window. No subscription yet."""
     service.ingest_schedules(session, [game_row("2026-10-18", "13:00")])
     assert client.put("/api/settings", json={"reminder_minutes": 60}).status_code == 200
     return session
@@ -252,7 +252,7 @@ def test_reminder_tick_sends_reminders_without_network_ingest(reminder_game, pus
     subscribe(reminder_game)
 
     jobs.tick(reminder_game, HALF_HOUR_BEFORE)
-    assert pushes.titles() == ["No pick yet: MIA @ BUF"]
+    assert pushes.titles() == ["Game today: kickoff 1:00 PM ET"]
     assert fetched == []
     assert jobs.TICK_SECONDS <= 5 * 60
 
@@ -268,7 +268,7 @@ def test_one_broken_subscription_does_not_stop_reminders_or_the_heartbeat(remind
 
     monkeypatch.setattr(push, "webpush", flaky)
     jobs.tick(reminder_game, HALF_HOUR_BEFORE)
-    assert pushes.titles() == ["No pick yet: MIA @ BUF"]
+    assert pushes.titles() == ["Game today: kickoff 1:00 PM ET"]
     assert reminder_game.get(AppSetting, jobs.HEARTBEAT_KEY) is not None
 
 
@@ -284,7 +284,7 @@ def test_ingest_failure_in_the_cycle_does_not_skip_reminders(session, client, pu
     monkeypatch.setattr(jobs, "ingest", nflverse_down)
     with contextlib.suppress(Exception):  # whether the cycle re-raises the ingest error is not part of the criterion
         jobs.cycle(session)
-    assert pushes.titles() == ["No pick yet: MIA @ BUF"]
+    assert pushes.titles() == [f"Game today: kickoff {soon.strftime('%-I:%M %p')} ET"]
 
 
 # A7 ---------------------------------------------------------------------------------------------------------------

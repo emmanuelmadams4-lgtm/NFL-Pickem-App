@@ -146,12 +146,12 @@ def test_n4_a_label_change_is_alerted_even_when_the_win_chance_barely_moves(load
     events = engine.refresh_predictions(loaded, game_ids=[game.game_id])
     assert [e.game_id for e in events] == [game.game_id]
     assert push.alert_prediction_changes(loaded, events) == 1
-    words = {"coin_flip": "coin flip", "tough_matchup": "tough matchup", "easy_pick": "easy pick"}
+    words = {"coin_flip": "a coin flip", "tough_matchup": "a tough matchup", "easy_pick": "an easy pick"}
     from nflpi.analytics.metrics import pick_label
 
     alert = sent(pushes)[0]
-    assert alert["title"] == f"Now a {words[pick_label(favourite)]}: {game.away_team} @ {game.home_team}"
-    assert f"Was a {words[pick_label(other)]}" in alert["body"]
+    assert alert["title"] == f"Now {words[pick_label(favourite)]}: {game.away_team} @ {game.home_team}"
+    assert f"Was {words[pick_label(other)]}" in alert["body"]
 
 
 def test_n5_no_change_alert_once_the_game_has_kicked_off(loaded, pushes):  # noqa: F811
