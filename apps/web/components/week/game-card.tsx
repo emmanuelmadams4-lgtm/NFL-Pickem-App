@@ -63,11 +63,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
   const away = game.away_score;
   const home = game.home_score;
   const stars = game.stars_out.out.filter((star) => !star.qb_alert);
-  const shownStars = stars.slice(0, 3);
-  const latestSeen = shownStars.reduce<string | null>(
-    (latest, star) => star.observed_at && (!latest || star.observed_at > latest) ? star.observed_at : latest,
-    null,
-  );
+  const star = stars[0];
   const starNote = game.stars_out.no_list.length > 0
     ? `No star list yet for ${game.stars_out.no_list.join(", ")}`
     : game.stars_out.reports_seen === 0 ? "Injury report not in yet" : null;
@@ -198,22 +194,16 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
           {game.qb_alerts.length > 2 && <span className="text-label text-subtle">+{game.qb_alerts.length - 2} more</span>}
         </div>
 
-        {game.status === "scheduled" && (stars.length > 0 ? (
+        {game.status === "scheduled" && (star ? (
           <div role="group" aria-label="Stars out" className="flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-label text-text-2">
             <span className="shrink-0 font-medium text-text">Stars out</span>
-            <span className="min-w-0 flex-1 truncate">
-              {shownStars.map((star, index) => (
-                <span key={`${star.team}-${star.slot}-${star.rank}`}>
-                  {index > 0 && " · "}{star.team} {star.player}
-                  {star.position && <> <span className="text-subtle">{star.position}</span></>}
-                  {star.status && <> <span className={statusTone(star.status) === "bad" ? "text-bad" : "text-warn"}>{star.status}</span></>}
-                </span>
-              ))}
-            </span>
-            {stars.length > 3 && <span className="shrink-0 text-subtle">+{stars.length - 3} more</span>}
-            {latestSeen && <span className="shrink-0 text-subtle">seen {ago(latestSeen)}</span>}
+            <span className="min-w-0 truncate">{star.team} {star.player}</span>
+            {star.position && <span className="shrink-0 text-subtle">{star.position}</span>}
+            {star.status && <span className={cx("shrink-0", statusTone(star.status) === "bad" ? "text-bad" : "text-warn")}>{star.status}</span>}
+            {stars.length > 1 && <span className="shrink-0 text-subtle">+{stars.length - 1} more</span>}
+            {star.observed_at && <span className="shrink-0 text-subtle">{ago(star.observed_at)}</span>}
             {game.stars_out.no_list.map((club) => (
-              <span key={club} className="shrink-0 text-text-2">{club}: no star list</span>
+              <span key={club} className="shrink-0 text-text-2">{club}: no list</span>
             ))}
           </div>
         ) : starNote ? <p className="text-label text-text-2">{starNote}</p> : null)}

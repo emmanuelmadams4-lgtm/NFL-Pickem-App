@@ -241,9 +241,15 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                 stars_out=s.StarsOut(
                     out=[
                         _star_status(row)
-                        for club in star_data["teams"]
-                        for row in club["stars"]
-                        if (row["status"] or "").lower() in stars.OUT_STATUSES
+                        for row in sorted(
+                            (
+                                row
+                                for club in star_data["teams"]
+                                for row in club["stars"]
+                                if (row["status"] or "").lower() in stars.OUT_STATUSES
+                            ),
+                            key=lambda row: (row["status"] or "").lower() != "out",
+                        )
                     ],
                     no_list=no_list,
                     reports_seen=star_data["reports_seen"], checked_at=star_data["checked_at"],
