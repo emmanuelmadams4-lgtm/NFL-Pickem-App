@@ -308,3 +308,25 @@ Security: work orders 9 and 10 came after Dwight's round 3. They change fixed st
 Logs: `g5-a-*.log`, `g5-b-*.log`. The backend count is 1081 because main gained the group and live lanes' tests. Main has since moved to `6359c7f` (lane starb: two bench files and logs, none of this lane's files), so no further replay was needed for the pair.
 
 **Lane-guard** (`lane-guard.log`, against `92adfbc`): `OUT OF LANE: backend/nflpi/ingestion/service.py: owned by lane coaches`, 1 problem: the granted edit, nothing else.
+
+### Fresh critic, round 2 on `20b82cf`: FAIL (one major, in a test)
+
+Report and decisions: `reviews/critic-2.md`. Its own gate run was green (`critic-b-*.log`: 1081 passed, 119 browser checks; load 11.52 19.55 16.23 after a ten-minute wait). It confirmed critic 1's F1 is fixed. Major: ST3's "Injury report not in yet" assertion sat behind a condition the fixture never met, so that state and the silent state were never checked in a browser.
+
+Fix (tests only, mine; no production code changed):
+* `stars.spec.ts` ST3b and ST3c replace the API's stars block for one game and check both states at both widths, unconditionally. First attempt (reload inside ST3) failed for a test reason (the saved week was shown, the replaced answer was never fetched): `st3-e2e.log` first run 2 failed; as separate tests with fresh storage: 21 passed. Without the replaced answer the card shows the stars line, so the checks do fail when the state is absent.
+* `test_api.py`: the worker test also makes the star refresh raise and checks the round goes on (critic's minor 2).
+* `e2e_seed.py`: stale comment fixed.
+
+### Landing gate pairs after the fix (main moved twice more)
+
+| Run | HEAD, base | Load before (1, 5, 15 min) | pytest | ruff | gen:api | typecheck | browser |
+|---|---|---|---|---|---|---|---|
+| g6-a | `d22f22f` on `b387f33` | 6.01 6.12 7.58 | 1125 passed | clean | no drift | exit 0 | 123 passed |
+| g6-b | same | 5.45 7.23 7.78 | 1125 passed | clean | no drift | exit 0 | 123 passed |
+| g7-a | `fb42c50` on `7496685` | 11.85 8.93 8.32 | 1209 passed | clean | no drift | exit 0 | 123 passed |
+| g7-b | same | 9.84 9.68 8.97 | 1209 passed | clean | no drift | exit 0 | 123 passed |
+
+Pair g7 is the landing pair. Both replays were clean (no conflict); `npm run gen:api` after each: no drift; packages installed before each pair because main changed `uv.lock`. Browser checks are 123 because of the four new ST3b and ST3c runs. The backend count grows with main (group, live, star bench, sign-in and news lanes). Main has since moved to `173f26b`, a docs-only commit (`docs/gauntlet/STATE.md`).
+
+**Lane-guard** (`lane-guard.log`, against `7496685`): `OUT OF LANE: backend/nflpi/ingestion/service.py: owned by lane timing`, 1 problem. The same granted edit (two `STALE_HOURS` entries); the lane map now names another owner for that file. No other finding.
