@@ -52,7 +52,7 @@ def live(session: Annotated[Session, Depends(get_session)]) -> LiveOut:
     eastern = ZoneInfo("America/New_York")
     today = now.astimezone(eastern).date()
     today_start = datetime.combine(today, datetime.min.time(), tzinfo=eastern).astimezone(UTC)
-    lower = max(today_start, now - LIVE_AGE)
+    lower = min(today_start, now - LIVE_AGE)
     candidates = session.scalars(
         select(Game).where(Game.kickoff_utc >= lower, Game.kickoff_utc <= now + timedelta(hours=1))
     ).all()

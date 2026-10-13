@@ -5,7 +5,7 @@ Server only. Reads `step-15a.md` ("carried to the wiring step"). Adds `backend/n
 ## Worker (`live_worker.py`)
 It runs in its OWN daemon thread started from `jobs.loop` (one call). A hung source can therefore never stall the main loop (the 300 s tick and the refresh cycle). Each wake (5 s) opens its own session, never shares one with the main loop.
 
-* **W1 in play.** A game is "in play" at `now` when `kickoff <= now < kickoff + 5 h` and its newest `live_states` row is not `post`. A "window" is the same test with `kickoff <= now + lead`.
+* **W1 in play.** A game is "in play" at `now` when `kickoff <= now < kickoff + 8 h` (was 5 h; changed after review: a weather delay can pass 5 h, and the API shows a game for 8 h) and its newest `live_states` row is not `post`, or is `post` with `home_wp` still null (the final summary is retried until stored). A "window" is the same test with `kickoff <= now + lead`.
 * **W2 no game, no call.** With no game in play and none inside a quote window, a wake makes ZERO fetches of any source and writes nothing.
 * **W3 ESPN.** While a game is in play, every wake calls `refresh_live_games` (the adapter spaces real fetches 30 s apart and skips quietly inside the gap). Over a 3 h game: 300 to 360 real scoreboard fetches.
 * **W4 quotes (frozen schedule).** Kalshi: only inside a 2 h lead window or in play; the worker spaces its attempts 120 s apart (adapter floor 60 s). Odds API: only inside a 24 h lead window or in play; spaced 6 h apart (adapter floor 6 h). The next-due time is set after every attempt, whatever the result.
@@ -37,3 +37,7 @@ Auth: unchanged dependency. Input: none (no parameters). DB: ORM only. External 
 * H5 `kalshi_home_prob` also needs the quote ROW to be at most 15 min old (A5 amended).
 * H6 (owner yes for Kalshi/Odds): recorded as D59 in OWNER_DECISIONS_2026-10-12.md ("Kalshi is fine", Odds key supplied); no new setting. For god.
 * LOW: first ESPN back-off stays 15 min (15a rule); the thread logs "live worker started"; the API reads the newest row only for games in the kickoff window.
+
+## Review round 1 (ecc:code-reviewer, ecc:silent-failure-hunter) and what was done
+Fixed with red tests first: (1) the API candidate floor was `max(today_start, now-8h)` (Codex deviated from the work order, which said `min`): an `in` game past midnight Eastern vanished, and an early final vanished by 10 PM; now `min`, two tests. (2) worker window 5 h -> 8 h to match the API. (3) a `post` row with null `home_wp` stays in the window so the summary is retried (silent-failure #3).
+Carried, with reasons (see step-15d.md): null `home_win_prob` after a failed or deadline-cut summary is kept as null (project rule: missing stays missing; Dwight H2 accepted either); log rate limit; `rollback` inside the failure handler; no thread supervision; ESPN gap while a slow quote source runs; schedule times use the step's start time; quote row older than 15 min is null even if unchanged (Dwight H5).

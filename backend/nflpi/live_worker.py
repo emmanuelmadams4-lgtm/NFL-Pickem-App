@@ -16,7 +16,7 @@ from nflpi.models import Game, IngestionRun, LiveState
 
 log = logging.getLogger(__name__)
 WAKE_SECONDS = 5
-MAX_GAME = timedelta(hours=5)
+MAX_GAME = timedelta(hours=8)
 ESPN_DEADLINE = 45
 QUOTE_DEADLINE = 45
 KALSHI_EVERY = timedelta(seconds=120)
@@ -53,7 +53,7 @@ def _candidates(session: Session, now: datetime) -> list[tuple[datetime, LiveSta
 
 def _any_in_window(candidates: list[tuple[datetime, LiveState | None]], now: datetime, lead: timedelta) -> bool:
     return any(
-        now - MAX_GAME < kickoff <= now + lead and (state is None or state.state != "post")
+        now - MAX_GAME < kickoff <= now + lead and (state is None or state.state != "post" or state.home_wp is None)
         for kickoff, state in candidates
     )
 

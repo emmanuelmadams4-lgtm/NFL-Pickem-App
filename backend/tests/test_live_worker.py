@@ -98,7 +98,7 @@ def test_a_week_of_wakes_in_the_off_season_makes_no_call(session):
 
 @pytest.mark.parametrize(
     "kickoff_offset",
-    [timedelta(hours=-5, seconds=-1), timedelta(days=-3), timedelta(hours=25), timedelta(days=4)],
+    [timedelta(hours=-8, seconds=-1), timedelta(days=-3), timedelta(hours=25), timedelta(days=4)],
 )
 def test_a_game_outside_every_window_makes_no_call(session, kickoff_offset):
     buf_la(session, T0 + kickoff_offset)
@@ -107,7 +107,7 @@ def test_a_game_outside_every_window_makes_no_call(session, kickoff_offset):
     assert net.calls == []
 
 
-def test_a_game_that_is_final_is_not_in_play_so_nothing_is_fetched_for_it(session):
+def test_a_final_game_with_its_win_probability_is_not_in_play_so_nothing_is_fetched_for_it(session):
     game = buf_la(session)
     store.add_live_state(
         session,
@@ -129,13 +129,40 @@ def test_a_game_that_is_final_is_not_in_play_so_nothing_is_fetched_for_it(sessio
     assert net.calls == []
 
 
-def test_a_game_kicking_off_now_is_in_play_and_five_hours_after_kickoff_it_is_not(session):
+def test_a_game_kicking_off_now_is_in_play_and_eight_hours_after_kickoff_it_is_not(session):
     buf_la(session)
     assert live_worker.in_window(session, KICKOFF, timedelta(0))
-    assert live_worker.in_window(session, KICKOFF + timedelta(hours=5) - timedelta(seconds=1), timedelta(0))
-    assert not live_worker.in_window(session, KICKOFF + timedelta(hours=5), timedelta(0))
+    assert live_worker.in_window(session, KICKOFF + timedelta(hours=8) - timedelta(seconds=1), timedelta(0))
+    assert not live_worker.in_window(session, KICKOFF + timedelta(hours=8), timedelta(0))
     assert not live_worker.in_window(session, KICKOFF - timedelta(seconds=1), timedelta(0))
     assert live_worker.in_window(session, KICKOFF - timedelta(hours=2), timedelta(hours=2))
+
+
+def test_a_final_game_still_missing_its_final_win_probability_stays_in_play_until_the_summary_is_stored(session):
+    game = buf_la(session)
+    store.add_live_state(
+        session,
+        game_id=game.game_id,
+        event_id="401872994",
+        fetched_at=T0,
+        state="post",
+        home_score=34,
+        away_score=37,
+        period=4,
+        clock="0:00",
+        home_wp=None,
+        tie_wp=None,
+        last_play_id="1",
+    )
+    session.commit()
+    assert live_worker.in_window(session, T0 + timedelta(minutes=1), timedelta(0))
+    final = {
+        espn.SCOREBOARD_URL: recorded("espn_scoreboard_final.json"),
+        espn.summary_url("401872994"): recorded("espn_summary_buf_lar.json"),
+    }
+    step(session, T0 + timedelta(minutes=1), net=Net(final))
+    assert session.scalars(select(LiveState).order_by(LiveState.id.desc())).first().home_wp is not None
+    assert not live_worker.in_window(session, T0 + timedelta(minutes=2), timedelta(0))
 
 
 # ----------------------------------------------------------------------------------------------- W3
@@ -472,7 +499,7 @@ def test_the_worker_loop_starts_the_live_thread_once(monkeypatch):
 
 def test_the_frozen_schedule_numbers():
     assert live_worker.WAKE_SECONDS == 5
-    assert live_worker.MAX_GAME == timedelta(hours=5)
+    assert live_worker.MAX_GAME == timedelta(hours=8)
     assert live_worker.KALSHI_EVERY == timedelta(seconds=120) and live_worker.KALSHI_LEAD == timedelta(hours=2)
     assert live_worker.ODDS_EVERY == timedelta(hours=6) and live_worker.ODDS_LEAD == timedelta(hours=24)
     assert live_worker.STALE_RUNNING == timedelta(minutes=10)

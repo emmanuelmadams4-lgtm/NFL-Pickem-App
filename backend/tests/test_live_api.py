@@ -129,6 +129,25 @@ def test_a_game_that_is_8_hours_old_is_still_shown_and_one_a_second_older_is_not
     assert ids(body(client)) == ["2026_05_edge"]
 
 
+def test_a_game_that_runs_past_midnight_eastern_stays_in_the_reply(monkeypatch, session, client):
+    late = datetime(2026, 10, 14, 4, 30, tzinfo=UTC)  # 12:30 AM Eastern on the 14th
+    monkeypatch.setattr(live_api, "_now", lambda: late)
+    game(
+        session, "mnf", datetime(2026, 10, 14, 0, 15, tzinfo=UTC), "in", home="LA", away="BUF"
+    )  # kicked off 8:15 PM ET
+    game(session, "snf", datetime(2026, 10, 13, 23, 20, tzinfo=UTC), "lost", home="DAL", away="TB", home_wp=None)
+    assert ids(body(client)) == ["2026_05_snf", "2026_05_mnf"]
+
+
+def test_an_early_game_that_finished_today_is_still_listed_late_in_the_evening(monkeypatch, session, client):
+    night = datetime(2026, 10, 14, 2, 0, tzinfo=UTC)  # 10:00 PM Eastern on the 13th
+    monkeypatch.setattr(live_api, "_now", lambda: night)
+    game(
+        session, "early", datetime(2026, 10, 13, 17, 0, tzinfo=UTC), "post", home="WAS", away="NYG"
+    )  # 1 PM ET, 9 h ago
+    assert ids(body(client)) == ["2026_05_early"]
+
+
 def test_the_reply_holds_at_most_20_games_in_kickoff_order(session, client):
     for i in range(25):
         game(session, f"g{i:02d}", NOW - timedelta(hours=2, minutes=i), "in", home="LA")
