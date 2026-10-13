@@ -138,7 +138,7 @@ def test_p4_games_of_another_season_never_match(games):
     ("Buf,Favorite,3", "Buf,favorite,3", "side"),  # the three words are exact
     ("Buf,Favorite,3", "Buf,,3", "side"),
     ("Mia,,none,,5", "Mia,Buf,none,,5", "pick"),  # none with a pick
-    ("Mia,,none,,5", "Mia,,none,2,5", "confidence"),  # none with a confidence
+    ("Mia,,none,,5", "Mia,,none,1,5", "confidence"),  # none with a confidence (1 is free for this member)
     ("Buf,Favorite,3", ",Favorite,3", "pick"),  # a side with no pick
     ("Buf,Favorite,3", "Buf,Favorite,", "confidence"),  # a pick with no confidence
 ])
@@ -195,6 +195,7 @@ def test_p8_one_row_per_member_and_game(games):
     assert "confidence" not in message
     # the same member after name cleaning is still the same member
     refused(games, picks(ROW, ROW.replace("Ann A", "Ann\u200b  A")), "line 3: .*twice")
+    refused(games, picks(ROW.replace("Ann A", "Ann\u200b  A"), ROW), "line 3: .*twice")
 
 
 def test_p9_a_member_uses_each_confidence_number_once_a_week(games):
@@ -250,6 +251,8 @@ def test_n2_text_that_is_not_utf8_is_refused_and_a_byte_order_mark_is_fine(games
     HEADER.lower(),
     HEADER.replace("Team", "Member"),
     "Rank,Team,Total_Pts",
+    "Rank,Team,Wk1,Wk2",
+    "Rank,Team,Wk1,Total",
     "Rank,Team,Wk2,Total_Pts",
     "Rank,Team,Wk1,Wk3,Total_Pts",
     "Rank,Team,Wk1,Wk1,Total_Pts",
@@ -455,6 +458,7 @@ def test_w2_weekly_rows_are_checked(games, old, new, match):
 
 def test_w2_a_weekly_member_is_the_same_member_after_name_cleaning(games):
     refused(games, picks("1,Ann A,5,5", "2,Ann\u200b  A,4,4", header=WEEKLY), "line 3: .*twice")
+    refused(games, picks("1,Ann\u200b  A,5,5", "2,Ann A,4,4", header=WEEKLY), "line 3: .*twice")
 
 
 def test_w2_weekly_numbers_at_their_bounds_are_accepted(games):

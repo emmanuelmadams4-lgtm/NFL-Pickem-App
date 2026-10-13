@@ -87,10 +87,45 @@ Operational layer note: N1, N2, N7 and N8 are what an operator sees when an impo
 First failing tests: `backend/tests/test_group.py` (red at `ModuleNotFoundError: No module named 'nflpi.group'`, the intended reason: the seam does not exist yet). Log `red-pytest.log`.
 
 ## 3. IMPLEMENTATION
-(filled as the work lands)
+Provider: Codex (`codex-cli 0.156.1`), one bounded work order at a time, prompt on stdin, in this worktree only. Work orders: `~/.claude/plans/nfl-pickem-lanes/wo/group-wo-*.md`. Codex logs: `~/.claude/plans/nfl-pickem-lanes-logs/s16a-wo*-codex.log`. Codex cannot reach the lane database from its sandbox, so every proof below is the coordinator's own rerun. CLIMBS: none. STRIKES: none.
+
+| Commit | What | Builder | Proof (coordinator's rerun) |
+|---|---|---|---|
+| `4a6a677` | Spec, fixtures, first failing tests | coordinator | red: `ModuleNotFoundError: No module named 'nflpi.group'` |
+| `af18571` | WO-1: two models, migration 0005, `importer.py`, `queries.py`, the one migration-list line | `gpt-6-sol` xhigh, try 1 (`JEV: model:group:wo-1 -> sol 0.94, xhigh 0.93`) | `tests/test_group.py` 100 passed; diff read: only the allowed files |
+| `49aab7c` | Red 2 (found by the coordinator reading the diff): a valid file of 16,000 rows fails, one INSERT over 65,535 values | coordinator | `red2-pytest.log`: 1 failed |
+| `977c5d9` | Red 3: review round 1 as failing tests | coordinator | `red3-pytest.log`: 67 failed, 65 passed |
+| `5ff61e0` | WO-2: batched upserts (N11), rollback and database failures (N12), no cell text in errors (N8), `imported_at` on update (N10), NFC (N5), name order ignoring case (Q4) | `gpt-6-sol` high, try 1 (`JEV: model:group:wo-2 -> sol 0.45, unsure`; `ADVISOR: sonnet -> sol, high`) | 132 passed; ruff clean |
+| `54b10a8`, `37d861b` | Red 4 and WO-3: any error at all rolls the import's session back | `gpt-6-luna` medium, try 1 (`JEV: model:group:wo-3 -> luna 0.85`; effort unsure at 0.29, so the table's `low` was raised one level to Jev's leading answer, `medium`, with no advisor call for an effort level) | 133 passed; ruff clean |
+
+**Review round 1** at `af18571` (read-only, tier large; reports with the coordinator's ruling on each finding in `~/.claude/plans/nfl-pickem-lanes-reviews/s16a-r1-*.md`):
+
+| Reviewer | Verdict | Taken into WO-2 / WO-3 | Not taken, and why |
+|---|---|---|---|
+| `ecc:code-reviewer` | APPROVE, no CRITICAL or HIGH | `imported_at` not refreshed; session left in a transaction after a refusal; name order by letter case | line number counts rows, as section 2 says; dead code went to CLEANUP |
+| `ecc:security-reviewer` | PASS | a database error kept as the cause would carry member names into a traceback; a name typed into another column was echoed (against N8); NFC | look-alike and invisible letters (carried); no member cap (the 1 MB cap bounds it) |
+| `ecc:silent-failure-hunter` | 2 HIGH | a database outage was reported as a bad file; no rollback on other errors | rank kept across files and rows never deleted are by design (W3, N10); a member with no row in a week is dropped from that week (carried) |
+| `ecc:python-reviewer` | 1 HIGH (migration 0005 points at 0003: known, planned, LANDING) | `imported_at`; narrow error handling | style-only items (ponytail: no extra helpers) |
+| `ecc:pr-test-analyzer` | 10 clauses with no killing test | a test for each: two games in one week, weekly cell count, name in every error kind, unassigned code point, any white space, length after cleaning, the order of checks (16 two-fault cases), rank before no rank, weekly duplicate after cleaning, a quoted line break in a number | none |
+| Dwight (hive security reviewer, required) | **PASS at `af18571`**, no CRITICAL, no HIGH; fix G1 and N11 before landing | G1 (cause carries names) and G2 (cell echo) fixed in WO-2, N11 fixed in WO-2, L1 `imported_at` | G3 case and look-alike names, G5 a re-import never deletes: carried; G4 migration number: LANDING; L2, L3: wave 5 route. Report: `/Users/emmanueladams/HarnessAgents/hive/agents/dwight-mv5mkpow/reports/2026-10-13-lane-group-16a-af18571.md`. Delta `af18571..HEAD` sent for confirmation: see section 5 |
+
+Amended criteria (each marked in section 2): N5 (NFC), N8 (no cell text at all), N10 (`imported_at`), Q4 (ignore letter case); added: N11, N12. All were written as failing tests before the fix.
+
+`lane-guard check` after IMPLEMENTATION: two lines, both the granted seams (`backend/nflpi/models.py`, `backend/tests/test_hardening.py`); nothing else.
 
 ## 4. CLEANUP
-(pending)
+Explicit scope-locked `/refactor` pass (skill loaded; analysis by the coordinator, edits by Codex) on the two touched production files, after all review fixes. Behaviour had to stay identical.
+
+| Smell | Ruling |
+|---|---|
+| `importer.py` `_number`: three identical `raise` lines and a three-step check | **Changed** (WO-4): one condition, one raise |
+| `_pick_row` returned `confidence` twice; `_pick_rows(width)` was always `len(PICKS_HEADER)` | **Changed** (WO-4) |
+| `favored == underdog or` could never decide (a one-team set never equals a game's two-team key) | **Removed** (WO-4), with a comment that `Game` and `Week_Total_Pts` are checked and never stored (P10) |
+| `_csv_rows` header test is one long boolean; `_rows` is a manual loop; list vs tuple header; two passes per side in `game_shares` | **No change needed**: each works, is under 15 lines, and an extra helper would add code (ponytail) |
+| Longest function `_pick_row`, 33 lines; file 216 lines; nesting 3 | **No change needed**: inside the limits |
+
+Commit `8bac149` (WO-4, `gpt-6-luna` medium; try 2 at `high`). The coordinator's own work order was wrong on one point: it told Codex to return `int(cell)` where the code had `int(digits)`, and a cell of 5,000 zeros and a digit then raised Python's own digit-limit `ValueError`. Caught by reading the diff, pinned by a new test (`test_p7_leading_zeros_are_still_plain_digits_however_many`, red first), corrected by Codex in try 2. That is a spec fault, not a builder fault: no climb, no strike.
+Proof after the edit: `tests/test_group.py` 134 passed; ruff clean.
 
 ## 5. VERIFICATION
 (pending)
