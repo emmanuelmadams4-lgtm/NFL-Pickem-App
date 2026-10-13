@@ -56,6 +56,22 @@ def _item(row: NewsItem, by_id: dict[str, sources.Source]) -> NewsItemOut | None
     )
 
 
+def latest_news_rows(session: Session, game: Game, limit: int = MAX_ITEMS) -> list[NewsItem]:
+    by_id = {src.id: src for src in sources.SOURCES}
+    teams = cast(NewsItem.team_ids, JSONB)
+    return list(
+        session.scalars(
+            select(NewsItem)
+            .where(
+                NewsItem.source.in_(list(by_id)),
+                or_(teams.contains([game.home_team]), teams.contains([game.away_team])),
+            )
+            .order_by(NewsItem.published_at.desc().nulls_last(), NewsItem.fetched_at.desc(), NewsItem.id.desc())
+            .limit(limit)
+        ).all()
+    )
+
+
 @router.get("/news", response_model=NewsOut)
 def news(session: Annotated[Session, Depends(get_session)], game_id: str | None = None) -> NewsOut:
     if game_id is None or not GAME_ID_PATTERN.fullmatch(game_id):
@@ -64,15 +80,5 @@ def news(session: Annotated[Session, Depends(get_session)], game_id: str | None 
     if game is None:
         raise HTTPException(404, "Game not found")
     by_id = {src.id: src for src in sources.SOURCES}
-    teams = cast(NewsItem.team_ids, JSONB)
-    rows = session.scalars(
-        select(NewsItem)
-        .where(
-            NewsItem.source.in_(list(by_id)),
-            or_(teams.contains([game.home_team]), teams.contains([game.away_team])),
-        )
-        .order_by(NewsItem.published_at.desc().nulls_last(), NewsItem.fetched_at.desc(), NewsItem.id.desc())
-        .limit(MAX_ITEMS)
-    ).all()
-    items = [item for row in rows if (item := _item(row, by_id)) is not None]
+    items = [item for row in latest_news_rows(session, game) if (item := _item(row, by_id)) is not None]
     return NewsOut(game_id=game.game_id, items=items)

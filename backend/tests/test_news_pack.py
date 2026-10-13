@@ -8,6 +8,7 @@ No test makes a real AI call or a network call: the provider is a fake.
 import hashlib
 import json
 import logging
+import re
 import unicodedata
 from datetime import UTC, datetime, timedelta
 
@@ -191,7 +192,9 @@ def test_n5_only_title_source_age_and_extract_reach_the_model(loaded, pick_game)
         user.split("Evidence pack (JSON):\n")[1].split("\n\nQuestion")[0]
     )["news"]["items"][0]
     item = research.evidence_pack(loaded, gid)["news"]["items"][0]
-    assert item.split("\n")[1:5] == ["source: ESPN", "age: 3 hours", "title: Plain title", "extract: A short extract."]
+    lines = item.split("\n")[1:5]
+    assert lines[0] == "source: ESPN" and re.fullmatch(r"age: \d+ hours", lines[1])  # age is against the real clock here
+    assert lines[2:] == ["title: Plain title", "extract: A short extract."]
 
 
 def test_n5_the_source_name_comes_from_the_allowlist_never_from_the_row():
@@ -265,7 +268,7 @@ def test_n6_an_item_with_nothing_left_after_cleaning_is_dropped():
 def test_n7_hostile_rows_in_the_database_reach_the_model_as_checked_data(loaded, pick_game, name):
     gid, _, home = pick_game
     evil = HOSTILE[name]
-    seed(loaded, row(evil, evil, teams=(home,)), row("Good one", teams=(home,), minutes=5))
+    seed(loaded, row(evil[:200], evil[:300], teams=(home,)), row("Good one", teams=(home,), minutes=5))  # column sizes
     spy = Spy()
     research.answer_question(loaded, gid, "Who wins?", provider=spy)
     user = spy.sent[0][1]

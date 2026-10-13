@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from nflpi.ai import news_pack
 from nflpi.ai.providers import AIError, AIProvider, get_provider
 from nflpi.analytics.trends import MIN_GAMES, game_trends
 from nflpi.api import schemas as s
@@ -131,7 +132,14 @@ def evidence_pack(session: Session, game_id: str) -> dict:
             "note": "Head-to-head history and rest days showed no proven predictive value in testing.",
         },
     }
+    block = news_pack.news_block(session, game_id)
+    if block is not None:
+        pack["news"] = block
     return pack
+
+
+def _system_for(pack: dict) -> str:
+    return SYSTEM + "\n" + news_pack.NEWS_SYSTEM_LINE if "news" in pack else SYSTEM
 
 
 def _check(report: s.MatchupReport, pack: dict) -> list[str]:
@@ -181,7 +189,7 @@ def generate_report(
         try:
             _reserve_call(session)
             reserved = True
-            response = provider.complete(SYSTEM, user, REPORT_SCHEMA, max_tokens=16000)
+            response = provider.complete(_system_for(pack), user, REPORT_SCHEMA, max_tokens=16000)
             report = s.MatchupReport.model_validate_json(response)
             problems = _check(report, pack)
             if not problems:
@@ -231,7 +239,7 @@ def answer_question(
         + f"\n\nQuestion: {question}\n\nAnswer in under 150 words. If the pack can't answer it, say what is missing."
     )
     _reserve_call(session)
-    answer = provider.complete(SYSTEM, user, None, max_tokens=16000)
+    answer = provider.complete(_system_for(pack), user, None, max_tokens=16000)
     row = AIReport(
         game_id=game_id,
         kind="answer",
