@@ -78,7 +78,12 @@ async function workerControls(page: Page) {
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 20_000 }).toBe(true);
 }
 
-const subscribePost = (page: Page) => page.waitForRequest((r) => r.method() === "POST" && new URL(r.url()).pathname === "/api/push/subscribe", { timeout: 15_000 });
+/** The app's re-send, once the server has answered it: a test that then deletes the row must not race the request. */
+const subscribePost = async (page: Page) => {
+  const res = await page.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/push/subscribe", { timeout: 15_000 });
+  expect(res.ok()).toBeTruthy();
+  return res.request();
+};
 
 test("A1 opening the app with alerts on re-sends the subscription; a row the server lost is re-created", async ({ page, context, request }) => {
   const m = await meta(request);
@@ -153,19 +158,27 @@ test("A3 a push that reaches the phone shows the alert, and tapping it opens the
   await workerControls(page);
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
 
+  const shown = () => worker.evaluate(async () => (await (self as unknown as WorkerScope).registration.getNotifications()).map((n) => ({ title: n.title, body: n.body, url: (n.data as { url: string }).url })));
   const cdp = await context.newCDPSession(page);
-  const registered = new Promise<string>((resolve) =>
-    cdp.on("ServiceWorker.workerRegistrationUpdated", (e) => {
-      const r = e.registrations.find((x) => !x.isDeleted);
-      if (r) resolve(r.registrationId);
+  const running = new Promise<string>((resolve) =>
+    cdp.on("ServiceWorker.workerVersionUpdated", (e) => {
+      const v = e.versions.find((x) => x.status === "activated" && x.runningStatus === "running");
+      if (v) resolve(v.registrationId);
     }),
   );
   await cdp.send("ServiceWorker.enable");
-  await cdp.send("ServiceWorker.deliverPushMessage", { origin: new URL(page.url()).origin, registrationId: await registered, data: JSON.stringify(alert) });
+  const registrationId = await running;
+  // The browser's debug channel now and then drops a push without an error or any worker event (about 1 run in 10
+  // here, measured). So the push is sent again while nothing has been shown. The last check is exact: a push that
+  // arrived twice would fail it.
+  await expect(async () => {
+    if ((await shown()).length === 0) await cdp.send("ServiceWorker.deliverPushMessage", { origin: new URL(page.url()).origin, registrationId, data: JSON.stringify(alert) });
+    await expect.poll(shown, { timeout: 2_000 }).not.toEqual([]);
+  }, "a push reached the worker").toPass({ timeout: 15_000 });
+  expect(await shown(), "the worker showed the alert, once").toEqual([alert]);
 
-  const shown = () => worker.evaluate(async () => (await (self as unknown as WorkerScope).registration.getNotifications()).map((n) => ({ title: n.title, body: n.body, url: (n.data as { url: string }).url })));
-  await expect.poll(shown, { message: "the worker showed the alert" }).toEqual([alert]);
-
+  // A stand-in for the tap: the browser gives no way to tap a real notification. A made-up event cannot focus a
+  // window and cannot be kept alive with waitUntil (the worker logs that); the handler's own steps still run.
   await worker.evaluate(async () => {
     const sw = self as unknown as WorkerScope;
     const [notification] = await sw.registration.getNotifications();
