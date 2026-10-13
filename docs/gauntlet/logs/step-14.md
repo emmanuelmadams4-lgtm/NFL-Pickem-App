@@ -186,3 +186,26 @@ Explicit scope-locked refactor pass on the touched code (`/refactor` rules: beha
 * **No change needed:** `team_game_epa` keeps its explicit two-pass shape (it must return rows in input order and drop a game when either side is unusable); `evaluate` keeps the `ships` key next to `confirm` because clause S7 names it; `metrics.py` additions are already minimal.
 * **Proof after the edit:** `tests/test_model.py` 19 passed; ruff clean; the real-data run on the final code (`run-3-candidates.json`) gives the same candidate numbers and the same baseline as the run before the cleanup (compared key by key: identical). New counts in that run: `epa_rows` 12,990, `epa_games` 6,491, `epa_missing_scored_games` 0. The first attempt at this run was killed by the host (exit 144, cause not known, during the overload window); the rerun exited 0.
 * **Remaining findings, classified:** all advisory, listed under "Carried" in section 3 and again in section 6.
+
+## 5. VERIFICATION
+
+Code last changed in `20f97cb`; commits after it add only the mutation script fix, evidence and docs. HEAD at verification: `bbddfb1` (gates), `59494d5` (critic). Branch is on `main` 53b1c89 (no rebase needed).
+
+| Check | Result | Evidence |
+|---|---|---|
+| Mutation sweep (`s14-mutate.py`, under `res:gate`) | **45 of 45** changes that break a frozen clause were caught by a failing test. One mutant string was ambiguous (`"n": int(len(y))` occurs twice); I made it unique and reran from scratch. | `mutate.log` |
+| Gate, run 1 on `bbddfb1` | 195 passed (47 s), 0 skipped; ruff clean; alembic "No new upgrade operations"; gen:api no drift | `final1.out`, `final1-*.log` |
+| Gate, run 2 on `bbddfb1` | 195 passed (44 s); same clean results | `final2.out`, `final2-*.log` |
+| Fresh critic (`ecc:code-reviewer`, no build transcript) | **PASS.** Reran the gate on `59494d5`: 195 passed (54 s), ruff, alembic, gen:api clean. No leak. Numbers match `run-3-candidates.json`. No change to live behaviour (engine, jobs, api, web untouched). Every clause S1 to S13 has a test that fails when it is broken; 4 mutants spot-checked and caught, tree clean. | `critic-*.log` |
+| Security (Dwight) | PASS at `2c4ece6`; delta to the cleanup commit confirmed PASS, no new finding. Code unchanged since (only the evidence script and docs). | Dwight memory, 2026-10-13 |
+| `lane-guard check` (lane model, base 53b1c89) | `OK` | `lane-guard.log` |
+| Jev Job 4 (`decide.sh`, topic `review:model:step-14`) | noul **0.84**: at or above 0.8, so the pass stands. `decide.sh` printed route `advisor` because its own bar for a noul is 0.9; Job 4's bar is 0.8, and the gates and the critic are green. | `~/.claude/plans/nfl-pickem-lanes/decisions.jsonl` |
+
+Critic advisories (not failures): `evaluate` and `paired_gain` do not check that tune and confirm seasons are disjoint (already carried); `inseason_blend` leaves NaN for a week with no market lines (harmless, `candidate_preds` filters on `p_market`).
+
+## 6. LANDING
+
+* Result: **no model change.** The branch lands the candidate test bench (`paired_gain`, `evaluate`, `inseason_blend`, EPA rating), 19 new tests and the evidence. Neither the in-season refit nor the EPA rating beats the current model by the paired-bootstrap rule.
+* Not pushed, no PR, no merge: the integrator (god) lands it.
+* Carried, advisory: per-reason drop counts in `team_game_epa`; unique `game_id` check; count of tied games; tune and confirm seasons overlap check; `fetch_csv` does not chain the original error (lane coaches owns that file); NaN weeks in `inseason_blend` for weeks without lines.
+* Next model ideas stay in the roadmap: each is tested walk-forward first and ships only if it wins.
