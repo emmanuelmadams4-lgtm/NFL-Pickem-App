@@ -263,3 +263,21 @@ Main then moved to `53b1c89` (coach fix). The lane was moved onto it with no con
 | `r3-b` | 4.52 | 222 passed | clean | none | 0 | 102 passed, 2 skipped |
 
 Lane-guard against `53b1c89`: OK. CLEANUP for the round 2 code (work orders 7, 8, 8b, 9): diffs read again after the fixes; no change needed (each is the smallest change for its red test; the one shared pattern, send then record, already reads the same in the three callers).
+
+### Review round 2: fresh critic PASS at `7990af9`
+
+Report: `step-7-evidence/reviews/critic-round2.md`; gate logs `critic6-{a,b,c}-*.log`: three runs, each 222 backend tests passed and 102 browser checks passed, 2 skipped (load before: 3.39, 5.18, 6.67). I read the three logs myself: same numbers. No blocker. The critic was a fresh subagent I dispatched myself: my request to the reviewer sat unread for over an hour while I held the machine-wide locks, so I withdrew it (outbox `s7-critic-round2-withdrawn`). Locks released at 06:34Z.
+
+**Jev Job 4** (`decide.sh` route "advisor", Jev unavailable; a read-only Sonnet advisor answered): LAND AS IS, no owner ruling needed for landing. Its note that a test pins finding 1 as deliberate is only half right: the test pins the reschedule case, not the postponement case.
+
+**Carried from round 2, not built, with the reason:**
+* A first game postponed after its reminder went out gives a second reminder that day (critic 1): rare, harmless for one user; a key on the day alone would end the pinned "rescheduled kickoff reminds again". Wants the integrator's or owner's ruling, not a blocker.
+* An alert counts as sent once one device got it; a device whose send failed is not retried (critic 2): older behaviour; a per-device record needs models and a migration (a seam).
+* `scripts/smoke.sh` has no test in the gate (critic 3): proven by `smoke-proof.sh` and its saved log.
+* Critic lows 4 to 9; security lows from delta 2. Lows 7 and 8 go on the real iPhone checklist.
+
+## 6. LANDING
+
+NEEDS the integrator: `lane/alerts` at the HEAD named in my done message is landing-ready (gate green five times on this code, security PASS, fresh critic PASS, lane-guard OK against `53b1c89`). I do not send the branch anywhere; the integrator does that, opens the request and merges it.
+
+PENDING, the owner's go-live steps, never run here: VAPID keys on the live app; a real alert on his iPhone (also checks critic lows 7 and 8 and the key-change case); delete any stored subscription whose address fails the new check, or turn alerts off and on once. Nothing was deployed.
