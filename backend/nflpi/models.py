@@ -279,3 +279,22 @@ class AppSetting(Base):
     __tablename__ = "app_settings"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[dict] = mapped_column(JSON)
+
+
+class GroupPick(Base):
+    __tablename__ = "group_picks"
+    game_id: Mapped[str] = mapped_column(String(32), ForeignKey("games.game_id"), primary_key=True)
+    member: Mapped[str] = mapped_column(String(64), primary_key=True)
+    picked_team: Mapped[str | None] = mapped_column(String(4))
+    confidence: Mapped[int | None] = mapped_column(Integer)
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class GroupStanding(Base):
+    __tablename__ = "group_standings"
+    season: Mapped[int] = mapped_column(Integer, primary_key=True)
+    week: Mapped[int] = mapped_column(Integer, primary_key=True)
+    member: Mapped[str] = mapped_column(String(64), primary_key=True)
+    points: Mapped[int] = mapped_column(Integer)
+    rank: Mapped[int | None] = mapped_column(Integer)
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
