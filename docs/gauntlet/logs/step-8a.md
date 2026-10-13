@@ -174,3 +174,14 @@ It could not find the lane-guard script at the path the coordinator gave it (the
 
 **Routed back to tests. No production code changed.** Star cases 48 to 56: six more bad-file cases (`snap_week_zero`, `stat_week_too_high`, `negative_defense_snaps`, `defense_snaps_too_many`, `stat_nan`, `stat_too_negative`), and the older bad-file cases now assert the text of the check that must fire; `test_stars_out_never_matches_a_name_across_clubs`; `test_equal_players_are_ranked_by_name_and_week_22_is_read` (also the limits 300 snaps and 1,000 yards accepted, and the stored `source` and `computed_at`); another season's report, another season's star list, a third club's report and a second good refresh added to the existing who's-out cases; two players with no id at one club.
 Proof, since these pass at once: `s8a-mutate.py` now makes 28 wrong changes (the 9 from round 2, the 14 that critic 3 named, 5 limit values) and sets the lane's database itself. `s8a-mutations.log`: control 56 passed; 28 of 28 caught, 0 survived.
+
+**Coordinator's gate on `b7c71d5`, twice (`final7-*.log`, `final8-*.log`):** pytest 171 passed, ruff, alembic, genapi PASS, both runs.
+
+**Integrator's ruling on the bar (god, message `25c389`, after three FAILs on tests only):** a new critic's PASS is still required; its bar is the frozen criteria. Every clause named in SPECIFICATION needs one test that fails when the clause is broken; wrong changes that survive outside the frozen clauses are advisory and are carried. Each critic checks each frozen clause once, with no open sweep. A fail by critic 4 is fixed once and checked by one more new critic on those items plus the gate; a fifth fail stops the lane.
+
+**Critic 4 (a new `ecc:code-reviewer` subagent, no build transcript) on `b7c71d5`: FAIL on one clause.** Its own gate, twice (`critic7-*.log`, `critic8-*.log`): pytest 171 passed, no skips, ruff, alembic, genapi PASS. Its first `critic8` run showed 15 failed and 15 errors because it had two gate runs going at once on the one test database; it re-ran alone and reported that as its own mistake. 25 of 26 criteria PASS, checkpoints PASS, no false sentence. About 110 wrong changes, 18 survived, 15 of them equivalent or LOW.
+- Blocking, S13: the season filter on the query that reads the star rows (the earlier round pinned only the query that picks the week).
+- Not blocking, S10 and S12: which report wins when a player has one filed with his id and one without.
+- LOW, carried: a 16-character id accepted and a 40-character echo kept whole are not tested; the id file winning over a same-name stats row; the "no stars ranked" text.
+
+**Routed back to tests. No production code changed.** Star cases 56 to 57: a 2022 star in the same week and club as the list in use, out, must not be listed; `test_stars_out_takes_the_newest_report_when_one_has_an_id_and_one_has_none`. `s8a-mutate.py` gains those two wrong changes: `s8a-mutations.log`, control 57 passed, 30 of 30 caught.

@@ -31,6 +31,9 @@ MUTATIONS = [
     ("S19 a stat of 1000 refused", "nflpi/ingestion/nflverse.py", "MAX_STAR_STAT_ABS = 1000", "MAX_STAR_STAT_ABS = 999"),
     ("S19 a stat of 1001 allowed", "nflpi/ingestion/nflverse.py", "MAX_STAR_STAT_ABS = 1000", "MAX_STAR_STAT_ABS = 1001"),
     ("S19 five-letter club allowed", "nflpi/ingestion/nflverse.py", "MAX_STAR_CLUB_LENGTH = 4", "MAX_STAR_CLUB_LENGTH = 5"),
+    # critic 4
+    ("S13 star rows of any season", "nflpi/analytics/stars.py", "select(TeamStar).where(TeamStar.season == game.season, TeamStar.week == stars_week,", "select(TeamStar).where(TeamStar.week == stars_week,"),
+    ("S10 oldest matching report wins", "nflpi/analytics/stars.py", "key=lambda report: report.id,", "key=lambda report: -report.id,"),
     ("S6 players with no id keyed by club", "nflpi/analytics/stars.py", '("pfr", row["pfr_id"] or row["player"])', '("pfr", row["team"])'),
 ]
 DB = "postgresql+psycopg://nflpi:nflpi@localhost:15438/nflpi_test"  # the lane's own database, never the default

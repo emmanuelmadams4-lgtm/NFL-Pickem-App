@@ -677,8 +677,10 @@ def test_stars_out_uses_the_latest_earlier_list_and_says_which(session):
     ingest(session)
     later = _game(session, SEASON, 5, "NYJ", "KC")  # no list for week 5: the week 3 list is the newest
     session.add(_star(2022, 5, "KC", "def", 1, "00-009", "Cory Corner"))  # another season's list: never used
+    session.add(_star(2022, 3, "KC", "off", 1, "00-006", "Tom Tackle"))  # a 2022 star in the same week as the list used
     session.commit()
     _injury(session, 5, "KC", "00-009", "Cory Corner", "Out", 1)
+    _injury(session, 5, "KC", "00-006", "Tom Tackle", "Out", 1)  # out, but a star only in 2022: not listed
     result = stars_out(session, later, now=NOW)
     assert result["stars_week"] == 3
     assert [r["player"] for r in result["out"]] == ["Cory Corner"]
@@ -703,6 +705,14 @@ def test_stars_out_never_matches_a_name_across_clubs(session):
     _injury(session, 2, "NE", None, "Able Tackle", "Out", 3)
     result = stars_out(session, game_id, now=NOW)
     assert (result["reports_seen"], result["out"]) == (1, [])
+
+
+def test_stars_out_takes_the_newest_report_when_one_has_an_id_and_one_has_none(session):
+    ingest(session)
+    game_id = _game(session, SEASON, 3, "NYJ", "KC")
+    _injury(session, 3, "KC", "00-009", "Cory Corner", "Out", 10)
+    _injury(session, 3, "KC", None, "Cory Corner", "Questionable", 1)  # newer, filed without his id: it wins
+    assert stars_out(session, game_id, now=NOW)["out"] == []
 
 
 def test_stars_out_rejects_an_unknown_game(session):
