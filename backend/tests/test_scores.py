@@ -62,6 +62,7 @@ def test_s1_implied_score_splits_the_total_by_the_spread_home_favoured_when_posi
         (float("inf"), 45.5),
         (3, float("inf")),
         (3, 0),
+        (0, 0),
         (3, -45.5),
         (46, 45.5),  # would give the road team a negative score
         (-46, 45.5),
@@ -152,6 +153,17 @@ def test_s4_a_final_game_with_a_missing_score_is_not_counted():
     form = scores.scoring_form(mini(rows))
     assert (form["home_pf"][4], form["home_pa"][4]) == (17, 20)  # games 1 and 2 only
     assert math.isnan(form["home_pf"][3])  # C still has no counted game
+
+
+def test_s4_a_scheduled_game_that_carries_scores_is_not_counted():
+    rows = [*FORM_ROWS]
+    rows[0] = ("A", "B", 20, 10, "scheduled")
+    form = scores.scoring_form(mini(rows))
+    # Before game 3, A's scheduled result is ignored; only the final B-over-A game counts.
+    assert (form["home_pf"][2], form["home_pa"][2]) == (14, 30)
+    assert math.isnan(form["away_pf"][2]) and math.isnan(form["away_pa"][2])
+    # Before game 2, B has only the scheduled game, so its form is missing.
+    assert math.isnan(form["home_pf"][1]) and math.isnan(form["home_pa"][1])
 
 
 def test_s5_scoring_form_never_sees_its_own_or_later_results():
