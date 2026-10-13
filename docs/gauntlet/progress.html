@@ -83,11 +83,12 @@ footer { color: var(--muted); font-size: 13px; }
   </header>
 
   <div class="headline">
-    <div class="big">6<small> / 14 steps landed</small></div>
+    <div class="big">7<small> / 14 steps landed</small></div>
     <div class="now">
-      <p><b>Just landed:</b> step 12, trends, is merged into main (PR #4). The AI's evidence pack now carries records with their sample size: head to head, quarterback and coach against a club, weekday, and site. A record shows from 4 games up, as you asked. Checked against real results back to 2002: 12 of 12 hand counts match.</p>
-      <p><b>Before that:</b> step 5, running at home, is merged into main (PR #3): backups you can restore, a safe restore, a token change, a clean-copy test, and the Windows PC runbook. Step 4, the pick sheet, merged just before it (PR #2).</p>
-      <p><b>Next:</b> step 6, the iPhone app, is being built now: works offline, says so when it cannot reach the server, and keeps your picks until it can send them. Then step 7, alerts. Still yours: set up the Windows PC and tell me what you see.</p>
+      <p><b>Just landed:</b> step 6, the iPhone app, is merged into main (PR #5) and the app on your Mac is rebuilt with it. It opens offline, says when it cannot reach the server, and keeps a tapped pick on the phone until the server answers. Your check on your iPhone is still open.</p>
+      <p><b>Before that:</b> step 12, trends, is merged into main (PR #4). The AI's evidence pack now carries records with their sample size: head to head, quarterback and coach against a club, weekday, and site. A record shows from 4 games up, as you asked. Checked against real results back to 2002: 12 of 12 hand counts match.</p>
+      <p><b>Earlier:</b> step 5, running at home, is merged into main (PR #3): backups you can restore, a safe restore, a token change, a clean-copy test, and the Windows PC runbook. Step 4, the pick sheet, merged just before it (PR #2).</p>
+      <p><b>Next:</b> step 7, alerts, and the first part of step 8: star players and who is out. Still yours: set up the Windows PC and tell me what you see.</p>
     </div>
   </div>
 
@@ -97,8 +98,8 @@ footer { color: var(--muted); font-size: 13px; }
     <div class="yd done" role="listitem"><span class="n">3</span><span class="t">New look (ref 06)</span></div>
     <div class="yd done" role="listitem"><span class="n">4</span><span class="t">Pick sheet</span></div>
     <div class="yd done" role="listitem"><span class="n">5</span><span class="t">Deploy</span></div>
-    <div class="yd next" role="listitem"><span class="n">6</span><span class="t">iPhone PWA</span></div>
-    <div class="yd" role="listitem"><span class="n">7</span><span class="t">Alerts</span></div>
+    <div class="yd done" role="listitem"><span class="n">6</span><span class="t">iPhone PWA</span></div>
+    <div class="yd next" role="listitem"><span class="n">7</span><span class="t">Alerts</span></div>
     <div class="yd" role="listitem"><span class="n">8</span><span class="t">Star players</span></div>
     <div class="yd" role="listitem"><span class="n">9</span><span class="t">Tiebreaker scores</span></div>
     <div class="yd" role="listitem"><span class="n">10</span><span class="t">Passkey sign-in</span></div>
@@ -129,7 +130,7 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td class="num">3</td><td>New look: reference 06 + your P logo<span class="sub">Lime on near-black, card per game, VS, pill tabs, floating phone tab bar</span></td><td>39 browser checks + 57 server tests, accessibility clean on phone, two fresh reviewers passed it</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">4</td><td>Pick sheet<span class="sub">Coin flip / tough / easy labels, points 1–N, auto pick at kickoff, copy to Yahoo, scorecard</span></td><td>Label cuts from the backtest with hit rates; re-rank, swap, lock and copy tested; three review rounds</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">5</td><td>Deploy and operate<span class="sub">Docker at home, backups you can restore, token change, Windows PC runbook</span></td><td>Clean copy starts; backup restores with the same counts; bad files refused; a restore killed partway recovers; all 32 team logos load. Four review rounds. Your PC and iPhone checks stay with you</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">6</td><td>iPhone PWA<span class="sub">Offline, "can't reach server", phone polish</span></td><td>Opens offline with saved data; buttons lock at kickoff offline</td><td><span class="pill todo">To do</span></td></tr>
+          <tr><td class="num">6</td><td>iPhone PWA<span class="sub">Offline, "can't reach server", phone polish</span></td><td>89 browser checks and 115 server tests pass three times in a row; four rounds of fresh reviewers; security review passed. Your iPhone check is still open</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">7</td><td>Alerts end to end<span class="sub">Flips, QB news, "no pick yet", test-alert button</span></td><td>Signed push delivered; the alert opens the game</td><td><span class="pill todo">To do</span></td></tr>
           <tr><td class="num">8</td><td>Star players + second injury source<span class="sub">5 stars per team, ESPN as a second source</span></td><td>Recorded-data tests; star idea must win walk-forward</td><td><span class="pill todo">To do</span></td></tr>
           <tr><td class="num">9</td><td>Tiebreaker scores<span class="sub">Predicted score for the two Yahoo tiebreak games</span></td><td>Beats the line-implied score on 2022–2025 or it doesn't ship</td><td><span class="pill todo">To do</span></td></tr>
@@ -163,11 +164,11 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="stat"><span>Sheet (step 4)</span><span>Merged</span></div>
       <div class="stat"><span>Deploy (step 5)</span><span>Merged</span></div>
       <div class="stat"><span>Merge conflicts</span><span>0</span></div>
-      <div class="stat"><span>iPhone app (step 6)</span><span>Building</span></div>
+      <div class="stat"><span>iPhone app (step 6)</span><span>Merged</span></div>
       <div class="stat"><span>Trends (step 12)</span><span>Merged</span></div>
       <p class="note">Steps 6 and 12 ran side by side; step 12 landed first with no conflict. Jev rated them independent (0.03 and 0.05), as it did steps 4 and 5. Each lane has its own copy of the code and its own fresh reviewer before it lands.</p>
     </div>
   </div>
 
-  <footer>Updated 2026-10-12 · Steps 1–5 and 12 landed (PRs #1 to #4 merged) · Now building: iPhone app (step 6)</footer>
+  <footer>Updated 2026-10-12 · Steps 1–6 and 12 landed (PRs #1 to #5 merged) · Next: alerts (step 7)</footer>
 </div>
