@@ -1,6 +1,6 @@
 # Step 15 (backend half) of 17: Live scores, live win probability and market quotes (new tables, adapters, no wiring)
 
-Session: owner's Mac, 2026-10-13 (night, US Eastern), lane `live` (worktree `.claude/worktrees/lane-live`, branch `lane/live`, base `main@53b1c89`), run beside lanes alerts, news, model, scores, group.
+Session: owner's Mac, 2026-10-13 (night, US Eastern), lane `live` (worktree `.claude/worktrees/lane-live`, branch `lane/live`, first based on `main@53b1c89`, moved twice onto newer main; final base `main@eed7c61`), run beside lanes alerts, news, model, scores, group.
 Coordinator: Claude (hive temp "Pam", dispatched by the integrator). Builder: Codex. Lane claim `claims/live`, coord task #15.
 Evidence folder: `docs/gauntlet/logs/step-15a-evidence/` (design.md, gate.sh and its logs, baseline, hand checks, reviews/).
 Rows covered from `docs/gauntlet/PLAN.md` row 15 and `research/odds-live-plan.md` Part 3: **15a** insert-only quote table, **15b** Kalshi adapter, **15c** Odds API adapter, **15d** ESPN live state (server side only), **15g** per-source failure handling. NOT in this step: worker loop (`jobs.py`), API routes and schemas, web, the model candidate (15e), in-game grading (15f).
@@ -28,7 +28,7 @@ Public seam (names pinned by `backend/tests/test_live.py`):
 * `nflpi.ingestion.live.store.live_states_for(session, game_ids) -> {game_id: LiveState}` (**the one query for the API**: newest row per game).
 * Models `LiveState` (`live_states`), `MarketQuote` (`market_quotes`), `SourceStatus` (`source_status`); migration `0005` (named `0006` in the lane map; renumbered at landing time); setting `odds_api_key`.
 
-Gate: `backend/tests/test_live.py` (267 cases), then `bash docs/gauntlet/logs/step-15a-evidence/gate.sh <label>`: full pytest (a skipped test is a failure), ruff, the migration up/check/down/up/check on an empty database, `npm run gen:api` with no drift, and a scan that the real Odds key appears in no file.
+Gate: `backend/tests/test_live.py` (267 cases when frozen, 304 at the end after the review rounds), then `bash docs/gauntlet/logs/step-15a-evidence/gate.sh <label>`: full pytest (a skipped test is a failure), ruff, the migration up/check/down/up/check on an empty database, `npm run gen:api` with no drift, and a scan that the real Odds key appears in no file.
 
 | # | Criterion | Layer |
 |---|---|---|
@@ -102,4 +102,19 @@ Dwight's delta review of `21c6af0` was **NOT YET** with two required fixes, both
 Dwight did not exercise the TLS name check; the hand-check logs did (certificate verified against the hostname through the pinned address, real ESPN, Kalshi and Odds API replies).
 
 ## 5. VERIFICATION
-(filled in after the final gate runs; see below)
+Final base `main@eed7c61` (steps 7, 14, 16a landed). Code HEAD for the evidence below: see each line.
+* **Gate x2 (coordinator), code `640e370`:** `final1-*`, `final2-*`: pytest **675 passed** (both runs; 1:14 and 1:16), ruff All checks passed, alembic up/check/down/up/check "No new upgrade operations detected" (log shows `downgrade ok`), genapi "no drift", keyscan "key text found in no file". Earlier equal runs on older bases: `prerebase*` (a5b22fc, 450 passed), `onA9ed486-*` (521), `onA21c6af0-*` (670).
+* **Hand check, two finished games (and a tie):** `handcheck-final.log` (real ESPN, through the guarded fetch; second fetch by independent urllib code): BUF @ LA stored 37-34 home win prob 0.0 play 4018729944992 = ESPN's page; TB @ DAL 24-16, 0.0, 4018729804255 = page; NYG @ WAS 27-27, 0.5, 4018729885158 = page. **HAND CHECK PASS.** `handcheck-quotes.log`: real Kalshi (4 quotes) and one real Odds API call (27 quotes, 9 books), key in no log or row. Odds API calls used: **2 of 3**.
+* **Fresh critic round 1** (`ecc:code-reviewer`, no build transcript, on `d263df3`, code = `640e370`): gate rerun under the lock: 675 passed, ruff, alembic, genapi, keyscan all PASS (`critic1-*` logs); 8 mutation probes, 7 killed; **FAIL L16**: removing `and matched` from the "good reply matched a game" guard left all 304 tests green, because the `None` case of `test_an_empty_reply_or_one_matching_no_game_never_marks_a_game_lost` still listed our own LA game on the board. A test gap, not a production bug. Fixed once (test only): that case now lists a game of ours is NOT on the board (NYG @ WSH, not seeded); the same mutation now fails the test (`['in', 'lost'] == ['in']`), production file restored. Advisory from the critic: step-log counts and base were stale (fixed in this commit). Carried items unchanged.
+* **Fresh critic round 2:** (see below)
+* **Dwight (security):** design PASS (E1-E8), code PASS at `cb6710c`, NOT YET at `21c6af0` (R1, R2), **PASS at `640e370`** (R1, R2, L1 fixed; no CRITICAL, HIGH or MEDIUM open). Advisory A1: a raw event id that is a list or object makes `_espn_job` raise TypeError (fails the run closed, writes nothing); carried.
+* **Angela (general review):** (see below)
+* **Lane guard** (`lane-guard.txt`): exactly the four granted seam files plus the renumbered migration `0005_live_and_quotes.py` (integrator's ruling), nothing else.
+* **Jev, did the review truly pass (Job 4):** (see below)
+
+### Carried to the worker / API step (step 15 wiring) and to god
+* Staleness for the screen = `store.last_confirmed("espn_live")` older than 2 minutes, not `LiveState.fetched_at`; a `lost` state means "left the scoreboard, last numbers shown"; a null `home_wp` means "no probability right now".
+* S4 per-run deadline (one refresh can make 17 fetches); I8 (score going backwards, `kind` from the clock only, one Blocked summary backs off all ESPN, a killed run stays `running`); retention for `market_quotes`/`live_states`; Dwight L2-L6 and A1; `run.py` split by source (455 lines); the duplicated fetch guard with lane news (`news/fetch.py` vs `live/fetch.py`: merge after both land).
+* Owner decisions to record in the repo (Dwight could not find them): yes for Kalshi, the Odds API key, and ESPN terms risk (D55 is live scores only).
+* Migration numbers: live = 0005 lands first, news = 0006 (god's ruling).
+* **Checked against a real live game: PENDING, 2026-10-15** (SEA @ DEN), then Sunday 2026-10-18.

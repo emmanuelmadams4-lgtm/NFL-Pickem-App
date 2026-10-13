@@ -1715,8 +1715,8 @@ def test_an_empty_reply_or_one_matching_no_game_never_marks_a_game_lost(session,
     seed_la_and_dallas(session)
     run.refresh_live_games(session, get=fake_get(in_progress()), now=NOW)
     board = {"events": []} if events is not None else recorded("espn_scoreboard_final.json")
-    if events is None:  # three events, none of them one of our games
-        board["events"] = [e for e in board["events"] if e["id"] != "401872980"][:2]
+    if events is None:  # a reply with events, none of them one of our games (NYG @ WSH is not seeded)
+        board["events"] = [e for e in board["events"] if e["id"] == "401872988"]
     run.refresh_live_games(session, get=fake_get({espn.SCOREBOARD_URL: board}), now=NOW + timedelta(minutes=1))
     assert [r.state for r in live_rows(session)] == ["in"]
 
