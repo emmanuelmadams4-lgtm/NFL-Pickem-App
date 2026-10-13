@@ -133,6 +133,13 @@ def test_n2_five_newest_items_of_either_team_from_allowlisted_sources_only(loade
     check_items(items)
 
 
+def test_n2_rows_of_other_sources_do_not_use_up_the_five_slots(loaded, pick_game):
+    gid, _, home = pick_game
+    seed(loaded, *[row(f"Rogue {i}", source="evil", teams=(home,), minutes=i) for i in range(6)])
+    seed(loaded, row("Real", teams=(home,), minutes=100))
+    assert [r.title for r in news_api.latest_news_rows(loaded, loaded.get(Game, gid))] == ["Real"]
+
+
 # ---------- N3: nothing changes with no news ----------
 
 
