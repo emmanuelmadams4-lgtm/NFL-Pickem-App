@@ -214,10 +214,10 @@ def import_group_csv(session: Session, season: int, data: bytes) -> ImportResult
             values = _standing_rows(rows, weeks, season)
             _write_standings(session, values)
         session.commit()
-    except GroupImportError:
-        session.rollback()
-        raise
     except SQLAlchemyError as exc:
         session.rollback()
         raise RuntimeError(f"group import: database error ({type(exc).__name__})") from None
+    except Exception:
+        session.rollback()
+        raise
     return ImportResult(kind, len(values))
