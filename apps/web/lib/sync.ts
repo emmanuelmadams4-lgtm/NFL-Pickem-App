@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { ApiError, type Api } from "@nflpi/shared";
 import type { QueryClient } from "@tanstack/react-query";
-import { safeGet, safeSet } from "@/lib/fmt";
+import { safeGet, safeRemove, safeSet } from "@/lib/fmt";
 
 /* ---------- connectivity ---------- */
 
@@ -22,16 +22,6 @@ export function useOnline(): boolean {
     () => navigator.onLine,
     () => true,
   );
-}
-
-/** Timestamp of the last successful API response. */
-const SYNC_KEY = "nflpi_last_sync";
-export function markNetworkSync() {
-  safeSet(SYNC_KEY, String(Date.now()));
-}
-export function lastNetworkSync(): number | null {
-  const v = Number(safeGet(SYNC_KEY));
-  return Number.isFinite(v) && v > 0 ? v : null;
 }
 
 let serverReachable = true;
@@ -63,7 +53,6 @@ export const trackedFetch: typeof fetch = async (input, init) => {
   try {
     const res = await fetch(input, init);
     setServerReachable(true);
-    if (res.ok) markNetworkSync();
     return res;
   } catch (error) {
     setServerReachable(false);
@@ -86,6 +75,7 @@ type Queue = Record<string, string | null>;
 
 let snapshot: Queue | null = null;
 let volatileQueue: Queue | null = null;
+let storedQueueDropped = false;
 const listeners = new Set<() => void>();
 let listeningForStorage = false;
 
@@ -121,11 +111,29 @@ function readQueue(): Queue {
 
 function writeQueue(q: Queue): boolean {
   listenForStorage();
-  const stored = safeSet(QUEUE_KEY, JSON.stringify(q));
+  storedQueueDropped = false;
+  const value = JSON.stringify(q);
+  const stored = safeSet(QUEUE_KEY, value);
+  if (!stored) {
+    const previous = readStoredQueue();
+    const stale = (gameId: string, team: string | null) =>
+      !Object.prototype.hasOwnProperty.call(q, gameId) || q[gameId] !== team;
+    const fallback = Object.fromEntries(Object.entries(previous).filter(([gameId, team]) => !stale(gameId, team))) as Queue;
+    if (Object.keys(fallback).length !== Object.keys(previous).length && !safeSet(QUEUE_KEY, JSON.stringify(fallback))) {
+      if (Object.entries(readStoredQueue()).some(([gameId, team]) => stale(gameId, team))) {
+        storedQueueDropped = true;
+        safeRemove(QUEUE_KEY);
+      }
+    }
+  }
   snapshot = q;
   volatileQueue = stored ? null : q;
   listeners.forEach((l) => l());
   return stored;
+}
+
+export function lastQueueWriteDroppedStored(): boolean {
+  return storedQueueDropped;
 }
 
 export function queuePick(gameId: string, team: string | null): boolean {

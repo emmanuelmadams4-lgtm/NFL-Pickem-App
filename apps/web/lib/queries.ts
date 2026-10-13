@@ -5,7 +5,7 @@ import { ApiError, keys, type GameDetail, type Provider, type Week } from "@nflp
 import { useApi } from "@/lib/api";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { isNetworkError, isServerReachable, orderedPickSend, queuePick, queuedPick, unqueueIfCurrent } from "@/lib/sync";
+import { isNetworkError, isServerReachable, lastQueueWriteDroppedStored, orderedPickSend, queuePick, queuedPick, unqueueIfCurrent } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
 
@@ -109,7 +109,11 @@ export function useSetPick(gameId: string) {
     onSettled: (data, _err, v, ctx) => {
       if (data?.queued) {
         if (ctx?.persisted === false && queuedPick(v.gameId) === v.team) {
-          toast("Could not save this pick on the phone. Keep the app open until it syncs.", "warn");
+          if (lastQueueWriteDroppedStored()) {
+            toast("Waiting picks could not be stored on this phone. Keep the app open until they sync, or enter them again when you are online.", "bad");
+          } else {
+            toast("Could not save this pick on the phone. Keep the app open until it syncs.", "warn");
+          }
         }
         return; // do not refetch over a pick the server has not seen yet
       }

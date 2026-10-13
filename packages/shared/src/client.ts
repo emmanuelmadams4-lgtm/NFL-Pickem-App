@@ -26,6 +26,7 @@ export type AskAnswer = S["AskOut"];
 export type Pick = S["PickOut"];
 export type ImportResult = S["ImportResult"];
 export type PushSubscriptionIn = S["PushSubscriptionIn"];
+export type PushTestOut = S["PushTestOut"];
 export type SettingsIn = S["SettingsIn"];
 export type Provider = "claude" | "jev";
 
@@ -109,6 +110,7 @@ export function createClient(config: ClientConfig) {
       call<void>("/push/subscribe", { method: "POST", body: JSON.stringify(subscription) }),
     pushUnsubscribe: (endpoint: string) =>
       call<void>(`/push/subscribe?endpoint=${encodeURIComponent(endpoint)}`, { method: "DELETE" }),
+    pushTest: () => call<PushTestOut>("/push/test", { method: "POST" }),
     /** Only the fields you pass are changed. reminder_minutes: 0 = off. */
     updateSettings: (settings: SettingsIn) => call<Meta>("/settings", { method: "PUT", body: JSON.stringify(settings) }),
     refresh: () => call<{ started: boolean; reason?: string }>("/refresh", { method: "POST" }),

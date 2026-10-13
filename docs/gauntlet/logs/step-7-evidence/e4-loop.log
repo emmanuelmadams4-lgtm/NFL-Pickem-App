@@ -1,0 +1,202 @@
+
+[2mRunning [22m20[2m tests using [22m1[2m worker[22m
+
+  [32m✓[39m  [2m 1 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (6.0s)[22m
+  [32m✓[39m  [2m 2 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (5.2s)[22m
+  [32m✓[39m  [2m 3 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (5.4s)[22m
+  [32m✓[39m  [2m 4 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (5.5s)[22m
+  [32m✓[39m  [2m 5 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (5.4s)[22m
+  [32m✓[39m  [2m 6 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (5.8s)[22m
+  [32m✓[39m  [2m 7 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (6.2s)[22m
+  [32m✓[39m  [2m 8 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (6.4s)[22m
+  [32m✓[39m  [2m 9 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (8.8s)[22m
+  [32m✓[39m  [2m10 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (7.7s)[22m
+  [32m✓[39m  [2m11 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (6.4s)[22m
+  [32m✓[39m  [2m12 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (7.2s)[22m
+  [32m✓[39m  [2m13 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (13.5s)[22m
+  [31m✘[39m  [2m14 [22m[31me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[39m[2m (17.3s)[22m
+  [31m✘[39m  [2m15 [22m[31me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[39m[2m (15.0s)[22m
+  [31m✘[39m  [2m16 [22m[31me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[39m[2m (14.6s)[22m
+  [31m✘[39m  [2m17 [22m[31me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[39m[2m (27.9s)[22m
+  [31m✘[39m  [2m18 [22m[31me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[39m[2m (17.8s)[22m
+  [32m✓[39m  [2m19 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (11.6s)[22m
+  [32m✓[39m  [2m20 [22me2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked[2m (10.2s)[22m
+
+
+[31m  1) e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('link', { name: /^Open matchup:/ }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('link', { name: /^Open matchup:/ }).first()[22m
+
+
+    [0m [90m 51 |[39m
+     [90m 52 |[39m [36masync[39m [36mfunction[39m boardLoaded(page[33m:[39m [33mPage[39m) {
+    [31m[1m>[22m[39m[90m 53 |[39m   [36mawait[39m expect(page[33m.[39mgetByRole([32m"link"[39m[33m,[39m { name[33m:[39m [35m/^Open matchup:/[39m })[33m.[39mfirst())[33m.[39mtoBeVisible()[33m;[39m
+     [90m    |[39m                                                                            [31m[1m^[22m[39m
+     [90m 54 |[39m }
+     [90m 55 |[39m
+     [90m 56 |[39m test([32m"E1 sign in: a wrong token is refused, the right one opens the current week"[39m[33m,[39m [36masync[39m ({ page[33m,[39m request }) [33m=>[39m {[0m
+    [2m    at boardLoaded (/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:53:76)[22m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:111:9[22m
+
+[2m    Error Context: test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat13/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat13/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat13/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  2) e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('link', { name: /^Open matchup:/ }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('link', { name: /^Open matchup:/ }).first()[22m
+
+
+    [0m [90m 51 |[39m
+     [90m 52 |[39m [36masync[39m [36mfunction[39m boardLoaded(page[33m:[39m [33mPage[39m) {
+    [31m[1m>[22m[39m[90m 53 |[39m   [36mawait[39m expect(page[33m.[39mgetByRole([32m"link"[39m[33m,[39m { name[33m:[39m [35m/^Open matchup:/[39m })[33m.[39mfirst())[33m.[39mtoBeVisible()[33m;[39m
+     [90m    |[39m                                                                            [31m[1m^[22m[39m
+     [90m 54 |[39m }
+     [90m 55 |[39m
+     [90m 56 |[39m test([32m"E1 sign in: a wrong token is refused, the right one opens the current week"[39m[33m,[39m [36masync[39m ({ page[33m,[39m request }) [33m=>[39m {[0m
+    [2m    at boardLoaded (/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:53:76)[22m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:111:9[22m
+
+[2m    Error Context: test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat14/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat14/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat14/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  3) e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('link', { name: /^Open matchup:/ }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('link', { name: /^Open matchup:/ }).first()[22m
+
+
+    [0m [90m 51 |[39m
+     [90m 52 |[39m [36masync[39m [36mfunction[39m boardLoaded(page[33m:[39m [33mPage[39m) {
+    [31m[1m>[22m[39m[90m 53 |[39m   [36mawait[39m expect(page[33m.[39mgetByRole([32m"link"[39m[33m,[39m { name[33m:[39m [35m/^Open matchup:/[39m })[33m.[39mfirst())[33m.[39mtoBeVisible()[33m;[39m
+     [90m    |[39m                                                                            [31m[1m^[22m[39m
+     [90m 54 |[39m }
+     [90m 55 |[39m
+     [90m 56 |[39m test([32m"E1 sign in: a wrong token is refused, the right one opens the current week"[39m[33m,[39m [36masync[39m ({ page[33m,[39m request }) [33m=>[39m {[0m
+    [2m    at boardLoaded (/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:53:76)[22m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:111:9[22m
+
+[2m    Error Context: test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat15/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat15/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat15/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  4) e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('link', { name: /^Open matchup:/ }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('link', { name: /^Open matchup:/ }).first()[22m
+
+
+    [0m [90m 51 |[39m
+     [90m 52 |[39m [36masync[39m [36mfunction[39m boardLoaded(page[33m:[39m [33mPage[39m) {
+    [31m[1m>[22m[39m[90m 53 |[39m   [36mawait[39m expect(page[33m.[39mgetByRole([32m"link"[39m[33m,[39m { name[33m:[39m [35m/^Open matchup:/[39m })[33m.[39mfirst())[33m.[39mtoBeVisible()[33m;[39m
+     [90m    |[39m                                                                            [31m[1m^[22m[39m
+     [90m 54 |[39m }
+     [90m 55 |[39m
+     [90m 56 |[39m test([32m"E1 sign in: a wrong token is refused, the right one opens the current week"[39m[33m,[39m [36masync[39m ({ page[33m,[39m request }) [33m=>[39m {[0m
+    [2m    at boardLoaded (/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:53:76)[22m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:111:9[22m
+
+[2m    Error Context: test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat16/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat16/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat16/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  5) e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('link', { name: /^Open matchup:/ }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('link', { name: /^Open matchup:/ }).first()[22m
+
+
+    [0m [90m 51 |[39m
+     [90m 52 |[39m [36masync[39m [36mfunction[39m boardLoaded(page[33m:[39m [33mPage[39m) {
+    [31m[1m>[22m[39m[90m 53 |[39m   [36mawait[39m expect(page[33m.[39mgetByRole([32m"link"[39m[33m,[39m { name[33m:[39m [35m/^Open matchup:/[39m })[33m.[39mfirst())[33m.[39mtoBeVisible()[33m;[39m
+     [90m    |[39m                                                                            [31m[1m^[22m[39m
+     [90m 54 |[39m }
+     [90m 55 |[39m
+     [90m 56 |[39m test([32m"E1 sign in: a wrong token is refused, the right one opens the current week"[39m[33m,[39m [36masync[39m ({ page[33m,[39m request }) [33m=>[39m {[0m
+    [2m    at boardLoaded (/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:53:76)[22m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/step2.spec.ts:111:9[22m
+
+[2m    Error Context: test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat17/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat17/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/step2-E4-lock-a-game-locks-62d62-t-a-reload-and-looks-locked-repeat17/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  5 failed[39m
+[31m    e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+[31m    e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+[31m    e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+[31m    e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+[31m    e2e/step2.spec.ts:105:5 › E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked [39m
+[32m  15 passed[39m[2m (6.2m)[22m

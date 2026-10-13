@@ -391,6 +391,11 @@ test("P19 the phone cannot store a waiting pick (storage full): he is told to ke
     await expect(page.getByText("Waiting to sync")).toBeVisible();
   } finally {
     await context.setOffline(false);
+    // Back online the open page sends the pick it kept in memory. Wait for it and remove it: without this
+    // the send races the end of the test, and when it wins the next test starts with this game already picked.
+    const serverPick = async () => (await board(page.request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+    await expect.poll(serverPick, { message: "the pick kept in memory is sent once he is back online", timeout: 25_000 }).toBe(g.home.abbr);
+    expect((await page.request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
   }
 });
 
@@ -478,6 +483,121 @@ test("P22 while the phone cannot store the queue, an older stored pick never com
   } finally {
     for (const g of [a, b]) expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
   }
+});
+
+test("P23 after the phone refused to store the queue, reopening the app does not send an older stored pick", async ({ page, request }) => {
+  const { open } = await board(request);
+  const a = open[0];
+  const serverPick = async () => (await board(request)).games.find((x) => x.game_id === a.game_id)!.my_pick;
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    // An older waiting pick is in storage, then storage stops taking writes (until the app is reopened).
+    await page.evaluate(([id, team]) => {
+      localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team }));
+      const real = Storage.prototype.setItem;
+      const w = window as unknown as { refused: number };
+      w.refused = 0;
+      Storage.prototype.setItem = function (k: string, v: string) {
+        if (k === "nflpi_pick_queue") {
+          w.refused++;
+          throw new DOMException("full", "QuotaExceededError");
+        }
+        return real.call(this, k, v);
+      };
+    }, [a.game_id, a.away.abbr]);
+    await pickGroup(page, a).getByRole("button", { name: `Pick ${a.home.name}` }).click();
+    await expect.poll(serverPick, { message: "the newer pick is saved" }).toBe(a.home.abbr);
+    await expect(page.getByText("Waiting to sync")).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { refused: number }).refused), "a queue write was refused").toBeGreaterThan(0);
+    await page.reload(); // the app is reopened: memory is gone, only storage is left
+    await boardLoaded(page);
+    await page.waitForTimeout(3_000);
+    expect(await serverPick(), "the older stored pick was not sent on reopening").toBe(a.home.abbr);
+    await expect(pickGroup(page, a).getByRole("button", { name: `${a.home.name} picked` })).toBeVisible();
+  } finally {
+    expect((await request.delete(`/api/picks/${a.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
+test("P23b a refused write does not throw away a waiting pick for another game that was safely stored", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const [a, b] = open;
+  const serverPick = async (id: string) => (await board(request)).games.find((x) => x.game_id === id)!.my_pick;
+  const storedQueue = () => page.evaluate(() => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}") as Record<string, string | null>);
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    // A waiting pick for game B is safely stored, then storage stops taking writes that add anything.
+    await page.evaluate(([id, team]) => {
+      localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team }));
+      const real = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k: string, v: string) {
+        if (k === "nflpi_pick_queue" && v.length > (localStorage.getItem(k) ?? "").length) throw new DOMException("full", "QuotaExceededError");
+        return real.call(this, k, v);
+      };
+    }, [b.game_id, b.away.abbr]);
+    await context.setOffline(true);
+    await pickGroup(page, a).getByRole("button", { name: `Pick ${a.home.name}` }).click();
+    await expect(pickGroup(page, a).getByRole("button", { name: `${a.home.name} picked` })).toBeVisible();
+    // Closing the app now leaves only storage: game B's waiting pick must still be there.
+    expect((await storedQueue())[b.game_id], "game B's stored pick survived the refused write").toBe(b.away.abbr);
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await expect.poll(() => serverPick(b.game_id), { message: "game B's waiting pick is sent" }).toBe(b.away.abbr);
+    await expect.poll(() => serverPick(a.game_id), { message: "the new pick is sent" }).toBe(a.home.abbr);
+  } finally {
+    await context.setOffline(false);
+    for (const g of [a, b]) expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
+test("P23c when the phone can store nothing and the stored queue had to be dropped, he is told to keep the app open or re-enter the picks", async ({ page, context, request }) => {
+  const { open } = await board(request);
+  const [a, b] = open;
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    // Storage holds an older pick for game A and a waiting pick for game B, then refuses every write to the queue.
+    await page.evaluate(([idA, teamA, idB, teamB]) => {
+      localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [idA]: teamA, [idB]: teamB }));
+      const real = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k: string, v: string) {
+        if (k === "nflpi_pick_queue") throw new DOMException("full", "QuotaExceededError");
+        return real.call(this, k, v);
+      };
+    }, [a.game_id, a.away.abbr, b.game_id, b.away.abbr]);
+    await context.setOffline(true);
+    await pickGroup(page, a).getByRole("button", { name: `Pick ${a.home.name}` }).click();
+    // The older copy of game A must not survive, so the stored queue is gone, and game B's pick with it.
+    expect(await page.evaluate(() => localStorage.getItem("nflpi_pick_queue")), "the stale stored queue was dropped").toBeNull();
+    await expect(page.getByText("Waiting picks could not be stored on this phone. Keep the app open until they sync, or enter them again when you are online.")).toBeVisible();
+  } finally {
+    await context.setOffline(false);
+    for (const g of [a, b]) expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
+test("P24 offline banner: 'showing data from' is the age of the data on screen, not of the last server reply", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await workerControls(page);
+  await weekPersisted(page);
+  await goOffline(page);
+  // The saved week is five hours old; the app last heard from the server (any reply) just now.
+  await page.addInitScript(() => {
+    const old = Date.now() - 5 * 3_600_000;
+    const cache = localStorage.getItem("nflpi_cache");
+    if (cache) localStorage.setItem("nflpi_cache", cache.replace(/"dataUpdatedAt":\d+/g, `"dataUpdatedAt":${old}`));
+    localStorage.setItem("nflpi_last_sync", String(Date.now()));
+  });
+  await page.reload();
+  await boardLoaded(page);
+  await expect(page.getByRole("status").filter({ hasText: /offline/i })).toContainText("showing data from 5h ago");
 });
 
 test("P15 one queued pick the server keeps refusing does not hold back the others", async ({ page, context, request }) => {

@@ -111,7 +111,9 @@ test("E4 lock: a game locks on screen within 5 s of kickoff, without a reload, a
   await boardLoaded(page);
   const buttons = pickGroup(page, g).getByRole("button");
   await expect(buttons.first()).toBeEnabled();
-  await page.clock.fastForward(Date.parse(g.kickoff_utc) - Date.parse(meta.server_time) - 1_000);
+  // Stop the page's clock exactly one second before kickoff. Fast-forwarding by a fixed amount left the time the
+  // page took to load on top, so a slow machine could pass kickoff here and fail the next line.
+  await page.clock.pauseAt(Date.parse(g.kickoff_utc) - 1_000);
   await expect(buttons.first()).toBeEnabled();
   await page.clock.runFor(4_000);
   await expect(buttons.first()).toBeDisabled({ timeout: 2_000 });

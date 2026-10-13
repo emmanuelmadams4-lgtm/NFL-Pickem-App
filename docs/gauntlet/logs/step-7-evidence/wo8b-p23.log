@@ -1,0 +1,10 @@
+ 0:17  up 13 days, 13:11, 1 user, load averages: 7.77 13.75 23.67
+
+Running 4 tests using 1 worker
+
+  ✓  1 e2e/pwa.spec.ts:451:5 › P22 while the phone cannot store the queue, an older stored pick never comes back over a newer one (4.4s)
+  ✓  2 e2e/pwa.spec.ts:483:5 › P23 after the phone refused to store the queue, reopening the app does not send an older stored pick (3.8s)
+  ✓  3 e2e/pwa.spec.ts:519:5 › P23b a refused write does not throw away a waiting pick for another game that was safely stored (869ms)
+  ✓  4 e2e/pwa.spec.ts:552:5 › P23c when the phone can store nothing and the stored queue had to be dropped, he is told to keep the app open or re-enter the picks (606ms)
+
+  4 passed (17.8s)

@@ -113,14 +113,15 @@ def test_push_subscribe_alerts_and_reminders_are_deduplicated(loaded, client, mo
     assert push.alert_prediction_changes(loaded, [ev]) == 0
     assert sent[0][0].startswith("Pick flipped") and sent[0][1] == f"/game/?id={gid}"
 
-    # Kickoff reminders: off by default, then one per unpicked game inside the window.
-    game = loaded.get(Game, gid)
-    assert push.send_kickoff_reminders(loaded, game.kickoff_utc - timedelta(minutes=30)) == 0
+    # Game-day reminder (D19): off at 0, then one per game day inside the window, whether or not he has picked.
+    upcoming = select(Game.kickoff_utc).where(Game.status == "scheduled").order_by(Game.kickoff_utc)
+    first = loaded.scalars(upcoming).first()
+    soon = first - timedelta(minutes=30)
+    assert client.put("/api/settings", json={"reminder_minutes": 0}).json()["reminder_minutes"] == 0
+    assert push.send_kickoff_reminders(loaded, soon) == 0
     assert client.put("/api/settings", json={"reminder_minutes": 60}).json()["reminder_minutes"] == 60
-    soon = game.kickoff_utc - timedelta(minutes=30)
-    n = push.send_kickoff_reminders(loaded, soon)
-    assert n >= 1 and push.send_kickoff_reminders(loaded, soon) == 0
-    assert any(t.startswith("No pick yet") for t, _ in sent)
+    assert push.send_kickoff_reminders(loaded, soon) == 1 and push.send_kickoff_reminders(loaded, soon) == 0
+    assert sent[-1][0].startswith("Game") and sent[-1][1] == "/sheet/"
     assert client.request("DELETE", "/api/push/subscribe", params={"endpoint": sub["endpoint"]}).status_code == 204
     assert loaded.scalar(select(func.count()).select_from(PushSubscription)) == 0
 

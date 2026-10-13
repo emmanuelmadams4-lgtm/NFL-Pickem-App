@@ -265,6 +265,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/push/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Push Test */
+        post: operations["push_test_api_push_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings": {
         parameters: {
             query?: never;
@@ -884,6 +901,28 @@ export interface components {
             /** Endpoint */
             endpoint: string;
             keys: components["schemas"]["PushKeys"];
+        };
+        /** PushTestOut */
+        PushTestOut: {
+            /** Configured */
+            configured: boolean;
+            /** Devices */
+            devices: number;
+            /** Delivered */
+            delivered: number;
+            /** Results */
+            results: components["schemas"]["PushTestResult"][];
+        };
+        /** PushTestResult */
+        PushTestResult: {
+            /** Host */
+            host: string;
+            /** Ok */
+            ok: boolean;
+            /** Status */
+            status: number | null;
+            /** Error */
+            error: string | null;
         };
         /** RankIn */
         RankIn: {
@@ -1732,6 +1771,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    push_test_api_push_test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushTestOut"];
+                };
             };
             /** @description Validation Error */
             422: {

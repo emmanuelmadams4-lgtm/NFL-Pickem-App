@@ -1,0 +1,16 @@
+[2m[WebServer] [22mingestion open-meteo/weather failed
+[2m[WebServer] [22mRuntimeError: Open-Meteo unreachable (e2e fixture)
+  [31m✘[39m  [2m33 [22m[31me2e/pwa.spec.ts:483:5 › P23 after the phone refused to store the queue, reopening the app does not send an older stored pick[39m[2m (6.3s)[22m
+  [31m✘[39m  [2m34 [22m[31me2e/pwa.spec.ts:519:5 › P24 offline banner: 'showing data from' is the age of the data on screen, not of the last server reply[39m[2m (7.8s)[22m
+    Error: the older stored pick was not sent on reopening
+    Expected: [32m"LV"[39m
+    Received: [31m"MIA"[39m
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+    Expected substring: [32m"showing data from 5h ago"[39m
+    Error: element(s) not found
+    [2m      - unexpected value "Offline · showing data from just now"[22m
+[31m  2 failed[39m
+[33m  2 skipped[39m
+[32m  89 passed[39m[2m (3.7m)[22m
+npm error Lifecycle script `e2e` failed with error:
+npm error command failed

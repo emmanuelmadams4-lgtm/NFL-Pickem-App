@@ -969,6 +969,52 @@
     }
    }
   },
+  "/api/push/test": {
+   "post": {
+    "summary": "Push Test",
+    "operationId": "push_test_api_push_test_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PushTestOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/settings": {
    "put": {
     "summary": "Update Settings",
@@ -2868,6 +2914,79 @@
     ],
     "title": "PushSubscriptionIn",
     "description": "Exactly what the browser's PushSubscription.toJSON() returns."
+   },
+   "PushTestOut": {
+    "properties": {
+     "configured": {
+      "type": "boolean",
+      "title": "Configured"
+     },
+     "devices": {
+      "type": "integer",
+      "title": "Devices"
+     },
+     "delivered": {
+      "type": "integer",
+      "title": "Delivered"
+     },
+     "results": {
+      "items": {
+       "$ref": "#/components/schemas/PushTestResult"
+      },
+      "type": "array",
+      "title": "Results"
+     }
+    },
+    "type": "object",
+    "required": [
+     "configured",
+     "devices",
+     "delivered",
+     "results"
+    ],
+    "title": "PushTestOut"
+   },
+   "PushTestResult": {
+    "properties": {
+     "host": {
+      "type": "string",
+      "title": "Host"
+     },
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     },
+     "error": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error"
+     }
+    },
+    "type": "object",
+    "required": [
+     "host",
+     "ok",
+     "status",
+     "error"
+    ],
+    "title": "PushTestResult"
    },
    "RankIn": {
     "properties": {

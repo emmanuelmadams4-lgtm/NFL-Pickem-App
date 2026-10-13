@@ -45,12 +45,14 @@ docker compose exec app python -m nflpi.jobs vapid   # prints two keys
 ```
 Put them in `.env` as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, set `VAPID_SUBJECT=mailto:<your email>`, then `docker compose up -d`.
 
-On the iPhone, inside the Home Screen app: **Settings → Alerts → On**, then allow notifications.
+On the iPhone, inside the Home Screen app: **Settings → Alerts → Turn on alerts**, then allow notifications. Then tap **Send test alert**: an alert should arrive within a few seconds, and the line under the button says what the push service answered.
 
 You get:
-* Pick flipped, or a win chance moved 10+ points
+* One reminder on every game day, an hour before that day's first kickoff (choose Off, 30 min, 1 hour or 3 hours in Settings). Tapping it opens the week's copy sheet.
+* Before a game kicks off, when something drastic changes: the pick flipped, the game moved between easy pick, tough matchup and coin flip, a starting QB changed, or the win chance moved 7+ points. Nothing after kickoff.
 * A QB in this week's games listed Out, Doubtful or Questionable
-* "No pick yet" reminder before kickoff (choose 30 min, 1 hour or 3 hours in Settings)
+
+The app keeps its alert subscription alive by itself: every time it opens it tells the server again, and if the server's keys changed it subscribes again.
 
 Alerts come from your server through Apple's push service. Apple does not require a developer account for this.
 

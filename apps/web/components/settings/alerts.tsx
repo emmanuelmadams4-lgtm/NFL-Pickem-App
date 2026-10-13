@@ -6,14 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
 import { useToast } from "@/components/toast";
 import { Button, Chip, Notice, SelectField, Section, errorMessage } from "@/components/ui";
-
-function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
-  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-  const raw = atob((base64 + padding).replace(/-/g, "+").replace(/_/g, "/"));
-  const out = new Uint8Array(new ArrayBuffer(raw.length));
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
+import { testAlertWords, urlBase64ToUint8Array } from "@/lib/push";
 
 function env() {
   const ua = navigator.userAgent;
@@ -37,6 +30,8 @@ export function AlertsSection({ meta }: { meta: Meta }) {
   const [info, setInfo] = useState<{ ios: boolean; standalone: boolean; pushCapable: boolean; permission: NotificationPermission | null; subscribed: boolean; swReady: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testBusy, setTestBusy] = useState(false);
+  const [testResult, setTestResult] = useState<{ text: string; problem: boolean } | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -106,12 +101,27 @@ export function AlertsSection({ meta }: { meta: Meta }) {
     }
   }
 
+  async function sendTest() {
+    setTestBusy(true);
+    setError(null);
+    setTestResult(null);
+    try {
+      setTestResult(testAlertWords(await api.pushTest()));
+      void qc.invalidateQueries({ queryKey: keys.meta });
+    } catch (e) {
+      setTestResult(null);
+      setError(`Could not send the test alert. ${errorMessage(e)}`);
+    } finally {
+      setTestBusy(false);
+    }
+  }
+
   async function setReminder(minutes: number) {
     setReminderBusy(true);
     try {
       const updated = await api.updateSettings({ reminder_minutes: minutes });
       qc.setQueryData(keys.meta, updated);
-      toast(minutes === 0 ? "Kickoff reminders are off." : `Kickoff reminder set to ${REMINDERS.find((r) => r.value === minutes)?.label.toLowerCase()}.`, "good");
+      toast(minutes === 0 ? "Game day reminder is off." : `Game day reminder set to ${REMINDERS.find((r) => r.value === minutes)?.label.toLowerCase()}.`, "good");
     } catch (e) {
       toast(`Reminder not saved. ${errorMessage(e)}`, "bad");
     } finally {
@@ -134,15 +144,19 @@ export function AlertsSection({ meta }: { meta: Meta }) {
         <div className="flex flex-wrap items-center gap-3">
           <Chip tone={info.subscribed ? "good" : "neutral"}>{info.subscribed ? "Alerts on" : "Alerts off"}</Chip>
           {info.subscribed ? (
-            <Button onClick={turnOff} loading={busy}>
-              Turn off alerts
-            </Button>
+            <>
+              <Button onClick={turnOff} loading={busy}>Turn off alerts</Button>
+              <Button onClick={sendTest} loading={testBusy}>Send test alert</Button>
+            </>
           ) : (
             <Button variant="primary" onClick={turnOn} loading={busy} disabled={info.permission === "denied"}>
               Turn on alerts
             </Button>
           )}
         </div>
+        {info.subscribed && testResult && (
+          <p role="status" className={`text-sm ${testResult.problem ? "text-bad" : "text-subtle"}`}>{testResult.text}</p>
+        )}
         {info.permission === "denied" && <p className="text-xs text-warn">Notifications are blocked for this app. Allow them in your device settings first.</p>}
         <p className="text-xs text-subtle">
           {meta.push_subscriptions} {meta.push_subscriptions === 1 ? "device is" : "devices are"} subscribed on the server.
@@ -151,11 +165,11 @@ export function AlertsSection({ meta }: { meta: Meta }) {
     );
   }
 
-  const reminder = meta.reminder_minutes ?? 0;
+  const reminder = meta.reminder_minutes ?? 60;
   const known = REMINDERS.some((r) => r.value === reminder);
 
   return (
-    <Section id="alerts" title="Alerts" note="Pick flips, big probability moves, QB injury news, and kickoff reminders.">
+    <Section id="alerts" title="Alerts" note="Pick flips, big changes before kickoff, QB news, and a reminder on game days.">
       <div className="grid gap-x-8 gap-y-5 md:grid-cols-[240px_minmax(0,1fr)]">
         <div>
           <p className="text-sm font-medium text-text">Push notifications</p>
@@ -171,8 +185,8 @@ export function AlertsSection({ meta }: { meta: Meta }) {
         </div>
 
         <div>
-          <p className="text-sm font-medium text-text">Kickoff reminder</p>
-          <p className="mt-0.5 text-xs text-subtle">The server sends a No pick yet alert for games you have not picked.</p>
+          <p className="text-sm font-medium text-text">Game day reminder</p>
+          <p className="mt-0.5 text-xs text-subtle">One alert on each game day, before that day&apos;s first kickoff.</p>
         </div>
         <div>
           <SelectField label="Remind me" value={reminder} onChange={(e) => setReminder(Number(e.target.value))} disabled={reminderBusy}>

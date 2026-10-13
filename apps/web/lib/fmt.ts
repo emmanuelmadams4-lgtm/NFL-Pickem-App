@@ -54,6 +54,14 @@ export function safeSet(key: string, value: string): boolean {
   }
 }
 
+export function safeRemove(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 export function isIndoor(roof: string | null | undefined): boolean {
   return roof === "dome" || roof === "closed";
 }

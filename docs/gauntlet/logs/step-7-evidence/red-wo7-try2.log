@@ -1,0 +1,5 @@
+        """Security S3, critic S1, integrator ruling: a failed send must not use up the alert."""
+WARNING  nflpi.notify.push:push.py:94 web push failed for push.example.test (503)
+FAILED tests/test_alerts.py::test_n3_an_alert_that_reached_no_device_is_not_recorded_as_sent
+FAILED tests/test_hardening.py::test_postponed_game_keeps_its_status_and_gets_no_reminder_or_pick_lock
+2 failed, 201 passed in 33.47s

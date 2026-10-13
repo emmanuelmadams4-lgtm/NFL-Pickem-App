@@ -1,0 +1,304 @@
+[31mF[0m[31mF[0m[31mF[0m[32m.[0m[31mF[0m[31mF[0m[31mF[0m[31mF[0m[31mF[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[31mF[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 57%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                    [100%][0m
+=================================== FAILURES ===================================
+[31m[1m_________ test_n1_a_win_chance_move_of_seven_points_counts_as_drastic __________[0m
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n1_a_win_chance_move_of_seven_points_counts_as_drastic[39;49;00m():[90m[39;49;00m
+>       [94massert[39;49;00m Settings.model_fields[[33m"[39;49;00m[33malert_move_threshold[39;49;00m[33m"[39;49;00m].default == [94m0.07[39;49;00m[90m[39;49;00m
+[1m[31mE       assert 0.1 == 0.07[0m
+[1m[31mE        +  where 0.1 = FieldInfo(annotation=float, required=False, default=0.1).default[0m
+
+[1m[31mtests/test_alerts.py[0m:67: AssertionError
+[31m[1m______ test_n2_one_reminder_per_game_day_an_hour_before_its_first_kickoff ______[0m
+
+game_days = <sqlalchemy.orm.session.Session object at 0x11887af90>
+client = <starlette.testclient.TestClient object at 0x11887a7b0>
+pushes = <tests.test_hardening.FakeWebPush object at 0x11887ba10>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n2_one_reminder_per_game_day_an_hour_before_its_first_kickoff[39;49;00m(game_days, client, pushes):  [90m# noqa: F811[39;49;00m[90m[39;49;00m
+        [90m# He has already picked the first game: the reminder is sent anyway (D19).[39;49;00m[90m[39;49;00m
+        [94massert[39;49;00m client.put([33m"[39;49;00m[33m/api/picks/2026_07_MIA_BUF[39;49;00m[33m"[39;49;00m, json={[33m"[39;49;00m[33mteam[39;49;00m[33m"[39;49;00m: [33m"[39;49;00m[33mBUF[39;49;00m[33m"[39;49;00m}).status_code == [94m200[39;49;00m[90m[39;49;00m
+    [90m[39;49;00m
+        [94massert[39;49;00m push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=[94m61[39;49;00m)) == [94m0[39;49;00m  [90m# too early[39;49;00m[90m[39;49;00m
+>       [94massert[39;49;00m push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=[94m50[39;49;00m)) == [94m1[39;49;00m[90m[39;49;00m
+[1m[31mE       assert 0 == 1[0m
+[1m[31mE        +  where 0 = <function send_kickoff_reminders at 0x115ec9e40>(<sqlalchemy.orm.session.Session object at 0x11887af90>, (datetime.datetime(2026, 10, 18, 17, 0, tzinfo=datetime.timezone.utc) - datetime.timedelta(seconds=3000)))[0m
+[1m[31mE        +    where <function send_kickoff_reminders at 0x115ec9e40> = push.send_kickoff_reminders[0m
+[1m[31mE        +    and   datetime.timedelta(seconds=3000) = timedelta(minutes=50)[0m
+
+[1m[31mtests/test_alerts.py[0m:78: AssertionError
+[31m[1m_ test_n2_reminder_is_on_at_one_hour_until_he_changes_it_and_zero_turns_it_off _[0m
+
+game_days = <sqlalchemy.orm.session.Session object at 0x11887b0e0>
+client = <starlette.testclient.TestClient object at 0x118acc690>
+pushes = <tests.test_hardening.FakeWebPush object at 0x118acd1d0>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n2_reminder_is_on_at_one_hour_until_he_changes_it_and_zero_turns_it_off[39;49;00m(game_days, client, pushes):  [90m# noqa: F811[39;49;00m[90m[39;49;00m
+>       [94massert[39;49;00m client.get([33m"[39;49;00m[33m/api/meta[39;49;00m[33m"[39;49;00m).json()[[33m"[39;49;00m[33mreminder_minutes[39;49;00m[33m"[39;49;00m] == [94m60[39;49;00m[90m[39;49;00m
+[1m[31mE       assert None == 60[0m
+
+[1m[31mtests/test_alerts.py[0m:95: AssertionError
+[31m[1m_ test_n3_a_starting_qb_change_is_alerted_even_when_the_win_chance_barely_moves _[0m
+
+loaded = <sqlalchemy.orm.session.Session object at 0x11887ba10>
+pushes = <tests.test_hardening.FakeWebPush object at 0x118a4aea0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x118ac8e20>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n3_a_starting_qb_change_is_alerted_even_when_the_win_chance_barely_moves[39;49;00m(loaded, pushes, monkeypatch):  [90m# noqa: F811[39;49;00m[90m[39;49;00m
+        monkeypatch.setattr(get_settings(), [33m"[39;49;00m[33malert_move_threshold[39;49;00m[33m"[39;49;00m, [94m0.99[39;49;00m)[90m[39;49;00m
+        subscribe(loaded)[90m[39;49;00m
+        game = week4_game(loaded)[90m[39;49;00m
+        game.home_qb = [33m"[39;49;00m[33mBackup One[39;49;00m[33m"[39;49;00m[90m[39;49;00m
+        loaded.commit()[90m[39;49;00m
+        events = engine.refresh_predictions(loaded, game_ids=[game.game_id])[90m[39;49;00m
+>       [94massert[39;49;00m [e.game_id [94mfor[39;49;00m e [95min[39;49;00m events] == [game.game_id][90m[39;49;00m
+[1m[31mE       AssertionError: assert [] == ['2023_04_MIA_LV'][0m
+[1m[31mE         [0m
+[1m[31mE         Right contains one more item: [0m[33m'[39;49;00m[33m2023_04_MIA_LV[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_alerts.py[0m:124: AssertionError
+[31m[1m___ test_n4_a_label_change_is_alerted_even_when_the_win_chance_barely_moves ____[0m
+
+loaded = <sqlalchemy.orm.session.Session object at 0x11887a660>
+pushes = <tests.test_hardening.FakeWebPush object at 0x118b01350>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x118aca470>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n4_a_label_change_is_alerted_even_when_the_win_chance_barely_moves[39;49;00m(loaded, pushes, monkeypatch):  [90m# noqa: F811[39;49;00m[90m[39;49;00m
+        monkeypatch.setattr(get_settings(), [33m"[39;49;00m[33malert_move_threshold[39;49;00m[33m"[39;49;00m, [94m0.99[39;49;00m)[90m[39;49;00m
+        subscribe(loaded)[90m[39;49;00m
+        game = week4_game(loaded)[90m[39;49;00m
+        newest = select(Prediction).where(Prediction.game_id == game.game_id).order_by(Prediction.id.desc())[90m[39;49;00m
+        last = loaded.scalars(newest).first()[90m[39;49;00m
+        favourite = [96mmax[39;49;00m(last.home_win_prob, [94m1[39;49;00m - last.home_win_prob)[90m[39;49;00m
+        [90m# An earlier snapshot with the same pick but on the other side of a label line.[39;49;00m[90m[39;49;00m
+        other = [94m0.60[39;49;00m [94mif[39;49;00m favourite >= [94m0.67[39;49;00m [95mor[39;49;00m favourite < [94m0.55[39;49;00m [94melse[39;49;00m [94m0.70[39;49;00m[90m[39;49;00m
+        earlier = {c.name: [96mgetattr[39;49;00m(last, c.name) [94mfor[39;49;00m c [95min[39;49;00m Prediction.__table__.columns [94mif[39;49;00m c.name != [33m"[39;49;00m[33mid[39;49;00m[33m"[39;49;00m}[90m[39;49;00m
+        earlier |= {[33m"[39;49;00m[33mhome_win_prob[39;49;00m[33m"[39;49;00m: other [94mif[39;49;00m last.home_win_prob >= [94m0.5[39;49;00m [94melse[39;49;00m [94m1[39;49;00m - other, [33m"[39;49;00m[33minputs_hash[39;49;00m[33m"[39;49;00m: [33m"[39;49;00m[33mearlier-snapshot[39;49;00m[33m"[39;49;00m}[90m[39;49;00m
+        loaded.add(Prediction(**earlier))[90m[39;49;00m
+        loaded.commit()[90m[39;49;00m
+    [90m[39;49;00m
+        events = engine.refresh_predictions(loaded, game_ids=[game.game_id])[90m[39;49;00m
+>       [94massert[39;49;00m [e.game_id [94mfor[39;49;00m e [95min[39;49;00m events] == [game.game_id][90m[39;49;00m
+[1m[31mE       AssertionError: assert [] == ['2023_04_MIA_LV'][0m
+[1m[31mE         [0m
+[1m[31mE         Right contains one more item: [0m[33m'[39;49;00m[33m2023_04_MIA_LV[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_alerts.py[0m:147: AssertionError
+[31m[1m_____________ test_n5_no_change_alert_once_the_game_has_kicked_off _____________[0m
+
+loaded = <sqlalchemy.orm.session.Session object at 0x11887b620>
+pushes = <tests.test_hardening.FakeWebPush object at 0x1178ffad0>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n5_no_change_alert_once_the_game_has_kicked_off[39;49;00m(loaded, pushes):  [90m# noqa: F811[39;49;00m[90m[39;49;00m
+        subscribe(loaded)[90m[39;49;00m
+        game = week4_game(loaded)[90m[39;49;00m
+        flip = engine.ChangeEvent(game.game_id, [94m0.6[39;49;00m, [94m0.4[39;49;00m, game.home_team, game.away_team, [33m"[39;49;00m[33mQB out[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+>       [94massert[39;49;00m push.alert_prediction_changes(loaded, [flip], now=game.kickoff_utc + timedelta(minutes=[94m1[39;49;00m)) == [94m0[39;49;00m[90m[39;49;00m
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE       TypeError: alert_prediction_changes() got an unexpected keyword argument 'now'[0m
+
+[1m[31mtests/test_alerts.py[0m:161: TypeError
+[31m[1m________ test_n6_send_test_alert_reports_what_the_push_service_answered ________[0m
+
+session = <sqlalchemy.orm.session.Session object at 0x11887b770>
+client = <starlette.testclient.TestClient object at 0x1188275c0>
+pushes = <tests.test_hardening.FakeWebPush object at 0x118aca360>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n6_send_test_alert_reports_what_the_push_service_answered[39;49;00m(session, client, pushes):  [90m# noqa: F811[39;49;00m[90m[39;49;00m
+>       [94massert[39;49;00m client.post([33m"[39;49;00m[33m/api/push/test[39;49;00m[33m"[39;49;00m).json() == {[33m"[39;49;00m[33mconfigured[39;49;00m[33m"[39;49;00m: [94mTrue[39;49;00m, [33m"[39;49;00m[33mdevices[39;49;00m[33m"[39;49;00m: [94m0[39;49;00m, [33m"[39;49;00m[33mdelivered[39;49;00m[33m"[39;49;00m: [94m0[39;49;00m, [33m"[39;49;00m[33mresults[39;49;00m[33m"[39;49;00m: []}[90m[39;49;00m
+[1m[31mE       AssertionError: assert {'detail': 'M... Not Allowed'} == {'configured'...'results': []}[0m
+[1m[31mE         [0m
+[1m[31mE         Left contains 1 more item:[0m
+[1m[31mE         [0m{[33m'[39;49;00m[33mdetail[39;49;00m[33m'[39;49;00m: [33m'[39;49;00m[33mMethod Not Allowed[39;49;00m[33m'[39;49;00m}[90m[39;49;00m[0m
+[1m[31mE         Right contains 4 more items:[0m
+[1m[31mE         [0m{[33m'[39;49;00m[33mconfigured[39;49;00m[33m'[39;49;00m: [94mTrue[39;49;00m, [33m'[39;49;00m[33mdelivered[39;49;00m[33m'[39;49;00m: [94m0[39;49;00m, [33m'[39;49;00m[33mdevices[39;49;00m[33m'[39;49;00m: [94m0[39;49;00m, [33m'[39;49;00m[33mresults[39;49;00m[33m'[39;49;00m: []}[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_alerts.py[0m:171: AssertionError
+[31m[1m___ test_n6_send_test_alert_needs_the_token_and_says_when_push_is_not_set_up ___[0m
+
+session = <sqlalchemy.orm.session.Session object at 0x11887b380>
+client = <starlette.testclient.TestClient object at 0x118a4b820>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n6_send_test_alert_needs_the_token_and_says_when_push_is_not_set_up[39;49;00m(session, client):[90m[39;49;00m
+        [94mfrom[39;49;00m[90m [39;49;00m[04m[96mfastapi[39;49;00m[04m[96m.[39;49;00m[04m[96mtestclient[39;49;00m[90m [39;49;00m[94mimport[39;49;00m TestClient[90m[39;49;00m
+    [90m[39;49;00m
+        [94mfrom[39;49;00m[90m [39;49;00m[04m[96mnflpi[39;49;00m[04m[96m.[39;49;00m[04m[96mapi[39;49;00m[04m[96m.[39;49;00m[04m[96mmain[39;49;00m[90m [39;49;00m[94mimport[39;49;00m app[90m[39;49;00m
+    [90m[39;49;00m
+>       [94massert[39;49;00m TestClient(app).post([33m"[39;49;00m[33m/api/push/test[39;49;00m[33m"[39;49;00m).status_code == [94m401[39;49;00m[90m[39;49;00m
+[1m[31mE       AssertionError: assert 405 == 401[0m
+[1m[31mE        +  where 405 = <Response [405 Method Not Allowed]>.status_code[0m
+[1m[31mE        +    where <Response [405 Method Not Allowed]> = post('/api/push/test')[0m
+[1m[31mE        +      where post = <starlette.testclient.TestClient object at 0x118c10b90>.post[0m
+[1m[31mE        +        where <starlette.testclient.TestClient object at 0x118c10b90> = <class 'starlette.testclient.TestClient'>(<fastapi.applications.FastAPI object at 0x11781ee40>)[0m
+
+[1m[31mtests/test_alerts.py[0m:192: AssertionError
+[31m[1m_______ test_n7_a_real_push_reaches_a_push_service_signed_and_encrypted ________[0m
+
+session = <sqlalchemy.orm.session.Session object at 0x118a47380>
+client = <starlette.testclient.TestClient object at 0x118acb570>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x118c5ae40>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_n7_a_real_push_reaches_a_push_service_signed_and_encrypted[39;49;00m(session, client, monkeypatch):[90m[39;49;00m
+        public, private = push.generate_vapid_keys()[90m[39;49;00m
+        settings = get_settings()[90m[39;49;00m
+        monkeypatch.setattr(settings, [33m"[39;49;00m[33mvapid_public_key[39;49;00m[33m"[39;49;00m, public)[90m[39;49;00m
+        monkeypatch.setattr(settings, [33m"[39;49;00m[33mvapid_private_key[39;49;00m[33m"[39;49;00m, private)[90m[39;49;00m
+        monkeypatch.setattr(settings, [33m"[39;49;00m[33mvapid_subject[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mmailto:owner@example.test[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+    [90m[39;49;00m
+        MockPushService.received = [][90m[39;49;00m
+        server = HTTPServer(([33m"[39;49;00m[33m127.0.0.1[39;49;00m[33m"[39;49;00m, [94m0[39;49;00m), MockPushService)[90m[39;49;00m
+        threading.Thread(target=server.serve_forever, daemon=[94mTrue[39;49;00m).start()[90m[39;49;00m
+        origin = [33mf[39;49;00m[33m"[39;49;00m[33mhttp://127.0.0.1:[39;49;00m[33m{[39;49;00mserver.server_port[33m}[39;49;00m[33m"[39;49;00m[90m[39;49;00m
+        phone_key = ec.generate_private_key(ec.SECP256R1())[90m[39;49;00m
+        point = (serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)[90m[39;49;00m
+        phone_public = phone_key.public_key().public_bytes(*point)[90m[39;49;00m
+        auth = [33mb[39;49;00m[33m"[39;49;00m[33m0123456789abcdef[39;49;00m[33m"[39;49;00m[90m[39;49;00m
+        session.add(PushSubscription(endpoint=[33mf[39;49;00m[33m"[39;49;00m[33m{[39;49;00morigin[33m}[39;49;00m[33m/push/phone-1[39;49;00m[33m"[39;49;00m, p256dh=b64(phone_public), auth=b64(auth)))[90m[39;49;00m
+        session.commit()[90m[39;49;00m
+        [94mtry[39;49;00m:[90m[39;49;00m
+            body = client.post([33m"[39;49;00m[33m/api/push/test[39;49;00m[33m"[39;49;00m).json()[90m[39;49;00m
+        [94mfinally[39;49;00m:[90m[39;49;00m
+            server.shutdown()[90m[39;49;00m
+>       [94massert[39;49;00m (body[[33m"[39;49;00m[33mdelivered[39;49;00m[33m"[39;49;00m], body[[33m"[39;49;00m[33mresults[39;49;00m[33m"[39;49;00m][[94m0[39;49;00m][[33m"[39;49;00m[33mstatus[39;49;00m[33m"[39;49;00m]) == ([94m1[39;49;00m, [94m201[39;49;00m)[90m[39;49;00m
+                ^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE       KeyError: 'delivered'[0m
+
+[1m[31mtests/test_alerts.py[0m:236: KeyError
+[31m[1m__________ test_push_subscribe_alerts_and_reminders_are_deduplicated ___________[0m
+
+loaded = <sqlalchemy.orm.session.Session object at 0x11887b380>
+client = <starlette.testclient.TestClient object at 0x118b147d0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x118b16030>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_push_subscribe_alerts_and_reminders_are_deduplicated[39;49;00m(loaded, client, monkeypatch):[90m[39;49;00m
+        sent = [][90m[39;49;00m
+        monkeypatch.setattr(push, [33m"[39;49;00m[33m_send[39;49;00m[33m"[39;49;00m, [94mlambda[39;49;00m session, title, body, url, **kw: sent.append((title, url)) [95mor[39;49;00m [94m1[39;49;00m)[90m[39;49;00m
+        sub = {[33m"[39;49;00m[33mendpoint[39;49;00m[33m"[39;49;00m: [33m"[39;49;00m[33mhttps://web.push.apple.com/abc123[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mkeys[39;49;00m[33m"[39;49;00m: {[33m"[39;49;00m[33mp256dh[39;49;00m[33m"[39;49;00m: [33m"[39;49;00m[33mB[39;49;00m[33m"[39;49;00m * [94m87[39;49;00m, [33m"[39;49;00m[33mauth[39;49;00m[33m"[39;49;00m: [33m"[39;49;00m[33ma[39;49;00m[33m"[39;49;00m * [94m22[39;49;00m}}[90m[39;49;00m
+        [94massert[39;49;00m client.post([33m"[39;49;00m[33m/api/push/subscribe[39;49;00m[33m"[39;49;00m, json=sub).status_code == [94m204[39;49;00m[90m[39;49;00m
+        [94massert[39;49;00m client.post([33m"[39;49;00m[33m/api/push/subscribe[39;49;00m[33m"[39;49;00m, json=sub).status_code == [94m204[39;49;00m  [90m# idempotent[39;49;00m[90m[39;49;00m
+        [94massert[39;49;00m loaded.scalar(select(func.count()).select_from(PushSubscription)) == [94m1[39;49;00m[90m[39;49;00m
+    [90m[39;49;00m
+        gid = loaded.scalars(select(Game.game_id).where(Game.season == CURRENT, Game.week == [94m4[39;49;00m)).first()[90m[39;49;00m
+        ev = ChangeEvent(gid, [94m0.6[39;49;00m, [94m0.4[39;49;00m, [33m"[39;49;00m[33mBUF[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mMIA[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mQB out[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+        [94massert[39;49;00m push.alert_prediction_changes(loaded, [ev]) == [94m1[39;49;00m[90m[39;49;00m
+        [94massert[39;49;00m push.alert_prediction_changes(loaded, [ev]) == [94m0[39;49;00m[90m[39;49;00m
+        [94massert[39;49;00m sent[[94m0[39;49;00m][[94m0[39;49;00m].startswith([33m"[39;49;00m[33mPick flipped[39;49;00m[33m"[39;49;00m) [95mand[39;49;00m sent[[94m0[39;49;00m][[94m1[39;49;00m] == [33mf[39;49;00m[33m"[39;49;00m[33m/game/?id=[39;49;00m[33m{[39;49;00mgid[33m}[39;49;00m[33m"[39;49;00m[90m[39;49;00m
+    [90m[39;49;00m
+        [90m# Game-day reminder (D19): off at 0, then one per game day inside the window, whether or not he has picked.[39;49;00m[90m[39;49;00m
+        upcoming = select(Game.kickoff_utc).where(Game.status == [33m"[39;49;00m[33mscheduled[39;49;00m[33m"[39;49;00m).order_by(Game.kickoff_utc)[90m[39;49;00m
+        first = loaded.scalars(upcoming).first()[90m[39;49;00m
+        soon = first - timedelta(minutes=[94m30[39;49;00m)[90m[39;49;00m
+        [94massert[39;49;00m client.put([33m"[39;49;00m[33m/api/settings[39;49;00m[33m"[39;49;00m, json={[33m"[39;49;00m[33mreminder_minutes[39;49;00m[33m"[39;49;00m: [94m0[39;49;00m}).json()[[33m"[39;49;00m[33mreminder_minutes[39;49;00m[33m"[39;49;00m] == [94m0[39;49;00m[90m[39;49;00m
+        [94massert[39;49;00m push.send_kickoff_reminders(loaded, soon) == [94m0[39;49;00m[90m[39;49;00m
+        [94massert[39;49;00m client.put([33m"[39;49;00m[33m/api/settings[39;49;00m[33m"[39;49;00m, json={[33m"[39;49;00m[33mreminder_minutes[39;49;00m[33m"[39;49;00m: [94m60[39;49;00m}).json()[[33m"[39;49;00m[33mreminder_minutes[39;49;00m[33m"[39;49;00m] == [94m60[39;49;00m[90m[39;49;00m
+        [94massert[39;49;00m push.send_kickoff_reminders(loaded, soon) == [94m1[39;49;00m [95mand[39;49;00m push.send_kickoff_reminders(loaded, soon) == [94m0[39;49;00m[90m[39;49;00m
+>       [94massert[39;49;00m sent[-[94m1[39;49;00m][[94m0[39;49;00m].startswith([33m"[39;49;00m[33mGame[39;49;00m[33m"[39;49;00m) [95mand[39;49;00m sent[-[94m1[39;49;00m][[94m1[39;49;00m] == [33m"[39;49;00m[33m/sheet/[39;49;00m[33m"[39;49;00m[90m[39;49;00m
+[1m[31mE       AssertionError: assert (False)[0m
+[1m[31mE        +  where False = <built-in method startswith of str object at 0x117932ff0>('Game')[0m
+[1m[31mE        +    where <built-in method startswith of str object at 0x117932ff0> = 'No pick yet: MIA @ LV'.startswith[0m
+
+[1m[31mtests/test_api.py[0m:124: AssertionError
+[31m[1m__________ test_reminder_tick_sends_reminders_without_network_ingest ___________[0m
+
+reminder_game = <sqlalchemy.orm.session.Session object at 0x118878c20>
+pushes = <tests.test_hardening.FakeWebPush object at 0x118d674d0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x118c0e5d0>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_reminder_tick_sends_reminders_without_network_ingest[39;49;00m(reminder_game, pushes, monkeypatch):[90m[39;49;00m
+        fetched = [][90m[39;49;00m
+        monkeypatch.setattr(nflverse, [33m"[39;49;00m[33mfetch_csv[39;49;00m[33m"[39;49;00m, [94mlambda[39;49;00m path: fetched.append(path) [95mor[39;49;00m [])[90m[39;49;00m
+        monkeypatch.setattr(weather, [33m"[39;49;00m[33mfetch_forecast[39;49;00m[33m"[39;49;00m, [94mlambda[39;49;00m *args: fetched.append([33m"[39;49;00m[33mweather[39;49;00m[33m"[39;49;00m))[90m[39;49;00m
+        subscribe(reminder_game)[90m[39;49;00m
+    [90m[39;49;00m
+        jobs.tick(reminder_game, HALF_HOUR_BEFORE)[90m[39;49;00m
+>       [94massert[39;49;00m pushes.titles() == [[33m"[39;49;00m[33mGame today: kickoff 1:00 PM ET[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+[1m[31mE       AssertionError: assert ['No pick yet: MIA @ BUF'] == ['Game today:...f 1:00 PM ET'][0m
+[1m[31mE         [0m
+[1m[31mE         At index 0 diff: [0m[33m'[39;49;00m[33mNo pick yet: MIA @ BUF[39;49;00m[33m'[39;49;00m[90m[39;49;00m != [0m[33m'[39;49;00m[33mGame today: kickoff 1:00 PM ET[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_hardening.py[0m:255: AssertionError
+[31m[1m____ test_one_broken_subscription_does_not_stop_reminders_or_the_heartbeat _____[0m
+
+reminder_game = <sqlalchemy.orm.session.Session object at 0x11887b0e0>
+pushes = <tests.test_hardening.FakeWebPush object at 0x118c8dc50>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x118dfa4e0>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_one_broken_subscription_does_not_stop_reminders_or_the_heartbeat[39;49;00m(reminder_game, pushes, monkeypatch):[90m[39;49;00m
+        subscribe(reminder_game, [33m"[39;49;00m[33mbroken[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+        subscribe(reminder_game, [33m"[39;49;00m[33mgood[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+    [90m[39;49;00m
+        [94mdef[39;49;00m[90m [39;49;00m[92mflaky[39;49;00m(info, *args, **kwargs):[90m[39;49;00m
+            [94mif[39;49;00m info[[33m"[39;49;00m[33mendpoint[39;49;00m[33m"[39;49;00m].endswith([33m"[39;49;00m[33mbroken[39;49;00m[33m"[39;49;00m):[90m[39;49;00m
+                [94mraise[39;49;00m [96mValueError[39;49;00m([33m"[39;49;00m[33mbad subscription key[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+            [94mreturn[39;49;00m pushes(info, *args, **kwargs)[90m[39;49;00m
+    [90m[39;49;00m
+        monkeypatch.setattr(push, [33m"[39;49;00m[33mwebpush[39;49;00m[33m"[39;49;00m, flaky)[90m[39;49;00m
+        jobs.tick(reminder_game, HALF_HOUR_BEFORE)[90m[39;49;00m
+>       [94massert[39;49;00m pushes.titles() == [[33m"[39;49;00m[33mGame today: kickoff 1:00 PM ET[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+[1m[31mE       AssertionError: assert ['No pick yet: MIA @ BUF'] == ['Game today:...f 1:00 PM ET'][0m
+[1m[31mE         [0m
+[1m[31mE         At index 0 diff: [0m[33m'[39;49;00m[33mNo pick yet: MIA @ BUF[39;49;00m[33m'[39;49;00m[90m[39;49;00m != [0m[33m'[39;49;00m[33mGame today: kickoff 1:00 PM ET[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_hardening.py[0m:271: AssertionError
+------------------------------ Captured log call -------------------------------
+[1m[31mERROR   [0m nflpi.notify.push:push.py:86 web push failed for https://push.example.test/broken
+Traceback (most recent call last):
+  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/nflpi/notify/push.py", line 68, in _send
+    webpush(
+    ~~~~~~~^
+        info,
+        ^^^^^
+    ...<5 lines>...
+        timeout=10,
+        ^^^^^^^^^^^
+    )
+    ^
+  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_hardening.py", line 266, in flaky
+    raise ValueError("bad subscription key")
+ValueError: bad subscription key
+[31m[1m___________ test_ingest_failure_in_the_cycle_does_not_skip_reminders ___________[0m
+
+session = <sqlalchemy.orm.session.Session object at 0x11887a660>
+client = <starlette.testclient.TestClient object at 0x118a5f070>
+pushes = <tests.test_hardening.FakeWebPush object at 0x118e4d640>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x118e7ce50>
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_ingest_failure_in_the_cycle_does_not_skip_reminders[39;49;00m(session, client, pushes, monkeypatch):[90m[39;49;00m
+        soon = (datetime.now(UTC) + timedelta(minutes=[94m30[39;49;00m)).astimezone(EASTERN)  [90m# cycle reads the real clock[39;49;00m[90m[39;49;00m
+        service.ingest_schedules(session, [game_row(soon.date().isoformat(), soon.strftime([33m"[39;49;00m[33m%[39;49;00m[33mH:[39;49;00m[33m%[39;49;00m[33mM[39;49;00m[33m"[39;49;00m))])[90m[39;49;00m
+        [94massert[39;49;00m client.put([33m"[39;49;00m[33m/api/settings[39;49;00m[33m"[39;49;00m, json={[33m"[39;49;00m[33mreminder_minutes[39;49;00m[33m"[39;49;00m: [94m60[39;49;00m}).status_code == [94m200[39;49;00m[90m[39;49;00m
+        subscribe(session)[90m[39;49;00m
+    [90m[39;49;00m
+        [94mdef[39;49;00m[90m [39;49;00m[92mnflverse_down[39;49;00m(session, weather=[94mTrue[39;49;00m):[90m[39;49;00m
+            [94mraise[39;49;00m [96mRuntimeError[39;49;00m([33m"[39;49;00m[33mnflverse down[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+    [90m[39;49;00m
+        monkeypatch.setattr(jobs, [33m"[39;49;00m[33mingest[39;49;00m[33m"[39;49;00m, nflverse_down)[90m[39;49;00m
+        [94mwith[39;49;00m contextlib.suppress([96mException[39;49;00m):  [90m# whether the cycle re-raises the ingest error is not part of the criterion[39;49;00m[90m[39;49;00m
+            jobs.cycle(session)[90m[39;49;00m
+>       [94massert[39;49;00m pushes.titles() == [[33mf[39;49;00m[33m"[39;49;00m[33mGame today: kickoff [39;49;00m[33m{[39;49;00msoon.strftime([33m'[39;49;00m[33m%[39;49;00m[33m-I:[39;49;00m[33m%[39;49;00m[33mM [39;49;00m[33m%[39;49;00m[33mp[39;49;00m[33m'[39;49;00m)[33m}[39;49;00m[33m ET[39;49;00m[33m"[39;49;00m][90m[39;49;00m
+[1m[31mE       AssertionError: assert ['No pick yet: MIA @ BUF'] == ['Game today:...f 8:59 PM ET'][0m
+[1m[31mE         [0m
+[1m[31mE         At index 0 diff: [0m[33m'[39;49;00m[33mNo pick yet: MIA @ BUF[39;49;00m[33m'[39;49;00m[90m[39;49;00m != [0m[33m'[39;49;00m[33mGame today: kickoff 8:59 PM ET[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_hardening.py[0m:287: AssertionError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n1_a_win_chance_move_of_seven_points_counts_as_drastic[0m - assert 0.1 == 0.07
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n2_one_reminder_per_game_day_an_hour_before_its_first_kickoff[0m - assert 0 == 1
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n2_reminder_is_on_at_one_hour_until_he_changes_it_and_zero_turns_it_off[0m - assert None == 60
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n3_a_starting_qb_change_is_alerted_even_when_the_win_chance_barely_moves[0m - AssertionError: assert [] == ['2023_04_MIA_LV']
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n4_a_label_change_is_alerted_even_when_the_win_chance_barely_moves[0m - AssertionError: assert [] == ['2023_04_MIA_LV']
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n5_no_change_alert_once_the_game_has_kicked_off[0m - TypeError: alert_prediction_changes() got an unexpected keyword argument 'now'
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n6_send_test_alert_reports_what_the_push_service_answered[0m - AssertionError: assert {'detail': 'M... Not Allowed'} == {'configured'...'r...
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n6_send_test_alert_needs_the_token_and_says_when_push_is_not_set_up[0m - AssertionError: assert 405 == 401
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n7_a_real_push_reaches_a_push_service_signed_and_encrypted[0m - KeyError: 'delivered'
+[31mFAILED[0m tests/test_api.py::[1mtest_push_subscribe_alerts_and_reminders_are_deduplicated[0m - AssertionError: assert (False)
+[31mFAILED[0m tests/test_hardening.py::[1mtest_reminder_tick_sends_reminders_without_network_ingest[0m - AssertionError: assert ['No pick yet: MIA @ BUF'] == ['Game today:...f 1:00...
+[31mFAILED[0m tests/test_hardening.py::[1mtest_one_broken_subscription_does_not_stop_reminders_or_the_heartbeat[0m - AssertionError: assert ['No pick yet: MIA @ BUF'] == ['Game today:...f 1:00...
+[31mFAILED[0m tests/test_hardening.py::[1mtest_ingest_failure_in_the_cycle_does_not_skip_reminders[0m - AssertionError: assert ['No pick yet: MIA @ BUF'] == ['Game today:...f 8:59...
+[31m[31m[1m13 failed[0m, [32m112 passed[0m[31m in 26.84s[0m[0m

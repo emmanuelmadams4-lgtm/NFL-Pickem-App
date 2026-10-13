@@ -1,0 +1,15 @@
+  [31m✘[39m  [2m1 [22m[31me2e/alerts.spec.ts:115:5 › A1c Settings shows the device the app just re-sent, not the count from before[39m[2m (5.9s)[22m
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+    Locator: locator('#alerts').getByText('1 device is subscribed on the server.')
+    Expected: visible
+[31m  1 failed[39m
+  [31m✘[39m  [2m1 [22m[31me2e/alerts.spec.ts:115:5 › A1c Settings shows the device the app just re-sent, not the count from before[39m[2m (5.7s)[22m
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+    Locator: locator('#alerts').getByText('1 device is subscribed on the server.')
+    Expected: visible
+[31m  1 failed[39m
+  [31m✘[39m  [2m1 [22m[31me2e/alerts.spec.ts:115:5 › A1c Settings shows the device the app just re-sent, not the count from before[39m[2m (6.0s)[22m
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+    Locator: locator('#alerts').getByText('1 device is subscribed on the server.')
+    Expected: visible
+[31m  1 failed[39m

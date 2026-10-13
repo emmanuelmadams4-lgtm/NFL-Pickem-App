@@ -1,0 +1,19 @@
+E       AssertionError: assert ('ValueError' in 'WARNING  nflpi.notify.push:push.py:100 web push failed for push.example.test\n')
+E        +  where 'WARNING  nflpi.notify.push:push.py:100 web push failed for push.example.test\n' = <_pytest.logging.LogCaptureFixture object at 0x1148b9fd0>.text
+WARNING  nflpi.notify.push:push.py:100 web push failed for push.example.test
+WARNING  nflpi.notify.push:push.py:94 web push failed for push.example.test (410)
+FAILED tests/test_alerts.py::test_n2_no_second_reminder_once_the_days_first_game_is_over
+FAILED tests/test_alerts.py::test_n1_an_exact_seven_point_move_is_alerted_as_a_big_move
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://127.0.0.1:5432/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://169.254.169.254/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://100.64.0.1/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://example.com/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://fcm.googleapis.com.evil.example/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://evilpush.apple.com.example/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://notpush.apple.com/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://web.push.apple.com:8443/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://user@web.push.apple.com/x]
+FAILED tests/test_alerts.py::test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service[https://web.push.apple.com@127.0.0.1/x]
+FAILED tests/test_alerts.py::test_s2_an_unexpected_send_failure_logs_its_kind_and_never_the_address
+FAILED tests/test_alerts.py::test_n6_a_device_the_push_service_forgot_is_told_what_to_do
+14 failed, 16 passed in 6.99s

@@ -1,13 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ago } from "@nflpi/shared";
+import { useEffect, useRef, useState } from "react";
+import { ago, keys } from "@nflpi/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
-import { flushPicks, isServerReachable, lastNetworkSync, pendingCount, useOnline, useServerReachable } from "@/lib/sync";
+import { flushPicks, isServerReachable, pendingCount, useOnline, useServerReachable } from "@/lib/sync";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { useToast } from "@/components/toast";
 import { Button, Card } from "@/components/ui";
+import { useMeta } from "@/lib/queries";
+import { keepPushSubscription } from "@/lib/push";
+
+/** Restores this device's existing push subscription once its server key is known. */
+export function PushKeepAlive() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const { data: meta } = useMeta();
+  const ran = useRef(false);
+  useEffect(() => {
+    if (!meta || ran.current) return;
+    ran.current = true;
+    void keepPushSubscription(api, meta.push_public_key).then((sent) => {
+      if (sent) void qc.invalidateQueries({ queryKey: keys.meta });
+    });
+  }, [api, meta, qc]);
+  return null;
+}
 
 /** Registers the service worker in production builds only. */
 export function ServiceWorkerRegister() {
@@ -89,9 +107,17 @@ export function OfflineBanner() {
 
   useEffect(() => {
     if (online && reachable) return;
-    // Prefer the last real network sync; fall back to the freshest cached query.
-    const fromCache = qc.getQueryCache().getAll().reduce((m, q) => Math.max(m, q.state.dataUpdatedAt), 0);
-    setAt(lastNetworkSync() ?? (fromCache || null));
+    const cache = qc.getQueryCache();
+    const update = () => {
+      const oldest = cache.getAll().reduce((time, query) => (
+        query.getObserversCount() > 0 && query.state.data !== undefined && query.state.dataUpdatedAt > 0
+          ? Math.min(time, query.state.dataUpdatedAt)
+          : time
+      ), Infinity);
+      setAt(Number.isFinite(oldest) ? oldest : null);
+    };
+    update();
+    return cache.subscribe(update);
   }, [online, reachable, qc]);
 
   if (online && reachable) return null;

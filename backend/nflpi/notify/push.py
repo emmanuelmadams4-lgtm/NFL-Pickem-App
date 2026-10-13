@@ -1,14 +1,17 @@
 """Web Push alerts for the PWA (iPhone Home Screen app, iOS 16.4+, and desktop browsers).
 
-Kinds: prediction flips / big moves, QB injury status, and "no pick yet" kickoff reminders.
+Kinds: prediction changes, QB injury status, and game-day kickoff reminders.
 Every alert has a dedupe key so a rerun never sends it twice. No Apple developer account is
 needed; the server signs messages with its own VAPID key.
 """
 
 import base64
+import hashlib
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -19,11 +22,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from nflpi.config import get_settings
-from nflpi.models import AppSetting, Game, InjuryReport, Notification, Prediction, PushSubscription, UserPick
+from nflpi.models import AppSetting, Game, InjuryReport, Notification, PushSubscription
 from nflpi.predictions.engine import ChangeEvent
 
 log = logging.getLogger(__name__)
 ALERT_STATUSES = {"Out", "Doubtful", "Questionable"}
+EASTERN = ZoneInfo("America/New_York")
+LABEL_WORDS = {"coin_flip": "a coin flip", "tough_matchup": "a tough matchup", "easy_pick": "an easy pick"}
 
 
 def generate_vapid_keys() -> tuple[str, str]:
@@ -54,7 +59,8 @@ def _record(session: Session, kind: str, game_id: str | None, key: str, payload:
 
 
 def _send(
-    session: Session, title: str, body: str, url: str, ttl: int = 6 * 3600, headers: dict[str, str] | None = None
+    session: Session, title: str, body: str, url: str, ttl: int = 6 * 3600, headers: dict[str, str] | None = None,
+    results: list[dict] | None = None,
 ) -> int:
     """Send to every subscription. Drops subscriptions the push service says are gone."""
     if not configured():
@@ -64,8 +70,9 @@ def _send(
     data = json.dumps({"title": title, "body": body, "url": url})
     for sub in session.scalars(select(PushSubscription)).all():
         info = {"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}}
+        host = urlparse(sub.endpoint).hostname or ""
         try:
-            webpush(
+            response = webpush(
                 info,
                 data,
                 vapid_private_key=s.vapid_private_key,
@@ -75,16 +82,40 @@ def _send(
                 timeout=10,
             )
             sent += 1
+            ok, status, error = True, getattr(response, "status_code", None), None
         except WebPushException as exc:
             status = exc.response.status_code if exc.response is not None else None
             if status in (404, 410):
                 session.delete(sub)
-            log.warning("web push failed for %s (%s): %s", sub.endpoint, status, exc)
-        except RequestException as exc:
-            log.warning("web push network error for %s: %s", sub.endpoint, exc)
-        except Exception:  # noqa: BLE001 - one bad subscription must not stop delivery to others
-            log.exception("web push failed for %s", sub.endpoint)
+            error = (
+                "Push service no longer recognizes this device. Turn alerts off and on again."
+                if status in (404, 410) else "Push service rejected the alert."
+            )
+            log.warning("web push failed for %s (%s)", host, status)
+            ok = False
+        except RequestException:
+            log.warning("web push network error for %s", host)
+            ok, status, error = False, None, "Could not reach the push service."
+        except Exception as exc:  # noqa: BLE001 - one bad subscription must not stop delivery to others
+            log.warning("web push failed for %s (%s)", host, type(exc).__name__)
+            ok, status, error = False, None, "Could not send this alert."
+        if results is not None:
+            results.append({"host": host, "ok": ok, "status": status, "error": error})
     return sent
+
+
+def send_test_alert(session: Session) -> dict:
+    """Send a test alert without recording it as a notification."""
+    devices = len(session.scalars(select(PushSubscription.id)).all())
+    if not configured():
+        return {"configured": False, "devices": devices, "delivered": 0, "results": []}
+    results: list[dict] = []
+    delivered = _send(
+        session, "Test alert", "Alerts work on this device.", "/settings/",
+        ttl=60, headers={"Urgency": "high"}, results=results,
+    )
+    session.commit()
+    return {"configured": True, "devices": devices, "delivered": delivered, "results": results}
 
 
 def game_url(game_id: str | None) -> str:
@@ -96,19 +127,42 @@ def _matchup(session: Session, game_id: str) -> str:
     return f"{g.away_team} @ {g.home_team}" if g else game_id
 
 
-def alert_prediction_changes(session: Session, events: list[ChangeEvent]) -> int:
+def alert_prediction_changes(session: Session, events: list[ChangeEvent], now: datetime | None = None) -> int:
+    now = now or datetime.now(UTC)
     sent = 0
     for e in events:
+        game = session.get(Game, e.game_id)
+        if game is None or game.status != "scheduled" or game.kickoff_utc <= now:
+            continue
         flipped = e.old_pick != e.new_pick
-        title = f"{'Pick flipped' if flipped else 'Big move'}: {_matchup(session, e.game_id)}"
-        body = (
-            f"Now {e.new_pick} ({max(e.new_prob, 1 - e.new_prob):.0%}). Was {e.old_pick}."
-            if flipped
-            else f"Home chance {e.old_prob:.0%} → {e.new_prob:.0%}. Pick stays {e.new_pick}."
-        )
-        key = f"pred:{e.game_id}:{e.new_pick}:{round(e.new_prob, 2)}"
-        if _record(session, "prediction", e.game_id, key, {"title": title, "body": body}):
-            sent += _send(session, title, body, game_url(e.game_id))
+        matchup = f"{game.away_team} @ {game.home_team}"
+        chance = max(e.new_prob, 1 - e.new_prob)
+        if flipped:
+            kind = "flip"
+            title = f"Pick flipped: {matchup}"
+            body = f"Now {e.new_pick} ({chance:.0%}). Was {e.old_pick}."
+        elif e.qb_team and e.qb_name:
+            kind = "qb"
+            title = f"QB change: {matchup}"
+            body = f"{e.qb_team} starts {e.qb_name}. Pick: {e.new_pick} ({chance:.0%})."
+        elif e.old_label and e.new_label and e.old_label != e.new_label:
+            kind = "label"
+            title = f"Now {LABEL_WORDS[e.new_label]}: {matchup}"
+            body = f"Was {LABEL_WORDS[e.old_label]}. Pick: {e.new_pick} ({chance:.0%})."
+        else:
+            kind = "move"
+            title = f"Big move: {matchup}"
+            body = f"Home chance {e.old_prob:.0%} → {e.new_prob:.0%}. Pick stays {e.new_pick}."
+        change = [kind, e.old_prob, e.new_prob, e.old_pick, e.new_pick, e.old_label, e.new_label, e.qb_team, e.qb_name]
+        digest = hashlib.sha256(json.dumps(change).encode()).hexdigest()[:20]
+        key = f"pred:{e.game_id}:{kind}:{digest}"
+        if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
+            continue
+        delivered = _send(session, title, body, game_url(e.game_id))
+        if not delivered:
+            log.warning("alert %s reached 0 devices", key)
+        elif _record(session, "prediction", e.game_id, key, {"title": title, "body": body}):
+            sent += delivered
     session.commit()
     return sent
 
@@ -130,50 +184,60 @@ def alert_injuries(session: Session, changed: list[InjuryReport], season: int, w
         title = f"QB injury: {r.player} ({r.team}) {r.report_status}"
         body = f"Week {r.week}. Practice: {r.practice_status or 'n/a'}. Check the pick."
         key = f"inj:{r.season}:{r.week}:{r.player_id or r.player}:{r.report_status}"
-        if _record(session, "injury", gid, key, {"title": title, "body": body}):
-            sent += _send(session, title, body, game_url(gid))
+        if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
+            continue
+        delivered = _send(session, title, body, game_url(gid))
+        if not delivered:
+            log.warning("alert %s reached 0 devices", key)
+        elif _record(session, "injury", gid, key, {"title": title, "body": body}):
+            sent += delivered
     session.commit()
     return sent
 
 
 def send_kickoff_reminders(session: Session, now: datetime) -> int:
-    """'No pick yet' for games kicking off within the reminder window (setting: reminder_minutes)."""
+    """Send one reminder per Eastern game day before its first kickoff."""
     row = session.get(AppSetting, "reminder_minutes")
     minutes = row.value.get("v") if row else None
-    if not minutes:
+    minutes = 60 if minutes is None else minutes
+    if minutes == 0:
         return 0
-    soon = session.scalars(
+    games = session.scalars(
         select(Game).where(
-            Game.status == "scheduled",
             Game.time_tbd.is_(False),
-            Game.kickoff_utc > now,
-            Game.kickoff_utc <= now + timedelta(minutes=minutes),
-        )
+            Game.status != "postponed",
+        ).order_by(Game.kickoff_utc, Game.game_id)
     ).all()
-    picked = set(session.scalars(select(UserPick.game_id).where(UserPick.game_id.in_([g.game_id for g in soon]))))
+    days: dict[str, list[Game]] = {}
+    for game in games:
+        day = game.kickoff_utc.astimezone(EASTERN).date().isoformat()
+        days.setdefault(day, []).append(game)
     sent = 0
-    for g in soon:
-        if g.game_id in picked:
+    for day, day_games in days.items():
+        first = day_games[0]
+        kickoff = first.kickoff_utc
+        if not kickoff - timedelta(minutes=minutes) <= now < kickoff:
             continue
-        pred = session.scalars(
-            select(Prediction).where(Prediction.game_id == g.game_id).order_by(Prediction.id.desc()).limit(1)
-        ).first()
-        mins = int((g.kickoff_utc - now).total_seconds() // 60)
-        title = f"No pick yet: {g.away_team} @ {g.home_team}"
-        model = f" Model: {pred.pick} {max(pred.home_win_prob, 1 - pred.home_win_prob):.0%}." if pred else ""
-        body = f"Kicks off in {mins} min.{model}"
-        key = f"remind:{g.game_id}:{g.kickoff_utc.isoformat()}"
+        kickoff_time = kickoff.astimezone(EASTERN).strftime("%-I:%M %p")
+        count = len(day_games)
+        title = (
+            f"Games today: first kickoff {kickoff_time} ET"
+            if count > 1 else f"Game today: kickoff {kickoff_time} ET"
+        )
+        matchup = f"{first.away_team} @ {first.home_team}"
+        body = f"{count} games today. First: {matchup}." if count > 1 else f"1 game today: {matchup}."
+        key = f"remind:{day}:{kickoff.isoformat()}"
         if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
             continue
         delivered = _send(
             session,
             title,
             body,
-            game_url(g.game_id),
-            ttl=int((g.kickoff_utc - now).total_seconds()),
+            "/sheet/",
+            ttl=int((kickoff - now).total_seconds()),
             headers={"Urgency": "high"},
         )
-        if delivered and _record(session, "reminder", g.game_id, key, {"title": title, "body": body}):
+        if delivered and _record(session, "reminder", first.game_id, key, {"title": title, "body": body}):
             sent += delivered
     session.commit()
     return sent
