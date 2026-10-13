@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+[31m[1m_________________ ERROR collecting tests/test_star_backtest.py _________________[0m
+[31mImportError while importing test module '/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-starb/backend/tests/test_star_backtest.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+[1m[31m../../../../../../.local/share/uv/python/cpython-3.13-macos-aarch64-none/lib/python3.13/importlib/__init__.py[0m:88: in import_module
+    [0m[94mreturn[39;49;00m _bootstrap._gcd_import(name[level:], package, level)[90m[39;49;00m
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mtests/test_star_backtest.py[0m:9: in <module>
+    [0m[94mfrom[39;49;00m[90m [39;49;00m[04m[96mnflpi[39;49;00m[04m[96m.[39;49;00m[04m[96manalytics[39;49;00m[90m [39;49;00m[94mimport[39;49;00m star_backtest [94mas[39;49;00m sb[90m[39;49;00m
+[1m[31mE   ImportError: cannot import name 'star_backtest' from 'nflpi.analytics' (/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-starb/backend/nflpi/analytics/__init__.py)[0m[0m
+[36m[1m=========================== short test summary info ============================[0m
+[31mERROR[0m tests/test_star_backtest.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+[31m[31m[1m1 error[0m[31m in 0.42s[0m[0m

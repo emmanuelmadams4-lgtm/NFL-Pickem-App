@@ -1,0 +1,755 @@
+{
+ "games": 3649,
+ "confirm_games": 1084,
+ "confirm_clusters": 72,
+ "baseline": {
+  "market": {
+   "n": 3649,
+   "accuracy": 0.6656618251575774,
+   "accuracy_ci": [
+    0.6508632502055358,
+    0.6807344477939161
+   ],
+   "brier": 0.21101053281928192,
+   "log_loss": 0.6094274267769724
+  },
+  "blend": {
+   "n": 3649,
+   "accuracy": 0.6645656344203892,
+   "accuracy_ci": [
+    0.6492189640997533,
+    0.6793642093724308
+   ],
+   "brier": 0.2115343303375747,
+   "log_loss": 0.6106975489610106
+  }
+ },
+ "baseline_confirm": {
+  "market": {
+   "n": 1084,
+   "accuracy": 0.6780442804428044,
+   "accuracy_ci": [
+    0.6494464944649446,
+    0.7075645756457565
+   ],
+   "brier": 0.21045524447924308,
+   "log_loss": 0.6081896562059822
+  },
+  "blend": {
+   "n": 1084,
+   "accuracy": 0.6752767527675276,
+   "accuracy_ci": [
+    0.6476014760147601,
+    0.7038745387453874
+   ],
+   "brier": 0.21111446829834304,
+   "log_loss": 0.6095256237556241
+  }
+ },
+ "candidates": [
+  {
+   "candidate": "star_out_report",
+   "variants": [
+    {
+     "variant": "p_star_count",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": 3.366037605121437e-05,
+      "log_loss_gain_ci": [
+       -0.0010084375247681363,
+       0.0010582953363816867
+      ],
+      "accuracy_diff": 0.0,
+      "accuracy_diff_ci": [
+       -0.003898635477582846,
+       0.003898635477582846
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0008782349206697601,
+       0.0009353967042519413
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.004281863404915303,
+       0.004313979837217904
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_star_weighted",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -5.067029257161641e-05,
+      "log_loss_gain_ci": [
+       -0.0010508014993719013,
+       0.0009990007957725567
+      ],
+      "accuracy_diff": -0.0003898635477582846,
+      "accuracy_diff_ci": [
+       -0.0042884990253411305,
+       0.0031189083820662767
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.000975659936529451,
+       0.0008373441000747992
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.004671078240560529,
+       0.003918841999119838
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_star_count_qb",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.00031008836366509264,
+      "log_loss_gain_ci": [
+       -0.001679814997860889,
+       0.0010146572238091585
+      ],
+      "accuracy_diff": -0.0031189083820662767,
+      "accuracy_diff_ci": [
+       -0.007797270955165692,
+       0.0015594541910331384
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0017040618165964135,
+       0.00116010166031645
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.008207702624051919,
+       0.001947461108133702
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_star_weighted_qb",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.00037948855126692933,
+      "log_loss_gain_ci": [
+       -0.0017609953593759615,
+       0.0009721597936969375
+      ],
+      "accuracy_diff": -0.0042884990253411305,
+      "accuracy_diff_ci": [
+       -0.008576998050682261,
+       0.0
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0017800963915545124,
+       0.0010989861395980603
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.009338612277786781,
+       0.0007725064966929996
+      ],
+      "ships_cluster": false
+     }
+    }
+   ],
+   "chosen": "p_star_count",
+   "confirm": {
+    "n": 1084,
+    "log_loss_gain": 0.00015753121592076944,
+    "log_loss_gain_ci": [
+     -0.0018991536799871683,
+     0.0020334930364719816
+    ],
+    "accuracy_diff": -0.0018450184501845018,
+    "accuracy_diff_ci": [
+     -0.007380073800738007,
+     0.0036900369003690036
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.0015032577177132155,
+     0.001743274553717588
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.007442033692780737,
+     0.0037418147801683817
+    ],
+    "ships_cluster": false
+   },
+   "ships": false,
+   "verdict_flips_with_clusters": false,
+   "confirm_half_width": 0.001966323358229575
+  },
+  {
+   "candidate": "star_out_reserve",
+   "variants": [
+    {
+     "variant": "p_star_res_count",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.001184674190488398,
+      "log_loss_gain_ci": [
+       -0.002689263192387514,
+       0.00017605171068419589
+      ],
+      "accuracy_diff": 0.0027290448343079924,
+      "accuracy_diff_ci": [
+       -0.0003898635477582846,
+       0.005847953216374269
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.002700704815448674,
+       0.0003613469600685179
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.0003898635477582846,
+       0.006173257396661649
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_star_res_weighted",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.0009666793357954605,
+      "log_loss_gain_ci": [
+       -0.00216161661963244,
+       0.0001307117961304042
+      ],
+      "accuracy_diff": 0.0035087719298245615,
+      "accuracy_diff_ci": [
+       0.0003898635477582846,
+       0.006627680311890838
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0022235990782775747,
+       0.00030969493400209063
+      ],
+      "accuracy_diff_ci_cluster": [
+       0.0007781798832382491,
+       0.006625162000003039
+      ],
+      "ships_cluster": false
+     }
+    }
+   ],
+   "chosen": "p_star_res_weighted",
+   "confirm": {
+    "n": 1084,
+    "log_loss_gain": 0.0006264426554070656,
+    "log_loss_gain_ci": [
+     -0.001401171409416916,
+     0.0027270860724903584
+    ],
+    "accuracy_diff": -0.0009225092250922509,
+    "accuracy_diff_ci": [
+     -0.007380073800738007,
+     0.005535055350553505
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.001378036953451948,
+     0.002675987756425592
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.00741461668400622,
+     0.0055616121201222755
+    ],
+    "ships_cluster": false
+   },
+   "ships": false,
+   "verdict_flips_with_clusters": false,
+   "confirm_half_width": 0.002064128740953637
+  }
+ ],
+ "data": {
+  "stat_rows": 321706,
+  "report_rows": 90752,
+  "roster_rows": 466143,
+  "report_rows_dated_at_or_after_kickoff": 6,
+  "stars_per_season": {
+   "2008": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2009": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2010": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2011": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2012": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2013": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2014": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2015": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2016": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2017": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2018": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2019": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2020": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2021": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2022": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2023": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2024": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   },
+   "2025": {
+    "qb": 32,
+    "off": 64,
+    "def": 64
+   }
+  },
+  "reserve_check": {
+   "2016": {
+    "reserve_player_weeks": 4678,
+    "played_that_week": 20,
+    "share": 0.004275331338178709,
+    "active_share_with_a_stat_line": 0.5952583421204803
+   },
+   "2017": {
+    "reserve_player_weeks": 5085,
+    "played_that_week": 2,
+    "share": 0.00039331366764995085,
+    "active_share_with_a_stat_line": 0.6141474573288755
+   },
+   "2018": {
+    "reserve_player_weeks": 4672,
+    "played_that_week": 0,
+    "share": 0.0,
+    "active_share_with_a_stat_line": 0.6141379188587973
+   },
+   "2019": {
+    "reserve_player_weeks": 5157,
+    "played_that_week": 9,
+    "share": 0.0017452006980802793,
+    "active_share_with_a_stat_line": 0.6842250631313131
+   },
+   "2020": {
+    "reserve_player_weeks": 5190,
+    "played_that_week": 0,
+    "share": 0.0,
+    "active_share_with_a_stat_line": 0.674273222367109
+   },
+   "2021": {
+    "reserve_player_weeks": 6364,
+    "played_that_week": 0,
+    "share": 0.0,
+    "active_share_with_a_stat_line": 0.6927605118829981
+   },
+   "2022": {
+    "reserve_player_weeks": 5232,
+    "played_that_week": 0,
+    "share": 0.0,
+    "active_share_with_a_stat_line": 0.6874634502923976
+   },
+   "2023": {
+    "reserve_player_weeks": 4954,
+    "played_that_week": 0,
+    "share": 0.0,
+    "active_share_with_a_stat_line": 0.6805921052631579
+   },
+   "2024": {
+    "reserve_player_weeks": 5426,
+    "played_that_week": 0,
+    "share": 0.0,
+    "active_share_with_a_stat_line": 0.6927911140341262
+   },
+   "2025": {
+    "reserve_player_weeks": 5760,
+    "played_that_week": 0,
+    "share": 0.0,
+    "active_share_with_a_stat_line": 0.7086240274683128
+   }
+  },
+  "clubs": {
+   "scored_club_games": 7298,
+   "with_no_report_row_that_week": 8
+  },
+  "report_rows_without_a_time": {
+   "2009": {
+    "out_or_doubtful": 1008,
+    "no_time": 1003
+   },
+   "2010": {
+    "out_or_doubtful": 996,
+    "no_time": 0
+   },
+   "2011": {
+    "out_or_doubtful": 1121,
+    "no_time": 0
+   },
+   "2012": {
+    "out_or_doubtful": 1080,
+    "no_time": 0
+   },
+   "2013": {
+    "out_or_doubtful": 1003,
+    "no_time": 0
+   },
+   "2014": {
+    "out_or_doubtful": 1140,
+    "no_time": 0
+   },
+   "2015": {
+    "out_or_doubtful": 1210,
+    "no_time": 0
+   },
+   "2016": {
+    "out_or_doubtful": 1264,
+    "no_time": 0
+   },
+   "2017": {
+    "out_or_doubtful": 1068,
+    "no_time": 0
+   },
+   "2018": {
+    "out_or_doubtful": 1097,
+    "no_time": 0
+   },
+   "2019": {
+    "out_or_doubtful": 1205,
+    "no_time": 0
+   },
+   "2020": {
+    "out_or_doubtful": 1057,
+    "no_time": 0
+   },
+   "2021": {
+    "out_or_doubtful": 1054,
+    "no_time": 0
+   },
+   "2022": {
+    "out_or_doubtful": 1234,
+    "no_time": 0
+   },
+   "2023": {
+    "out_or_doubtful": 1138,
+    "no_time": 0
+   },
+   "2024": {
+    "out_or_doubtful": 1310,
+    "no_time": 0
+   },
+   "2025": {
+    "out_or_doubtful": 1502,
+    "no_time": 1502
+   }
+  },
+  "report_statuses": {
+   "Questionable": 23616,
+   "Probable": 17400,
+   "Out": 16107,
+   "Doubtful": 3380,
+   "None": 30243,
+   "Note": 6
+  },
+  "rows_skipped_for_no_player_id": {
+   "stats_player": 383,
+   "injuries": 0,
+   "weekly_rosters": 140
+  },
+  "rows_per_season": {
+   "stats": {
+    "2008": 17191,
+    "2009": 17669,
+    "2010": 17569,
+    "2011": 17419,
+    "2012": 17398,
+    "2013": 17227,
+    "2014": 17601,
+    "2015": 17592,
+    "2016": 17531,
+    "2017": 17456,
+    "2018": 17393,
+    "2019": 17341,
+    "2020": 17581,
+    "2021": 18947,
+    "2022": 18809,
+    "2023": 18621,
+    "2024": 18961,
+    "2025": 19400
+   },
+   "reports": {
+    "2009": 4821,
+    "2010": 4491,
+    "2011": 4971,
+    "2012": 5533,
+    "2013": 5070,
+    "2014": 5078,
+    "2015": 5232,
+    "2016": 5115,
+    "2017": 5104,
+    "2018": 5133,
+    "2019": 5392,
+    "2020": 5661,
+    "2021": 5587,
+    "2022": 5682,
+    "2023": 5599,
+    "2024": 6215,
+    "2025": 6068
+   },
+   "roster": {
+    "2016": 35020,
+    "2017": 51321,
+    "2018": 52200,
+    "2019": 51630,
+    "2020": 44124,
+    "2021": 46670,
+    "2022": 46136,
+    "2023": 45650,
+    "2024": 46572,
+    "2025": 46820
+   }
+  },
+  "by_season": {
+   "2009": {
+    "out_or_doubtful_rows": 1008,
+    "of_which_stars": 100,
+    "scored_games": 0,
+    "games_with_a_star_out_on_the_report": 0,
+    "games_with_reserve_input": 0
+   },
+   "2010": {
+    "out_or_doubtful_rows": 996,
+    "of_which_stars": 100,
+    "scored_games": 0,
+    "games_with_a_star_out_on_the_report": 0,
+    "games_with_reserve_input": 0
+   },
+   "2011": {
+    "out_or_doubtful_rows": 1121,
+    "of_which_stars": 178,
+    "scored_games": 0,
+    "games_with_a_star_out_on_the_report": 0,
+    "games_with_reserve_input": 0
+   },
+   "2012": {
+    "out_or_doubtful_rows": 1080,
+    "of_which_stars": 125,
+    "scored_games": 255,
+    "games_with_a_star_out_on_the_report": 80,
+    "games_with_reserve_input": 0
+   },
+   "2013": {
+    "out_or_doubtful_rows": 1003,
+    "of_which_stars": 107,
+    "scored_games": 255,
+    "games_with_a_star_out_on_the_report": 65,
+    "games_with_reserve_input": 0
+   },
+   "2014": {
+    "out_or_doubtful_rows": 1140,
+    "of_which_stars": 118,
+    "scored_games": 255,
+    "games_with_a_star_out_on_the_report": 70,
+    "games_with_reserve_input": 0
+   },
+   "2015": {
+    "out_or_doubtful_rows": 1210,
+    "of_which_stars": 150,
+    "scored_games": 256,
+    "games_with_a_star_out_on_the_report": 88,
+    "games_with_reserve_input": 0
+   },
+   "2016": {
+    "out_or_doubtful_rows": 1264,
+    "of_which_stars": 128,
+    "scored_games": 254,
+    "games_with_a_star_out_on_the_report": 79,
+    "games_with_reserve_input": 254
+   },
+   "2017": {
+    "out_or_doubtful_rows": 1068,
+    "of_which_stars": 98,
+    "scored_games": 255,
+    "games_with_a_star_out_on_the_report": 61,
+    "games_with_reserve_input": 255
+   },
+   "2018": {
+    "out_or_doubtful_rows": 1097,
+    "of_which_stars": 100,
+    "scored_games": 254,
+    "games_with_a_star_out_on_the_report": 79,
+    "games_with_reserve_input": 254
+   },
+   "2019": {
+    "out_or_doubtful_rows": 1205,
+    "of_which_stars": 128,
+    "scored_games": 255,
+    "games_with_a_star_out_on_the_report": 75,
+    "games_with_reserve_input": 255
+   },
+   "2020": {
+    "out_or_doubtful_rows": 1057,
+    "of_which_stars": 127,
+    "scored_games": 255,
+    "games_with_a_star_out_on_the_report": 81,
+    "games_with_reserve_input": 255
+   },
+   "2021": {
+    "out_or_doubtful_rows": 1054,
+    "of_which_stars": 113,
+    "scored_games": 271,
+    "games_with_a_star_out_on_the_report": 56,
+    "games_with_reserve_input": 271
+   },
+   "2022": {
+    "out_or_doubtful_rows": 1234,
+    "of_which_stars": 151,
+    "scored_games": 269,
+    "games_with_a_star_out_on_the_report": 89,
+    "games_with_reserve_input": 269
+   },
+   "2023": {
+    "out_or_doubtful_rows": 1138,
+    "of_which_stars": 107,
+    "scored_games": 272,
+    "games_with_a_star_out_on_the_report": 60,
+    "games_with_reserve_input": 272
+   },
+   "2024": {
+    "out_or_doubtful_rows": 1310,
+    "of_which_stars": 150,
+    "scored_games": 272,
+    "games_with_a_star_out_on_the_report": 92,
+    "games_with_reserve_input": 272
+   },
+   "2025": {
+    "out_or_doubtful_rows": 1502,
+    "of_which_stars": 160,
+    "scored_games": 271,
+    "games_with_a_star_out_on_the_report": 93,
+    "games_with_reserve_input": 271
+   }
+  }
+ },
+ "scored_games_missing_an_input": {
+  "star_out_diff": 0,
+  "star_out_w_diff": 0,
+  "qb_out_diff": 0,
+  "star_res_diff": 1021,
+  "star_res_w_diff": 1021
+ },
+ "scored_games_with_a_nonzero_input": {
+  "star_out_diff": 1068,
+  "star_out_w_diff": 1157,
+  "qb_out_diff": 314,
+  "star_res_diff": 1421,
+  "star_res_w_diff": 1724
+ },
+ "scored_games_equal_to_the_blend": {
+  "p_star_count": {
+   "tune": 0,
+   "confirm": 0
+  },
+  "p_star_weighted": {
+   "tune": 0,
+   "confirm": 0
+  },
+  "p_star_count_qb": {
+   "tune": 0,
+   "confirm": 0
+  },
+  "p_star_weighted_qb": {
+   "tune": 0,
+   "confirm": 0
+  },
+  "p_star_res_count": {
+   "tune": 1784,
+   "confirm": 0
+  },
+  "p_star_res_weighted": {
+   "tune": 1784,
+   "confirm": 0
+  }
+ },
+ "tune_only_weights": {
+  "p_star_count": {
+   "star_out_diff": -0.075648927963243
+  },
+  "p_star_weighted": {
+   "star_out_w_diff": -0.052766266563140526
+  },
+  "p_star_count_qb": {
+   "star_out_diff": -0.07590044950775715,
+   "qb_out_diff": -0.04176665803997684
+  },
+  "p_star_weighted_qb": {
+   "star_out_w_diff": -0.052997944806750345,
+   "qb_out_diff": -0.041030926966516515
+  },
+  "p_star_res_count": {
+   "star_res_diff": -0.05192843708897862
+  },
+  "p_star_res_weighted": {
+   "star_res_w_diff": -0.03524110749402024
+  }
+ },
+ "seconds": 63.2
+}

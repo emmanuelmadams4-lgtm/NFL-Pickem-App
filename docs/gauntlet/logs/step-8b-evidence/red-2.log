@@ -1,0 +1,30 @@
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                                                              [100%][0m
+=================================== FAILURES ===================================
+[31m[1m_________ test_unknown_stays_missing_and_a_known_empty_report_is_zero __________[0m
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_unknown_stays_missing_and_a_known_empty_report_is_zero[39;49;00m():[90m[39;49;00m
+        df = frame()[90m[39;49;00m
+        game = _game(df)[90m[39;49;00m
+        other_game = df[(df[[33m"[39;49;00m[33mseason[39;49;00m[33m"[39;49;00m] == [94m2022[39;49;00m) & (df[[33m"[39;49;00m[33mweek[39;49;00m[33m"[39;49;00m] == [94m2[39;49;00m)].iloc[[94m1[39;49;00m][90m[39;49;00m
+        reports = [_report([94m2022[39;49;00m, [94m2[39;49;00m, other_game.home_team, [33m"[39;49;00m[33mnobody[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mQuestionable[39;49;00m[33m"[39;49;00m)]  [90m# the week has a report[39;49;00m[90m[39;49;00m
+        feats = sb.star_out_features(df, _stats_2021(), reports)[90m[39;49;00m
+        [94massert[39;49;00m [96mlist[39;49;00m(feats.index) == [96mlist[39;49;00m(df.index)[90m[39;49;00m
+        [94massert[39;49;00m (feats.loc[(df[[33m"[39;49;00m[33mseason[39;49;00m[33m"[39;49;00m] == [94m2022[39;49;00m) & (df[[33m"[39;49;00m[33mweek[39;49;00m[33m"[39;49;00m] == [94m2[39;49;00m), REPORT_COLUMNS] == [94m0[39;49;00m).all().all()[90m[39;49;00m
+        [90m# A week with no report row at all is unknown, not "nobody is out".[39;49;00m[90m[39;49;00m
+        [94massert[39;49;00m feats.loc[(df[[33m"[39;49;00m[33mseason[39;49;00m[33m"[39;49;00m] == [94m2022[39;49;00m) & (df[[33m"[39;49;00m[33mweek[39;49;00m[33m"[39;49;00m] != [94m2[39;49;00m), REPORT_COLUMNS].isna().all().all()[90m[39;49;00m
+        [94massert[39;49;00m feats.loc[df[[33m"[39;49;00m[33mseason[39;49;00m[33m"[39;49;00m] != [94m2022[39;49;00m, REPORT_COLUMNS].isna().all().all()[90m[39;49;00m
+        [90m# No star list for the season before (no 2020 stats): unknown even with a report.[39;49;00m[90m[39;49;00m
+        feats = sb.star_out_features(df, _stats_2021(), reports + [_report([94m2021[39;49;00m, [94m2[39;49;00m, game.home_team, [33m"[39;49;00m[33mh1[39;49;00m[33m"[39;49;00m)])[90m[39;49;00m
+        [94massert[39;49;00m feats.loc[df[[33m"[39;49;00m[33mseason[39;49;00m[33m"[39;49;00m] == [94m2021[39;49;00m, REPORT_COLUMNS].isna().all().all()[90m[39;49;00m
+        [94massert[39;49;00m sb.star_out_features(df, [], reports)[REPORT_COLUMNS].isna().all().all()[90m[39;49;00m
+        [90m# A season with playoff rows only has no list at all (an empty list would read as "nobody is out").[39;49;00m[90m[39;49;00m
+        post_only = [_stat([94m2021[39;49;00m, [33m"[39;49;00m[33mh1[39;49;00m[33m"[39;49;00m, week=[94m19[39;49;00m, season_type=[33m"[39;49;00m[33mPOST[39;49;00m[33m"[39;49;00m, receiving_yards=[94m900.0[39;49;00m)][90m[39;49;00m
+>       [94massert[39;49;00m [94m2021[39;49;00m [95mnot[39;49;00m [95min[39;49;00m sb.league_stars(post_only)[90m[39;49;00m
+[1m[31mE       AssertionError: assert 2021 not in {2021: {}}[0m
+[1m[31mE        +  where {2021: {}} = <function league_stars at 0x1107e4f40>([{'season': 2021, 'week': 19, 'season_type': 'POST', 'player_id': 'h1', ...}])[0m
+[1m[31mE        +    where <function league_stars at 0x1107e4f40> = sb.league_stars[0m
+
+[1m[31mtests/test_star_backtest.py[0m:198: AssertionError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_star_backtest.py::[1mtest_unknown_stays_missing_and_a_known_empty_report_is_zero[0m - AssertionError: assert 2021 not in {2021: {}}
+[31m[31m[1m1 failed[0m, [32m10 passed[0m[31m in 2.08s[0m[0m
