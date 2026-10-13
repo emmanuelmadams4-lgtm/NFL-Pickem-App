@@ -192,6 +192,14 @@ def test_g4_a_stored_number_outside_0_to_1_or_not_finite_is_missing_never_clampe
     assert e.brier == pytest.approx((20 * 0.16 + 10 * 0.04 + 20 * 0.09) / 50)
 
 
+def test_g4_only_in_play_rows_are_points_a_lost_row_mid_game_ends_the_hold_without_adding_one(session):
+    g = finished(session, "A")
+    espn(session, g, [(0, "in", 0.6), (20, "lost", 0.99), (30, "in", 0.7), (60, "post", 0.7)])
+    e = by_id(session)["2026_05_A"].forecasters["espn_live"]
+    assert e.points == 2 and e.coverage == pytest.approx(50 / 60)
+    assert e.brier == pytest.approx((20 * 0.16 + 30 * 0.09) / 50)
+
+
 def test_g4_a_null_kalshi_row_ends_the_hold_and_only_live_kalshi_quotes_count(session):
     g = finished(session, "A")
     espn(session, g, GAME_A)
