@@ -1,0 +1,6 @@
+[1m[31mE                   AttributeError: 'StarStatus' object has no attribute 'qb_alert'[0m
+
+[1m[31m.venv/lib/python3.13/site-packages/pydantic/main.py[0m:1105: AttributeError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_api.py::[1mtest_a_star_quarterback_named_in_the_qb_alert_is_marked_by_the_api_whatever_the_spelling[0m - AttributeError: 'StarStatus' object has no attribute 'qb_alert'
+[31m[31m[1m1 failed[0m, [32m10 passed[0m[31m in 6.73s[0m[0m

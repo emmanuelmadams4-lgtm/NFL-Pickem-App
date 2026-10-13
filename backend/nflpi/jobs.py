@@ -39,6 +39,12 @@ def ingest(session, weather: bool = True) -> dict:
     season, week = engine.current_week(session)
     run, changed = service.ingest_injuries(session, season)
     out["injuries"] = run.status
+    try:
+        out["stars"] = service.ingest_stars(session, season).status
+    except Exception:  # noqa: BLE001 - a star refresh must not stop the round
+        log.exception("star refresh failed")
+        session.rollback()
+        out["stars"] = "failed"
     if weather:
         out["weather"] = service.ingest_weather(session).status
     out["qb_alerts"] = push.alert_injuries(session, changed, season, week)

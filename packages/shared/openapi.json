@@ -2037,6 +2037,9 @@
       "type": "integer",
       "title": "Injury Count"
      },
+     "stars_out": {
+      "$ref": "#/components/schemas/StarsOut"
+     },
      "weather": {
       "anyOf": [
        {
@@ -2059,6 +2062,13 @@
       },
       "type": "array",
       "title": "Injuries"
+     },
+     "stars": {
+      "items": {
+       "$ref": "#/components/schemas/TeamStars"
+      },
+      "type": "array",
+      "title": "Stars"
      },
      "market_history": {
       "items": {
@@ -2157,10 +2167,12 @@
      "qb_not_projected",
      "qb_alerts",
      "injury_count",
+     "stars_out",
      "weather",
      "home_form",
      "away_form",
      "injuries",
+     "stars",
      "market_history",
      "prediction_history",
      "meetings",
@@ -2388,6 +2400,9 @@
       "type": "integer",
       "title": "Injury Count"
      },
+     "stars_out": {
+      "$ref": "#/components/schemas/StarsOut"
+     },
      "weather": {
       "anyOf": [
        {
@@ -2427,6 +2442,7 @@
      "qb_not_projected",
      "qb_alerts",
      "injury_count",
+     "stars_out",
      "weather"
     ],
     "title": "GameSummary"
@@ -4013,6 +4029,140 @@
     ],
     "title": "StandingsOut"
    },
+   "StarStatus": {
+    "properties": {
+     "team": {
+      "type": "string",
+      "title": "Team"
+     },
+     "player": {
+      "type": "string",
+      "title": "Player"
+     },
+     "position": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Position"
+     },
+     "slot": {
+      "type": "string",
+      "enum": [
+       "qb",
+       "off",
+       "def"
+      ],
+      "title": "Slot"
+     },
+     "rank": {
+      "type": "integer",
+      "title": "Rank"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     },
+     "listed": {
+      "type": "boolean",
+      "title": "Listed"
+     },
+     "qb_alert": {
+      "type": "boolean",
+      "title": "Qb Alert"
+     },
+     "injury": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Injury"
+     },
+     "observed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Observed At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team",
+     "player",
+     "position",
+     "slot",
+     "rank",
+     "status",
+     "listed",
+     "qb_alert",
+     "injury",
+     "observed_at"
+    ],
+    "title": "StarStatus"
+   },
+   "StarsOut": {
+    "properties": {
+     "out": {
+      "items": {
+       "$ref": "#/components/schemas/StarStatus"
+      },
+      "type": "array",
+      "title": "Out"
+     },
+     "no_list": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "No List"
+     },
+     "reports_seen": {
+      "type": "integer",
+      "title": "Reports Seen"
+     },
+     "checked_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Checked At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "out",
+     "no_list",
+     "reports_seen",
+     "checked_at"
+    ],
+    "title": "StarsOut"
+   },
    "Tally": {
     "properties": {
      "correct": {
@@ -4250,6 +4400,39 @@
      "logo_url"
     ],
     "title": "TeamOut"
+   },
+   "TeamStars": {
+    "properties": {
+     "team": {
+      "type": "string",
+      "title": "Team"
+     },
+     "stars_week": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stars Week"
+     },
+     "stars": {
+      "items": {
+       "$ref": "#/components/schemas/StarStatus"
+      },
+      "type": "array",
+      "title": "Stars"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team",
+     "stars_week",
+     "stars"
+    ],
+    "title": "TeamStars"
    },
    "ValidationError": {
     "properties": {

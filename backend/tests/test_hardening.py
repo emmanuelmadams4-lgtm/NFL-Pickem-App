@@ -385,7 +385,9 @@ def test_current_week_stays_until_its_last_game_is_final(session):
 def test_health_is_degraded_without_a_fresh_worker_heartbeat(loaded, client, monkeypatch):
     monkeypatch.setattr(weather, "fetch_forecast", lambda *args: None)
     service.ingest_injuries(loaded, CURRENT, rows=[])
-    service.ingest_weather(loaded)  # now every dataset is fresh and a model is active
+    service.ingest_weather(loaded)
+    service.run_logged(loaded, "nflverse", "stars", lambda: 0)  # step 8a2: freshness, and so health, count these two
+    service.run_logged(loaded, "espn", "head_coaches", lambda: 0)  # now every dataset is fresh and a model is active
 
     def status() -> str:
         res = client.get("/api/health", headers={"Authorization": ""})  # public

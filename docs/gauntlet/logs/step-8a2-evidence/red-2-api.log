@@ -1,0 +1,4 @@
+=========================== short test summary info ============================
+FAILED tests/test_api.py::test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them - AttributeError: 'StarsOut' object has no attribute 'no_list'
+FAILED tests/test_api.py::test_freshness_lists_the_star_list_and_the_head_coaches - AssertionError: assert {'head_coaches', 'stars'} <= {'injuries', ...s', 'we...
+2 failed, 8 passed in 5.80s

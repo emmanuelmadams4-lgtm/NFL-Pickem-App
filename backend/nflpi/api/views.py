@@ -2,12 +2,15 @@
 
 from collections import defaultdict
 from datetime import UTC, datetime
+from unicodedata import category
 
 import numpy as np
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from nflpi.analytics import stars
 from nflpi.analytics.metrics import calibration, wilson_ci
+from nflpi.analytics.stars import ALERT_STATUSES
 from nflpi.api import schemas as s
 from nflpi.ingestion.service import freshness
 from nflpi.models import (
@@ -26,7 +29,21 @@ from nflpi.models import (
 )
 from nflpi.predictions import sheet
 
-ALERT_STATUSES = ("Out", "Doubtful", "Questionable")
+
+def _clean_star_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return " ".join("".join(char for char in value if category(char) not in {"Cc", "Cf"}).split())
+
+
+def _star_status(row: dict) -> s.StarStatus:
+    return s.StarStatus(
+        team=row["team"], player=_clean_star_text(row["player"]) or "",
+        position=_clean_star_text(row["position"]), slot=row["slot"], rank=row["rank"],
+        status=_clean_star_text(row["status"]), injury=_clean_star_text(row["injury"]),
+        listed=row["listed"], qb_alert=row["qb_alert"],
+        observed_at=row["observed_at"],
+    )
 
 
 def now_utc() -> datetime:
@@ -172,12 +189,22 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
         win = winner(g)
         pick = picks.get(g.game_id)
         inj = injuries[g.week]
-        qb_alerts = [
-            f"{r.team} QB {r.player}: {r.report_status}"
+        star_data = stars.game_stars(session, g.game_id, now)
+        star_qb_report_ids = {
+            row["report_id"]
+            for club in star_data["teams"]
+            for row in club["stars"]
+            if row["qb_alert"]
+        }
+        qb_rows = [
+            r
             for team in (g.away_team, g.home_team)
             for r in inj.get(team, [])
             if r.position == "QB" and r.report_status in ALERT_STATUSES
         ]
+        qb_rows.sort(key=lambda r: r.id not in star_qb_report_ids)
+        qb_alerts = [f"{r.team} QB {r.player}: {r.report_status}" for r in qb_rows]
+        no_list = [club["team"] for club in star_data["teams"] if club["stars_week"] is None]
         out.append(
             s.GameSummary(
                 game_id=g.game_id,
@@ -210,6 +237,22 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                     for team in (g.away_team, g.home_team)
                     for r in inj.get(team, [])
                     if r.report_status in ALERT_STATUSES
+                ),
+                stars_out=s.StarsOut(
+                    out=[
+                        _star_status(row)
+                        for row in sorted(
+                            (
+                                row
+                                for club in star_data["teams"]
+                                for row in club["stars"]
+                                if (row["status"] or "").lower() in stars.OUT_STATUSES
+                            ),
+                            key=lambda row: (row["status"] or "").lower() != "out",
+                        )
+                    ],
+                    no_list=no_list,
+                    reports_seen=star_data["reports_seen"], checked_at=star_data["checked_at"],
                 ),
                 weather=_weather(g, wx.get(g.game_id)),
             )
@@ -330,11 +373,17 @@ def game_detail(session: Session, game_id: str) -> s.GameDetail | None:
         (r for team in (g.away_team, g.home_team) for r in injuries.get(team, [])),
         key=lambda r: (r.team != g.away_team, rank.get(r.report_status or "", 3), r.position or ""),
     )
+    star_data = stars.game_stars(session, game_id, now)
     return s.GameDetail(
         **base.model_dump(),
         home_form=home_form,
         away_form=away_form,
         injuries=[s.InjuryOut.model_validate(r, from_attributes=True) for r in inj_rows],
+        stars=[
+            s.TeamStars(team=club["team"], stars_week=club["stars_week"],
+                        stars=[_star_status(row) for row in club["stars"]])
+            for club in star_data["teams"]
+        ],
         market_history=[
             s.MarketOut(
                 observed_at=m.observed_at,

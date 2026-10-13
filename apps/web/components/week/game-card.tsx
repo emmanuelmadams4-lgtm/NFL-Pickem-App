@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { marketFavorite, pickProb, pct, type GameSummary, type Team } from "@nflpi/shared";
+import { ago, marketFavorite, pickProb, pct, type GameSummary, type Team } from "@nflpi/shared";
 import { Chip, Mark, Tip, cx } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
 import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-bits";
@@ -62,6 +62,11 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
   const differs = !!(p && mine && mine !== p.pick);
   const away = game.away_score;
   const home = game.home_score;
+  const stars = game.stars_out.out.filter((star) => !star.qb_alert);
+  const star = stars[0];
+  const starNote = game.stars_out.no_list.length > 0
+    ? `No star list yet for ${game.stars_out.no_list.join(", ")}`
+    : game.stars_out.reports_seen === 0 ? "Injury report not in yet" : null;
 
   return (
     <li data-testid="game-card" className="relative flex flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-border-strong">
@@ -188,6 +193,21 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
           })}
           {game.qb_alerts.length > 2 && <span className="text-label text-subtle">+{game.qb_alerts.length - 2} more</span>}
         </div>
+
+        {game.status === "scheduled" && (star ? (
+          <div>
+          <div role="group" aria-label="Stars out" className="flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-label text-text-2">
+            <span className="shrink-0 font-medium text-text">Stars out</span>
+            <span className="min-w-0 truncate">{star.team} {star.player}</span>
+            {star.position && <span className="shrink-0 text-subtle">{star.position}</span>}
+            {star.status && <span className={cx("shrink-0", statusTone(star.status) === "bad" ? "text-bad" : "text-warn")}>{star.status}</span>}
+            {stars.length > 1 && <span className="shrink-0 text-subtle">+{stars.length - 1} more</span>}
+            {star.observed_at && <span aria-hidden="true" className="shrink-0 text-subtle">·</span>}
+            {star.observed_at && <span className="shrink-0 text-subtle">{ago(star.observed_at)}</span>}
+          </div>
+          {game.stars_out.no_list.length > 0 && <p className="text-label text-text-2">{starNote}</p>}
+          </div>
+        ) : starNote ? <p className="text-label text-text-2">{starNote}</p> : null)}
 
         {p?.change_note && (
           <p className="flex items-start gap-1.5 text-label text-text-2">

@@ -1,0 +1,6 @@
+[1m[31mE         ...Full output truncated (2 lines hidden), use '-vv' to show[0m
+
+[1m[31mtests/test_api.py[0m:181: AssertionError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_api.py::[1mtest_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them[0m - AssertionError: assert [('MIA', 'Sta...'off', 'Out')] == [('LV', 'Ron ..., ...
+[31m[31m[1m1 failed[0m, [32m10 passed[0m[31m in 5.09s[0m[0m

@@ -889,3 +889,117 @@ def test_equal_players_are_ranked_by_name_and_week_22_is_read(session):
     stored = session.scalars(select(TeamStar)).all()
     assert {r.source for r in stored} == {"nflverse"}
     assert all(r.computed_at is not None for r in stored)
+
+
+# Step 8a2: what the screens ask (each club's own list, the full five with status, names spelled two ways)
+
+
+def test_stars_out_uses_each_clubs_own_latest_list(session):
+    game_id = _game(session, SEASON, 5, "NYJ", "KC")
+    session.add(_star(SEASON, 3, "KC", "def", 1, "00-009", "Cory Corner"))  # KC's newest list is week 3
+    session.add(_star(SEASON, 4, "NYJ", "qb", 1, "00-041", "Stay Put"))  # the Jets' newest list is week 4
+    session.commit()
+    _injury(session, 5, "KC", "00-009", "Cory Corner", "Out", 2)
+    _injury(session, 5, "NYJ", "00-041", "Stay Put", "Doubtful", 3)
+
+    result = stars_out(session, game_id, now=NOW)
+
+    assert [(r["team"], r["player"], r["status"]) for r in result["out"]] == [
+        ("NYJ", "Stay Put", "Doubtful"),
+        ("KC", "Cory Corner", "Out"),
+    ]
+
+
+def test_game_stars_lists_every_star_of_both_clubs_with_his_status(session):
+    from nflpi.analytics.stars import game_stars
+
+    game_id = _game(session, SEASON, 5, "NYJ", "KC")
+    session.add_all(
+        [
+            _star(SEASON, 3, "KC", "qb", 1, "00-001", "Pat Passer"),
+            _star(SEASON, 3, "KC", "off", 1, "00-003", "Ron Runner"),
+            _star(SEASON, 3, "KC", "off", 2, "00-004", "Cal Catch"),
+            _star(SEASON, 3, "KC", "def", 1, "00-009", "Cory Corner"),
+            _star(SEASON, 3, "KC", "def", 2, "00-008", "Russ Rush"),
+            _star(SEASON, 2, "KC", "qb", 1, "00-099", "Old Passer"),  # an older KC list: not shown
+            _star(SEASON, 6, "KC", "qb", 1, "00-098", "Next Passer"),  # a list made after this game's week: not shown
+        ]
+    )
+    session.commit()
+    _injury(session, 5, "KC", "00-009", "Cory Corner", "Out", 2, position="CB")
+    _injury(session, 5, "KC", "00-004", "Cal Catch", "Questionable", 4)
+    _injury(session, 5, "KC", "00-008", "Russ Rush", None, 4, practice_status="Limited")  # a practice note only
+
+    result = game_stars(session, game_id, now=NOW)
+
+    assert (result["game_id"], result["season"], result["week"], result["reports_seen"]) == (game_id, SEASON, 5, 3)
+    away, home = result["teams"]
+    assert away == {"team": "NYJ", "stars_week": None, "stars": []}  # no list for the Jets: said, not hidden
+    assert (home["team"], home["stars_week"]) == ("KC", 3)
+    assert [(r["slot"], r["rank"], r["player"], r["status"]) for r in home["stars"]] == [
+        ("qb", 1, "Pat Passer", None),  # not on this week's report
+        ("off", 1, "Ron Runner", None),
+        ("off", 2, "Cal Catch", "Questionable"),  # shown as it is; only Out and Doubtful go on the row
+        ("def", 1, "Cory Corner", "Out"),
+        ("def", 2, "Russ Rush", None),  # a practice note is not a game status
+    ]
+    # on the report or not is said apart from the game status: a practice note is a row, with no game status
+    assert [r["listed"] for r in home["stars"]] == [False, False, True, True, True]
+    corner = home["stars"][3]
+    assert (corner["injury"], corner["observed_at"], corner["age_hours"]) == ("Knee", NOW - timedelta(hours=2), 2.0)
+    assert (home["stars"][0]["observed_at"], home["stars"][0]["age_hours"]) == (None, None)
+    with pytest.raises(LookupError):
+        game_stars(session, "nope", now=NOW)
+
+
+@pytest.mark.parametrize(
+    ("star", "reported"),
+    [
+        ("Marv Catcher", "Marv Catcher Jr."),
+        ("Marv Catcher Jr.", "Marv Catcher"),
+        ("Marv Catcher", "Marv Catcher II"),
+        ("Marv Catcher III", "marv catcher"),
+        ("D.J. Catcher", "DJ Catcher"),
+        ("Marv O'Catcher Sr.", "Marv OCatcher"),
+        ("José Catcher", "Jose Catcher"),  # an accent in one file only
+    ],
+)
+def test_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently(session, star, reported):
+    game_id = _game(session, SEASON, 5, "NYJ", "KC")
+    session.add(_star(SEASON, 4, "KC", "off", 1, None, star))
+    session.commit()
+    _injury(session, 5, "KC", None, reported, "Out", 1)
+    assert [r["player"] for r in stars_out(session, game_id, now=NOW)["out"]] == [star]
+
+
+@pytest.mark.parametrize("reported", ["Marv Catch", "Marvin Catcher", "Mary Catcher", "Catcher"])
+def test_a_different_name_is_never_matched_to_a_star(session, reported):
+    game_id = _game(session, SEASON, 5, "NYJ", "KC")
+    session.add(_star(SEASON, 4, "KC", "off", 1, None, "Marv Catcher"))
+    session.commit()
+    _injury(session, 5, "KC", None, reported, "Out", 1)
+    assert stars_out(session, game_id, now=NOW)["out"] == []
+
+
+def test_a_name_that_fits_two_reports_takes_the_exact_one_or_none(session):
+    from nflpi.analytics.stars import game_stars
+
+    game_id = _game(session, SEASON, 5, "NYJ", "KC")
+    session.add(_star(SEASON, 4, "KC", "off", 1, None, "Marv Catcher"))
+    session.commit()
+    _injury(session, 5, "KC", None, "Marv Catcher Jr.", "Out", 1)
+    _injury(session, 5, "KC", None, "Marv Catcher Sr.", "Doubtful", 1)
+    # father and son are both on the report and neither is spelled as the star is: nobody's status is borrowed
+    assert stars_out(session, game_id, now=NOW)["out"] == []
+
+    _injury(session, 5, "KC", None, "Marv Catcher", "Questionable", 1)
+    star = game_stars(session, game_id, now=NOW)["teams"][1]["stars"][0]
+    assert (star["status"], star["listed"]) == ("Questionable", True)  # the one spelled exactly as the star
+
+
+def test_an_id_on_both_sides_still_decides_even_when_the_names_look_alike(session):
+    game_id = _game(session, SEASON, 5, "NYJ", "KC")
+    session.add(_star(SEASON, 4, "KC", "off", 1, "00-111", "Marv Catcher"))
+    session.commit()
+    _injury(session, 5, "KC", "00-222", "Marv Catcher Jr.", "Out", 1)  # another man: his son, say
+    assert stars_out(session, game_id, now=NOW)["out"] == []
