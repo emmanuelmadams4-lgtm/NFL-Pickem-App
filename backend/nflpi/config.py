@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     stale_hours_schedules: float = 12
     stale_hours_injuries: float = 24
     stale_hours_weather: float = 6
+    stale_hours_stars: float = 24 * 8
+    stale_hours_head_coaches: float = 24 * 30
 
     # Model
     train_window_seasons: int = 10

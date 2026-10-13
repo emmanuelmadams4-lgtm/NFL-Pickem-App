@@ -26,6 +26,8 @@ STALE_HOURS = {
     "teams": lambda s: 24 * 30,
     "injuries": lambda s: s.stale_hours_injuries,
     "weather": lambda s: s.stale_hours_weather,
+    "stars": lambda s: s.stale_hours_stars,
+    "head_coaches": lambda s: s.stale_hours_head_coaches,
 }
 
 
