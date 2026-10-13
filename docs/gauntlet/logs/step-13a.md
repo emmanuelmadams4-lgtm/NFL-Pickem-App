@@ -41,3 +41,28 @@ Definitions. **First seen / last changed**, line: min / max `observed_at` of the
 * **Operational layer:** the log fills on every schedule ingestion with no new job; the report is `cd backend && uv run python -m nflpi.analytics.timing <season> <week>`. **User-facing layer:** N/A (no screen in this lane).
 * **Week 6 report: PENDING** until week 6 is played (after Monday 2026-10-19). It is not faked in this log.
 * Red: commit `0b71014`, `step-13a-evidence/red-1.log`.
+
+## 3. IMPLEMENTATION
+
+* **Provider.** `codex exec` tried once with the default model: refused, exact error `{"type":"invalid_request_error","message":"The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account."}` (400). So `IMPLEMENTATION_PROVIDER: CLAUDE (limit hit)`, `BUILD_RUNG: sonnet (try 1 of 2)`, `CLIMBS: none`. One bounded work order (models, migration 0007, `ingestion/timing.py`, `service.py` hook and `now` parameter, `analytics/timing.py`) built by a Sonnet subagent; the coordinator wrote the spec and the tests first, inspected the whole diff and reran the proof itself. Work orders Claude built: the one.
+* **Commits.** `0b71014` tests (red), `57f0e2d` feature. First green: `tests/test_timing.py` 13 passed, `ruff` clean (the builder reported one E501 in the frozen test docstring; fixed by the coordinator, it is the lane's own file).
+* **Where the log is written.** `upsert_games` calls `timing.record_qbs` once per run (same transaction); the line and injury logs are the existing append-only tables, untouched. `ingest_injuries` gained an optional `now` (time injection for tests, same style as `ingest_weather`).
+* **Review.** `ecc:database-reviewer` on the migration, model and `record_qbs`: PASS, no blockers. Advisories (all carried, none mapped to a clause): (1) FK has no ON DELETE, same as every other table, games are never deleted; (2) `record_qbs` reads every newest row each run (~13.5k small rows, fine today; `DISTINCT ON` if it grows); (3) a duplicate `game_id` in one batch would insert twice (feed keys are unique); (4) blank or NaN names: `parse_games` maps blank to None, so not reachable. Security review: not required (no route, input or outside call).
+* **Live-database safety.** The migration only creates a new table and one index; `games` is not altered, no existing row is rewritten, the foreign key onto an empty table validates nothing. First run after deploy writes about 2 rows per game (~13.5k) stamped with the deploy time; for games already kicked off that is after kickoff and never counts as pregame (clauses T8 to T11).
+
+## 4. CLEANUP
+
+* Scope-locked `/refactor` pass on the touched code. One simplification: dropped `obs.qb or None` in `week_report` (commit `a706007`), an unreachable guard that the mutation pass found no test could distinguish (`parse_games` already returns None for a blank name). Left alone with reason: the two-item `SIDES` tuple exists in both new modules (one line each, importing across the ingestion/analytics layers would add a dependency for no gain). Re-ran `tests/test_timing.py` and the full gate after the edit.
+
+## 5. Evidence (all on `a706007` unless noted)
+
+| Check | Result | Log |
+|---|---|---|
+| Mutation pass: each frozen rule broken once (12 breaks: T1, T2, T3, T4/T5, T5, T6, T7, T8/T9, T10/T11, T12, T13) | 11 caught; 1 survivor (`obs.qb or None`) was the unreachable guard, now deleted | `step-13a-evidence/mutation.log` |
+| Gate run 1: `pytest -q` | 1203 passed in 315 s | `step-13a-evidence/gate-1.log` |
+| Gate run 1: `ruff check nflpi tests migrations` | All checks passed | same |
+| Gate run 1: alembic upgrade, `check`, downgrade to 0006, upgrade | exit 0, "No new upgrade operations detected" | same |
+| Gate run 2 (same commit, separate hold of the slot) | 1203 passed in 199 s; ruff clean; alembic check clean | `step-13a-evidence/gate-2.log` |
+| `npm run gen:api` | exit 0, `git status packages` empty: no API drift | `step-13a-evidence/gate-2.log` |
+
+Test database: container `nflpi-lane-scores-db` on 127.0.0.1:15446 (never the default URL). Slot: `res:gate-c` per god's ruling of 14:19Z (`res:gate-b` was held by another lane from 09:50 to past 10:10 local).

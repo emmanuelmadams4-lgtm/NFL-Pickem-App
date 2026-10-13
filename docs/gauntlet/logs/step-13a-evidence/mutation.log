@@ -1,0 +1,13 @@
+CAUGHT   T3 qb unchanged inserts | [31mFAILED[0m tests/test_timing.py::[1mtest_unchanged_quarterback_does_not_move_last_changed[0m - AssertionError: assert {'first_seen'...y='Etc/UTC'))} == {
+CAUGHT   T4/T5 qb change ignored | [31mFAILED[0m tests/test_timing.py::[1mtest_changed_quarterback_moves_last_changed_and_never_first_seen[0m - AssertionError: assert {'first_seen'...y='Etc/U
+CAUGHT   T1 line unchanged inserts | [31mFAILED[0m tests/test_timing.py::[1mtest_unchanged_line_on_a_new_run_does_not_move_last_changed[0m - AssertionError: assert {'first_seen'...y='Etc/UTC'))
+CAUGHT   T2 line change ignored | [31mFAILED[0m tests/test_timing.py::[1mtest_changed_line_moves_last_changed_and_never_first_seen[0m - AssertionError: assert {'first_seen'...y='Etc/UTC'))} 
+CAUGHT   T6 injury unchanged inserts | [31mFAILED[0m tests/test_timing.py::[1mtest_injury_rows_keep_first_seen_and_move_last_changed_only_on_a_change[0m - AssertionError: assert {'first_seen'...y
+CAUGHT   T5 qb first_seen counts blank | [31mFAILED[0m tests/test_timing.py::[1mtest_blank_quarterback_stays_blank_and_is_not_first_seen[0m - AssertionError: assert {'first_seen'...y='Etc/UTC'))} =
+CAUGHT   T8/T9 snapshot pregame filter off | [31mFAILED[0m tests/test_timing.py::[1mtest_a_line_first_seen_after_kickoff_is_not_a_pregame_line[0m - assert -1.0 is None [31m[31m[1m1 failed[0m, [32m
+CAUGHT   T10/T11 qb pregame filter off | [31mFAILED[0m tests/test_timing.py::[1mtest_a_quarterback_seen_only_after_kickoff_counts_as_blank_pregame[0m - AssertionError: assert ('BUF QB1', 'MIA QB1',
+CAUGHT   T7 oldest snapshot not newest | [31mFAILED[0m tests/test_timing.py::[1mtest_line_age_is_kickoff_minus_the_last_pregame_snapshot[0m - assert 100.0 == 30.0 [31m[31m[1m1 failed[0m, [32m6
+CAUGHT   T12 missing line read as zero age | [31mFAILED[0m tests/test_timing.py::[1mtest_median_skips_games_without_a_line_and_is_none_when_all_are_missing[0m - assert 50.0 == 100.0 [31m[31m[1m1 fai
+CAUGHT   T13 blank either->both | [31mFAILED[0m tests/test_timing.py::[1mtest_week_report_counts_blank_quarterbacks_and_the_median[0m - assert 1 == 2 [31m[31m[1m1 failed[0m, [32m12 pass
+SURVIVED T12 empty-string qb not blank | [32m[32m[1m13 passed[0m[32m in 1.96s[0m[0m
+survivors: 1
