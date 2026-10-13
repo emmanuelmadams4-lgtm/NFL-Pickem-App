@@ -178,8 +178,10 @@ def test_inseason_refit_uses_earlier_weeks_and_never_the_same_or_a_later_week():
     # Week 1 has no game of its own season to learn from: same training rows as the season-level blend.
     assert np.allclose(got[week == 1], base.loc[week == 1, "p_blend"])
     assert not np.allclose(got[week > 1], base.loc[week > 1, "p_blend"])
-    # Results of week 3 and later cannot move a pick made for weeks 1 to 3.
-    later = _flip_scores(df, (df["season"] == 2022) & (df["week"] >= 3))
+    # The last game of week 3 and everything after it cannot move a pick made for weeks 1 to 3.
+    # (Earlier week 3 games are left alone: Elo rightly moves between games of one week.)
+    last_of_week3 = df.loc[(df["season"] == 2022) & (df["week"] == 3), "kickoff_utc"].max()
+    later = _flip_scores(df, (df["season"] == 2022) & (df["kickoff_utc"] >= last_of_week3))
     after = inseason_blend(_elo_frames(later), 2022, window=3)
     assert np.allclose(got[week <= 3], after[week <= 3])
     assert not np.allclose(got[week > 3], after[week > 3])
