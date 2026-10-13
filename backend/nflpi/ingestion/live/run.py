@@ -160,11 +160,13 @@ def _save_event(
     )
 
 
-def _mark_missing_live_games(session: Session, matched_game_ids: set[str], now: datetime) -> int:
-    missing_ids = [game_id for game_id in store.in_progress_game_ids(session) if game_id not in matched_game_ids]
+def _mark_missing_live_games(session: Session, raw_event_ids: set[str], now: datetime) -> int:
+    missing_ids = store.in_progress_game_ids(session)
     newest = store.live_states_for(session, missing_ids)
     lost = 0
     for game_id, previous in newest.items():
+        if previous.espn_event_id in raw_event_ids:
+            continue
         if store.add_live_state(
             session,
             game_id=game_id,
@@ -190,14 +192,18 @@ def _espn_job(
     get: Callable[[str], fetch.JsonResult],
     now: datetime,
 ) -> tuple[int, int, fetch.FetchError | None]:
-    events, skipped = espn.parse_scoreboard(get(espn.SCOREBOARD_URL).data)
+    data = get(espn.SCOREBOARD_URL).data
+    raw_events = data.get("events") if isinstance(data, dict) else None
+    raw_event_ids = (
+        {event.get("id") for event in raw_events if isinstance(event, dict)} if isinstance(raw_events, list) else set()
+    )
+    events, skipped = espn.parse_scoreboard(data)
     active = [event for event in events if event.state in ("in", "post")]
     if len(active) >= 3 and all(event.home_score is None and event.away_score is None for event in active):
         raise ValueError("shape")
     games = _candidate_games(session, events)
     newest = store.live_states_for(session, [game.game_id for game in games])
     inserted, summaries, summary_failures, matched = 0, 0, 0, 0
-    matched_game_ids: set[str] = set()
     blocking_error: fetch.FetchError | None = None
     for event in events:
         game = _matching_game(event, games)
@@ -206,7 +212,6 @@ def _espn_job(
             log.debug("unmatched ESPN event %r", event.event_id[:64])
             continue
         matched += 1
-        matched_game_ids.add(game.game_id)
         probability = None
         if _needs_summary(event, newest.get(game.game_id)) and blocking_error is None and summaries < MAX_SUMMARIES:
             summaries += 1
@@ -226,7 +231,8 @@ def _espn_job(
         log.warning("espn_live: %d summaries failed", summary_failures)
     if len(events) >= 3 and matched == 0:
         raise ValueError("no match")
-    inserted += _mark_missing_live_games(session, matched_game_ids, now)
+    if raw_event_ids and matched:
+        inserted += _mark_missing_live_games(session, raw_event_ids, now)
     return inserted, skipped, blocking_error
 
 
@@ -420,7 +426,7 @@ def refresh_odds_quotes(
     if not isinstance(key, str) or oddsapi.KEY.fullmatch(key) is None:
         return RefreshResult("oddsapi", "skipped", detail="ODDS_API_KEY is not set")
     now = datetime.now(UTC) if now is None else now.astimezone(UTC)
-    status = session.get(SourceStatus, "oddsapi")
+    status = session.get(SourceStatus, "oddsapi", populate_existing=True)
     if (
         status is not None
         and status.credits_left is not None

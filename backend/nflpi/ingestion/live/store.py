@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from nflpi.models import LiveState, MarketQuote, SourceStatus
@@ -123,7 +124,8 @@ def last_confirmed(session: Session, source: str) -> datetime | None:
 
 
 def reserve(session: Session, source: str, now: datetime, interval: timedelta) -> bool:
-    row = session.get(SourceStatus, source, with_for_update=True)
+    row = session.get(SourceStatus, source, with_for_update=True, populate_existing=True)
+    created = row is None
     if row is None:
         row = SourceStatus(source=source, consecutive_failures=0, updated_at=now)
         session.add(row)
@@ -132,7 +134,13 @@ def reserve(session: Session, source: str, now: datetime, interval: timedelta) -
         return False
     row.blocked_until = now + interval
     row.updated_at = now
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        if created:
+            return False
+        raise
     return True
 
 
