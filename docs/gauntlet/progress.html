@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
-/* Layout: one narrow column, a drive chart across the top (8 steps = 8 segments of the field), then what's waiting on the owner, then the step table. */
+/* Layout: one narrow column, a drive chart across the top (17 steps = 17 segments of the field), then what's waiting on the owner, then the step table. */
 :root {
   --bg: #f4f5f1; --surface: #ffffff; --line: #d9ddd4; --ink: #15191e; --ink-2: #4f5862; --muted: #7a838c;
   --turf: #2c7448; --turf-soft: #e3efe6; --amber: #9a6400; --amber-soft: #f7ecd6; --red: #b42318; --red-soft: #f9e2df;
@@ -35,18 +35,25 @@ p { margin: 0; }
 .now b { color: var(--ink); font-weight: 600; }
 
 /* Drive chart */
-.field { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
-.yd { position: relative; padding: 10px 8px 12px; border-left: 1px dashed var(--line); min-width: 0; display: grid; gap: 4px; }
-.yd:first-child { border-left: 0; }
+.field { display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.yd { position: relative; padding: 10px 8px 12px; border-left: 1px dashed var(--line); min-width: 0; display: grid; gap: 4px; align-content: start; }
 .yd .n { font-family: var(--display); font-weight: 700; font-size: 22px; font-variant-numeric: tabular-nums; }
 .yd .t { font-size: 12px; color: var(--ink-2); line-height: 1.25; }
-.yd.next { background: var(--turf-soft); box-shadow: inset 0 3px 0 var(--turf); }
-.yd.next .n { color: var(--turf); }
-.yd.opt .n { color: var(--muted); }
+.yd.part { background: var(--amber-soft); box-shadow: inset 0 3px 0 var(--amber); }
+.yd.part .n { color: var(--amber); }
+.yd.part .t::after { content: " · in build"; color: var(--amber); font-weight: 600; }
+.yd.yours .n { color: var(--muted); }
+.yd.yours .t::after { content: " · yours"; color: var(--muted); font-weight: 600; }
 .yd.done { box-shadow: inset 0 3px 0 var(--turf); }
 .yd.done .t::after { content: " · done"; color: var(--turf); font-weight: 600; }
-.yd:nth-child(8) { border-left: 0; } .yd:nth-child(n+8) { border-top: 1px dashed var(--line); }
-@media (max-width: 620px) { .field { grid-template-columns: repeat(4, 1fr); } .yd:nth-child(8) { border-left: 1px dashed var(--line); } .yd:nth-child(4n+1) { border-left: 0; } .yd:nth-child(n+5) { border-top: 1px dashed var(--line); } }
+.yd:nth-child(6n+1) { border-left: 0; }
+.yd:nth-child(n+7) { border-top: 1px dashed var(--line); }
+@media (max-width: 620px) {
+  .field { grid-template-columns: repeat(3, 1fr); }
+  .yd:nth-child(6n+1) { border-left: 1px dashed var(--line); }
+  .yd:nth-child(3n+1) { border-left: 0; }
+  .yd:nth-child(n+4) { border-top: 1px dashed var(--line); }
+}
 
 .waiting { border: 1px solid var(--amber); background: var(--amber-soft); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; }
 .waiting h3 { margin: 0; font-family: var(--display); font-size: 18px; letter-spacing: .04em; text-transform: uppercase; color: var(--amber); }
@@ -60,18 +67,17 @@ thead th { border-top: 0; font-family: var(--display); font-size: 13px; letter-s
 td.num { font-family: var(--display); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; width: 36px; }
 td .sub { display: block; color: var(--ink-2); font-size: 13px; }
 .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
-.pill.next { background: var(--turf-soft); color: var(--turf); }
 .pill.todo { background: transparent; color: var(--muted); border: 1px solid var(--line); }
-.pill.wait { background: var(--amber-soft); color: var(--amber); }
+.pill.prog { background: var(--amber-soft); color: var(--amber); }
 .pill.block { background: var(--red-soft); color: var(--red); }
 .pill.done { background: var(--turf); color: var(--surface); }
 
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-.card { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.card { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 14px 16px; display: grid; gap: 8px; min-width: 0; align-content: start; }
 .card h3 { margin: 0; font-family: var(--display); font-size: 17px; letter-spacing: .04em; text-transform: uppercase; }
 .stat { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 6px; }
 .stat:first-of-type { border-top: 0; padding-top: 0; }
-.stat span:last-child { font-family: var(--display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+.stat span:last-child { font-family: var(--display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .note { color: var(--ink-2); font-size: 13px; }
 footer { color: var(--muted); font-size: 13px; }
 </style>
@@ -83,39 +89,44 @@ footer { color: var(--muted); font-size: 13px; }
   </header>
 
   <div class="headline">
-    <div class="big">7<small> / 14 steps landed</small></div>
+    <div class="big">11<small> / 17 steps landed</small></div>
     <div class="now">
-      <p><b>Just landed:</b> step 6, the iPhone app, is merged into main (PR #5) and the app on your Mac is rebuilt with it. It opens offline, says when it cannot reach the server, and keeps a tapped pick on the phone until the server answers. Your check on your iPhone is still open.</p>
-      <p><b>Before that:</b> step 12, trends, is merged into main (PR #4). The AI's evidence pack now carries records with their sample size: head to head, quarterback and coach against a club, weekday, and site. A record shows from 4 games up, as you asked. Checked against real results back to 2002: 12 of 12 hand counts match.</p>
-      <p><b>Earlier:</b> step 5, running at home, is merged into main (PR #3): backups you can restore, a safe restore, a token change, a clean-copy test, and the Windows PC runbook. Step 4, the pick sheet, merged just before it (PR #2).</p>
-      <p><b>Next:</b> step 7, alerts, and the first part of step 8: star players and who is out. Still yours: set up the Windows PC and tell me what you see.</p>
+      <p><b>Today, 13 October:</b> 18 pieces of work merged into main and 6 deploys to your PC, each with a database backup first. Five more steps are partly landed and still in build.</p>
+      <p><b>Live on your PC now:</b> star players and who is out on the game card, the news worker, news inside the AI report, the data-timing log, live game data in the background, and the grading of win chances during games. Claude runs through your subscription sign-in with the API key as backup.</p>
+      <p><b>In build right now:</b> the live scores screen, the group screen, star alerts with the morning summary, the server half of passkey sign-in, and a third round of model tests.</p>
+      <p><b>Not deployed yet:</b> passkey sign-in. It is being built and will come to you for sign-off before it lands.</p>
     </div>
   </div>
 
   <div class="field" role="list" aria-label="Roadmap steps">
     <div class="yd done" role="listitem"><span class="n">1</span><span class="t">Safe backend + CI</span></div>
     <div class="yd done" role="listitem"><span class="n">2</span><span class="t">Desktop web</span></div>
-    <div class="yd done" role="listitem"><span class="n">3</span><span class="t">New look (ref 06)</span></div>
+    <div class="yd done" role="listitem"><span class="n">3</span><span class="t">New look</span></div>
     <div class="yd done" role="listitem"><span class="n">4</span><span class="t">Pick sheet</span></div>
     <div class="yd done" role="listitem"><span class="n">5</span><span class="t">Deploy</span></div>
-    <div class="yd done" role="listitem"><span class="n">6</span><span class="t">iPhone PWA</span></div>
-    <div class="yd next" role="listitem"><span class="n">7</span><span class="t">Alerts</span></div>
-    <div class="yd" role="listitem"><span class="n">8</span><span class="t">Star players</span></div>
-    <div class="yd" role="listitem"><span class="n">9</span><span class="t">Tiebreaker scores</span></div>
-    <div class="yd" role="listitem"><span class="n">10</span><span class="t">Passkey sign-in</span></div>
-    <div class="yd" role="listitem"><span class="n">11</span><span class="t">Go-live: AI + keys</span></div>
+    <div class="yd done" role="listitem"><span class="n">6</span><span class="t">iPhone app</span></div>
+    <div class="yd done" role="listitem"><span class="n">7</span><span class="t">Alerts</span></div>
+    <div class="yd part" role="listitem"><span class="n">8</span><span class="t">Stars + news</span></div>
+    <div class="yd done" role="listitem"><span class="n">9</span><span class="t">Tiebreaker scores</span></div>
+    <div class="yd part" role="listitem"><span class="n">10</span><span class="t">Passkey sign-in</span></div>
+    <div class="yd yours" role="listitem"><span class="n">11</span><span class="t">Go-live checks</span></div>
     <div class="yd done" role="listitem"><span class="n">12</span><span class="t">Trends</span></div>
-    <div class="yd" role="listitem"><span class="n">13</span><span class="t">Backend cleanup</span></div>
-    <div class="yd" role="listitem"><span class="n">14</span><span class="t">Model gets better</span></div>
+    <div class="yd part" role="listitem"><span class="n">13</span><span class="t">Cleanup + timing</span></div>
+    <div class="yd done" role="listitem"><span class="n">14</span><span class="t">Model bench</span></div>
+    <div class="yd part" role="listitem"><span class="n">15</span><span class="t">Live scores</span></div>
+    <div class="yd part" role="listitem"><span class="n">16</span><span class="t">Group picks</span></div>
+    <div class="yd done" role="listitem"><span class="n">17</span><span class="t">Claude sign-in</span></div>
   </div>
 
   <div class="waiting">
     <h3>Waiting on you</h3>
     <ul>
-      <li><b>Nothing blocking.</b> Your screenshots, logo and 41 decisions are in. Line freshness gets measured in week 6.</li>
-      <li>Run the setup on your Windows 11 PC (docs/DEPLOY.md) and tell me what you see. I can only test the Docker part on the Mac, so the PC steps will be marked unverified until you do.</li>
-      <li>At step 6: install the app on your iPhone once and tell me what you see.</li>
-      <li>At step 11: API keys, your server, and your iPhone for the live checks.</li>
+      <li><b>Nothing is blocking the build.</b> These are checks only you can do.</li>
+      <li>On your iPhone: turn alerts on in Settings and tap "Send test alert".</li>
+      <li>Thursday 15 October: open the app during the first game and look at the live score.</li>
+      <li>Passkey sign-in: I will bring you a short list of decisions to sign off before it lands.</li>
+      <li>Restart Angela (reviewer) from the app. She has not answered since about 08:00 UTC. Nothing waits on her.</li>
+      <li>Your yes to deploy after each landing covers today only. From tomorrow I ask again.</li>
     </ul>
   </div>
 
@@ -123,22 +134,25 @@ footer { color: var(--muted); font-size: 13px; }
     <h2>Roadmap</h2>
     <div class="tbl">
       <table>
-        <thead><tr><th>#</th><th>Step</th><th>Proof it must pass</th><th>Status</th></tr></thead>
+        <thead><tr><th>#</th><th>Step</th><th>Where it stands</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td class="num">1</td><td>Safe backend + CI + first landing<span class="sub">Docker fix, picks locked after kickoff, reminders that can't get lost</span></td><td>All tests, migrations on an empty DB, CI green on the PR</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">2</td><td>Desktop web app<span class="sub">Honest Results, "Time TBD", lock at kickoff on screen, team logos</span></td><td>Browser checks + server tests, accessibility clean, two fresh reviewers</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">3</td><td>New look: reference 06 + your P logo<span class="sub">Lime on near-black, card per game, VS, pill tabs, floating phone tab bar</span></td><td>39 browser checks + 57 server tests, accessibility clean on phone, two fresh reviewers passed it</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">4</td><td>Pick sheet<span class="sub">Coin flip / tough / easy labels, points 1–N, auto pick at kickoff, copy to Yahoo, scorecard</span></td><td>Label cuts from the backtest with hit rates; re-rank, swap, lock and copy tested; three review rounds</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">5</td><td>Deploy and operate<span class="sub">Docker at home, backups you can restore, token change, Windows PC runbook</span></td><td>Clean copy starts; backup restores with the same counts; bad files refused; a restore killed partway recovers; all 32 team logos load. Four review rounds. Your PC and iPhone checks stay with you</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">6</td><td>iPhone PWA<span class="sub">Offline, "can't reach server", phone polish</span></td><td>89 browser checks and 115 server tests pass three times in a row; four rounds of fresh reviewers; security review passed. Your iPhone check is still open</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">7</td><td>Alerts end to end<span class="sub">Flips, QB news, "no pick yet", test-alert button</span></td><td>Signed push delivered; the alert opens the game</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">8</td><td>Star players + second injury source<span class="sub">5 stars per team, ESPN as a second source</span></td><td>Recorded-data tests; star idea must win walk-forward</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">9</td><td>Tiebreaker scores<span class="sub">Predicted score for the two Yahoo tiebreak games</span></td><td>Beats the line-implied score on 2022–2025 or it doesn't ship</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">10</td><td>Passkey sign-in<span class="sub">Face ID sign-in; token stays as backup</span></td><td>Security review + browser test</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">11</td><td>Go-live: AI and keys<span class="sub">You add keys and install on your iPhone</span></td><td>Smoke script all PASS on your server</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">12</td><td>Trends<span class="sub">Team, QB, coach, venue records with sample size</span></td><td>115 server tests pass; 12 of 12 hand counts match real results; security review and a fresh reviewer passed it. Play-caller records are wired but the table is still empty</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">13</td><td>Backend cleanup + data timing<span class="sub">Faster Week board; how fresh lines and QB news are</span></td><td>Same tests and backtest numbers; timing report</td><td><span class="pill todo">To do</span></td></tr>
-          <tr><td class="num">14</td><td>The model gets better (required)<span class="sub">Weekly refit, play-by-play ratings, one idea at a time</span></td><td>Must beat the current model walk-forward or it doesn't ship</td><td><span class="pill todo">To do</span></td></tr>
+          <tr><td class="num">1</td><td>Safe backend + CI + first landing<span class="sub">Docker fix, picks locked after kickoff, reminders that can't get lost</span></td><td>Landed</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">2</td><td>Desktop web app<span class="sub">Honest Results, "Time TBD", lock at kickoff on screen, team logos</span></td><td>Landed</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">3</td><td>New look<span class="sub">Lime on near-black, a card per game, your P logo</span></td><td>Landed</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">4</td><td>Pick sheet<span class="sub">Coin flip / tough / easy labels, points 1 to N, copy to Yahoo</span></td><td>Landed (PR #2)</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">5</td><td>Deploy and operate<span class="sub">Docker at home, backups you can restore</span></td><td>Landed (PR #3). The app has run on your Windows PC since 13 October; the Mac is the stopped backup</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">6</td><td>iPhone app<span class="sub">Opens offline, says when it cannot reach the server</span></td><td>Landed (PR #5)</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">7</td><td>Alerts end to end<span class="sub">Flips, quarterback news, "no pick yet", test-alert button</span></td><td>Landed (PR #8). Your test alert on the iPhone is still open</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">8</td><td>Star players and news<span class="sub">5 stars per team, who is out, news from public feeds</span></td><td>Landed and live: the star list and who is out, on the game card and the game screen (PRs #6, #20); news from ESPN and CBS feeds, the news worker and its route (PRs #12, #19); news inside the AI report as quoted data (PR #22). Tested and not shipped: "star out" as a model input (PR #17). Left: news on the game page, and star alerts with the morning summary (in final testing)</td><td><span class="pill prog">In build</span></td></tr>
+          <tr><td class="num">9</td><td>Tiebreaker scores<span class="sub">Predicted score for the two Yahoo tiebreak games</span></td><td>Landed (PR #11). Result: the score the betting line implies stays the answer; our stats model and a blend did not beat it on 2022 to 2025</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">10</td><td>Passkey sign-in<span class="sub">Face ID / Touch ID; the app token stays as backup</span></td><td>Server half in build since 17:18 UTC. Not landed, not deployed. It needs your sign-off before it lands. The sign-in screen comes after</td><td><span class="pill prog">In build</span></td></tr>
+          <tr><td class="num">11</td><td>Go-live: AI and keys<span class="sub">Your keys, your server, your iPhone</span></td><td>Done so far: the PC is live, and Claude answers through your sign-in with the key as backup (both live test calls passed). Open: your iPhone alert test</td><td><span class="pill todo">Yours</span></td></tr>
+          <tr><td class="num">12</td><td>Trends<span class="sub">Team, quarterback, coach and venue records with sample size</span></td><td>Landed (PR #4)</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">13</td><td>Backend cleanup + data timing<span class="sub">How fresh lines and quarterback news are; a faster Week board</span></td><td>Landed and live: the data-timing log (PR #21), collecting since 15:03 UTC today. The week 6 report can be read after 19 October. Not started: the code cleanup</td><td><span class="pill prog">Part landed</span></td></tr>
+          <tr><td class="num">14</td><td>The model gets better<span class="sub">A test bench; an idea ships only if it beats the current model</span></td><td>Landed: the bench (PR #9) and round two, five ideas from the GitHub repo review (PR #13). Nothing beat the current model, so nothing changed. Round three is running now</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">15</td><td>Live scores<span class="sub">Score, clock and win chance while games are on</span></td><td>Landed and live: live game data and market prices (PR #14), the live worker and route (PR #15), grading of win chances during games (PR #23). In build: the screen. First check against a real game: Thursday 15 October</td><td><span class="pill prog">In build</span></td></tr>
+          <tr><td class="num">16</td><td>Group picks<span class="sub">Your Yahoo group files: standings and how the group picked</span></td><td>Landed and live: tables and import (PR #10), upload and read routes (PR #16). In final testing: the group screen and upload form. No real member name is in the code repository</td><td><span class="pill prog">In build</span></td></tr>
+          <tr><td class="num">17</td><td>Claude through your sign-in<span class="sub">Your Claude subscription first, the API key as backup</span></td><td>Landed (PR #18) and proven live on the PC with two test calls</td><td><span class="pill done">Done</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -146,29 +160,37 @@ footer { color: var(--muted); font-size: 13px; }
 
   <div class="cols">
     <div class="card">
-      <h3>Model bar (2012–2025)</h3>
+      <h3>Model bar (2012 to 2025)</h3>
       <div class="stat"><span>Betting market</span><span>66.6%</span></div>
-      <div class="stat"><span>Our blend (recommended)</span><span>66.5%</span></div>
+      <div class="stat"><span>Our blend (live)</span><span>66.5%</span></div>
       <div class="stat"><span>Stats only</span><span>64.5%</span></div>
-      <p class="note">3,649 games, walk-forward. The blend ties the market; stats alone are 2.1 points worse.</p>
+      <p class="note">3,649 games, each predicted using only earlier games. The live blend ties the market.</p>
     </div>
     <div class="card">
-      <h3>Independent reviews</h3>
-      <div class="stat"><span>Structure findings</span><span>18</span></div>
-      <div class="stat"><span>Blindspot findings</span><span>12</span></div>
-      <div class="stat"><span>Blockers</span><span>1</span></div>
-      <p class="note">Verdict: structure is sound and right-sized. Every finding is assigned to a step.</p>
+      <h3>Model ideas tested</h3>
+      <div class="stat"><span>Ideas tested</span><span>9</span></div>
+      <div class="stat"><span>Beat the live model</span><span>0</span></div>
+      <div class="stat"><span>Round three</span><span>Running</span></div>
+      <p class="note">Tested so far: weekly refit, play-by-play ratings, the bootstrap check, other ways to remove the bookmaker's margin with spread and total as inputs, calibration, recency weights, offence and defence split, stars out, and score models. Round three covers the GitHub techniques not yet tried: boosted trees, a stacked blend, a margin model, explosive plays, and how confidence points are ordered. The test seasons (2022 to 2025, 1,084 games) cannot show a gain smaller than about 0.001 log loss.</p>
     </div>
     <div class="card">
-      <h3>Lanes</h3>
-      <div class="stat"><span>Sheet (step 4)</span><span>Merged</span></div>
-      <div class="stat"><span>Deploy (step 5)</span><span>Merged</span></div>
-      <div class="stat"><span>Merge conflicts</span><span>0</span></div>
-      <div class="stat"><span>iPhone app (step 6)</span><span>Merged</span></div>
-      <div class="stat"><span>Trends (step 12)</span><span>Merged</span></div>
-      <p class="note">Steps 6 and 12 ran side by side; step 12 landed first with no conflict. Jev rated them independent (0.03 and 0.05), as it did steps 4 and 5. Each lane has its own copy of the code and its own fresh reviewer before it lands.</p>
+      <h3>Live app on your PC</h3>
+      <div class="stat"><span>Deploys today</span><span>6</span></div>
+      <div class="stat"><span>Last deploy</span><span>17:34 UTC</span></div>
+      <div class="stat"><span>Health</span><span>OK</span></div>
+      <div class="stat"><span>Your picks</span><span>93</span></div>
+      <p class="note">Runs everything through PR #23. A database backup is taken before every deploy, and the row counts are compared before and after: unchanged every time.</p>
+    </div>
+    <div class="card">
+      <h3>In build now</h3>
+      <div class="stat"><span>Live scores screen</span><span>Jim</span></div>
+      <div class="stat"><span>Group screen</span><span>Testing</span></div>
+      <div class="stat"><span>Star alerts</span><span>Testing</span></div>
+      <div class="stat"><span>Passkey, server half</span><span>Building</span></div>
+      <div class="stat"><span>Model round three</span><span>Started</span></div>
+      <p class="note">Each piece runs in its own copy of the code and passes a security review where needed, a fresh reviewer and a final check before it lands. The Claude usage limit paused the build three times today; work restarted from saved state each time.</p>
     </div>
   </div>
 
-  <footer>Updated 2026-10-12 · Steps 1–6 and 12 landed (PRs #1 to #5 merged) · Next: alerts (step 7)</footer>
+  <footer>Updated 2026-10-13 17:53 UTC · 11 of 17 steps landed, 5 more partly landed · 18 landings and 6 deploys today (PRs #6 to #23)</footer>
 </div>
