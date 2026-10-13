@@ -244,3 +244,44 @@ Logs: `g2-a-*.log`, `g2-b-*.log`. Baseline before the step on the old main: `bas
 **Lane-guard** (`lane-guard.log`, against `e51ac48`): `OUT OF LANE: backend/nflpi/ingestion/service.py: owned by lane coaches`, 1 problem. That is the one edit the integrator granted (hive message 08276f: two `STALE_HOURS` entries) and said he accepts; no other finding.
 
 Builders: work orders 1 to 7 were all built by Ryan (Codex). None by Claude.
+
+Correction to the line above: work orders 8 and 9 (below) were built by Claude Sonnet subagents, because Codex ran out of credits about 09:00 UTC on 2026-10-13 (god's rule, hive message c11d28: a Sonnet subagent builds, never Opus; the coordinator still writes the spec and the failing test and reruns every proof; the builder is never the critic).
+
+### Fresh critic, round 1 on `c5451ad`: FAIL (one major)
+
+Report and decisions: `reviews/critic-1.md`. Its own gate run was green (`critic-a-*.log`: 965 passed, 119 browser checks, load 4.39 5.57 7.21). F1 (major): the one-line stars line of work order 7 was never screenshotted or design-reviewed and cut names and statuses at 393 px; "+N more" understated what was hidden; the tests passed on cut text. Accepted.
+
+### Work order 8 (`wo-8.md`), one try, built by Claude Sonnet
+
+Decision: the line names ONE star in full, the worst status first, then counts the rest; only the name may be cut; position, status, count, age and the missing-list note are never cut. The API orders `stars_out.out` Out before Doubtful (one stable sort in `views.py`); the client does not sort.
+
+| What | Proof (mine) |
+|---|---|
+| Red first | `red-5.log` (`test_api.py`: 1 failed, 10 passed, the order assertion); `red-5-e2e.log` (ST1 and ST2 failed on phone and desktop, 13 passed) |
+| After the build | diff in scope (two files); ruff clean; `test_api.py` 11 passed; `test_stars.py` 72 passed; typecheck exit 0; `gen:api` no drift; `wo8-e2e.log`: `stars.spec.ts` and `phone-layout.spec.ts` 30 passed with a fresh build |
+| Screenshots | `~/.claude/plans/nfl-pickem-lanes-logs/step-8a2/after5-*.png`; I looked at the phone board: status, count, age and "MIA: no list" are whole; only the 39-character stress name is cut |
+
+Check gate pair g3 on `0633ad5` (old main): green twice, 965 passed, 119 browser checks, loads 6.07 6.14 5.67 and 8.70 8.55 7.06 (`g3-*.log`).
+
+### Security review (Dwight), round 3 on the delta `7c5572d..0633ad5`: PASS
+
+`reviews/dwight-3.json`. No critical, high or medium. Two low notes, both as the work order intends (the age is the named star's; the sort is "Out before the rest", right while the set is Out and Doubtful). Work order 9 below came after his review: it changes one fixed string and adds one fixed character in `game-card.tsx`, no feed text and no logic, so I did not ask for a fourth round.
+
+### Design critic 2 on the one-name line (`reviews/design-critic-2.md`): FIX, two accepted
+
+It confirmed F1 is fixed (nothing a reader needs is cut at three widths). Accepted: "no list" reads as good news, so it says "no star list"; a dot between the count and the age. Not changed, with reasons in the report: rewriting names as initial plus surname (the app never rewrites a name from the feed; a real name fits in the normal state), per-club counts, the QB in the count, "seen", the group label.
+
+### Work order 9 (`wo-9.md`), one try, built by Claude Sonnet
+
+Two lines in `game-card.tsx`. Red by reading (ST2 asked for "MIA: no star list" and the dot; the code said "no list"). Proof: typecheck exit 0, then the gate below (ST2 green on phone and desktop).
+
+### Landing gate pair g4 on `1f50f96` (lane replayed onto main `98ec875`, no conflicts; `npm run gen:api` after the replay: no drift): GREEN twice
+
+| Run | Load before (1, 5, 15 min) | pytest | ruff | gen:api | typecheck | browser |
+|---|---|---|---|---|---|---|
+| g4-a | 4.92 5.99 6.42 | 1033 passed | clean | no drift | exit 0 | 119 passed |
+| g4-b | 5.76 5.58 6.09 | 1033 passed | clean | no drift | exit 0 | 119 passed |
+
+Logs: `g4-a-*.log`, `g4-b-*.log`. The backend count rose from 965 to 1033 because main gained the live lane's tests.
+
+**Lane-guard** (`lane-guard.log`, against `98ec875`): `OUT OF LANE: backend/nflpi/ingestion/service.py: owned by lane coaches`, 1 problem: the granted edit, nothing else.
