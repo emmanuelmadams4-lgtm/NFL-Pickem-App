@@ -1,0 +1,1 @@
+Own baseline run cancelled 2026-10-13: it waited on the shared lock res:gate (held by lanes alerts and news) through the whole build and never started. Reference baseline at the same base commit d88d74e: lane model, 172 passed (docs/gauntlet/logs/step-14.md on lane/model).

@@ -1,0 +1,22 @@
+2022_01_BUF_LA: spread -1 total 51.5 -> line score 25-26; final 10-31; team miss 10; total miss 10
+2023_18_BUF_MIA: spread -2.5 total 47.5 -> line score 23-25; final 14-21; team miss 6.5; total miss 13
+2024_10_MIA_LA: spread +2.5 total 49.5 -> line score 26-24; final 15-23; team miss 6; total miss 12
+MATCH  games: hand 1087.000000  report 1087.000000
+MATCH  team-score miss: hand 7.139834  report 7.139834
+MATCH  total-points miss: hand 10.180313  report 10.180313
+MATCH  slot games: hand 152.000000  report 152.000000
+MATCH  slot team-score miss: hand 7.098684  report 7.098684
+MATCH  slot total-points miss: hand 10.289474  report 10.289474
+MATCH  2022 games: hand 271.000000  report 271.000000
+MATCH  2022 team-score miss: hand 6.928044  report 6.928044
+MATCH  2022 total-points miss: hand 10.387454  report 10.387454
+MATCH  2023 games: hand 272.000000  report 272.000000
+MATCH  2023 team-score miss: hand 7.321691  report 7.321691
+MATCH  2023 total-points miss: hand 10.216912  report 10.216912
+MATCH  2024 games: hand 272.000000  report 272.000000
+MATCH  2024 team-score miss: hand 7.060662  report 7.060662
+MATCH  2024 total-points miss: hand 9.738971  report 9.738971
+MATCH  2025 games: hand 272.000000  report 272.000000
+MATCH  2025 team-score miss: hand 7.248162  report 7.248162
+MATCH  2025 total-points miss: hand 10.378676  report 10.378676
+18 of 18 MATCH

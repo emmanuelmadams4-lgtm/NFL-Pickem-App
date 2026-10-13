@@ -1,0 +1,179 @@
+{
+ "seasons": [
+  2022,
+  2023,
+  2024,
+  2025
+ ],
+ "games": 1087,
+ "methods": [
+  {
+   "method": "implied",
+   "label": "Closing line implied score",
+   "team_mae": 7.1481140754369825,
+   "total_mae": 10.209751609935603
+  },
+  {
+   "method": "stats",
+   "label": "Stats model without the line",
+   "team_mae": 7.34360625574977,
+   "total_mae": 10.435142594296229
+  },
+  {
+   "method": "blend",
+   "label": "Stats model with the closing line",
+   "team_mae": 7.151333946642135,
+   "total_mae": 10.234590616375344
+  }
+ ],
+ "comparisons": [
+  {
+   "candidate": "stats",
+   "team_mae_gain": -0.19549218031278748,
+   "team_ci": [
+    -0.29162833486660533,
+    -0.0993445262189513
+   ],
+   "total_mae_gain": -0.22539098436062557,
+   "total_ci": [
+    -0.4029438822447102,
+    -0.0441352345906165
+   ],
+   "wins": false
+  },
+  {
+   "candidate": "blend",
+   "team_mae_gain": -0.003219871205151794,
+   "team_ci": [
+    -0.04185832566697332,
+    0.03541858325666973
+   ],
+   "total_mae_gain": -0.02483900643974241,
+   "total_ci": [
+    -0.11131554737810488,
+    0.05979760809567617
+   ],
+   "wins": false
+  }
+ ],
+ "by_season": [
+  {
+   "season": 2022,
+   "n": 271,
+   "implied": {
+    "team_mae": 6.931734317343174,
+    "total_mae": 10.439114391143912
+   },
+   "stats": {
+    "team_mae": 7.088560885608856,
+    "total_mae": 10.730627306273062
+   },
+   "blend": {
+    "team_mae": 6.905904059040591,
+    "total_mae": 10.365313653136532
+   }
+  },
+  {
+   "season": 2023,
+   "n": 272,
+   "implied": {
+    "team_mae": 7.329044117647059,
+    "total_mae": 10.268382352941176
+   },
+   "stats": {
+    "team_mae": 7.555147058823529,
+    "total_mae": 10.602941176470589
+   },
+   "blend": {
+    "team_mae": 7.334558823529412,
+    "total_mae": 10.323529411764707
+   }
+  },
+  {
+   "season": 2024,
+   "n": 272,
+   "implied": {
+    "team_mae": 7.082720588235294,
+    "total_mae": 9.753676470588236
+   },
+   "stats": {
+    "team_mae": 7.220588235294118,
+    "total_mae": 9.867647058823529
+   },
+   "blend": {
+    "team_mae": 7.049632352941177,
+    "total_mae": 9.738970588235293
+   }
+  },
+  {
+   "season": 2025,
+   "n": 272,
+   "implied": {
+    "team_mae": 7.248161764705882,
+    "total_mae": 10.378676470588236
+   },
+   "stats": {
+    "team_mae": 7.509191176470588,
+    "total_mae": 10.540441176470589
+   },
+   "blend": {
+    "team_mae": 7.314338235294118,
+    "total_mae": 10.511029411764707
+   }
+  }
+ ],
+ "tiebreak_slots": {
+  "games": 152,
+  "methods": [
+   {
+    "method": "implied",
+    "label": "Closing line implied score",
+    "team_mae": 7.1019736842105265,
+    "total_mae": 10.322368421052632
+   },
+   {
+    "method": "stats",
+    "label": "Stats model without the line",
+    "team_mae": 7.098684210526316,
+    "total_mae": 10.368421052631579
+   },
+   {
+    "method": "blend",
+    "label": "Stats model with the closing line",
+    "team_mae": 7.0625,
+    "total_mae": 10.401315789473685
+   }
+  ],
+  "comparisons": [
+   {
+    "candidate": "stats",
+    "team_mae_gain": 0.003289473684210526,
+    "team_ci": [
+     -0.2270559210526316,
+     0.23034539473684165
+    ],
+    "total_mae_gain": -0.046052631578947366,
+    "total_ci": [
+     -0.506578947368421,
+     0.3881578947368421
+    ],
+    "wins": false
+   },
+   {
+    "candidate": "blend",
+    "team_mae_gain": 0.039473684210526314,
+    "team_ci": [
+     -0.05929276315789473,
+     0.13486842105263158
+    ],
+    "total_mae_gain": -0.07894736842105263,
+    "total_ci": [
+     -0.27631578947368424,
+     0.09868421052631579
+    ],
+    "wins": false
+   }
+  ]
+ },
+ "ships": null
+}
