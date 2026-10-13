@@ -1,0 +1,7 @@
+Look at real data BEFORE the freeze. Seasons up to 2021 only; no 2022-2025 score was read.
+File: nflverse schedules/games.csv, 7548 rows, sha256 4a493272693cdb79 (fetched 2026-10-13 through nflverse.fetch_csv).
+<=2021: corr(spread_line, home margin) = 0.426   corr(total_line, total points) = 0.313
+=> spread_line is positive when the home team is favoured.
+Games missing a spread or total, per season 2002-2025: 0 in every season.
+Half-point share <=2021: spread 0.419, total 0.464.
+Regular-season games 2022-2025 (count only, no scores read): 1087.
