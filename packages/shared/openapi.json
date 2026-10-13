@@ -4074,6 +4074,10 @@
       ],
       "title": "Status"
      },
+     "listed": {
+      "type": "boolean",
+      "title": "Listed"
+     },
      "qb_alert": {
       "type": "boolean",
       "title": "Qb Alert"
@@ -4110,6 +4114,7 @@
      "slot",
      "rank",
      "status",
+     "listed",
      "qb_alert",
      "injury",
      "observed_at"

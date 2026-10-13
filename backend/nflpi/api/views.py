@@ -41,7 +41,7 @@ def _star_status(row: dict) -> s.StarStatus:
         team=row["team"], player=_clean_star_text(row["player"]) or "",
         position=_clean_star_text(row["position"]), slot=row["slot"], rank=row["rank"],
         status=_clean_star_text(row["status"]), injury=_clean_star_text(row["injury"]),
-        qb_alert=row["qb_alert"],
+        listed=row["listed"], qb_alert=row["qb_alert"],
         observed_at=row["observed_at"],
     )
 

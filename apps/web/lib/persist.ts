@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
  * No extra dependency: dehydrate/hydrate come with @tanstack/react-query.
  */
 export const CACHE_KEY = "nflpi_cache";
-const VERSION = 1;
+const VERSION = 2;
 const MAX_CHARS = 3_500_000; // localStorage is about 5MB of UTF-16; stay well under
 
 export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;

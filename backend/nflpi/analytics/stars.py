@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from datetime import UTC, datetime
+from unicodedata import combining, normalize
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -182,24 +183,21 @@ def _current_reports(session: Session, game: Game) -> list[InjuryReport]:
 
 
 def _star_report(star: TeamStar, reports: list[InjuryReport]) -> InjuryReport | None:
-    return max(
-        (
-            report
-            for report in reports
-            if report.team == star.team
-            and (
-                report.player_id == star.player_id
-                if report.player_id and star.player_id
-                else _normal_name(report.player) == _normal_name(star.player)
-            )
-        ),
-        key=lambda report: report.id,
-        default=None,
-    )
+    club = [report for report in reports if report.team == star.team]
+    ids = [report for report in club if star.player_id and report.player_id == star.player_id]
+    named = [
+        report for report in club
+        if not (star.player_id and report.player_id)
+        and _normal_name(report.player) == _normal_name(star.player)
+    ]
+    if len({report.player for report in named}) > 1:
+        named = [report for report in named if report.player == star.player]
+    return max(ids + named, key=lambda report: report.id, default=None)
 
 
 def _normal_name(name: str) -> str:
-    words = name.lower().replace(".", "").replace("'", "").replace("’", "").split()
+    folded = "".join(char for char in normalize("NFKD", name) if not combining(char))
+    words = folded.lower().replace(".", "").replace("'", "").replace("’", "").split()
     if words and words[-1] in {"jr", "sr", "ii", "iii", "iv", "v"}:
         words.pop()
     return " ".join(words)
@@ -268,7 +266,7 @@ def game_stars(session: Session, game_id: str, now: datetime | None = None) -> d
             rows.append(dict(
                 team=team, player=star.player, position=star.position, slot=star.slot, rank=star.rank,
                 status=status, injury=report.injury if status else None,
-                qb_alert=_qb_alert(report), report_id=report.id if report else None,
+                listed=report is not None, qb_alert=_qb_alert(report), report_id=report.id if report else None,
                 observed_at=report.observed_at if status else None,
                 age_hours=round((now - report.observed_at).total_seconds() / 3600, 1) if status else None,
             ))

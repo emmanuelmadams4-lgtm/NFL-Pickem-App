@@ -51,7 +51,7 @@ function StarTeam({ team, club, week, reportsSeen }: {
                   <span className={`min-w-0 text-right text-label leading-5 break-words ${star.status ? "text-text-2" : "text-subtle"}`}>
                     {star.status || (reportsSeen === 0
                       ? <><span aria-hidden>–</span><span className="sr-only">Not known yet</span></>
-                      : "Not on injury report")}
+                      : star.listed ? "No game status" : "Not on injury report")}
                   </span>
                 )}
               </li>

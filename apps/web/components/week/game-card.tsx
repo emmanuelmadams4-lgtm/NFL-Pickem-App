@@ -198,30 +198,25 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
           {game.qb_alerts.length > 2 && <span className="text-label text-subtle">+{game.qb_alerts.length - 2} more</span>}
         </div>
 
-        {game.status === "scheduled" && (stars.length > 0 || starNote) && (
-          <div className="min-w-0 space-y-1 text-label text-text-2">
-            {stars.length > 0 && (
-              <div role="group" aria-label="Stars out" className="min-w-0">
-                <p className="font-medium text-text">
-                  Stars out {latestSeen && <span className="font-normal text-subtle">· latest seen {ago(latestSeen)}</span>}
-                </p>
-                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-                  {shownStars.map((star) => (
-                    <span key={`${star.team}-${star.slot}-${star.rank}`} className="inline-flex max-w-full min-w-0 flex-wrap items-center gap-x-1">
-                      <span className="min-w-0 break-words">{star.team} {star.player}</span>
-                      <span className="inline-flex gap-x-1 whitespace-nowrap">
-                        {star.position && <span className="text-subtle">{star.position}</span>}
-                        {star.status && <span className={statusTone(star.status) === "bad" ? "text-bad" : "text-warn"}>{star.status}</span>}
-                      </span>
-                    </span>
-                  ))}
-                  {stars.length > 3 && <span className="text-subtle">+{stars.length - 3} more</span>}
-                </div>
-              </div>
-            )}
-            {starNote && <p className="text-text-2">{starNote}</p>}
+        {game.status === "scheduled" && (stars.length > 0 ? (
+          <div role="group" aria-label="Stars out" className="flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-label text-text-2">
+            <span className="shrink-0 font-medium text-text">Stars out</span>
+            <span className="min-w-0 flex-1 truncate">
+              {shownStars.map((star, index) => (
+                <span key={`${star.team}-${star.slot}-${star.rank}`}>
+                  {index > 0 && " · "}{star.team} {star.player}
+                  {star.position && <> <span className="text-subtle">{star.position}</span></>}
+                  {star.status && <> <span className={statusTone(star.status) === "bad" ? "text-bad" : "text-warn"}>{star.status}</span></>}
+                </span>
+              ))}
+            </span>
+            {stars.length > 3 && <span className="shrink-0 text-subtle">+{stars.length - 3} more</span>}
+            {latestSeen && <span className="shrink-0 text-subtle">seen {ago(latestSeen)}</span>}
+            {game.stars_out.no_list.map((club) => (
+              <span key={club} className="shrink-0 text-text-2">{club}: no star list</span>
+            ))}
           </div>
-        )}
+        ) : starNote ? <p className="text-label text-text-2">{starNote}</p> : null)}
 
         {p?.change_note && (
           <p className="flex items-start gap-1.5 text-label text-text-2">
