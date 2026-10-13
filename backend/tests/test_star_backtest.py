@@ -193,6 +193,10 @@ def test_unknown_stays_missing_and_a_known_empty_report_is_zero():
     feats = sb.star_out_features(df, _stats_2021(), reports + [_report(2021, 2, game.home_team, "h1")])
     assert feats.loc[df["season"] == 2021, REPORT_COLUMNS].isna().all().all()
     assert sb.star_out_features(df, [], reports)[REPORT_COLUMNS].isna().all().all()
+    # A season with playoff rows only has no list at all (an empty list would read as "nobody is out").
+    post_only = [_stat(2021, "h1", week=19, season_type="POST", receiving_yards=900.0)]
+    assert 2021 not in sb.league_stars(post_only)
+    assert sb.star_out_features(df, post_only, reports)[REPORT_COLUMNS].isna().all().all()
 
 
 def test_reserve_lists_add_to_the_report_from_2016_only(monkeypatch):
@@ -269,7 +273,11 @@ def test_star_preds_fit_on_past_seasons_and_keep_the_blend_when_an_input_is_miss
     inputs.loc[df["season"] < 2019, RESERVE_COLUMNS] = np.nan  # reserve inputs start in 2019
     missing = df[(df["season"] == 2022) & (df["week"] == 2)].index[0]
     inputs.loc[missing, "star_out_diff"] = np.nan
+    # Two games with no price: one to score (it must not be scored) and one to learn from (it must not be used).
+    for season, week in ((2022, 3), (2020, 1)):
+        df.loc[df[(df["season"] == season) & (df["week"] == week)].index[0], ["home_ml", "away_ml"]] = np.nan
     base = candidate_preds(df, [2021, 2022], window=3)
+    assert len(base) == 29
     seen = []
     real_fit = LogitModel.fit.__func__
 

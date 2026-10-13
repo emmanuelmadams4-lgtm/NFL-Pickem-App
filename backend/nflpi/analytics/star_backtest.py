@@ -33,7 +33,9 @@ def _score(totals: dict[str, float], points: dict[str, float]) -> float:
 
 def league_stars(stats: list[dict]) -> dict[int, dict[str, tuple[str, float]]]:
     """Rank each season's regular-season players by their production."""
-    stars: dict[int, dict[str, tuple[str, float]]] = {row["season"]: {} for row in stats}
+    stars: dict[int, dict[str, tuple[str, float]]] = {
+        row["season"]: {} for row in stats if row["season_type"] == "REG"
+    }
     players: dict[int, dict[str, dict]] = {}
     for row in stats:
         if row["season_type"] != "REG":
@@ -89,7 +91,7 @@ def _club_out(reports: list[dict], kickoff: object) -> set[str]:
 
 
 def _counts(ids: set[str], stars: dict[str, tuple[str, float]]) -> tuple[float, float, float]:
-    found = [stars[pid] for pid in ids if pid in stars]
+    found = [stars[pid] for pid in sorted(ids) if pid in stars]
     return (float(sum(group != "qb" for group, _ in found)),
             float(sum(weight for group, weight in found if group != "qb")),
             float(sum(group == "qb" for group, _ in found)))
@@ -122,14 +124,14 @@ def star_out_features(
             else:
                 reserve_home = _counts(home | roster_rows.get(home_key, set()), stars)
                 reserve_away = _counts(away | roster_rows.get(away_key, set()), stars)
-                result += [reserve_home[i] - reserve_away[i] for i in (0, 1)]
+                result += [h - a for h, a in zip(reserve_home[:2], reserve_away[:2], strict=True)]
         values.append(result)
     return pd.DataFrame(values, columns=columns, index=df.index, dtype=float)
 
 
 def star_preds(df: pd.DataFrame, seasons: list[int], inputs: pd.DataFrame, window: int = 10) -> pd.DataFrame:
     """Score six star inputs against the walk-forward blend."""
-    frames = {params: frame.assign(**{name: inputs[name] for name in inputs.columns})
+    frames = {params: frame.assign(**inputs)
               for params, frame in _elo_frames(df).items()}
     by_season = []
     for season in seasons:
