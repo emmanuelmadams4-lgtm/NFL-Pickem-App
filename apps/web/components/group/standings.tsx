@@ -10,7 +10,7 @@ export function Standings({ season, week, state, onRetry }: { season: number; we
       {state.status === "ok" && state.data.rows.length === 0 && <EmptyState title={`No standings for week ${week} yet`} hint="Upload your weekly performance file above." />}
       {state.status === "ok" && state.data.rows.length > 0 && (
         <>
-          <table aria-label={`Standings for week ${week}`} className="w-full table-fixed text-sm">
+          <table aria-label={`Standings for week ${week}`} className="w-full max-w-xl table-fixed text-sm">
             <thead className="border-b border-border text-label text-subtle">
               <tr>
                 <th scope="col" className="w-10 py-2 pr-1 text-right font-medium tabular-nums sm:w-12">Rank</th>
@@ -30,6 +30,7 @@ export function Standings({ season, week, state, onRetry }: { season: number; we
               ))}
             </tbody>
           </table>
+          {state.data.rows.some((row) => row.rank === null) && <p className="mt-3 text-label text-subtle">A dash in the Rank column means the file gave no rank.</p>}
           {state.data.weeks_counted.length > 0 && <p className="mt-3 text-label text-subtle">Totals count weeks {state.data.weeks_counted.join(", ")}.</p>}
         </>
       )}

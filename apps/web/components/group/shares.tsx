@@ -16,9 +16,6 @@ function SideRow({ side, picked }: { side: Side; picked: number }) {
           <span>{line.count}</span>{" "}<span>{line.share}</span>{" "}<span>{line.avg}</span>
         </span>
       </div>
-      <div aria-hidden="true" className="mt-2 h-1.5 overflow-hidden rounded-full bg-elevated">
-        <div className="h-full rounded-full bg-text-2" style={{ width: `${Math.max(0, Math.min(1, side.share ?? 0)) * 100}%` }} />
-      </div>
     </div>
   );
 }
@@ -41,7 +38,7 @@ export function Shares({ season, week, state, weekGames, onRetry }: {
               <Card key={game.game_id} data-testid="group-game" className="min-w-0 p-4">
                 <h3 className="text-sm font-semibold text-text">{game.away_team} at {game.home_team}</h3>
                 <p className="mt-1 text-label text-subtle">{weekGame ? kickoffWhen(weekGame) : dateTime(game.kickoff_utc)}</p>
-                <Chip tone="neutral" className="mt-3">App pick: {weekGame?.sheet.app_pick ?? "–"}</Chip>
+                <Chip tone="neutral" className="mt-3">App pick: {weekGame?.sheet.app_pick ?? <>–<span className="sr-only"> not available</span></>}</Chip>
                 {game.picked === 0 ? (
                   <p className="mt-4 text-sm text-text-2">No group picks for this game yet</p>
                 ) : (

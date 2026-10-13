@@ -62,6 +62,18 @@ export function UploadPanel({ season, week, onSaved }: { season: number; week: n
   return (
     <Section title="Upload a file" note="Export your picks file or your weekly performance file from Yahoo, then choose it here.">
       <input key={inputKey} ref={input} type="file" accept=".csv,text/csv" aria-label="Choose a CSV file" className="sr-only" tabIndex={-1} onChange={choose} />
+
+      {result && (
+        <div role="status" data-testid="upload-result" className="mb-4 rounded-ctl border border-good/40 bg-good/10 px-4 py-3 text-sm text-text">
+          {uploadResultText(result)}
+          {result.season !== season && <Link href={`/group/?season=${result.season}&week=${week}`} className="ml-2 inline-block py-3 text-accent-text underline underline-offset-2">Show the {result.season} season</Link>}
+        </div>
+      )}
+      {error && <>
+        <div role="alert" data-testid="upload-error" className="mb-4 rounded-ctl border border-bad/40 bg-bad/10 px-4 py-3 text-sm text-bad">{error}</div>
+        <p className="-mt-2 mb-4 text-label text-subtle">Check that it is the picks file or the weekly performance file you exported from Yahoo.</p>
+      </>}
+
       {!file && <Button type="button" variant="secondary" className="h-11 lg:h-9" onClick={openChooser}>Choose file</Button>}
 
       {file && (
@@ -71,7 +83,7 @@ export function UploadPanel({ season, week, onSaved }: { season: number; week: n
             {seasons.map((s) => <option key={s} value={s}>{s}</option>)}
           </SelectField>
           <div className="text-sm text-text">
-            <p className="font-bold">Saving to the {chosenSeason} season</p>
+            <p className="font-semibold">Saving to the {chosenSeason} season</p>
             <p className="mt-1 text-text-2">Check the season: the server cannot tell if the year is wrong.</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -81,13 +93,6 @@ export function UploadPanel({ season, week, onSaved }: { season: number; week: n
         </div>
       )}
 
-      {result && (
-        <div role="status" data-testid="upload-result" className="mt-4 rounded-ctl border border-good/40 bg-good/10 px-4 py-3 text-sm text-text">
-          {uploadResultText(result)}
-          {result.season !== season && <Link href={`/group/?season=${result.season}&week=${week}`} className="ml-2 text-accent-text underline underline-offset-2">Show the {result.season} season</Link>}
-        </div>
-      )}
-      {error && <div role="alert" data-testid="upload-error" className="mt-4 rounded-ctl border border-bad/40 bg-bad/10 px-4 py-3 text-sm text-bad">{error}</div>}
     </Section>
   );
 }
