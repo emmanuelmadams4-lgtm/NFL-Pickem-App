@@ -126,6 +126,17 @@ Do this if the token leaked or a phone was lost.
 2. Put it in `.env` as `APP_ACCESS_TOKEN`.
 3. `docker compose up -d --force-recreate app worker`
 4. The old token stops working at once. Sign in again on each device with the new one.
+5. If passkeys are on, open the passkey list and remove any passkey you do not know. Do the same after a restore (section 5): a restore brings back the passkeys that existed at the time of the backup.
+
+### Passkey sign-in (optional, off by default)
+
+A passkey lets a device sign in with Face ID or Touch ID. The access token keeps working in every case.
+
+* **Switch on:** in `.env` set `PASSKEY_RP_ID` to the app's host name with no `https://` (for example `pickem.example.ts.net`) and `PASSKEY_ORIGINS` to its https address (for example `https://pickem.example.ts.net`; several addresses are separated by commas). Then `docker compose up -d --force-recreate app worker`.
+* **Switch off:** clear both settings and recreate the same way. Passkey sign-ins stop at once. They work again if the settings come back within their 30 days, so remove a passkey to end its sign-ins for good.
+* A passkey is tied to the host name. A new host name means registering each device again.
+* Adding a passkey needs the access token. A passkey sign-in can list and remove passkeys but cannot add one. Up to 10 passkeys.
+* Every add and every removal sends an alert to your devices.
 
 ## 7. Update the app
 
