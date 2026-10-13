@@ -150,6 +150,10 @@ Diff inspection: both diffs touch only lane web's files; no untracked extras; no
 
 Screenshots: `~/.claude/plans/nfl-pickem-lanes-logs/step-8a2/before-*.png` (baseline build, `shots-before.log`) and `after-*.png` (HEAD of work order 2), board and two game screens at phone, tablet and desktop.
 
+Work orders, continued:
+
+| Work order | Commit | What | Proof (mine) |
+|---|---|---|---|
 | WO-3 (`wo-3.md`), try 1 | `f3c5e21` | Seam granted by the integrator (hive message 08276f): two settings in `config.py`, two `STALE_HOURS` entries in `ingestion/service.py` | Diff is exactly four lines. `test_api.py`: the freshness test is green (`red-3-api.log`: 10 passed; the 1 failure is the next red test). Browser ST8 is proven in the next browser run. |
 
 ### Design review, round 1 (three fresh critics in parallel, read-only, on `4657935`)
@@ -168,3 +172,7 @@ Reports: `step-8a2-evidence/reviews/ux-critic-1.md`, `visual-critic-1.md`, `impl
 | Rejected | V5 (tooltip), V8 (truncate or surname only), I8, I12 | Both notes are owner wording (D24, D27) and stay visible; names are never cut; group label is what the tests and screen readers use; no shared helper for two call sites |
 
 Work order 4 (`wo-4.md`) carries the accepted items. Red tests committed in `f197494`.
+
+| Work order | Commit | What | Proof (mine) |
+|---|---|---|---|
+| WO-4 (`wo-4.md`), try 1 | `f4198bf` | The accepted design findings: `StarStatus.qb_alert` set by the API from the matched report row, star quarterbacks' alerts first; card: club before each name, no-list note beside listed stars, age on the label line, plain-text status; game screen: "Full injury report" heading, club names one level down, one chip style, no slot word, no dashed box for "no list" | Diff touches only the eight allowed files. ruff clean; `test_api.py` 11 passed; `test_stars.py` 70 passed; typecheck exit 0; `gen:api` twice, same checksums. `wo4-e2e.log` (load 8.17, build ok): 17 passed, ST8 included. Screenshots `after2-*.png`; I checked the phone board and the phone game screen by eye. |
