@@ -267,14 +267,15 @@ def test_a6_the_summary_hour_is_eastern_after_the_clock_goes_back(session, pushe
     assert star_alerts.run(session, datetime(2026, 11, 7, 13, 30, tzinfo=UTC))["summary"] == 1  # 08:30 EST
 
 
-def test_a6_two_changes_to_one_star_are_one_line_with_the_newest_status_and_both_are_used_up(world, pushes):  # noqa: F811
-    first = report(world, "W1", "Jaylen Waddle", "MIA", "Questionable", observed=MORNING - timedelta(hours=6))
+def test_a6_two_changes_to_one_star_are_one_line_with_the_newest_status_and_the_older_one_never_surfaces(world, pushes):  # noqa: F811
+    report(world, "W1", "Jaylen Waddle", "MIA", "Questionable", observed=MORNING - timedelta(hours=6))
     second = report(world, "W1", "Jaylen Waddle", "MIA", "Out", observed=MORNING - timedelta(hours=2))
     star_alerts.run(world, MORNING)
     (message,) = sent(pushes)
     assert message["body"] == "Jaylen Waddle (MIA) Out"
     keys = set(world.scalars(select(Notification.dedupe_key).where(Notification.kind == "star")))
-    assert keys == {f"star:{first.id}", f"star:{second.id}"}
+    assert keys == {f"star:{second.id}"}  # the older row is superseded: never alerted, never listed
+    assert star_alerts.run(world, MORNING + timedelta(minutes=5)) == {"immediate": 0, "summary": 0}
 
 
 def test_a7_no_pending_change_means_no_summary_and_no_record(world, pushes):  # noqa: F811

@@ -44,21 +44,43 @@ def _seen(session: Session, *keys: str) -> bool:
     return session.scalar(select(Notification.id).where(Notification.dedupe_key.in_(keys)).limit(1)) is not None
 
 
-def _is_change(session: Session, report: InjuryReport) -> bool:
+def _same_player_rows(report: InjuryReport) -> tuple:
+    """Where-clauses for rows about the same player, season, week and team as this report."""
     same_player = (
         InjuryReport.player_id == report.player_id
         if report.player_id else InjuryReport.player_id.is_(None) & (InjuryReport.player == report.player)
     )
+    return (InjuryReport.season == report.season, InjuryReport.week == report.week, InjuryReport.team == report.team,
+            same_player)
+
+
+def _is_change(session: Session, report: InjuryReport) -> bool:
     previous = session.scalars(
         select(InjuryReport)
-        .where(
-            InjuryReport.season == report.season, InjuryReport.week == report.week, InjuryReport.team == report.team,
-            same_player, InjuryReport.id < report.id,
-        )
+        .where(*_same_player_rows(report), InjuryReport.id < report.id)
         .order_by(InjuryReport.id.desc())
         .limit(1)
     ).first()
     return previous is None or previous.report_status != report.report_status
+
+
+def _superseded(session: Session, report: InjuryReport) -> bool:
+    """A later row gives the same player a different status (or none), so this one is stale."""
+    status = InjuryReport.report_status
+    differs = status.is_(None) | (status != report.report_status)
+    return session.scalar(
+        select(InjuryReport.id).where(*_same_player_rows(report), InjuryReport.id > report.id, differs).limit(1)
+    ) is not None
+
+
+def _first_with_status(session: Session, report: InjuryReport) -> bool:
+    """No earlier row gives the same player this same status that week."""
+    return session.scalar(
+        select(InjuryReport.id).where(
+            *_same_player_rows(report), InjuryReport.id < report.id,
+            InjuryReport.report_status == report.report_status,
+        ).limit(1)
+    ) is None
 
 
 def _game(session: Session, report: InjuryReport, now: datetime) -> Game | None:
@@ -103,7 +125,11 @@ def _changes(session: Session, baseline: int, now: datetime) -> list[Change]:
     for report in reports:
         who = report.player_id or report.player
         injury_key = f"inj:{report.season}:{report.week}:{who}:{report.report_status}"
-        if _seen(session, f"star:{report.id}", injury_key) or not _is_change(session, report):
+        if _seen(session, f"star:{report.id}"):
+            continue
+        if _first_with_status(session, report) and _seen(session, injury_key):
+            continue
+        if not _is_change(session, report) or _superseded(session, report):
             continue
         game = _game(session, report, now)
         star = _star(session, report, game) if game else None
@@ -123,7 +149,7 @@ def _send_immediate(session: Session, change: Change, now: datetime) -> int:
         body += f" {injury}."
     delivered = push._send(
         session, title, body, push.game_url(game.game_id),
-        ttl=int((kickoff - now).total_seconds()), headers={"Urgency": "high"},
+        ttl=max(1, int((kickoff - now).total_seconds())), headers={"Urgency": "high"},
     )
     if not delivered:
         return 0
