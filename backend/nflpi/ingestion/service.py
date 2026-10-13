@@ -1,6 +1,7 @@
 """Run ingestion jobs. Each run is logged; a failed run keeps old data in place."""
 
 import logging
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
@@ -15,6 +16,10 @@ from nflpi.models import Game, IngestionRun, InjuryReport, MarketSnapshot, Team,
 from nflpi.predictions.market import novig_home_prob
 
 log = logging.getLogger(__name__)
+
+_COACH_CACHE: dict[int, tuple[float, dict[str, str]]] = {}
+COACH_CACHE_SECONDS = 6 * 3600
+MIN_CLUBS = 30
 
 STALE_HOURS = {
     "schedules": lambda s: s.stale_hours_schedules,
@@ -124,7 +129,19 @@ def ingest_head_coaches(session: Session, coaches: dict[str, str] | None = None)
         season = session.scalar(select(func.max(Game.season)))
         if season is None:
             raise RuntimeError("no games loaded")
-        current_coaches = coaches if coaches is not None else nflverse.fetch_head_coaches(season)
+        if coaches is not None:
+            current_coaches = coaches
+        else:
+            cached = _COACH_CACHE.get(season)
+            if cached is not None and time.monotonic() - cached[0] < COACH_CACHE_SECONDS:
+                current_coaches = cached[1]
+            else:
+                current_coaches = nflverse.fetch_head_coaches(season)
+                if len(current_coaches) < MIN_CLUBS:
+                    raise RuntimeError(
+                        f"ESPN listed a head coach for {len(current_coaches)} of 32 clubs; keeping the feed names"
+                    )
+                _COACH_CACHE[season] = (time.monotonic(), current_coaches)
         changed = 0
         for abbr, name in current_coaches.items():
             for side in ("home", "away"):

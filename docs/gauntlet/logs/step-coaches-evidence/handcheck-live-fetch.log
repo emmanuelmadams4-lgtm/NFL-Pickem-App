@@ -1,0 +1,12 @@
+32
+{'BUF': 'Joe Brady', 'ATL': 'Kevin Stefanski', 'ARI': 'Mike LaFleur', 'LV': 'Klint Kubiak', 'LA': 'Sean McVay', 'WAS': 'Dan Quinn'}
+Traceback (most recent call last):
+  File [35m"<stdin>"[0m, line [35m6[0m, in [35m<module>[0m
+[1;35mFileNotFoundError[0m: [35m[Errno 2] No such file or directory: '/var/folders/jr/vyjqhb4j04g4hkzc_0dnh15c0000gn/T//games.csv'[0m
+schedules ok 842
+head_coaches runs [('ok', 68, None)]
+BUF {'Joe Brady'}
+ATL {'Kevin Stefanski'}
+ARI {'Mike LaFleur'}
+LV {'Klint Kubiak'}
+2025 BUF {'Sean McDermott'}

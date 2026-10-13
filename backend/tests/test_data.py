@@ -125,6 +125,11 @@ def test_weather_picks_the_kickoff_hour():
 # --- Head coaches: nflverse games.csv carries last season's coach for some clubs (BUF still McDermott in 2026). ---
 # The current season's names come from ESPN's season coach list instead (defect, owner 2026-10-13).
 
+@pytest.fixture(autouse=True)
+def _fresh_coach_cache():
+    service._COACH_CACHE.clear()
+
+
 ESPN_HOST = "sports.core.api.espn.com"
 ESPN_TEAMS = {"2": "BUF", "13": "LV", "14": "LAR", "28": "WSH", "22": "ARI"}
 
@@ -284,7 +289,6 @@ def test_espn_calls_send_a_user_agent_and_do_not_follow_redirects(monkeypatch):
 def test_too_few_clubs_fails_the_run_and_keeps_the_feed_names(session, monkeypatch):
     service.ingest_schedules(session, schedule_rows())
     monkeypatch.setattr(nflverse, "fetch_head_coaches", lambda season: {"BUF": "Joe Brady"})
-    service._COACH_CACHE.clear()
     run = service.ingest_head_coaches(session)
     assert run.status == "failed" and "1 of" in run.error
     assert session.scalar(select(Game.home_coach).where(Game.season == CURRENT, Game.home_team == "BUF")) == "BUF Coach"
@@ -299,7 +303,6 @@ def test_the_coach_feed_is_fetched_at_most_once_in_the_cache_window(session, mon
         return {f"T{i}": f"Coach {i}" for i in range(32)} | {"BUF": "Joe Brady"}
 
     monkeypatch.setattr(nflverse, "fetch_head_coaches", fetch)
-    service._COACH_CACHE.clear()
     assert service.ingest_head_coaches(session).status == "ok"
     service.ingest_schedules(session, schedule_rows(), head_coaches=None)  # a plain reload: no new fetch, names stay
     assert service.ingest_head_coaches(session).status == "ok"
