@@ -95,6 +95,9 @@ def test_league_stars_break_ties_by_id_and_take_the_position_of_the_latest_week(
     ]
     got = sb.league_stars(rows)[2021]
     assert got == {"a": ("off", 1.0), "m": ("qb", 1.0)}  # n ended the season as a receiver with 1 point
+    # L2: a player whose offence and defence scores are equal belongs to offence.
+    tie = sb.league_stars([_stat(2021, "t", receiving_yards=100.0, def_tackles_solo=10.0)])[2021]
+    assert tie == {"t": ("off", 1.0)}
 
 
 def test_stars_come_only_from_the_season_before_the_game():
@@ -222,6 +225,9 @@ def test_reserve_lists_add_to_the_report_from_2016_only(monkeypatch):
     for status in ("ACT", "DEV", "CUT", "INA", "", None):
         quiet = [_roster(2022, 2, away, "a2", status), _roster(2022, 2, home, "h1", status)]
         assert sb.star_out_features(df, stats, reports, quiet).loc[game.name, "star_res_diff"] == 1
+    # F7: the away side's reserve count also unions its own report with its roster rows.
+    both = sb.star_out_features(df, stats, reports + [_report(2022, 2, away, "a2")], roster)
+    assert both.loc[game.name, "star_res_diff"] == 2 - 2
     # A week with a report but no roster row is unknown for the reserve columns only.
     week3 = (df["season"] == 2022) & (df["week"] == 3)
     only_week2 = [row for row in roster if (row["season"], row["week"]) == (2022, 2)]
