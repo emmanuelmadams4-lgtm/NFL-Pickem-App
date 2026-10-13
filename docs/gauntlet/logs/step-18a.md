@@ -1,6 +1,6 @@
 # Step 18a: audit of the current model, the six-repository check, and the plan for the rest of step 18
 
-Lane `audit`, branch `lane/audit`, started from main `c55827f`, rebased onto main `11cc401` before the final gate, coord task #30, tier **T1** (documents and one test file; no model change). Coordinator Oscar (hive `worker-audit`, Opus), 2026-10-13, one Gauntlet Loop ONE_SHOT session. Owner brief: `docs/model/OWNER_BRIEF_2026-10-13.md` sections 1 and 2; owner decision D68.
+Lane `audit`, branch `lane/audit`, started from main `c55827f`, rebased onto main `589aa3b` before the final gate (commit names below are as rebased), coord task #30, tier **T1** (documents and one test file; no model change). Coordinator Oscar (hive `worker-audit`, Opus), 2026-10-13, one Gauntlet Loop ONE_SHOT session. Owner brief: `docs/model/OWNER_BRIEF_2026-10-13.md` sections 1 and 2; owner decision D68.
 
 **Result in three lines.** The model is not broken and is well calibrated, but it is the market's closing number in all but 2% of games, and it ties the market: nothing measured shows it beating the market (`docs/model/AUDIT.md`). Of the six repositories one is a possible later dependency, two give ideas, three are rejected; none shows a technique that beats the current model (`docs/model/REPOS.md`). The rest of step 18 is cut into seven lane-sized steps, 18d to 18j, with the rules for judging spread and totals forecasts written before any test (`docs/model/PLAN.md`).
 
@@ -53,7 +53,7 @@ Public seam (from the dispatch): `analytics.backtest.predict_season` (bench) and
 
 * **Document rules (from the dispatch, checked by the critic).** Every finding in `AUDIT.md` is VERIFIED (file and line, plus a test or a command with output) or HYPOTHESIS (names the test that would settle it). Every repository row carries the commit and the license as read from the clone. No 2026 game, line, injury or result is made up.
 * **Red.** These tests assert properties the code is expected to have, so "red first" is not possible without a defect. Red was produced the honest way: planted defects (ten by the end: M1 to M10) (`step-18a-evidence/mutate.py`), each of which must make at least one test fail. Had a test failed on the unchanged code, it would have been kept as a strict `xfail` and reported to the integrator as `AUDIT CRITICAL` (none did).
-* **S4 was added after the first run** (commit `8a65d64`), when the line-timing finding (AUDIT A6) needed its own proof. It adds a clause; it changes none.
+* **S4 was added after the first run** (commit `b0fdc07`), when the line-timing finding (AUDIT A6) needed its own proof. It adds a clause; it changes none.
 * **Gate.** `docs/gauntlet/logs/step-18a-evidence/gate.sh <label>`: full `pytest` on the lane's own database (`nflpi-lane-model-db`, port 15442; a skipped test fails the gate), `ruff` on `nflpi tests migrations` and the evidence scripts, `alembic upgrade head` then `alembic check` on a fresh scratch database, `npm run gen:api` with no drift. One full run on the final commit, the audit test file twice in a row, and the planted-defect sweep.
 * **Baseline.** `tests/test_model.py` on `c55827f`: 34 passed (`~/.claude/plans/nfl-pickem-lanes/logs/step-18a-c55827f-baseline-test_model.log`).
 
@@ -63,15 +63,15 @@ Public seam (from the dispatch): `analytics.backtest.predict_season` (bench) and
 |---|---|---|
 | Six repositories cloned shallow into the session scratch folder, outside the repository; never run | coordinator | six commits and licenses read from the clones (table in `REPOS.md`) |
 | One reader per repository | 4 Sonnet + 2 Haiku subagents, read only, in parallel | reports in `step-18a-evidence/repos/`. The coordinator re-checked every commit and license and spot-checked the claims marked ✔ in `REPOS.md`. One reader claim was wrong (nfl-predictions does report log loss) and is corrected in the report and the table |
-| `backend/tests/test_model_audit.py` (the spec) | coordinator | 5 tests green on the first run (`3dc43de`), 6 after S4 (`8a65d64`) |
+| `backend/tests/test_model_audit.py` (the spec) | coordinator | 5 tests green on the first run (`bb3c5d6`), 6 after S4 (`b0fdc07`) |
 | Work order 1 (`step-18a-evidence/wo-1.md`): `audit_numbers.py`, `mutate.py` | Claude Sonnet builder (Codex refused), try 1 of 2 | delivered ruff-clean. The builder found that pytest's colour codes hid the `FAILED` lines and added `--color=no`. The coordinator read both files, then added three planted defects to the list himself (M7, M8, M9: the list is spec data, not code) |
 | `blend_vs_market.py` (30 lines, one lookup) | coordinator | written directly: smaller than a work order, recorded here as the exception the roster allows |
 | Bench numbers | coordinator, under `res:gate-c` | `audit-numbers.json`: 3,649 games, market 66.57% / 0.6094, blend 66.46% / 0.6107, equal to step 14's stored numbers |
-| `AUDIT.md`, `REPOS.md`, `PLAN.md` | coordinator | commits `8a65d64`, `2fd89bb` |
+| `AUDIT.md`, `REPOS.md`, `PLAN.md` | coordinator | commits `b0fdc07`, `76b9c4d` |
 
 **BUILD:** `IMPLEMENTATION_PROVIDER: CLAUDE (Codex refused the default model)`, `BUILD_RUNG: sonnet (try 1 of 2)`, `CLIMBS: none`.
 
-**Review fan-out (T1, trivial tier: `ecc:code-reviewer` on the four new code files, read only).** Verdict **WARN** on `2fd89bb`: no test found that passes with its clause broken; 0 critical, 0 high, 4 medium, 6 low (`step-18a-evidence/reviews/code-reviewer-1.md`). Each finding and what was done:
+**Review fan-out (T1, trivial tier: `ecc:code-reviewer` on the four new code files, read only).** Verdict **WARN** on `76b9c4d`: no test found that passes with its clause broken; 0 critical, 0 high, 4 medium, 6 low (`step-18a-evidence/reviews/code-reviewer-1.md`). Each finding and what was done:
 
 | Finding | Done |
 |---|---|
@@ -85,11 +85,11 @@ Public seam (from the dispatch): `analytics.backtest.predict_season` (bench) and
 | LOW calibration slope uses a regularized fit | noted in `AUDIT.md` A4 (effect under 0.01) |
 | LOW `mutate.py` counted only `FAILED` lines; end check flagged an already dirty tree | fixed in 1b (`ERROR` lines count; refuses a dirty tree at start) |
 
-Work order 1b (`wo-1b.md`): Claude Sonnet builder, try 2 of 2 on the rung, six changes in the two scripts, commit `7b79273`. The coordinator read the diff and reran every proof (section 5). One lapse, stated plainly: both builders' own proof runs of `mutate.py` (about 90 seconds each) ran without a machine lock, because the work orders allowed one run and did not name the lock; every coordinator run held one.
+Work order 1b (`wo-1b.md`): Claude Sonnet builder, try 2 of 2 on the rung, six changes in the two scripts, commit `5b796ae`. The coordinator read the diff and reran every proof (section 5). One lapse, stated plainly: both builders' own proof runs of `mutate.py` (about 90 seconds each) ran without a machine lock, because the work orders allowed one run and did not name the lock; every coordinator run held one.
 
 ## 4. CLEANUP
 
-Scope: the four code files this step added (`backend/tests/test_model_audit.py` and the three scripts in the evidence folder). An explicit `/refactor` read after the review fixes, on `7b79273`:
+Scope: the four code files this step added (`backend/tests/test_model_audit.py` and the three scripts in the evidence folder). An explicit `/refactor` read after the review fixes, on `5b796ae`:
 
 * **No change needed.** `test_model_audit.py` repeats two five-line helpers that also exist in `tests/test_model.py` (`frame`, `_flip_scores`). Kept on purpose: that file belongs to lane modelc and may change under this one; importing from it would tie the audit's proof to another lane's test file.
 * **No change needed.** `audit_numbers.py` and `blend_vs_market.py` both build the bench frame the way `jobs.backtest` does (seven lines each). Kept: each script must run alone as evidence, and a shared helper would be a third file for seven lines.

@@ -1,6 +1,6 @@
 # Audit of the current model (owner brief, section 1)
 
-Step 18a, lane `audit`, 2026-10-13. Code audited: main at `11cc401` (the audit began at `c55827f`; the model, bench and ingestion files are identical in both). No model code was changed. Brief: `docs/model/OWNER_BRIEF_2026-10-13.md` section 1, read under owner decision D68.
+Step 18a, lane `audit`, 2026-10-13. Code audited: main at `589aa3b` (the audit began at `c55827f`; the model, bench and ingestion files are identical in both). No model code was changed. Brief: `docs/model/OWNER_BRIEF_2026-10-13.md` section 1, read under owner decision D68.
 
 ## The answer in five lines
 
@@ -65,7 +65,7 @@ Words. **Bench:** the walk-forward backtest (`analytics/backtest.py`): each seas
 **A8. VERIFIED that history holds one quarterback name per game with no time attached; HYPOTHESIS that this makes the bench look better than a live pick could be.**
 * The flags come from nflverse's `home_qb_name` and `away_qb_name` (`ingestion/nflverse.py:167-168`, `features.py:100-112`).
 * Command output: in the bench both names are present in 100% of the 3,649 games (`audit-numbers.json`, `sample.share_with_both_qbs` = 1.0). In the 2026 file, names are present for 79 of 79 finished games and for 14 of 193 unplayed games, week 6 only (`feeds-extra.txt`). The file has no column for who was expected before a finished game.
-* HYPOTHESIS: for a finished game the name is the man who actually started, so the bench sees late changes that a live pick could not. **Settled by:** the `qb_observations` log (`models.py:378`, collecting since 2026-10-13): for each 2026 game compare the last name seen before kickoff with the name after the game, and count the differences. `docs/gauntlet/PLAN.md` row 13 already names this "hindsight-QB caveat".
+* HYPOTHESIS: for a finished game the name is the man who actually started, so the bench sees late changes that a live pick could not. **Settled by:** the `qb_observations` log (`models.py:380`, collecting since 2026-10-13): for each 2026 game compare the last name seen before kickoff with the name after the game, and count the differences. `docs/gauntlet/PLAN.md` row 13 already names this "hindsight-QB caveat".
 * A bound on the size, not a measurement of it: the whole stats model is 0.0028 log loss ahead of Elo alone (A9, VERIFIED), and the flags are only part of that. How much of the 0.0028 would survive with pre-game projections is the HYPOTHESIS above.
 
 **A12. VERIFIED. Injuries, weather, star players and news are not model inputs, so they cannot leak; there is no scaler or imputer to fit.**
