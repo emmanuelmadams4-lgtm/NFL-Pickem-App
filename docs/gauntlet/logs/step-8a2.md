@@ -176,3 +176,27 @@ Work order 4 (`wo-4.md`) carries the accepted items. Red tests committed in `f19
 | Work order | Commit | What | Proof (mine) |
 |---|---|---|---|
 | WO-4 (`wo-4.md`), try 1 | `f4198bf` | The accepted design findings: `StarStatus.qb_alert` set by the API from the matched report row, star quarterbacks' alerts first; card: club before each name, no-list note beside listed stars, age on the label line, plain-text status; game screen: "Full injury report" heading, club names one level down, one chip style, no slot word, no dashed box for "no list" | Diff touches only the eight allowed files. ruff clean; `test_api.py` 11 passed; `test_stars.py` 70 passed; typecheck exit 0; `gen:api` twice, same checksums. `wo4-e2e.log` (load 8.17, build ok): 17 passed, ST8 included. Screenshots `after2-*.png`; I checked the phone board and the phone game screen by eye. |
+
+### Design review, rounds 2 and 3
+
+* **Blind A/B judge** (`reviews/ab-judge-1.md`, images only, sets named by coin flip, key recorded after the verdict: X = before, Y = after work order 4): **winner Y**. Of its five remarks on the winner one is accepted (the missing-list note is too dim), four are not changed, with reasons in the report.
+* **Polish critic** (`reviews/polish-critic-1.md`): four Polish findings, all accepted; **verdict: ship**. Work order 6 (`wo-6.md`) carries them and the judge's remark.
+* **Scripted gates:** sideways overflow at 393 px: ST2 (0 px); accessibility (axe, serious and critical, dark and light, board and game screen): ST7, green; touch targets: not applicable, the step adds no link, button or input; console: the gate's browser run fails on page errors.
+* **Stop rule:** gates green; blind A/B a win; no Critical, Structural or Visual finding open after work order 4; remaining remarks are variation no critic tied to a user-visible harm.
+* **`design.md`:** no durable change. The step uses existing tokens and components only.
+
+## 4. CLEANUP
+
+Explicit scope-locked `/refactor` pass after the review fixes: work order 5 (`wo-5.md`), commit `989cac2`, behaviour unchanged.
+
+| Item | Result |
+|---|---|
+| One star read per game on the week board | Done: `views.summaries` calls `stars.game_stars` once and builds `StarsOut` from it; the `stars_out` call, the key set and the row merge are gone. `analytics.stars.stars_out` stays (its tests and step 8b use it). |
+| `report_id` | Kept only for one set and one sort key that put a star quarterback's alert first. |
+| One list of alert statuses | Done: `ALERT_STATUSES` lives in `analytics/stars.py`; `views.py` imports it. `notify/push.py` has its own copy and is left alone (not part of this step's diff). |
+| `statusTone` | Done: exported from `star-players.tsx`, imported by `injuries.tsx`; the function props are gone. No circular import. |
+| Unused code after work order 4 | No change needed: `Chip` in `game-card.tsx` is still used by other flags; every `slotName` entry is the fallback when a position is missing. |
+
+Proof after the edit (mine): ruff clean; `test_api.py` 11 passed; `test_stars.py` 70 passed; typecheck exit 0; `gen:api` no change; `wo5-e2e.log` (load 4.96, build ok): 17 passed. Screenshots `after3-*.png`.
+
+Remaining, classified: the week board reads stars once per game (about five small queries per game, 16 games): acceptable for one user; a single batched read belongs to step 13 (backend speed). Carried to the ingestion lane (not this lane's files): `checked_at` per season, an empty injuries file logging ok, distinct failure messages.

@@ -205,19 +205,21 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
                 <p className="font-medium text-text">
                   Stars out {latestSeen && <span className="font-normal text-subtle">· latest seen {ago(latestSeen)}</span>}
                 </p>
-                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                   {shownStars.map((star) => (
                     <span key={`${star.team}-${star.slot}-${star.rank}`} className="inline-flex max-w-full min-w-0 flex-wrap items-center gap-x-1">
                       <span className="min-w-0 break-words">{star.team} {star.player}</span>
-                      {star.position && <span className="text-subtle">{star.position}</span>}
-                      {star.status && <span className={statusTone(star.status) === "bad" ? "text-bad" : "text-warn"}>{star.status}</span>}
+                      <span className="inline-flex gap-x-1 whitespace-nowrap">
+                        {star.position && <span className="text-subtle">{star.position}</span>}
+                        {star.status && <span className={statusTone(star.status) === "bad" ? "text-bad" : "text-warn"}>{star.status}</span>}
+                      </span>
                     </span>
                   ))}
                   {stars.length > 3 && <span className="text-subtle">+{stars.length - 3} more</span>}
                 </div>
               </div>
             )}
-            {starNote && <p className="text-subtle">{starNote}</p>}
+            {starNote && <p className="text-text-2">{starNote}</p>}
           </div>
         )}
 

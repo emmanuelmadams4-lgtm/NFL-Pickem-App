@@ -33,7 +33,7 @@ function StarTeam({ team, club, week, reportsSeen }: {
         )}
       </div>
       {!club || club.stars_week === null || club.stars.length === 0 ? (
-        <p className="text-label text-subtle">No star list yet</p>
+        <p className="text-label text-text-2">No star list yet</p>
       ) : (
         <ul aria-label={`${team.name} star players`} className="divide-y divide-border">
           {club.stars.map((star) => {
@@ -48,7 +48,7 @@ function StarTeam({ team, club, week, reportsSeen }: {
                   {star.status && details.length > 0 && <p className="text-label text-text-2 break-words">{details.join(" · ")}</p>}
                 </div>
                 {star.status && tone ? <Chip tone={tone}>{star.status}</Chip> : (
-                  <span className={`min-w-0 text-right text-label break-words ${star.status ? "text-text-2" : "text-subtle"}`}>
+                  <span className={`min-w-0 text-right text-label leading-5 break-words ${star.status ? "text-text-2" : "text-subtle"}`}>
                     {star.status || (reportsSeen === 0
                       ? <><span aria-hidden>–</span><span className="sr-only">Not known yet</span></>
                       : "Not on injury report")}
@@ -69,7 +69,7 @@ export function StarPlayers({ game }: { game: GameDetail }) {
       <h3 className="text-sm font-semibold text-text">Star players</h3>
       <p className="mt-0.5 text-label text-subtle">A star being out does not change the pick.</p>
       <p className="text-label text-subtle">Ages count from when this app first saw the status.</p>
-      {game.stars_out.reports_seen === 0 && <p className="mt-2 text-label text-subtle">No injury report yet this week</p>}
+      {game.stars_out.reports_seen === 0 && <p className="mt-2 text-label text-text-2">No injury report yet this week</p>}
       <div className="mt-3 grid gap-6 md:grid-cols-2">
         <StarTeam team={game.away} club={game.stars.find((club) => club.team === game.away.abbr)} week={game.week}
           reportsSeen={game.stars_out.reports_seen} />
