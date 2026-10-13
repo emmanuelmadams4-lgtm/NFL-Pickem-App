@@ -10,9 +10,9 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from nflpi.analytics.stars import stars_out
 from sqlalchemy import func, select
 
+from nflpi.analytics.stars import stars_out
 from nflpi.ingestion import nflverse, service
 from nflpi.models import Game, IngestionRun, InjuryReport, TeamStar
 
@@ -361,6 +361,16 @@ def _without(rows: list[dict], column: str) -> list[dict]:
         "snaps_not_a_number",
         "empty_files",
         "id_too_long",
+        "empty_snaps",
+        "empty_stats",
+        "empty_players",
+        "week_out_of_range",
+        "blank_team",
+        "duplicate_row",
+        "stat_too_big",
+        "files_end_in_different_weeks",
+        "fewer_weeks_than_stored",
+        "fewer_clubs_than_stored",
     ],
 )
 def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
@@ -379,9 +389,33 @@ def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
         snaps, stats = [], []
     elif case == "id_too_long":
         stats[1] = stats[1] | {"player_id": "x" * 40}
+    elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+        snaps = []
+    elif case == "empty_stats":
+        stats = []
+    elif case == "empty_players":
+        players = []
+    elif case == "week_out_of_range":  # weeks run 1 to 22
+        snaps[0] = snaps[0] | {"week": "23"}
+    elif case == "blank_team":
+        stats[1] = stats[1] | {"team": " "}
+    elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+        snaps.append(snaps[0])
+    elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+        stats[1] = stats[1] | {"rushing_yards": "5000"}
+    elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+        stats = [r for r in stats if r["week"] == "1"]
+    elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+        snaps = [r for r in snaps if r["week"] == "1"]
+        stats = [r for r in stats if r["week"] == "1"]
+    elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+        snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+        stats = [r for r in stats if r["team"] != "LV"]
     run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
     assert run.status == "failed"
     assert run.error
+    if case.startswith("missing_"):  # the logged error names the file
+        assert ("snap_counts" if case == "missing_snap_column" else "stats_player_week") in run.error
     assert stars(session, 3, "KC") == before
     assert session.scalar(select(func.count()).select_from(TeamStar)) == 20
 
@@ -478,11 +512,12 @@ def test_stars_out_lists_stars_whose_latest_report_is_out_or_doubtful(session):
 
     result = stars_out(session, game_id, now=NOW)
 
-    assert {k: result[k] for k in ("game_id", "season", "week", "stars_week")} == {
+    assert {k: result[k] for k in ("game_id", "season", "week", "stars_week", "reports_seen")} == {
         "game_id": game_id,
         "season": SEASON,
         "week": 3,
         "stars_week": 3,
+        "reports_seen": 6,  # players with a report this week: five Chiefs and one Jet (Pat's is last week's)
     }
     assert result["checked_at"] == NOW - timedelta(hours=1)  # the last good injury refresh, not the failed one
     # Away club first, then home; inside a club: quarterback, offence, defence.
@@ -546,6 +581,7 @@ def test_stars_out_uses_the_latest_earlier_list_and_says_which(session):
         "week": 1,
         "stars_week": None,
         "checked_at": None,
+        "reports_seen": 1,
         "out": [],
     }
 
@@ -553,3 +589,39 @@ def test_stars_out_uses_the_latest_earlier_list_and_says_which(session):
 def test_stars_out_rejects_an_unknown_game(session):
     with pytest.raises(LookupError):
         stars_out(session, "2023_99_NOPE_NOPE", now=NOW)
+
+
+def test_stars_out_says_when_no_injury_report_exists_for_the_week(session):
+    ingest(session)
+    game_id = _game(session, SEASON, 3, "NYJ", "KC")
+    _injury(session, 2, "KC", "00-009", "Cory Corner", "Out", 100)  # last week only: this week is not reported yet
+    result = stars_out(session, game_id, now=NOW)
+    # An empty list with no reports seen means "not known yet", not "nobody is out".
+    assert (result["stars_week"], result["reports_seen"], result["out"]) == (3, 0, [])
+
+
+# S19, S20: review round 1
+
+
+def test_a_player_missing_from_the_id_file_is_joined_to_his_stats_by_name_and_club(session):
+    data = (
+        [
+            snap(1, "DEN", "NewR01", "New Rookie", "WR", off=40),  # NewR01 is not in the id file
+            snap(1, "DEN", "ZerQ01", "Zero Quarterback", "QB", off=0),
+            snap(1, "DEN", "OthW01", "Other Wide", "WR", off=30),
+        ],
+        [
+            stat(1, "DEN", "00-050", "New Rookie", "WR", receiving_yards=50, receptions=4),
+            stat(1, "DEN", "00-051", "Zero Quarterback", "QB"),
+            stat(1, "LAC", "00-052", "New Rookie", "WR", receiving_yards=300),  # same name, another club: not him
+        ],
+        [{"pfr_id": "ZerQ01", "gsis_id": "00-051", "display_name": ""}, {"pfr_id": "OthW01", "gsis_id": "00-053"}],
+    )
+    assert ingest(session, data=data).status == "ok"
+    # New Rookie is one player: 0.1 x 40 + 50/10 + 0.5 x 4 = 11.0, with the league id from his stats rows.
+    # Other Wide: 0.1 x 30 = 3.0. The quarterback has no snaps and no attempts: he is not a star.
+    assert stars(session, 2, "DEN") == [
+        ("off", 1, "New Rookie", "00-050", "WR", 40, 7.0, 11.0),
+        ("off", 2, "Other Wide", "00-053", "WR", 30, 0.0, 3.0),
+    ]
+    assert stars(session, 2, "LAC") == [("off", 1, "New Rookie", "00-052", "WR", 0, 30.0, 30.0)]

@@ -1,0 +1,1022 @@
+......FF....FFFFFFFFFF...F.F.FF                                          [100%]
+=================================== FAILURES ===================================
+__ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[missing_snap_column] __
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ac980>
+case = 'missing_snap_column'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+        assert run.status == "failed"
+        assert run.error
+        if case.startswith("missing_"):  # the logged error names the file
+>           assert ("snap_counts" if case == "missing_snap_column" else "stats_player_week") in run.error
+E           assert 'snap_counts' in "'offense_snaps'"
+E            +  where "'offense_snaps'" = <nflpi.models.IngestionRun object at 0x10d8a7b50>.error
+
+tests/test_stars.py:418: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    nflpi.ingestion.service:service.py:38 ingestion nflverse/stars failed
+Traceback (most recent call last):
+  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-stars/backend/nflpi/ingestion/service.py", line 32, in run_logged
+    run.rows = job()
+               ~~~^^
+  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-stars/backend/nflpi/ingestion/service.py", line 167, in job
+    parsed_snaps = nflverse.parse_star_snaps(snap_rows, season)
+  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-stars/backend/nflpi/ingestion/nflverse.py", line 182, in parse_star_snaps
+    off, de = int(row["offense_snaps"]), int(row["defense_snaps"])
+                  ~~~^^^^^^^^^^^^^^^^^
+KeyError: 'offense_snaps'
+__ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[missing_stat_column] __
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ad7f0>
+case = 'missing_stat_column'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+        assert run.status == "failed"
+        assert run.error
+        if case.startswith("missing_"):  # the logged error names the file
+>           assert ("snap_counts" if case == "missing_snap_column" else "stats_player_week") in run.error
+E           assert 'stats_player_week' in "'def_sacks'"
+E            +  where "'def_sacks'" = <nflpi.models.IngestionRun object at 0x10d977020>.error
+
+tests/test_stars.py:418: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    nflpi.ingestion.service:service.py:38 ingestion nflverse/stars failed
+Traceback (most recent call last):
+  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-stars/backend/nflpi/ingestion/service.py", line 32, in run_logged
+    run.rows = job()
+               ~~~^^
+  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-stars/backend/nflpi/ingestion/service.py", line 168, in job
+    parsed_stats = nflverse.parse_star_stats(stat_rows, season)
+  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-stars/backend/nflpi/ingestion/nflverse.py", line 207, in parse_star_stats
+    record.update({name: _star_number(row[name]) for name in STAR_STATS})
+                                      ~~~^^^^^^
+KeyError: 'def_sacks'
+______ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[empty_snaps] ______
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ada90>
+case = 'empty_snaps'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+______ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[empty_stats] ______
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ae3c0>
+case = 'empty_stats'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+_____ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[empty_players] _____
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ae660>
+case = 'empty_players'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+___ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[week_out_of_range] ___
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ae270>
+case = 'week_out_of_range'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+______ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[blank_team] _______
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ae660>
+case = 'blank_team'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+_____ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[duplicate_row] _____
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ae3c0>
+case = 'duplicate_row'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+_____ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[stat_too_big] ______
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ada90>
+case = 'stat_too_big'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+_ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[files_end_in_different_weeks] _
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ad7f0>
+case = 'files_end_in_different_weeks'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+_ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[fewer_weeks_than_stored] _
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ad940>
+case = 'fewer_weeks_than_stored'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+_ test_a_bad_file_fails_the_run_and_keeps_the_old_stars[fewer_clubs_than_stored] _
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ac980>
+case = 'fewer_clubs_than_stored'
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            "missing_snap_column",
+            "missing_stat_column",
+            "negative_snaps",
+            "snaps_not_a_number",
+            "empty_files",
+            "id_too_long",
+            "empty_snaps",
+            "empty_stats",
+            "empty_players",
+            "week_out_of_range",
+            "blank_team",
+            "duplicate_row",
+            "stat_too_big",
+            "files_end_in_different_weeks",
+            "fewer_weeks_than_stored",
+            "fewer_clubs_than_stored",
+        ],
+    )
+    def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
+        ingest(session)
+        before = stars(session, 3, "KC")
+        snaps, stats, players = handmade()
+        if case == "missing_snap_column":
+            snaps = _without(snaps, "offense_snaps")
+        elif case == "missing_stat_column":
+            stats = _without(stats, "def_sacks")
+        elif case == "negative_snaps":
+            snaps[0] = snaps[0] | {"offense_snaps": "-4"}
+        elif case == "snaps_not_a_number":
+            snaps[0] = snaps[0] | {"defense_snaps": "lots"}
+        elif case == "empty_files":
+            snaps, stats = [], []
+        elif case == "id_too_long":
+            stats[1] = stats[1] | {"player_id": "x" * 40}
+        elif case == "empty_snaps":  # a header-only snap file beside a good stats file
+            snaps = []
+        elif case == "empty_stats":
+            stats = []
+        elif case == "empty_players":
+            players = []
+        elif case == "week_out_of_range":  # weeks run 1 to 22
+            snaps[0] = snaps[0] | {"week": "23"}
+        elif case == "blank_team":
+            stats[1] = stats[1] | {"team": " "}
+        elif case == "duplicate_row":  # the same player, week and club twice would double his numbers
+            snaps.append(snaps[0])
+        elif case == "stat_too_big":  # no player gains 5,000 yards in a game
+            stats[1] = stats[1] | {"rushing_yards": "5000"}
+        elif case == "files_end_in_different_weeks":  # stats stop at week 1, snaps go to week 2
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_weeks_than_stored":  # an older copy of both files: week 1 only
+            snaps = [r for r in snaps if r["week"] == "1"]
+            stats = [r for r in stats if r["week"] == "1"]
+        elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
+            snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
+            stats = [r for r in stats if r["team"] != "LV"]
+        run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
+>       assert run.status == "failed"
+E       AssertionError: assert 'ok' == 'failed'
+E         
+E         - failed
+E         + ok
+
+tests/test_stars.py:415: AssertionError
+______ test_stars_out_lists_stars_whose_latest_report_is_out_or_doubtful _______
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ae7b0>
+
+    def test_stars_out_lists_stars_whose_latest_report_is_out_or_doubtful(session):
+        ingest(session)
+        game_id = _game(session, SEASON, 3, "NYJ", "KC")
+        _injury(session, 3, "KC", "00-009", "Cory Corner", "Out", 30, position="CB")  # a star, out
+        _injury(session, 3, "KC", "00-003", "Ron Runner", "Out", 50)  # a star: out first ...
+        _injury(session, 3, "KC", "00-003", "Ron Runner", "Questionable", 5)  # ... then upgraded: not listed
+        _injury(session, 3, "KC", "00-004", "Cal Catch", "Questionable", 4)  # a star, only questionable
+        _injury(session, 3, "KC", "00-006", "Tom Tackle", "Out", 4)  # out, but not a star
+        _injury(session, 2, "KC", "00-001", "Pat Passer", "Out", 200)  # last week's report: not this game
+        _injury(session, 3, "KC", "00-008", "Russ Rush", None, 4, practice_status="Limited")  # practice note only
+        _injury(session, 3, "NYJ", "00-041", "Stay Put", "Doubtful", 2, injury="Ankle")  # a star, doubtful
+        session.add(
+            IngestionRun(source="nflverse", dataset="injuries", status="ok", finished_at=NOW - timedelta(hours=1), rows=1)
+        )
+        session.add(IngestionRun(source="nflverse", dataset="injuries", status="failed", finished_at=NOW, error="boom"))
+        session.commit()
+    
+        result = stars_out(session, game_id, now=NOW)
+    
+>       assert {k: result[k] for k in ("game_id", "season", "week", "stars_week", "reports_seen")} == {
+                   ^^^^^^^^^
+            "game_id": game_id,
+            "season": SEASON,
+            "week": 3,
+            "stars_week": 3,
+            "reports_seen": 6,  # players with a report this week: five Chiefs and one Jet (Pat's is last week's)
+        }
+E       KeyError: 'reports_seen'
+
+tests/test_stars.py:515: KeyError
+__________ test_stars_out_uses_the_latest_earlier_list_and_says_which __________
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8aeba0>
+
+    def test_stars_out_uses_the_latest_earlier_list_and_says_which(session):
+        ingest(session)
+        later = _game(session, SEASON, 5, "NYJ", "KC")  # no list for week 5: the week 3 list is the newest
+        _injury(session, 5, "KC", "00-009", "Cory Corner", "Out", 1)
+        result = stars_out(session, later, now=NOW)
+        assert result["stars_week"] == 3
+        assert [r["player"] for r in result["out"]] == ["Cory Corner"]
+    
+        opener = _game(session, SEASON, 1, "NYJ", "KC")  # week 1: no list exists yet, and a later list is never used
+        _injury(session, 1, "KC", "00-009", "Cory Corner", "Out", 1)
+>       assert stars_out(session, opener, now=NOW) | {"checked_at": None} == {
+            "game_id": opener,
+            "season": SEASON,
+            "week": 1,
+            "stars_week": None,
+            "checked_at": None,
+            "reports_seen": 1,
+            "out": [],
+        }
+E       AssertionError: assert {'game_id': '...k': None, ...} == {'game_id': '...k': None, ...}
+E         
+E         Omitting 6 identical items, use -vv to show
+E         Right contains 1 more item:
+E         {'reports_seen': 1}
+E         Use -v to get more diff
+
+tests/test_stars.py:578: AssertionError
+________ test_stars_out_says_when_no_injury_report_exists_for_the_week _________
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8ae7b0>
+
+    def test_stars_out_says_when_no_injury_report_exists_for_the_week(session):
+        ingest(session)
+        game_id = _game(session, SEASON, 3, "NYJ", "KC")
+        _injury(session, 2, "KC", "00-009", "Cory Corner", "Out", 100)  # last week only: this week is not reported yet
+        result = stars_out(session, game_id, now=NOW)
+        # An empty list with no reports seen means "not known yet", not "nobody is out".
+>       assert (result["stars_week"], result["reports_seen"], result["out"]) == (3, 0, [])
+                                      ^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'reports_seen'
+
+tests/test_stars.py:600: KeyError
+_ test_a_player_missing_from_the_id_file_is_joined_to_his_stats_by_name_and_club _
+
+session = <sqlalchemy.orm.session.Session object at 0x10d8aeba0>
+
+    def test_a_player_missing_from_the_id_file_is_joined_to_his_stats_by_name_and_club(session):
+        data = (
+            [
+                snap(1, "DEN", "NewR01", "New Rookie", "WR", off=40),  # NewR01 is not in the id file
+                snap(1, "DEN", "ZerQ01", "Zero Quarterback", "QB", off=0),
+                snap(1, "DEN", "OthW01", "Other Wide", "WR", off=30),
+            ],
+            [
+                stat(1, "DEN", "00-050", "New Rookie", "WR", receiving_yards=50, receptions=4),
+                stat(1, "DEN", "00-051", "Zero Quarterback", "QB"),
+                stat(1, "LAC", "00-052", "New Rookie", "WR", receiving_yards=300),  # same name, another club: not him
+            ],
+            [{"pfr_id": "ZerQ01", "gsis_id": "00-051", "display_name": ""}, {"pfr_id": "OthW01", "gsis_id": "00-053"}],
+        )
+        assert ingest(session, data=data).status == "ok"
+        # New Rookie is one player: 0.1 x 40 + 50/10 + 0.5 x 4 = 11.0, with the league id from his stats rows.
+        # Other Wide: 0.1 x 30 = 3.0. The quarterback has no snaps and no attempts: he is not a star.
+>       assert stars(session, 2, "DEN") == [
+            ("off", 1, "New Rookie", "00-050", "WR", 40, 7.0, 11.0),
+            ("off", 2, "Other Wide", "00-053", "WR", 30, 0.0, 3.0),
+        ]
+E       AssertionError: assert [('qb', 1, 'Z...WR', 40, ...)] == [('off', 1, '...WR', 30, ...)]
+E         
+E         At index 0 diff: ('qb', 1, 'Zero Quarterback', '00-051', 'QB', 0, 0.0, 0.0) != ('off', 1, 'New Rookie', '00-050', '...
+E         
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+tests/test_stars.py:623: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[missing_snap_column] - assert 'snap_counts' in "'offense_snaps'"
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[missing_stat_column] - assert 'stats_player_week' in "'def_sacks'"
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[empty_snaps] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[empty_stats] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[empty_players] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[week_out_of_range] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[blank_team] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[duplicate_row] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[stat_too_big] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[files_end_in_different_weeks] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[fewer_weeks_than_stored] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_a_bad_file_fails_the_run_and_keeps_the_old_stars[fewer_clubs_than_stored] - AssertionError: assert 'ok' == 'failed'
+FAILED tests/test_stars.py::test_stars_out_lists_stars_whose_latest_report_is_out_or_doubtful - KeyError: 'reports_seen'
+FAILED tests/test_stars.py::test_stars_out_uses_the_latest_earlier_list_and_says_which - AssertionError: assert {'game_id': '...k': None, ...} == {'game_id': '...k'...
+FAILED tests/test_stars.py::test_stars_out_says_when_no_injury_report_exists_for_the_week - KeyError: 'reports_seen'
+FAILED tests/test_stars.py::test_a_player_missing_from_the_id_file_is_joined_to_his_stats_by_name_and_club - AssertionError: assert [('qb', 1, 'Z...WR', 40, ...)] == [('off', 1, '...WR...
+16 failed, 15 passed in 1.42s
