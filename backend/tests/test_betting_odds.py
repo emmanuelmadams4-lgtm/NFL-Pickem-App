@@ -145,7 +145,17 @@ def test_no_vig_even_market_is_unchanged():
 
 
 @pytest.mark.parametrize(
-    "bad", [[], [0.5], [0.5, 0.0], [0.5, -0.1], [0.5, float("nan")], [0.5, float("inf")], [0.5, True]]
+    "bad",
+    [
+        [],
+        [0.5],
+        [0.2, 0.2, 0.2, 0.4],
+        [0.5, 0.0],
+        [0.5, -0.1],
+        [0.5, float("nan")],
+        [0.5, float("inf")],
+        [0.5, True],
+    ],
 )
 def test_no_vig_rejects_incomplete_or_invalid_sets(bad):
     with pytest.raises(BettingError):
