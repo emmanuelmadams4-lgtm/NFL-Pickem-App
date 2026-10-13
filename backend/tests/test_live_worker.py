@@ -11,10 +11,9 @@ import time
 import types
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import pytest
 from sqlalchemy import func, select
-
-import httpx
 
 from nflpi import jobs, live_worker
 from nflpi.ingestion.live import espn, fetch, run, store
@@ -82,6 +81,7 @@ def buf_la(session, kickoff=KICKOFF) -> Game:
 
 # ----------------------------------------------------------------------------------------------- W1, W2
 
+
 def test_with_no_game_in_any_window_a_wake_makes_no_call_and_writes_nothing(session):
     net = Net()
     result = step(session, T0, net=net)
@@ -110,8 +110,18 @@ def test_a_game_outside_every_window_makes_no_call(session, kickoff_offset):
 def test_a_game_that_is_final_is_not_in_play_so_nothing_is_fetched_for_it(session):
     game = buf_la(session)
     store.add_live_state(
-        session, game_id=game.game_id, event_id="401872994", fetched_at=T0, state="post", home_score=34,
-        away_score=37, period=4, clock="0:00", home_wp=0.0, tie_wp=0.0, last_play_id="1",
+        session,
+        game_id=game.game_id,
+        event_id="401872994",
+        fetched_at=T0,
+        state="post",
+        home_score=34,
+        away_score=37,
+        period=4,
+        clock="0:00",
+        home_wp=0.0,
+        tie_wp=0.0,
+        last_play_id="1",
     )
     session.commit()
     net = Net()
@@ -129,6 +139,7 @@ def test_a_game_kicking_off_now_is_in_play_and_five_hours_after_kickoff_it_is_no
 
 
 # ----------------------------------------------------------------------------------------------- W3
+
 
 def test_a_game_in_play_gets_its_score_stored_and_the_next_wake_inside_30_seconds_fetches_nothing(session):
     buf_la(session)
@@ -167,6 +178,7 @@ def test_when_the_game_turns_final_polling_stops(session):
 
 
 # ----------------------------------------------------------------------------------------------- W4
+
 
 def test_kalshi_is_asked_only_inside_the_two_hour_lead_and_every_120_seconds(session):
     buf_la(session, T0 + timedelta(hours=1))
@@ -211,6 +223,7 @@ def test_a_game_in_play_gets_all_three_sources(session):
 
 # ----------------------------------------------------------------------------------------------- W5
 
+
 def test_a_31_day_month_with_a_game_every_day_stays_far_under_the_odds_budget(session):
     first = datetime(2026, 10, 1, 20, 15, tzinfo=UTC)
     for day in range(31):
@@ -239,7 +252,12 @@ def test_a_restarted_worker_cannot_spend_a_second_odds_credit_inside_the_6_hour_
 def test_a_credit_header_below_50_stops_the_odds_api_for_35_days(session):
     for day in range(45):
         seed_game(
-            session, "BUF", "MIA", T0 + timedelta(days=day, hours=1), game_id=f"2026_{day:02d}_BUF_MIA", status="scheduled"
+            session,
+            "BUF",
+            "MIA",
+            T0 + timedelta(days=day, hours=1),
+            game_id=f"2026_{day:02d}_BUF_MIA",
+            status="scheduled",
         )
     net = Net(odds_credits=50)  # the first call brings it to 49
     play(session, T0, 40 * 86400, net, every=6 * 3600)
@@ -247,6 +265,7 @@ def test_a_credit_header_below_50_stops_the_odds_api_for_35_days(session):
 
 
 # ----------------------------------------------------------------------------------------------- W6
+
 
 def test_the_deadline_wrapper_refuses_a_fetch_started_after_the_run_deadline():
     clock, calls = Clock(), []
@@ -284,6 +303,7 @@ def test_the_default_deadlines_are_45_seconds(session):
 
 
 # ----------------------------------------------------------------------------------------------- W7
+
 
 class Killed(BaseException):
     """The process dying mid run (a signal, an out of memory kill)."""
@@ -335,6 +355,7 @@ def test_the_sweep_fails_old_running_rows_of_the_live_sources_and_nothing_else(s
 
 
 # ----------------------------------------------------------------------------------------------- W8
+
 
 def test_one_source_blowing_up_does_not_stop_the_others_and_its_message_is_never_logged(session, monkeypatch, caplog):
     buf_la(session)
@@ -393,8 +414,13 @@ def test_a_broken_window_query_is_logged_by_class_and_returns_normally(session, 
 
 # ----------------------------------------------------------------------------------------------- W9
 
+
 def test_run_forever_sweeps_first_survives_a_failing_step_and_stops_when_told(session, monkeypatch):
-    session.add(IngestionRun(source="kalshi", dataset="market_quotes", status="running", started_at=datetime(2020, 1, 1, tzinfo=UTC)))
+    session.add(
+        IngestionRun(
+            source="kalshi", dataset="market_quotes", status="running", started_at=datetime(2020, 1, 1, tzinfo=UTC)
+        )
+    )
     session.commit()
     seen = []
 

@@ -58,7 +58,8 @@ def live(session: Annotated[Session, Depends(get_session)]) -> LiveOut:
     ).all()
     states = store.live_states_for(session, [game.game_id for game in candidates])
     kept = [
-        game for game in candidates
+        game
+        for game in candidates
         if (state := states.get(game.game_id)) is not None
         and (
             (state.state in ("in", "lost") and game.kickoff_utc >= now - LIVE_AGE)
