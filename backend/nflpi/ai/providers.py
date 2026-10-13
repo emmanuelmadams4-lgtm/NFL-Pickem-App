@@ -3,16 +3,34 @@
 import asyncio
 import json
 import logging
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from typing import Protocol
 
 import anthropic
+import anyio
 import httpx
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+from pydantic import SecretStr
 
 from nflpi.config import get_settings
 
 SDK_TIMEOUT_S = 120.0
+_SDK_ENV = {
+    "ANTHROPIC_API_KEY": "",
+    "ANTHROPIC_AUTH_TOKEN": "",
+    "ANTHROPIC_BASE_URL": "",
+    "ANTHROPIC_CUSTOM_HEADERS": "",
+    "CLAUDE_CODE_USE_BEDROCK": "",
+    "CLAUDE_CODE_USE_VERTEX": "",
+    "CLAUDE_CODE_USE_FOUNDRY": "",
+    "HTTPS_PROXY": "",
+    "https_proxy": "",
+    "HTTP_PROXY": "",
+    "http_proxy": "",
+    "DISABLE_AUTOUPDATER": "1",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+}
 
 
 def _run_sync(make_coro):
@@ -25,6 +43,10 @@ def _run_sync(make_coro):
 
 
 class AIError(RuntimeError):
+    pass
+
+
+class ClaudeDeclined(AIError):
     pass
 
 
@@ -73,39 +95,49 @@ class ClaudeSdkProvider:
     name = "claude"
     route = "sdk"
 
-    def __init__(self, token: str, model: str) -> None:
+    def __init__(self, token: SecretStr, model: str) -> None:
         self.token, self.model = token, model
 
     def complete(self, system: str, user: str, json_schema: dict | None = None, max_tokens: int = 16000) -> str:
-        options = ClaudeAgentOptions(
-            system_prompt=system,
-            tools=[],
-            setting_sources=[],
-            model=self.model,
-            max_turns=5 if json_schema else 2,
-            effort="medium" if json_schema else "low",
-            output_format={"type": "json_schema", "schema": json_schema} if json_schema else None,
-            stderr=lambda _line: None,
-            env={"CLAUDE_CODE_OAUTH_TOKEN": self.token, "ANTHROPIC_API_KEY": "", "ANTHROPIC_AUTH_TOKEN": ""},
-        )
+        token = self.token.get_secret_value()
 
-        async def last_result() -> ResultMessage | None:
+        async def last_result(options: ClaudeAgentOptions) -> ResultMessage | None:
             last = None
-            async for message in query(prompt=user, options=options):
-                if isinstance(message, ResultMessage):
-                    last = message
+            with anyio.fail_after(SDK_TIMEOUT_S):
+                async for message in query(prompt=user, options=options):
+                    if isinstance(message, ResultMessage):
+                        last = message
             return last
 
-        async def run() -> ResultMessage | None:
-            return await asyncio.wait_for(last_result(), SDK_TIMEOUT_S)
-
         try:
-            result = _run_sync(run)
+            with tempfile.TemporaryDirectory(prefix="nflpi-claude-") as cfg:
+                options = ClaudeAgentOptions(
+                    system_prompt=system,
+                    tools=[],
+                    setting_sources=[],
+                    model=self.model,
+                    max_turns=5 if json_schema else 2,
+                    effort="medium" if json_schema else "low",
+                    output_format={"type": "json_schema", "schema": json_schema} if json_schema else None,
+                    stderr=lambda _line: None,
+                    cwd=cfg,
+                    env={**_SDK_ENV, "CLAUDE_CODE_OAUTH_TOKEN": token, "CLAUDE_CONFIG_DIR": cfg},
+                )
+                result = _run_sync(lambda: last_result(options))
         except Exception as exc:  # noqa: BLE001 - every SDK failure becomes AIError
+            detail = repr(exc).replace(token, "[redacted]")
+            api_key = get_settings().anthropic_api_key
+            if api_key:
+                detail = detail.replace(api_key, "[redacted]")
+            logging.getLogger("nflpi.ai").warning("Claude sign-in route error: %s", detail)
             raise AIError(f"Claude sign-in route failed: {type(exc).__name__}") from None
 
         if result is None or result.is_error or result.subtype != "success":
-            raise AIError("Claude sign-in route failed: no successful result")
+            raise AIError(f"Claude sign-in route failed: {result.subtype if result else 'no result'}")
+        if result.stop_reason == "refusal":
+            raise ClaudeDeclined("Claude declined this request")
+        if result.stop_reason == "max_tokens":
+            raise AIError("Claude response was cut off (max_tokens)")
         if json_schema:
             if result.structured_output is None:
                 raise AIError("Claude sign-in route failed: no structured output")
@@ -130,10 +162,12 @@ class ClaudeRouter:
         if self.sdk:
             try:
                 answer = self.sdk.complete(system, user, json_schema, max_tokens)
+            except ClaudeDeclined:
+                raise
             except AIError as exc:
                 if self.api is None:
                     raise AIError(
-                        "Claude sign-in failed and may have expired; run claude setup-token and set "
+                        f"{exc}. The Claude sign-in may have expired; run claude setup-token and set "
                         "CLAUDE_CODE_OAUTH_TOKEN on the server"
                     ) from None
                 logging.getLogger("nflpi.ai").warning(
@@ -144,9 +178,8 @@ class ClaudeRouter:
                 return answer
 
         if self.api:
-            self.route, self.model = "api", self.api.model
             try:
-                return self.api.complete(system, user, json_schema, max_tokens)
+                answer = self.api.complete(system, user, json_schema, max_tokens)
             except AIError as exc:
                 if self.sdk:
                     raise AIError(f"Claude sign-in and API key routes failed; API key route: {exc}") from None
@@ -155,6 +188,8 @@ class ClaudeRouter:
                 if self.sdk:
                     raise AIError("Claude sign-in and API key routes failed") from None
                 raise
+            self.route, self.model = "api", self.api.model
+            return answer
         raise AIError("Claude is not configured")
 
     def __repr__(self) -> str:
@@ -188,10 +223,10 @@ class OpenRouterProvider:
 def get_provider(name: str) -> AIProvider:
     s = get_settings()
     if name == "claude":
-        token = s.claude_code_oauth_token.get_secret_value()
-        if not token and not s.anthropic_api_key:
+        has_token = bool(s.claude_code_oauth_token.get_secret_value())
+        if not has_token and not s.anthropic_api_key:
             raise AIError("Claude is not configured: set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY on the server")
-        sdk = ClaudeSdkProvider(token, s.anthropic_model) if token else None
+        sdk = ClaudeSdkProvider(s.claude_code_oauth_token, s.anthropic_model) if has_token else None
         api = ClaudeProvider(s.anthropic_api_key, s.anthropic_model) if s.anthropic_api_key else None
         return ClaudeRouter(sdk, api)
     if name == "jev":

@@ -4,6 +4,8 @@ from pathlib import Path
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_HIDDEN_REPR_FIELDS = frozenset({"anthropic_api_key", "openrouter_api_key", "app_access_token", "vapid_private_key"})
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -51,7 +53,7 @@ class Settings(BaseSettings):
     news_contact: str = ""
 
     def __repr_args__(self) -> list[tuple[str | None, object]]:
-        return [(name, value) for name, value in super().__repr_args__() if name != "anthropic_api_key"]
+        return [(name, value) for name, value in super().__repr_args__() if name not in _HIDDEN_REPR_FIELDS]
 
 
 @lru_cache
