@@ -132,3 +132,101 @@ The gate opened by the frozen meaning of "signal": idea 2a (tune +0.00004, confi
 Protocol: candidate `offence_defence_split`, six variants fixed here: offence and defence EPA ratings at half-life 4, 8, 16 games (`p_split_<h>`), and the same plus offence and defence success-rate ratings (`p_split_sr_<h>`). Chosen on the tune seasons, scored once on the confirm seasons, same ship rule. If it does not ship, the step stops: no further variant.
 Data: nflverse play-by-play 2002 to 2025 (`pbp/play_by_play_<season>.csv.gz`), read by the evidence script through the app's own download function (same host, timeout and retries); plays counted are passes and runs with an EPA value; `success` is nflverse's own 0/1 column. Step 14's team-week file has no success rate, which is why play-by-play is needed. The scales are fixed numbers chosen so each input varies by about one unit (the fit penalises large weights); they are not fitted.
 Red: `red-2.log` (three tests, `AttributeError`: the functions do not exist).
+
+## 3. IMPLEMENTATION
+
+Provider: Codex, one bounded work order at a time, prompt on stdin. The coordinator wrote the tests and the runner script (`ideas.py`), read every diff and reran the proof itself each time.
+
+| Work order | Model, effort | JEV | Result | Commit |
+|---|---|---|---|---|
+| WO-1 code for ideas 1 to 4 (`wo-1.md`) | gpt-6-sol, medium, try 1 | sol 0.55, medium 0.36: unsure. I took Jev's own lean, the higher option, instead of paying for an advisor call on a model pick | 31 passed, first try. Five files, all in scope | `dfb0f71` |
+| WO-2 code for idea 5 (`wo-2.md`) | gpt-6-sol, medium, try 1 | same job class as WO-1; not asked again | 34 passed, first try. Two files, in scope | `9d0d49a` |
+| WO-3 review fixes and cleanup (`wo-3.md`) | gpt-6-luna, medium, try 1 | not asked: mechanical, behaviour-preserving, checked by rerunning every stage | 34 passed; every stored number identical after it | `7aec8c6` |
+
+CLIMBS: none. STRIKES: none. No Codex limit was hit. EFFORT: coordinator session setting unchanged.
+
+### What the real data says
+
+Run: `cd backend && uv run python ../docs/gauntlet/logs/step-14b-evidence/ideas.py <stage>`, against live nflverse files, 2026-10-13, one stage at a time in the plan's order, each committed before the next ran. Stored: `step-14b-evidence/run-<stage>.json` (first run) and `final-<stage>.json` (the final code, section 4). Walk-forward, window 10 seasons, 3,649 regular-season games with a closing line, 2012 to 2025; tune 2,565 games; confirm 1,084 games in 72 season-weeks. Run time: 2 to 3 seconds per stage, 17 seconds for idea 1, about 70 seconds for idea 5 (24 seasons of play-by-play).
+
+**Baseline check (operational layer):** market 66.57%, log loss 0.6094; blend 66.46%, 0.6107. On the confirm seasons: market 67.80%, 0.6082; blend 67.53%, 0.6095. Equal to step 14's stored numbers; the script now stops if they ever differ.
+
+Gain = how much lower the idea's log loss is than the blend's (positive is better). Interval = paired bootstrap, 95%, game by game (this is the rule). "By week" = the same interval when whole season-weeks are resampled (shown beside it, never decides).
+
+### Verdict table
+
+**Read this first: the confirm set is 1,084 games. It cannot show a gain under about 0.001 log loss. Every "No" below means "no gain this test can see", not "proven useless".**
+
+| # | Idea | Chosen on 2012 to 2021 | Gain on 2022 to 2025 | Interval (the rule) | Interval by week | Accuracy change | Ships |
+|---|---|---|---|---|---|---|---|
+| 1 | Cluster-bootstrap check of step 14's two candidates | (step 14's choices) | in-season refit +0.00035; EPA rating -0.00041 | -0.00029 to +0.00100; -0.00171 to +0.00086 | -0.00021 to +0.00095; -0.00185 to +0.00110 | 0.00; +0.37 points | **No verdict flips. The rule stands.** |
+| 2a | Other ways to remove the bookmaker margin | power | +0.00023 | -0.00031 to +0.00072 | -0.00029 to +0.00074 | 0.00 points | **No** |
+| 2b | Spread and total as extra inputs | spread and total together | -0.00034 | -0.00342 to +0.00276 | -0.00344 to +0.00261 | -0.37 points | **No** |
+| 3 | Calibrated blend | Platt | -0.00007 | -0.00103 to +0.00093 | -0.00104 to +0.00089 | -0.09 points | **No** |
+| 4 | Recency-weighted fit | half-life 8 seasons | +0.00020 | -0.00054 to +0.00099 | -0.00062 to +0.00105 | -0.18 points | **No** |
+| 5 | Offence and defence EPA split with success rate | EPA split, half-life 8 games | -0.00064 | -0.00246 to +0.00120 | -0.00296 to +0.00162 | +0.09 points | **No** |
+
+**In plain words:** none of the five ideas beats the current model, so **the live model does not change**. Every interval includes zero. The two positive gains (2a and 4) are a fifth of the smallest gain this test can detect, and idea 4 also picked fewer winners. For scale: the closing line itself is 0.0013 ahead of the blend. Five ideas were each looked at once on the confirm seasons; had one passed, there would have been about a one in five chance of that happening by luck. None passed, so that caveat does not bite.
+
+### Every variant tried (tune seasons, 2,565 games)
+
+| Idea | Variant | Tune gain | Tune interval | Chosen |
+|---|---|---|---|---|
+| 1 | in-season refit | -0.00015 | -0.00058 to +0.00028 | yes |
+| 1 | EPA rating, half-life 4 / 8 / 16 games | +0.00019 / +0.00012 / -0.00015 | see `run-cluster.json` | 4 |
+| 2a | additive | +0.00002 | -0.00014 to +0.00016 | no |
+| 2a | Shin (same numbers as additive: one method in substance) | +0.00002 | -0.00014 to +0.00016 | no |
+| 2a | power | +0.00004 | -0.00025 to +0.00028 | yes |
+| 2a | odds ratio | +0.00001 | -0.00017 to +0.00018 | no |
+| 2b | + spread | +0.00028 | -0.00055 to +0.00106 | no |
+| 2b | + total | +0.00043 | -0.00033 to +0.00118 | no |
+| 2b | + spread and total | +0.00072 | -0.00044 to +0.00185 | yes |
+| 2b | + spread divided by total | +0.00000 | -0.00050 to +0.00052 | no |
+| 3 | Platt | -0.00056 | -0.00209 to +0.00097 | yes |
+| 3 | isotonic | -0.00798 | -0.01387 to -0.00243 (clearly worse) | no |
+| 4 | half-life 2 seasons | -0.00019 | -0.00155 to +0.00123 | no |
+| 4 | half-life 4 seasons | +0.00006 | -0.00067 to +0.00083 | no |
+| 4 | half-life 8 seasons | +0.00008 | -0.00029 to +0.00048 | yes |
+| 5 | EPA split, half-life 4 / 8 / 16 games | -0.00036 / -0.00017 / -0.00026 | all include zero | 8 |
+| 5 | EPA split plus success rate, half-life 4 / 8 / 16 games | -0.00134 / -0.00108 / -0.00075 | half-life 8 is clearly worse | no |
+
+That is every variant: 4 recomputed from step 14 and 19 new (three distinct margin methods, since Shin equals additive). Nothing else was run on the confirm seasons. One extra tune-only check was run after the reviews (below).
+
+### Notes on each idea
+
+* **Idea 1.** The recomputed game-level numbers equal step 14's stored file key by key (`matches_step14_stored_numbers: true`). Resampling by week moves the interval little: slightly narrower for the refit, about 14% wider for the EPA rating. Same-week games are not correlated enough here to change a verdict. Nothing to send to the owner.
+* **Idea 2a.** The fit already has its own weight on the market's log-odds, which absorbs most of what a different margin method changes.
+* **Idea 2b.** The spread and total looked best of all on the tune seasons (+0.00072) and came out negative with fewer right picks on the confirm seasons: the pattern of an input that repeats what the moneyline already says and adds noise.
+* **Idea 3.** Reliability table first (blend, tune seasons, by the picked side): said 55.3%, won 53.3% (794 games); said 64.8%, won 62.9% (827); said 74.5%, won 77.3% (661); said 83.8%, won 84.1% (258); said 91.8%, won 88.0% (25). Every bucket is within 3 points and the market's own table has the same shape. There is little to correct, and correcting it on small samples costs more than it gains (isotonic most of all).
+* **Idea 4.** After the reviews (finding M1) I checked, on the tune seasons only, whether the small recency gains came from recency or from a side effect: weights below 1 also strengthen the fit's penalty. With the weights rescaled to mean 1 the tune gains shrink (half-life 8: +0.00008 to +0.00002; half-life 4: +0.00006 to -0.00004; half-life 2: -0.00019 to -0.00041; `run-recency-check.json`). So even the small recency "signal" was partly that side effect. This check is a diagnostic, not a candidate; the confirm seasons were not touched for it.
+* **Idea 5.** Play-by-play gave 12,998 team-games and a rating for all 6,499 finished games; no scored game lacked one. Splitting EPA into offence and defence was worse than the blend on the tune seasons in all six variants. Net EPA lost in step 14, the split loses here: the closing line already carries this. Stopped, as ordered.
+* **Fallbacks:** in every stage the count of scored games missing an input is 0 (`scored_games_missing_an_input` in each `final-<stage>.json`), so no variant was scored on the blend's own number.
+
+### Review round 1 (on `c0cbc4e`, before cleanup)
+
+| Reviewer | Verdict | Report |
+|---|---|---|
+| `ecc:code-reviewer` | WARNING. No CRITICAL, no HIGH, no leak found. 2 MEDIUM, 7 LOW | `~/.claude/plans/nfl-pickem-lanes-reviews/s14b-r1-code-reviewer.md` |
+| `ecc:silent-failure-hunter` | No HIGH. 5 MEDIUM, 10 LOW | `~/.claude/plans/nfl-pickem-lanes-reviews/s14b-r1-silent-failure-hunter.md` |
+
+Neither reviewer could run the tests (their sandbox could not reach the lane database); the coordinator's own runs are the test evidence.
+
+Rulings:
+
+* **Accepted, fixed in the runner (coordinator's file):** the script exits non-zero when the baseline differs from step 14's stored numbers or when the recomputed step 14 candidates differ (a cut-short download can no longer pass quietly); it prints, per input column, how many scored games were missing it.
+* **Accepted, fixed in WO-3:** no in-place change of the shared frames and no ninefold recomputation in `idea_preds`; one helper for "missing input keeps the blend's number" and one for "only games with a price"; `calibrated` clips before taking log-odds; `offence_defence` lost its broad `except`; spread divided by total is missing when the total is not above 0.
+* **Accepted as a finding, no code change (M1, both reviewers):** recency weights also change the penalty. The clause and its variants were frozen before the result, so the verdict stands as run; the tune-only check above shows the effect and it weakens the idea further.
+* **Accepted as a finding (M2):** Shin equals additive with two outcomes. Already in the assumptions; the tables say three distinct methods.
+* **Kept as built:** bench-only functions stay in `analytics/backtest.py` (lane-owned file; a new module would be outside the lane's files). `add_features` is not refactored to call `market_logit` (the live path stays untouched).
+* **Carried, advisory:** a fit drops training rows with a missing input without printing a count (none of the scored inputs were missing here; the split ratings miss only each team's first game of 2002); `market_logit` and `calibrated` clip without counting; a moneyline of 0 behaves differently by method (existing `implied_prob` has no guard); a probability of exactly 0.5 counts as an away pick (existing); NaN cluster keys are not refused; step 14's EPA rating input was not rescaled, so the fit's penalty shrank its weight by an estimated fifth (idea 5 used fixed scales; it still lost).
+
+AGENTS: `ecc:code-reviewer`, `ecc:silent-failure-hunter` ran. `ecc:security-reviewer` and Dwight not run: no auth, user input, database query or new network path; the runner downloads from the same nflverse host through the app's existing download function and reads one committed JSON file. `ecc:python-reviewer`, `ecc:pr-test-analyzer` not run: standard-size work item. `ecc:planner`, `ecc:architect`, `ecc:code-explorer` not run: the plan and the seam files came with the dispatch. `ecc:mle-reviewer` is the fresh critic (section 5).
+
+## 4. CLEANUP
+
+Explicit scope-locked refactor pass on the touched code (`/refactor` rules: behaviour unchanged, touched functions only), done by Codex in work order 3 (`wo-3.md`, gpt-6-luna), commit `7aec8c6`.
+
+* **Simplified:** `_predict_or_blend` replaces eleven copies of one expression across `candidate_preds`, `idea_preds` and `split_preds`; `_market_games` replaces three copies of the closing two lines; `idea_preds` builds its seven input columns once and attaches them with `assign` (it used to write into each of the nine Elo frames); the two hard-coded method tuples became `DEVIG_METHODS[1:]`; `offence_defence` went from hand-unpacked `first_*` / `second_*` names and a `try/except` to one loop over the two sides; the two clip limits in `calibrated` are named constants.
+* **No change needed:** `metrics.py`, `market.py`, `model.py` and `features.market_logit` are already minimal.
+* **Proof after the edit:** `tests/test_model.py` 34 passed (`green-3.log`); ruff clean; all six stages rerun on the final code (`final-<stage>.json`) and compared with the first runs key by key: identical in every number.
+* **Remaining findings, classified:** all advisory, listed under "Carried" above.
