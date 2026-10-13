@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+import pytest
 from sqlalchemy import func, select
 
 from nflpi.ingestion import nflverse, service, weather
@@ -210,3 +211,96 @@ def test_a_coach_link_to_another_host_is_never_fetched_and_a_name_too_long_for_t
     got = nflverse.fetch_head_coaches(2026, get=get)
     assert got == {"LV": "Klint Kubiak"}  # BUF: foreign link skipped; LA: 65 characters skipped
     assert not any("evil.test" in u for u in calls)
+
+
+# --- Dwight's review (security C1 to C3, function C4, C7, L1 to L3) ---
+
+
+def test_only_a_plain_https_espn_link_is_followed():
+    calls = []
+    inner = espn_get({"BUF": ["Joe Brady"], "LV": ["Klint Kubiak"]})
+    bad_links = {
+        "2": f"https://{ESPN_HOST}@evil.test/coaches/BUF/0?lang=en",  # userinfo: the host is evil.test
+        "13": f"https://{ESPN_HOST}:8000/coaches/LV/0?lang=en",  # another port
+    }
+
+    def get(url: str) -> dict:
+        calls.append(url)
+        for tid, link in bad_links.items():
+            if url.endswith(f"/teams/{tid}/coaches?lang=en"):
+                return {"items": [{"$ref": link}]}
+        return inner(url)
+
+    with pytest.raises(RuntimeError, match="no head coaches"):
+        nflverse.fetch_head_coaches(2026, get=get)
+    assert all(u.startswith("https://site.api.espn.com") or u.endswith("coaches?lang=en") for u in calls)
+
+
+def test_a_team_id_that_is_not_digits_is_skipped_and_names_are_cleaned():
+    messy = {"BUF": ["Joe  Brady​"], "LV": ["Klint Kubiak"]}
+    inner = espn_get(messy)
+
+    def get(url: str) -> dict:
+        data = inner(url)
+        if url.endswith("/teams"):
+            data["sports"][0]["leagues"][0]["teams"][1]["team"]["id"] = "13/../x"
+        if "/coaches/BUF/" in url:
+            return {"firstName": "Joe", "lastName": " Brady​  "}
+        return data
+
+    assert nflverse.fetch_head_coaches(2026, get=get) == {"BUF": "Joe Brady"}  # LV skipped: id is not digits
+
+
+def test_a_coach_name_that_is_not_text_is_skipped():
+    inner = espn_get({"BUF": ["Joe Brady"], "LV": ["Klint Kubiak"]})
+
+    def get(url: str) -> dict:
+        if "/coaches/LV/" in url:
+            return {"firstName": {"x": 1}, "lastName": 7}
+        return inner(url)
+
+    assert nflverse.fetch_head_coaches(2026, get=get) == {"BUF": "Joe Brady"}
+
+
+def test_espn_calls_send_a_user_agent_and_do_not_follow_redirects(monkeypatch):
+    seen = {}
+
+    class Resp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {}
+
+    def fake_get(url, **kwargs):
+        seen.update(kwargs)
+        return Resp()
+
+    monkeypatch.setattr(nflverse.httpx, "get", fake_get)
+    nflverse.fetch_json("https://site.api.espn.com/x")
+    assert seen["follow_redirects"] is False and "nflpi" in seen["headers"]["User-Agent"]
+
+
+def test_too_few_clubs_fails_the_run_and_keeps_the_feed_names(session, monkeypatch):
+    service.ingest_schedules(session, schedule_rows())
+    monkeypatch.setattr(nflverse, "fetch_head_coaches", lambda season: {"BUF": "Joe Brady"})
+    service._COACH_CACHE.clear()
+    run = service.ingest_head_coaches(session)
+    assert run.status == "failed" and "1 of" in run.error
+    assert session.scalar(select(Game.home_coach).where(Game.season == CURRENT, Game.home_team == "BUF")) == "BUF Coach"
+
+
+def test_the_coach_feed_is_fetched_at_most_once_in_the_cache_window(session, monkeypatch):
+    service.ingest_schedules(session, schedule_rows())
+    calls = []
+
+    def fetch(season):
+        calls.append(season)
+        return {f"T{i}": f"Coach {i}" for i in range(32)} | {"BUF": "Joe Brady"}
+
+    monkeypatch.setattr(nflverse, "fetch_head_coaches", fetch)
+    service._COACH_CACHE.clear()
+    assert service.ingest_head_coaches(session).status == "ok"
+    service.ingest_schedules(session, schedule_rows(), head_coaches=None)  # a plain reload: no new fetch, names stay
+    assert service.ingest_head_coaches(session).status == "ok"
+    assert calls == [CURRENT]
