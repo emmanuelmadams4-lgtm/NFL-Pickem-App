@@ -116,6 +116,10 @@ def test_the_allowlist_is_https_feeds_on_exact_hosts():
         "https://user:pw@www.espn.com/x",
         "https://www.espn.com:8443/x",
         "file:///etc/passwd",
+        "https://www.espn.com/a\\b",
+        "https://www.espn.com/a\x01b",
+        "https://www.espn.com/a\tb",
+        "https://www.espn.com:443@evil.example/x",
     ],
 )
 def test_a_url_that_is_not_https_on_the_exact_host_is_refused_before_any_lookup(url):
@@ -138,6 +142,10 @@ def test_a_url_that_is_not_https_on_the_exact_host_is_refused_before_any_lookup(
         ["224.0.0.1"],
         ["::1"],
         ["64:ff9b::1"],  # NAT64: Python calls it global, we do not
+        ["64:ff9b:1::1"],  # local-use NAT64
+        ["::7f00:1"],  # IPv4-compatible 127.0.0.1
+        ["2002:7f00:1::1"],  # 6to4 wrapping 127.0.0.1
+        ["2001:0:4136:e378:8000:63bf:3fff:fdd2"],  # Teredo
         ["::ffff:100.64.0.1"],
         ["fd00::1"],
         ["fe80::1"],
@@ -197,7 +205,13 @@ def test_redirects_on_the_same_host_are_followed_up_to_three_hops():
 
 @pytest.mark.parametrize(
     "location",
-    ["https://www.nbcsports.com/x", "http://www.espn.com/x", "https://www.espn.com.evil.example/x", "//evil.example/x"],
+    [
+        "https://www.nbcsports.com/x",
+        "http://www.espn.com/x",
+        "https://www.espn.com.evil.example/x",
+        "//evil.example/x",
+        "/ok\\evil",
+    ],
 )
 def test_a_redirect_off_the_host_or_to_http_is_refused_and_never_followed(location):
     web = Web({("www.espn.com", "/feed"): httpx.Response(301, headers={"location": location})})
@@ -269,8 +283,39 @@ def test_network_errors_are_fetch_errors(exc):
         )
 
 
-def test_the_timeout_is_ten_seconds():
-    assert fetch.TIMEOUT_S == 10 and fetch.MAX_FEED_BYTES == 2_000_000 and fetch.MAX_REDIRECTS == 3
+def test_the_timeout_is_ten_seconds_and_the_whole_fetch_twenty():
+    assert fetch.TIMEOUT_S == 10 and fetch.DEADLINE_S == 20
+    assert fetch.MAX_FEED_BYTES == 2_000_000 and fetch.MAX_REDIRECTS == 3
+    client = fetch.build_client(None)
+    assert client.timeout == httpx.Timeout(10)
+    client.close()
+
+
+def test_a_redirect_with_no_location_is_a_fetch_error():
+    web = Web({("www.espn.com", "/feed"): httpx.Response(301)})
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", web)
+
+
+def test_a_public_ipv6_answer_is_pinned_and_compressed_bodies_are_not_requested():
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=feed_xml())})
+    guarded("https://www.espn.com/feed", web, resolver=lambda h: ["2606:4700:4700::1111"])
+    (req,) = web.requests
+    assert req.url.host == "2606:4700:4700::1111" and req.headers["host"] == "www.espn.com"
+    assert req.headers["accept-encoding"] == "identity"
+
+
+def test_default_resolver_asks_for_port_443_and_returns_each_address_once(monkeypatch):
+    asked = []
+
+    def fake(host, port, **kw):
+        asked.append((host, port))
+        rows = ["93.184.216.34", "93.184.216.34", "93.184.216.35"]
+        return [(2, 1, 6, "", (address, 443)) for address in rows]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    assert fetch.default_resolver("www.espn.com") == ["93.184.216.34", "93.184.216.35"]
+    assert asked == [("www.espn.com", 443)]
 
 
 @pytest.mark.parametrize("ctype", ["text/html", "application/json", "image/png", ""])
@@ -288,14 +333,14 @@ def test_feed_content_types_are_accepted(ctype):
     assert guarded("https://www.espn.com/feed", web).status == 200
 
 
-@pytest.mark.parametrize("status", [403, 429])
-def test_403_and_429_are_blocked(status):
+@pytest.mark.parametrize("status", [401, 403, 429])
+def test_401_403_and_429_are_blocked(status):
     web = Web({("www.espn.com", "/feed"): httpx.Response(status)})
     with pytest.raises(fetch.Blocked):
         guarded("https://www.espn.com/feed", web)
 
 
-@pytest.mark.parametrize("status", [500, 502, 503, 400, 401])
+@pytest.mark.parametrize("status", [500, 502, 503, 400])
 def test_other_failures_are_fetch_errors_not_blocks(status):
     web = Web({("www.espn.com", "/feed"): httpx.Response(status)})
     with pytest.raises(fetch.FetchError) as caught:
@@ -357,24 +402,31 @@ def test_missing_robots_means_allowed(status):
     assert exc is None and result.status == 200
 
 
-@pytest.mark.parametrize(
-    "robots",
-    [
-        httpx.Response(401),
-        httpx.Response(403),
-        httpx.Response(500),
-        httpx.Response(503),
-        httpx.Response(200, headers={"content-type": "text/html"}, content=b"<html>not rules</html>"),
-        httpx.Response(200, headers=TEXT, content=b"x" * (fetch.MAX_ROBOTS_BYTES + 1)),
-        httpx.Response(301, headers={"location": "https://www.nbcsports.com/robots.txt"}),
-        httpx.Response(301, headers={"location": "/other-robots.txt"}),
-    ],
-    ids=["401", "403", "500", "503", "html", "oversize", "redirect-off-host", "redirect-same-host"],
-)
-def test_robots_that_cannot_be_trusted_means_denied(robots):
+REFUSED = [httpx.Response(401), httpx.Response(403)]
+TROUBLE = [
+    httpx.Response(500),
+    httpx.Response(503),
+    httpx.Response(200, headers={"content-type": "text/html"}, content=b"<html>not rules</html>"),
+    httpx.Response(200, headers=TEXT, content=b"x" * (fetch.MAX_ROBOTS_BYTES + 1)),
+    httpx.Response(301, headers={"location": "https://www.nbcsports.com/robots.txt"}),
+    httpx.Response(301, headers={"location": "/other-robots.txt"}),
+]
+
+
+@pytest.mark.parametrize("robots", REFUSED, ids=["401", "403"])
+def test_robots_that_refuses_us_is_a_block(robots):
     web, _, exc = feed_through_robots(robots)
     assert isinstance(exc, fetch.Blocked)
     assert "www.espn.com/espn/rss/nfl/news" not in web.paths()
+
+
+@pytest.mark.parametrize(
+    "robots", TROUBLE, ids=["500", "503", "html", "oversize", "redirect-off-host", "redirect-same-host"]
+)
+def test_robots_that_cannot_be_trusted_stops_this_poll_but_is_not_a_block(robots):
+    web, _, exc = feed_through_robots(robots)
+    assert isinstance(exc, fetch.FetchError) and not isinstance(exc, fetch.Blocked)
+    assert "www.espn.com/espn/rss/nfl/news" not in web.paths()  # fail closed: the feed is not requested
 
 
 def test_robots_rules_are_parsed_from_text_never_read_by_urllib(monkeypatch):
@@ -388,12 +440,13 @@ def test_robots_rules_are_parsed_from_text_never_read_by_urllib(monkeypatch):
     assert exc is None and result.status == 200
 
 
-def test_robots_unreachable_means_denied():
+def test_robots_unreachable_stops_this_poll_but_is_not_a_block():
     def boom(request):
         raise httpx.ConnectError("down")
 
-    with pytest.raises(fetch.Blocked):
+    with pytest.raises(fetch.FetchError) as caught:
         fetch.fetch_feed(ESPN, resolver=public_dns, transport=httpx.MockTransport(boom))
+    assert not isinstance(caught.value, fetch.Blocked)
 
 
 @pytest.mark.parametrize("status", [204, 206, 404, 410])
@@ -429,7 +482,7 @@ def test_validators_are_sent_and_a_304_is_a_clean_empty_result():
     assert seen["if-none-match"] == 'W/"abc"' and seen["if-modified-since"] == "Wed, 01 Jan 2025 00:00:00 GMT"
 
 
-@pytest.mark.parametrize("bad", ["x" * 300, "ab\x00c", "a\x07b"])
+@pytest.mark.parametrize("bad", ["x" * 300, "x" * 257, "ab\x00c", "a\x07b", "caf\u00e9", "\u202e"])
 def test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent(bad):
     headers = XML | {"etag": bad, "last-modified": bad}
     web = web_for(
@@ -442,6 +495,18 @@ def test_validators_that_are_long_or_have_control_characters_are_never_saved_or_
         ESPN, resolver=public_dns, transport=sent.transport, validators={"etag": bad, "last_modified": bad}
     )
     assert "if-none-match" not in sent.requests[-1].headers and "if-modified-since" not in sent.requests[-1].headers
+
+
+def test_a_validator_of_exactly_256_plain_characters_is_kept_and_sent():
+    good = "a" * 256
+    headers = XML | {"etag": good}
+    web = web_for(
+        ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
+    )
+    assert fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport).etag == good
+    sent = web_for(ESPN, feed_xml())
+    fetch.fetch_feed(ESPN, resolver=public_dns, transport=sent.transport, validators={"etag": good})
+    assert sent.requests[-1].headers["if-none-match"] == good
 
 
 def test_the_result_carries_the_new_validators():
@@ -480,6 +545,25 @@ def test_whitespace_is_collapsed_and_lengths_are_capped():
     (glued,) = one(feed_xml(item(title="Bills&#10;win&#9;big")))
     assert glued.title == "Bills win big"
     assert len(got.extract) <= 300 and "  " not in got.extract
+
+
+def test_style_blocks_are_dropped_like_scripts():
+    (got,) = one(feed_xml(item(desc="&lt;style&gt;body{x:1}&lt;/style&gt;Kept text")))
+    assert got.extract == "Kept text"
+
+
+def test_tracker_keys_are_dropped_whatever_their_case():
+    link = "https://www.espn.com/a?UTM_Source=x&FBCLID=1&Keep=2".replace("&", "&amp;")
+    assert one(feed_xml(item(link=link)))[0].url == "https://www.espn.com/a?Keep=2"
+
+
+def test_a_feed_whose_every_entry_is_unusable_is_an_error_not_a_quiet_zero():
+    foreign = [item(title=f"t{n}", link=f"https://evil.example/{n}") for n in range(3)]
+    with pytest.raises(parse.FeedError):
+        one(feed_xml(*foreign))
+    old = (RECORDED_AT - timedelta(days=60)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    assert one(feed_xml(item(date=old))) == []  # a quiet feed with only old news is fine
+    assert [i.title for i in one(feed_xml(*foreign, item(title="ok")))] == ["ok"]
 
 
 def test_clean_text_is_the_one_cleaner():
@@ -532,6 +616,15 @@ def test_a_missing_date_stays_missing_and_a_future_date_is_dropped_not_trusted()
     }
     assert got["fresh"].published_at == RECORDED_AT and got["fresh"].published_at.tzinfo is not None
     assert got["future"].published_at is None and got["no date"].published_at is None
+
+
+def test_a_date_a_day_ahead_is_kept_and_two_days_ahead_is_dropped():
+    def at(delta):
+        return (RECORDED_AT + delta).strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+    feed = feed_xml(item(title="a", date=at(timedelta(hours=20))), item(title="b", date=at(timedelta(hours=40))))
+    got = {i.title: i.published_at for i in one(feed)}
+    assert got["a"] is not None and got["b"] is None
 
 
 def test_items_older_than_thirty_days_are_skipped():
@@ -617,6 +710,7 @@ def test_teams_match_on_whole_names_and_nicknames_ignoring_case(session):
     assert tie(names, "BUFFALO BILLS rally").team_ids == ["BUF"]
     assert tie(names, "the Jets' secondary", "Giants next").team_ids == ["NYG", "NYJ"]
     for miss in [
+        "xBills rally",
         "Billsboro mayor",
         "Jetsons reboot",
         "Giantsville",
@@ -897,7 +991,7 @@ def test_a_block_stops_that_source_for_24_hours_and_never_retries_in_a_loop(sess
     assert len(web.requests) > sent and again[0].error.startswith("blocked:")
 
 
-def test_run_errors_hold_at_most_forty_characters_of_what_the_server_said(session):
+def test_run_errors_never_repeat_what_the_server_said(session):
     long_location = "https://www.nbcsports.com/" + "y" * 200
     web = web_for(
         ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(301, headers={"location": long_location})}
@@ -917,6 +1011,69 @@ def test_nothing_else_the_feed_names_is_ever_fetched(session):
     web = web_for(ESPN, feed)
     go(session, web, sources=(ESPN,))
     assert web.paths() == ["www.espn.com/robots.txt", "www.espn.com/espn/rss/nfl/news"]
+
+
+@pytest.mark.parametrize("minutes,polls", [(29, False), (30, True)])
+def test_the_thirty_minute_window_ends_exactly_at_thirty_minutes(session, minutes, polls):
+    web = web_for(ESPN, feed_xml(item()))
+    go(session, web, sources=(ESPN,))
+    again = go(session, web, now=RECORDED_AT + timedelta(minutes=minutes), sources=(ESPN,))
+    assert bool(again) is polls
+
+
+def test_the_newest_run_decides_not_the_oldest(session):
+    web = web_for(ESPN, feed_xml(item()))
+    go(session, web, sources=(ESPN,))
+    go(session, web, now=RECORDED_AT + timedelta(minutes=31), sources=(ESPN,))
+    assert go(session, web, now=RECORDED_AT + timedelta(minutes=40), sources=(ESPN,)) == []
+
+
+def with_etag(body: bytes, etag: str = '"v1"') -> Web:
+    response = httpx.Response(200, headers=XML | {"etag": etag}, content=body)
+    return web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): response})
+
+
+def test_a_bad_feed_that_carries_an_etag_does_not_save_it(session):
+    (made,) = go(session, with_etag(b"<html>no</html>"), sources=(ESPN,))
+    assert made.status == "failed" and session.get(AppSetting, "news:espn:validators") is None
+
+
+def test_a_feed_with_only_foreign_links_fails_the_run_and_saves_no_validators(session):
+    feed = feed_xml(*[item(title=f"t{n}", link=f"https://evil.example/{n}") for n in range(3)])
+    (made,) = go(session, with_etag(feed), sources=(ESPN,))
+    assert made.status == "failed" and session.get(AppSetting, "news:espn:validators") is None
+
+
+def test_old_validators_are_forgotten_when_a_good_answer_brings_none(session):
+    go(session, with_etag(feed_xml(item())), sources=(ESPN,))
+    assert session.get(AppSetting, "news:espn:validators") is not None
+    second = web_for(ESPN, feed_xml(item(title="Other", link="https://www.espn.com/b")))
+    go(session, second, now=RECORDED_AT + timedelta(minutes=31), sources=(ESPN,))
+    assert session.get(AppSetting, "news:espn:validators") is None
+
+
+def test_an_unexpected_error_in_one_source_is_recorded_and_the_next_source_still_runs(session, monkeypatch):
+    real = store.store_items
+
+    def flaky(session_, source_id, *args, **kw):
+        if source_id == "espn":
+            raise RuntimeError("boom")
+        return real(session_, source_id, *args, **kw)
+
+    monkeypatch.setattr(store, "store_items", flaky)
+    made = go(session, both_webs(feed_xml(item()), feed_xml(item(link="https://www.cbssports.com/a"))))
+    assert {r.source: r.status for r in made} == {"espn": "failed", "cbs": "ok"}
+    assert made[0].error == "unexpected: RuntimeError"
+
+
+def test_robots_trouble_fails_the_run_but_is_retried_in_the_next_window(session):
+    feed = httpx.Response(200, headers=XML, content=feed_xml())
+    web = Web({(ESPN.host, "/robots.txt"): httpx.Response(503), (ESPN.host, "/espn/rss/nfl/news"): feed})
+    (made,) = go(session, web, sources=(ESPN,))
+    assert made.status == "failed" and not made.error.startswith("blocked:")
+    assert web.paths() == ["www.espn.com/robots.txt"]
+    (retry,) = go(session, web, now=RECORDED_AT + timedelta(minutes=31), sources=(ESPN,))
+    assert retry.status == "failed" and web.paths().count("www.espn.com/robots.txt") == 2
 
 
 def test_a_block_changes_nothing_about_how_we_ask(session):
