@@ -60,6 +60,9 @@ M = [  # (label, file, old, new, expected count of old)
     ("A13 injury sentence dropped", SA, '        body += f" {injury}."', "        pass", 1),
     ("A13 link wrong", SA, "push.game_url(game.game_id)", '"/"', 1),
 ]
+ONLY = os.environ.get("S8I_ONLY")
+if ONLY:
+    M = [m for m in M if ONLY in m[0]]
 DB = os.environ["DATABASE_URL"]
 survived = 0
 for label, rel, old, new, n in [("no mutation (control)", "", "", "", 0)] + M:

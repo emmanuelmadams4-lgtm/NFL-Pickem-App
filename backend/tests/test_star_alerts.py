@@ -431,3 +431,47 @@ def test_a14_each_round_that_sends_logs_one_count_line(world, pushes, caplog):  
     caplog.set_level(logging.INFO)
     star_alerts.run(world, KICKOFF - timedelta(minutes=30))
     assert "star alerts: immediate=1 summary=0" in caplog.text
+
+
+# Added after the mutation sweep (step 8i log, section 5): clauses a first sweep found under-tested ------------------
+
+
+def test_a1_a_status_row_of_another_week_is_not_the_previous_row(world, pushes):  # noqa: F811
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out", observed=KICKOFF - timedelta(days=8), week=WEEK - 1)
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out")  # first row of this week: a change whatever last week said
+    assert star_alerts.run(world, KICKOFF - timedelta(minutes=60))["immediate"] == 1
+
+
+def test_a4b_a_game_with_no_confirmed_time_stays_in_the_summary_even_if_its_placeholder_is_near(world, pushes):  # noqa: F811
+    game = world.get(Game, "2026_07_MIA_BUF")
+    game.time_tbd = True
+    game.kickoff_utc = MORNING + timedelta(minutes=30)  # a placeholder 30 minutes after the summary
+    world.commit()
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out", observed=MORNING - timedelta(hours=1))
+    assert star_alerts.run(world, MORNING) == {"immediate": 0, "summary": 1}
+
+
+def test_a5_a_scheduled_game_with_no_confirmed_time_whose_placeholder_has_passed_is_left_out(world, pushes):  # noqa: F811
+    game = world.get(Game, "2026_07_MIA_BUF")
+    game.time_tbd = True
+    game.kickoff_utc = MORNING - timedelta(hours=1)
+    world.commit()
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out", observed=MORNING - timedelta(hours=2))
+    assert star_alerts.run(world, MORNING) == {"immediate": 0, "summary": 0}
+    assert pushes.calls == []
+
+
+def test_a6_a_change_seen_after_the_days_summary_waits_for_the_next_day(world, pushes):  # noqa: F811
+    report(world, "P1", "Jalen Ramsey", "MIA", "Out", observed=SATURDAY_8_ET - timedelta(hours=3), position="CB")
+    assert star_alerts.run(world, SATURDAY_8_ET)["summary"] == 1
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out", observed=SATURDAY_8_ET + timedelta(minutes=2))
+    assert star_alerts.run(world, SATURDAY_8_ET + timedelta(minutes=30)) == {"immediate": 0, "summary": 0}
+    assert notes(world, "starsum") == 1 and len(pushes.calls) == 1
+
+
+def test_a8_the_name_is_cut_at_forty_characters(world, pushes):  # noqa: F811
+    world.get(TeamStar, (SEASON, WEEK, "MIA", "off", 1)).player = "N" * 60
+    world.commit()
+    report(world, "W1", "x", "MIA", "Out")
+    star_alerts.run(world, KICKOFF - timedelta(minutes=30))
+    assert sent(pushes)[0]["title"] == "Star out: " + "N" * 40 + " (MIA)"
