@@ -108,6 +108,8 @@ Builder: Ryan (Codex). Each work order is a file in the evidence folder; I read 
 | Work order | What | Model, effort, try | Commit | My proof |
 |---|---|---|---|---|
 | 1 (`wo-1.md`) | Step 6 follow-ups: pick queue drops the older stored copy after a refused write (P23); offline banner shows the age of the data on screen (P24) | gpt-6-sol, high, try 1 (Jev `model:alerts:wo-1`: sol 1.0, high 1.0) | `30bb253` | `gate.sh wo1`: browser tests 91 passed, typecheck 0. Server tests 13 red on purpose (work order 2). |
+| 2 (`wo-2.md`) | Server side: threshold 0.07 (N1), one reminder per game day (N2), QB and label change alerts (N3, N4), none after kickoff (N5), `POST /api/push/test` (N6, N7) | gpt-6-sol, high, try 1 | `6ce6d72` | `gate.sh wo2`: pytest 125 passed, ruff clean, typecheck 0, browser tests 93 passed; the 6 alerts browser tests red on purpose (work order 3). The gate's "no drift" line read FAIL because the generated API files were not committed yet; rerun after the commit: no drift. |
+| 2b (`wo-2b.md`) | A first-named starter is not a QB change. Found by me reading work order 2's diff: my work order text allowed "no starter before, one named now", which would send one alert per game when the week's starters are first posted. Red test first (`red-wo2b.log`). | gpt-6-sol, medium, try 1 (Jev `model:alerts:wo-2b`: sol 0.97, medium 0.96) | `79ad694` | pytest 126 passed, ruff clean (`wo2b-pytest.log`). |
 
 Model choice for work order 2: Jev settled effort (high, 1.0) and split on the rung, so a Sonnet advisor answered: gpt-6-sol, no split, confidence 0.7 (it said it read the work order only). Work order 3: Jev `model:alerts:wo-3`, sol 0.99, high 0.98.
 
@@ -122,3 +124,10 @@ Model choice for work order 2: Jev settled effort (high, 1.0) and split on the r
 ### Design brief for the Alerts section (Design Gauntlet)
 
 One existing section of Settings, no new screen. Added: one secondary button ("Send test alert") beside "Turn off alerts", shown only while alerts are on; one result line under it (`role="status"`, plain words, replaced by each new result). Reworded: "Kickoff reminder" becomes "Game day reminder" with the help text "One alert on each game day, before that day's first kickoff." Existing tokens and components only (`Button`, `Chip`, `Notice`, `text-subtle`, `text-bad`); no new colour, size or component, so `design.md` gets no durable change. The exact words are in `wo-3.md` section D and pinned by test A4.
+
+### Notes from reading work order 2's diff (for the reviewers)
+
+* `_send`'s last catch-all now logs a warning with the host only, where it logged the full traceback and the endpoint. Good for the secret address; the traceback is lost. For Dwight to rate.
+* `POST /api/push/test` has no rate limit of its own (token required, single user). For Dwight to rate.
+* The subscribe route accepts any `https://` address; an allowlist of push-service hosts is not built. For Dwight to rate.
+* When both starters change in one refresh, the alert names the home side only. Accepted: one alert per game per change.
