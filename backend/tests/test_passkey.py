@@ -6,6 +6,7 @@ nflpi.auth.throttle (reset, LIMIT), nflpi.auth.passkeys (MAX_PASSKEYS, MAX_LIVE_
 (session_factory, for the fail-closed test), and the three table names.
 """
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -137,6 +138,7 @@ def test_p1_unset_settings_answer_not_configured_on_every_ceremony_route_and_cha
         (RP, f"{ORIGIN},https://evil.example"),  # one bad origin spoils the list
         (RP, f"{ORIGIN}/path"),  # an origin has no path
         ("*", "https://*"),  # a wildcard is not a host name
+        ("*.ts.net", "https://a.*.ts.net"),  # nor is one with dots, even when the origin spells the same thing
         ("tsnet", "https://tsnet"),  # a bare name with no dot is not a real host (only localhost is)
     ],
 )
@@ -637,7 +639,8 @@ def test_p15_nothing_secret_is_logged(configured, client, anon, device, caplog):
     value = anon.post("/api/passkey/signin/finish", json=asserted).json()["session"]
     assert sign_in(anon, device, tamper="signature").status_code == 401
     assert sign_in(anon, device, origin="https://evil.example").status_code == 401
-    assert sign_in(anon, SoftAuthenticator(RP, ORIGIN)).status_code == 401
+    stranger = SoftAuthenticator(RP, ORIGIN)  # never registered: its id must not be logged either
+    assert sign_in(anon, stranger).status_code == 401
     assert sign_in(anon, device).status_code == 200
     assert anon.get("/api/freshness", headers=bearer(value + "x")).status_code == 401
     # refused registrations: a wrong origin, the same passkey again, a body that is not a credential, too big, too many
@@ -670,6 +673,7 @@ def test_p15_nothing_secret_is_logged(configured, client, anon, device, caplog):
         "attestation": created["response"]["attestationObject"],
         "client data": asserted["response"]["clientDataJSON"],
         "refused challenge": refused_options["challenge"],
+        "unknown credential id": stranger.id,
         "refused credential id": spare.id,
         "refused attestation": refused["response"]["attestationObject"],
     }
@@ -740,6 +744,42 @@ def test_p16_r5_live_challenges_are_capped_per_kind_and_expired_ones_are_cleared
     expire(configured, "passkey_challenges")
     assert anon.post("/api/passkey/signin/begin").status_code == 200
     assert count(configured, "passkey_challenges") == 1
+
+
+def declared_post(path: str, body: bytes, content_length: bytes) -> int:
+    """POST straight to the app with a Content-Length that need not match the body (a client library would fix it)."""
+    statuses: list[int] = []
+    chunks = [{"type": "http.request", "body": body, "more_body": False}]
+
+    async def receive() -> dict:
+        return chunks.pop() if chunks else {"type": "http.disconnect"}
+
+    async def send(message: dict) -> None:
+        if message["type"] == "http.response.start":
+            statuses.append(message["status"])
+
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "https",
+        "path": path,
+        "raw_path": path.encode(),
+        "query_string": b"",
+        "headers": [(b"content-length", content_length), (b"authorization", b"Bearer test-token")],
+        "server": ("testserver", 443),
+        "client": ("testclient", 50000),
+    }
+    asyncio.run(app(scope, receive, send))
+    return statuses[0]
+
+
+def test_p16_a_declared_length_over_the_cap_is_refused_without_reading_the_body(configured):
+    for path in ("/api/passkey/signin/finish", "/api/passkey/register/finish"):
+        assert declared_post(path, b"{}", b"70000") == 413, path
+        assert declared_post(path, b"{}", b"not a number") == 400, path
+    assert declared_post("/api/passkey/signin/finish", b"{}", b"2") == 401  # an honest small body is just a bad sign-in
 
 
 def test_p16_an_oversized_body_is_refused_before_it_is_parsed(configured, client, anon):

@@ -1,7 +1,7 @@
 # ruff: noqa: E501
 """Mutation pass for step 10 server: break each security rule once and show a passkey test catches it.
 
-Usage: python mutation.py <copy-of-backend-dir> [--dry]
+Usage: python mutation.py <copy-of-backend-dir> [--dry] [--only=<part of a mutant's name>]
 Run it on a throwaway copy (git archive), never on the worktree. --dry only checks every mutation still applies.
 Each mutant: (name, clause, file, [(old, new), ...]). A replacement replaces every occurrence of `old`.
 A mutant is run against the tests of its own clause only (-k), so 'caught' means that clause's test caught it.
@@ -84,7 +84,10 @@ def main() -> int:
     backend = pathlib.Path(sys.argv[1])
     dry = "--dry" in sys.argv
     survived = unapplied = 0
+    wanted = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")]
     for name, clause, rel, edits in MUTANTS:
+        if wanted and not any(w in name for w in wanted):
+            continue
         path = backend / rel
         original = path.read_text()
         mutated = original

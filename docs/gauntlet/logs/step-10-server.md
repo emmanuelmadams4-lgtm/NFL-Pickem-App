@@ -92,7 +92,10 @@ passkeys_are_off`). Added clauses from Dwight's code review: C1 a silent add or 
 (`r2_with_no_device_*`, `r2_a_failed_alert_*`), C3 a session refused for unset settings is logged
 (`p1_clearing_the_settings_*`), C9 a wildcard or dotless relying party is not configured (`p1_half_set_*`). Added on
 the test reviewer's advice: `p16_the_rate_window_slides`, `p5_a_failed_registration_finish_*`,
-`p5_finishes_racing_on_one_challenge_*`. The file now has 47 tests, 67 cases.
+`p5_finishes_racing_on_one_challenge_*`. The first mutation sweep (56 mutants, `mutation-516ba39.log`) left three
+alive, all test gaps and no code defect; closed with a wildcard relying party that has dots, a declared length over the
+cap with a small body (`p16_a_declared_length_over_the_cap_*`), and the unknown passkey's id in the P15 secret list.
+The file now has 48 tests, 69 cases.
 
 ## 3. IMPLEMENTATION
 
