@@ -6,6 +6,7 @@ validated, retried a limited number of times, and saved even when it fails.
 """
 
 import json
+import logging
 from datetime import UTC, datetime
 
 from pydantic import ValidationError
@@ -19,6 +20,8 @@ from nflpi.api import schemas as s
 from nflpi.api.views import ai_report_out, game_detail
 from nflpi.config import get_settings
 from nflpi.models import AIReport, AppSetting, BacktestRun
+
+log = logging.getLogger(__name__)
 
 SYSTEM = """You are an NFL analyst writing for one person making weekly Pick'em picks.
 Use ONLY the evidence pack you are given. Do not add injuries, stats, quotes, news or
@@ -132,9 +135,15 @@ def evidence_pack(session: Session, game_id: str) -> dict:
             "note": "Head-to-head history and rest days showed no proven predictive value in testing.",
         },
     }
-    block = news_pack.news_block(session, game_id)
-    if block is not None:
-        pack["news"] = block
+    try:
+        block = news_pack.news_block(session, game_id)
+    except Exception as exc:  # news is optional: the report must still work
+        session.rollback()
+        log.warning("news unavailable for the AI pack: %s", type(exc).__name__)
+        pack["news_unavailable"] = "News could not be read for this game; treat it as missing."
+    else:
+        if block is not None:
+            pack["news"] = block
     return pack
 
 

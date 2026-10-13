@@ -3,6 +3,7 @@
 Pure: no I/O, no logging. News text is written by strangers, so every character is checked on the way in.
 """
 
+import re
 import unicodedata
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -40,13 +41,15 @@ def model_text(raw: str, limit: int) -> str:
     # clean_text already removed control characters, and NFKC never creates one
     text = unicodedata.normalize("NFKC", parse.clean_text(raw, limit))
     text = "".join(char for char in text if not _is_bracket(char)).replace("&", " and ")
+    # no spelling of the tag name survives, so no look-alike of a delimiter can be made
+    text = re.sub(r"(?i)news_item", " ", text)
     return " ".join(text.split())[:limit].strip()
 
 
 def _age(published_at: datetime | None, now: datetime) -> str:
-    if published_at is None:
+    if published_at is None or published_at > now:
         return "unknown"
-    return f"{max(0, int((now - published_at).total_seconds() // 3600))} hours"
+    return f"{int((now - published_at).total_seconds() // 3600)} hours"
 
 
 def news_items(rows: Sequence[NewsItem], by_id: dict[str, sources.Source], now: datetime) -> list[str]:
