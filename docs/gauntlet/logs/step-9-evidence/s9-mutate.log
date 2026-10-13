@@ -18,6 +18,8 @@ CAUGHT   S4 unfinished game counted
 CAUGHT   S4 missing road score counted
 CAUGHT   S4 points for and against swapped
 CAUGHT   S4 window is 8
+CAUGHT   S4 default window is 15
+CAUGHT   S4 add_score_features window is 8
 CAUGHT   S5 own result leaks into the form
 CAUGHT   S6 implied home takes the road number
 CAUGHT   S6 missing line becomes zero
@@ -49,6 +51,7 @@ CAUGHT   S11 mean gain is enough
 CAUGHT   S11 upper end is enough
 CAUGHT   S11 equal total refused
 CAUGHT   S11 total points ignored
+CAUGHT   S11 total tolerance
 CAUGHT   S11 minimum is 100 games
 CAUGHT   S11 exactly the minimum refused
 CAUGHT   S11 no minimum
@@ -69,7 +72,10 @@ CAUGHT   S12 every Sunday game
 CAUGHT   S13 slots are all games
 CAUGHT   S13 season rows use every game
 CAUGHT   S14 unpredicted games kept
+CAUGHT   S14 only line columns checked
 CAUGHT   S15 reads the environment
 CAUGHT   S15 pandas read_csv
 CAUGHT   S15 imports a database driver
-74 of 74 caught
+CAUGHT   S15 np.loadtxt
+CAUGHT   S15 pd.read_json
+80 of 80 caught
