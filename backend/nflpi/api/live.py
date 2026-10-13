@@ -117,6 +117,14 @@ def live(session: Annotated[Session, Depends(get_session)]) -> LiveOut:
     return LiveOut(games=games, stale=playing and (last is None or now - last > STALE_AFTER), last_confirmed_at=last)
 
 
+MEANS_NOTE = (
+    "Means are over each forecaster's own scored games and are not comparable across forecasters; "
+    "compare only on the same games."
+)
+MEANS_NOTE = (
+    "Means are over each forecaster's own scored games and are not comparable across forecasters; "
+    "compare only on the same games."
+)
 GRADES_422 = "season must be a year 2000 to 2100 and week a number 1 to 22"
 
 
@@ -127,6 +135,9 @@ class ForecastGradeOut(BaseModel):
     coverage: float
     brier: float | None
     log_loss: float | None
+    kind: str | None = Field(
+        description="For pregame_model: the chosen prediction's kind ('live' or 'backfill'); null otherwise"
+    )
 
 
 class GameGradeOut(BaseModel):
@@ -136,7 +147,9 @@ class GameGradeOut(BaseModel):
     away_team: str
     home_score: int | None
     away_score: int | None
-    status: Literal["graded", "tie", "no_live_data", "in_progress"]
+    status: Literal["graded", "tie", "no_live_data", "in_progress", "incomplete"] = Field(
+        description="graded|tie|no_live_data|in_progress|incomplete; incomplete is final with no closing post row"
+    )
     window_seconds: float | None
     forecasters: list[ForecastGradeOut]
 
@@ -144,8 +157,8 @@ class GameGradeOut(BaseModel):
 class SummaryForecasterOut(BaseModel):
     name: str
     games: int
-    brier: float | None
-    log_loss: float | None
+    brier: float | None = Field(description=MEANS_NOTE)
+    log_loss: float | None = Field(description=MEANS_NOTE)
 
 
 class SummaryOut(BaseModel):
@@ -157,8 +170,8 @@ class LiveGradesOut(BaseModel):
     season: int
     week: int
     games: list[GameGradeOut]
-    week_summary: SummaryOut
-    season_summary: SummaryOut
+    week_summary: SummaryOut = Field(description=MEANS_NOTE)
+    season_summary: SummaryOut = Field(description=MEANS_NOTE)
 
 
 def _whole_number(text: str | None, low: int, high: int) -> int:
@@ -195,5 +208,6 @@ def live_grades(
     season: Annotated[str | None, Query()] = None,
     week: Annotated[str | None, Query()] = None,
 ) -> LiveGradesOut:
+    """Reads a whole season per call: open it on the Results page, do not poll it."""
     year, number = _whole_number(season, 2000, 2100), _whole_number(week, 1, 22)
     return _grades_out(year, number, live_grade.grade_season(session, year))

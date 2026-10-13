@@ -1,11 +1,14 @@
 """Step 15f: grade the in-game win probabilities of finished games (clauses G1-G12 in docs/gauntlet/logs/step-15f.md).
 
 Every forecast is a step function over the game window and is weighted by the seconds it held, so the density of
-stored rows never decides the score. Missing numbers get no weight and are never filled."""
+stored rows never decides the score. Missing numbers get no weight and are never filled.
+
+The game window runs from the first 'in' row to the first 'post' row after it; rows after that are ignored for every
+forecaster. A final game with no such 'post' row is 'in_progress' (last row 'in') or 'incomplete' (last row 'lost')."""
 
 import math
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 import numpy as np
@@ -33,6 +36,7 @@ class ForecastGrade:
     coverage: float
     brier: float | None
     log_loss: float | None
+    kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -92,10 +96,13 @@ def _grade_series(
 
 
 def _pregame(game: Game, predictions: list, start: datetime, end: datetime, home_won: bool) -> ForecastGrade:
-    valid = [p for p in predictions if p.created_at < game.kickoff_utc or p.kind == "backfill"]
+    before = [p for p in predictions if p.created_at < game.kickoff_utc and p.kind != "backfill"]
+    backfill = [p for p in predictions if p.kind == "backfill"]
+    chosen = (before or backfill or [None])[-1]
     window = (end - start).total_seconds()
-    segments = [(valid[-1].home_win_prob, window)] if valid and _valid(valid[-1].home_win_prob) else []
-    return _grade_series(segments, window, home_won, 1, 0.0)
+    segments = [(chosen.home_win_prob, window)] if chosen is not None and _valid(chosen.home_win_prob) else []
+    grade = _grade_series(segments, window, home_won, 1, 0.0)
+    return replace(grade, kind=chosen.kind if chosen is not None else None)
 
 
 def _grade_game(game: Game, states: list, quotes: list, predictions: list) -> GameGrade:
@@ -111,9 +118,12 @@ def _grade_game(game: Game, states: list, quotes: list, predictions: list) -> Ga
     first_in = next((s for s in states if s.state == "in"), None)
     if first_in is None:
         return result("no_live_data")
-    if states[-1].state not in ("post", "lost"):
-        return result("in_progress")
-    start, end = first_in.fetched_at, states[-1].fetched_at
+    after = states[states.index(first_in) + 1 :]
+    last_row = next((s for s in after if s.state == "post"), None)
+    if last_row is None:
+        return result("in_progress" if states[-1].state == "in" else "incomplete")
+    states = states[: states.index(last_row) + 1]
+    start, end = first_in.fetched_at, last_row.fetched_at
     home_won = game.home_score > game.away_score
     window = (end - start).total_seconds()
     espn = [Point(s.fetched_at, s.home_wp if s.state == "in" else None) for s in states]

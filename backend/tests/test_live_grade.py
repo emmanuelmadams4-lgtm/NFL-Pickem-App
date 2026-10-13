@@ -115,12 +115,22 @@ def test_g2_a_game_whose_last_row_is_still_in_play_is_in_progress_and_never_scor
     assert x.status == "in_progress" and x.forecasters == {} and x.window_seconds is None
 
 
-def test_g2_a_lost_row_ends_the_window_like_a_post_row_and_is_not_a_point(session):
+def test_g2_a_game_that_ends_on_a_lost_row_is_incomplete_and_never_scored(session):
     g = finished(session, "A")
     espn(session, g, [(0, "in", 0.6), (30, "lost", 0.6)])
     x = by_id(session)["2026_05_A"]
-    assert x.status == "graded" and x.window_seconds == 1800.0
-    assert x.forecasters["espn_live"].points == 1
+    assert x.status == "incomplete" and x.forecasters == {} and x.window_seconds is None
+    assert lg.summarise([x]).games_graded == 0
+
+
+def test_g2_the_window_ends_at_the_first_post_row_and_later_rows_are_ignored(session):
+    g = finished(session, "A")
+    espn(session, g, [(0, "in", 0.6), (30, "in", 0.7), (40, "post", 0.7), (50, "lost", 0.7)])
+    kalshi(session, g, [(0, 0.5), (20, 0.6), (35, 0.7), (45, 0.99)])  # 0.99 is after the end: settled price
+    x = by_id(session)["2026_05_A"]
+    assert x.status == "graded" and x.window_seconds == 2400.0
+    assert x.forecasters["kalshi_live"].coverage == 1.0
+    assert x.forecasters["kalshi_live"].brier == pytest.approx((20 * 0.25 + 15 * 0.16 + 5 * 0.09) / 40)
 
 
 # ---------------------------------------------------------------------------------------------- G3 pregame
@@ -140,11 +150,20 @@ def test_g3_a_later_or_earlier_prediction_picks_the_last_one_before_kickoff(sess
     assert by_id(session)["2026_05_A"].forecasters["pregame_model"].brier == pytest.approx(0.09)
 
 
-def test_g3_a_backfill_prediction_made_after_the_game_counts_like_the_results_page(session):
+def test_g3_a_backfill_made_after_the_game_is_used_only_when_no_real_snapshot_exists_and_is_labelled(session):
     g = finished(session, "A")
     espn(session, g, GAME_A)
     predict(session, g, 0.8, minute=5000, kind="backfill")
-    assert by_id(session)["2026_05_A"].forecasters["pregame_model"].brier == pytest.approx(0.04)
+    p = by_id(session)["2026_05_A"].forecasters["pregame_model"]
+    assert p.brier == pytest.approx(0.04) and p.kind == "backfill"
+
+
+def test_g3_a_real_snapshot_before_kickoff_beats_a_later_backfill_and_is_labelled_live(session):
+    g = game_a(session)  # real snapshot .7 an hour before kickoff
+    predict(session, g, 0.8, minute=5000, kind="backfill")
+    p = by_id(session)["2026_05_A"].forecasters["pregame_model"]
+    assert p.brier == pytest.approx(0.09) and p.kind == "live"
+    assert by_id(session)["2026_05_A"].forecasters["espn_live"].kind is None
 
 
 def test_g3_no_prediction_is_not_enough_data_not_a_score(session):
@@ -286,7 +305,7 @@ def test_g11_a_forecaster_never_scored_has_null_averages():
 URL = "/api/live/grades"
 GAME_FIELDS = {"game_id", "week", "home_team", "away_team", "home_score", "away_score", "status", "window_seconds",
                "forecasters"}  # fmt: skip
-FORECAST_FIELDS = {"name", "status", "points", "coverage", "brier", "log_loss"}
+FORECAST_FIELDS = {"name", "status", "points", "coverage", "brier", "log_loss", "kind"}
 SUMMARY_FIELDS = {"games_graded", "forecasters"}
 SUMMARY_FORECAST_FIELDS = {"name", "games", "brier", "log_loss"}
 
