@@ -72,7 +72,7 @@ Baseline on `main@92adfbc`: recorded in section 3.
 | WO-2 `wo-2.md` | `api/news.py`, `Source.name`, 2 lines in `api/main.py` | Sonnet subagent (try 1) | Written to the order; I ran the proof: 59 of 59 passed on the first run. One addition by the builder: an item whose source id is unknown is skipped (the SQL already excludes them) |
 
 * **Diff read by me** against the order: only the allowed files; `jobs.py` +2 lines (limit 10); `main.py` +2 lines (limit: one import and one include); no `schemas.py`, `views.py`, `client.ts` or `apps/web` touched. The model of Dwight's M1 (JSONB cast with bound values), M2 (clean_text first, `<`/`>` last), M3 (plain `str | None`, `re.fullmatch`, fixed 422), M4 (the thread opens its own session) are all visible in the code.
-* **Baseline** (before the lane, `main@92adfbc`): the suite on the lane's last-landed base was 1089 tests; after this step the gate shows 1142 passed (53 new).
+* **Count:** the gate shows 1142 passed; 80 of them are new (21 worker, 59 route), so the suite before this step was 1062 by subtraction (the baseline was not run on its own).
 * **Proof run of the first full gate** (`g0`, deleted after use because the alembic line was wrong: `alembic check` on the test database, which pytest builds with `create_all`, says "not up to date"; the gate now checks on a fresh scratch database, upgrade head then check, the way step 8c did): `1142 passed in 243 s`, ruff clean, `gen:api` regenerated `openapi.json` and `api-types.ts` (+140 and +88 lines, only the new route and two models). Committed.
 * **Hand check (real network, once each):** see section 5.
 
