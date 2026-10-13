@@ -1,0 +1,15 @@
+Code HEAD 8c4afb5 (rebased on main 53660d0). Runs B and C use their own databases; run A (shared database, collided with the critic's pytest) is not counted.
+--- gate B
+18:24:38 holding res:gate-c for gateB
+pytest: 1387 passed in 290.21s (0:04:50)
+All checks passed!
+No new upgrade operations detected.
+gen:api drift:        0
+18:29:53 released res:gate-c, exit=0
+--- gate C
+18:29:58 holding res:gate-c for gateC
+pytest: 1387 passed in 312.56s (0:05:12)
+All checks passed!
+No new upgrade operations detected.
+gen:api drift:        0
+18:35:36 released res:gate-c, exit=0

@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _HIDDEN_REPR_FIELDS = frozenset({"anthropic_api_key", "openrouter_api_key", "app_access_token", "vapid_private_key"})
@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
     vapid_subject: str = ""  # "mailto:you@example.com" or an https URL; push services reject placeholders
     alert_move_threshold: float = 0.07
+    star_summary_hour: int = Field(default=8, ge=0, le=20)  # daily star summary, 8 AM Eastern
 
     # News
     news_contact: str = ""
