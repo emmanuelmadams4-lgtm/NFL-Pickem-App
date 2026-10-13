@@ -1,4 +1,4 @@
-"""Tie news items to teams and players in step 8e."""
+"""Match news text to NFL teams and players."""
 
 import re
 from collections.abc import Mapping

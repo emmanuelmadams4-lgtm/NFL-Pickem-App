@@ -5,6 +5,7 @@ import socket
 import ssl
 import time
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass
 from urllib.parse import urljoin, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
@@ -112,17 +113,90 @@ def _checked_url(url: str, host: str) -> tuple[str, str]:
     return hostname, urlunsplit(("https", hostname, parts.path or "/", parts.query, ""))
 
 
+def _pin(url: str, host: str, resolver: Callable[[str], list[str]]) -> tuple[str, str]:
+    hostname, hostname_url = _checked_url(url, host)
+    try:
+        addresses = resolver(hostname)
+    except (OSError, UnicodeError) as exc:
+        raise FetchError("dns error") from exc
+    if not addresses:
+        raise FetchError("dns empty")
+    if any(not is_public(address) for address in addresses):
+        raise Blocked("address blocked")
+    address = addresses[0]
+    ip_host = f"[{address}]" if ":" in address else address
+    parts = urlsplit(hostname_url)
+    return hostname, urlunsplit(("https", ip_host, parts.path, parts.query, ""))
+
+
+def _read_body(response: httpx.Response, max_bytes: int, clock: Callable[[], float], deadline: float) -> bytes:
+    chunks: list[bytes] = []
+    size = 0
+    for chunk in response.iter_bytes():
+        if clock() > deadline:
+            raise FetchError("deadline exceeded")
+        size += len(chunk)
+        if size > max_bytes:
+            raise FetchError("too large")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _handle_response(
+    response: httpx.Response,
+    hostname_url: str,
+    redirects: int,
+    max_redirects: int,
+    content_types: tuple[str, ...],
+    max_bytes: int,
+    clock: Callable[[], float],
+    deadline: float,
+) -> tuple[FetchResult | None, str | None]:
+    status = response.status_code
+    if status in _REDIRECTS and "location" in response.headers:
+        if redirects >= max_redirects:
+            raise FetchError("too many redirects")
+        location = response.headers["location"]
+        if _has_control(location) or "\\" in location:
+            raise Blocked("url blocked")
+        try:
+            return None, urljoin(hostname_url, location)
+        except (ValueError, UnicodeError) as exc:
+            raise Blocked("url blocked") from exc
+    if status in (401, 403, 429):
+        raise Blocked(f"status {status}")
+    if status >= 400 and status not in (404, 410):
+        raise FetchError(f"status {status}")
+    if status == 200:
+        media_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
+        if not any(kind in media_type for kind in content_types):
+            raise FetchError("content type")
+    if status in (304, 404, 410):
+        body = b""
+    elif 200 <= status < 300:
+        body = _read_body(response, max_bytes, clock, deadline)
+    else:
+        raise FetchError(f"status {status}")
+    result = FetchResult(
+        status,
+        body,
+        _validator(response.headers.get("etag")),
+        _validator(response.headers.get("last-modified")),
+    )
+    return result, None
+
+
 def fetch_guarded(
     url: str,
     *,
     host: str,
-    resolver=default_resolver,
+    resolver: Callable[[str], list[str]] = default_resolver,
     transport: httpx.BaseTransport | None = None,
     headers: dict[str, str] | None = None,
     max_bytes: int = MAX_FEED_BYTES,
     content_types: tuple[str, ...] = ("xml",),
     max_redirects: int = MAX_REDIRECTS,
-    clock=time.monotonic,
+    clock: Callable[[], float] = time.monotonic,
 ) -> FetchResult:
     start = clock()
     redirects = 0
@@ -130,21 +204,11 @@ def fetch_guarded(
         while True:
             if clock() > start + DEADLINE_S:
                 raise FetchError("deadline exceeded")
-            hostname, hostname_url = _checked_url(url, host)
-            try:
-                addresses = resolver(hostname)
-            except (OSError, UnicodeError) as exc:
-                raise FetchError("dns error") from exc
-            if not addresses:
-                raise FetchError("dns empty")
-            if any(not is_public(address) for address in addresses):
-                raise Blocked("address blocked")
+            hostname, ip_url = _pin(url, host, resolver)
             if clock() > start + DEADLINE_S:
                 raise FetchError("deadline exceeded")
-            address = addresses[0]
-            ip_host = f"[{address}]" if ":" in address else address
-            parts = urlsplit(hostname_url)
-            ip_url = urlunsplit(("https", ip_host, parts.path, parts.query, ""))
+            pinned_parts = urlsplit(ip_url)
+            hostname_url = urlunsplit(("https", hostname, pinned_parts.path, pinned_parts.query, ""))
             request_headers = httpx.Headers(headers or {})
             request_headers["User-Agent"] = user_agent()
             request_headers["Host"] = hostname
@@ -153,59 +217,39 @@ def fetch_guarded(
                 with client.stream(
                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
                 ) as response:
-                    status = response.status_code
-                    if status in _REDIRECTS and "location" in response.headers:
-                        if redirects >= max_redirects:
-                            raise FetchError("too many redirects")
-                        location = response.headers["location"]
-                        if _has_control(location) or "\\" in location:
-                            raise Blocked("url blocked")
-                        try:
-                            url = urljoin(hostname_url, location)
-                        except (ValueError, UnicodeError) as exc:
-                            raise Blocked("url blocked") from exc
-                        redirects += 1
-                        continue
-                    if status in (401, 403, 429):
-                        raise Blocked(f"status {status}")
-                    if status >= 400 and status not in (404, 410):
-                        raise FetchError(f"status {status}")
-                    if status == 200:
-                        media_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
-                        if not any(kind in media_type for kind in content_types):
-                            raise FetchError("content type")
-                    if status in (304, 404, 410):
-                        body = b""
-                    elif 200 <= status < 300:
-                        chunks: list[bytes] = []
-                        size = 0
-                        for chunk in response.iter_bytes():
-                            if clock() > start + DEADLINE_S:
-                                raise FetchError("deadline exceeded")
-                            size += len(chunk)
-                            if size > max_bytes:
-                                raise FetchError("too large")
-                            chunks.append(chunk)
-                        body = b"".join(chunks)
-                    else:
-                        raise FetchError(f"status {status}")
-                    return FetchResult(
-                        status,
-                        body,
-                        _validator(response.headers.get("etag")),
-                        _validator(response.headers.get("last-modified")),
+                    result, redirect_url = _handle_response(
+                        response,
+                        hostname_url,
+                        redirects,
+                        max_redirects,
+                        content_types,
+                        max_bytes,
+                        clock,
+                        start + DEADLINE_S,
                     )
+                if redirect_url is not None:
+                    url = redirect_url
+                    redirects += 1
+                    continue
+                return result
             except (httpx.HTTPError, ssl.SSLError, OSError) as exc:
                 raise FetchError(type(exc).__name__) from exc
 
 
-def check_robots(source: Source, *, resolver=default_resolver, transport: httpx.BaseTransport | None = None) -> None:
+def check_robots(
+    source: Source,
+    *,
+    resolver: Callable[[str], list[str]] = default_resolver,
+    transport: httpx.BaseTransport | None = None,
+    clock: Callable[[], float] = time.monotonic,
+) -> None:
     try:
         result = fetch_guarded(
             f"https://{source.host}/robots.txt",
             host=source.host,
             resolver=resolver,
             transport=transport,
+            clock=clock,
             content_types=("text/plain",),
             max_bytes=MAX_ROBOTS_BYTES,
             max_redirects=0,
@@ -227,11 +271,12 @@ def check_robots(source: Source, *, resolver=default_resolver, transport: httpx.
 def fetch_feed(
     source: Source,
     *,
-    resolver=default_resolver,
+    resolver: Callable[[str], list[str]] = default_resolver,
     transport: httpx.BaseTransport | None = None,
     validators: dict[str, str] | None = None,
+    clock: Callable[[], float] = time.monotonic,
 ) -> FetchResult:
-    check_robots(source, resolver=resolver, transport=transport)
+    check_robots(source, resolver=resolver, transport=transport, clock=clock)
     conditional: dict[str, str] = {}
     if validators:
         etag = _validator(validators.get("etag"))
@@ -245,6 +290,7 @@ def fetch_feed(
         host=source.host,
         resolver=resolver,
         transport=transport,
+        clock=clock,
         headers=conditional,
         content_types=("xml",),
     )

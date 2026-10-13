@@ -2,14 +2,23 @@
 
 import io
 import unicodedata
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from html.parser import HTMLParser
+from typing import Any
 from urllib.parse import quote, unquote_plus, urlsplit, urlunsplit
 
 import feedparser
 
 from nflpi.ingestion.news.sources import Source
+
+MAX_ENTRIES = 100
+KEEP_DAYS = 30
+MAX_URL = 2048
+TITLE_MAX = 200
+EXTRACT_MAX = 300
+FUTURE_SLACK = timedelta(days=1)
 
 _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
 _TRACKERS = {"fbclid", "gclid", "ocid"}
@@ -83,10 +92,10 @@ def canonical_url(link: str | None, suffixes: tuple[str, ...]) -> str | None:
     path = quote(parts.path or "/", safe=_URL_SAFE)
     query = quote("&".join(query_parts), safe=_URL_SAFE)
     result = urlunsplit(("https", host, path, query, ""))
-    return result if len(result) <= 2048 else None
+    return result if len(result) <= MAX_URL else None
 
 
-def _published(entry: dict, now: datetime) -> datetime | None:
+def _published(entry: Mapping[str, Any], now: datetime) -> datetime | None:
     stamp = entry.get("published_parsed") or entry.get("updated_parsed")
     if not stamp:
         return None
@@ -94,7 +103,7 @@ def _published(entry: dict, now: datetime) -> datetime | None:
         published = datetime(*stamp[:6], tzinfo=UTC)
     except (TypeError, ValueError):
         return None
-    return None if published > now + timedelta(days=1) else published
+    return None if published > now + FUTURE_SLACK else published
 
 
 def parse_feed(body: bytes, source: Source, now: datetime) -> list[Item]:
@@ -103,16 +112,16 @@ def parse_feed(body: bytes, source: Source, now: datetime) -> list[Item]:
         raise FeedError("not a feed")
     items: list[Item] = []
     usable = False
-    for entry in parsed.entries[:100]:
-        title = clean_text(entry.get("title") or "", 200)
+    for entry in parsed.entries[:MAX_ENTRIES]:
+        title = clean_text(entry.get("title") or "", TITLE_MAX)
         url = canonical_url(entry.get("link"), source.link_suffixes)
         if not title or not url:
             continue
         usable = True
         published_at = _published(entry, now)
-        if published_at is not None and published_at < now - timedelta(days=30):
+        if published_at is not None and published_at < now - timedelta(days=KEEP_DAYS):
             continue
-        items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
+        items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", EXTRACT_MAX)))
     if parsed.entries and not usable:
         raise FeedError("no usable items")
     return items

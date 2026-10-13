@@ -1,4 +1,4 @@
-"""Store deduplicated news items in step 8f."""
+"""Store deduplicated news items and prune expired records."""
 
 import hashlib
 from datetime import datetime, timedelta
