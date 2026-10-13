@@ -3,7 +3,10 @@
 Criterion ids (R.., U.., S.., T..) are the frozen list in docs/gauntlet/logs/step-16b-server.md section 2.
 """
 
+import asyncio
+import json
 import logging
+import threading
 from datetime import UTC, datetime
 
 import pytest
@@ -12,6 +15,7 @@ from sqlalchemy import event, select
 from nflpi.api import group as group_api
 from nflpi.db import get_engine
 from nflpi.group import importer
+from nflpi.group.importer import ImportResult
 from nflpi.models import Game, GroupPick, GroupStanding
 
 SEASON = 2023
@@ -129,6 +133,57 @@ def test_u5_the_cap_holds_without_a_content_length(client, games, monkeypatch):
     assert reply.status_code == 413
 
 
+def asgi_post(chunks, headers=()):
+    """Post chunks straight to the app as separate ASGI body messages with no Content-Length."""
+    from nflpi.api.main import app
+
+    messages = [{"type": "http.request", "body": c, "more_body": True} for c in chunks]
+    messages.append({"type": "http.request", "body": b"", "more_body": False})
+    sent = []
+
+    async def receive():
+        return messages.pop(0) if messages else {"type": "http.disconnect"}
+
+    async def send(message):
+        sent.append(message)
+
+    scope = {"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": "POST", "scheme": "http",
+             "path": "/api/group/import", "raw_path": b"/api/group/import", "query_string": b"season=2023",
+             "root_path": "", "client": ("test", 1), "server": ("test", 80),
+             "headers": [(b"authorization", b"Bearer test-token"), *headers]}
+    asyncio.run(app(scope, receive, send))
+    status = next(m["status"] for m in sent if m["type"] == "http.response.start")
+    return status, b"".join(m.get("body", b"") for m in sent if m["type"] == "http.response.body")
+
+
+def test_u5_the_stream_is_cut_at_the_cap_chunk_by_chunk(games, monkeypatch):
+    cap = importer.MAX_BYTES
+    monkeypatch.setattr(group_api, "import_group_csv", lambda *a: pytest.fail("importer called on a big file"))
+    status, body = asgi_post([b"x" * (cap // 2), b"x" * (cap // 2 - 1), b"xx"])  # cap + 1 in three pieces
+    assert status == 413 and json.loads(body) == {"detail": "file is too large"}
+    monkeypatch.setattr(group_api, "import_group_csv", lambda *a: ImportResult("picks", 0))
+    status, _ = asgi_post([b"x" * (cap // 2), b"x" * (cap // 2 - 1), b"x"])  # exactly the cap
+    assert status == 200
+
+
+def test_u5_a_chunked_body_over_the_cap_is_stopped_before_the_importer_even_with_a_small_header(games, monkeypatch):
+    monkeypatch.setattr(group_api, "import_group_csv", lambda *a: pytest.fail("importer called on a big file"))
+    status, _ = asgi_post([b"x" * 600_000, b"x" * 600_000], headers=[(b"content-length", b"10")])
+    assert status == 413  # a header that lies low does not help: the bytes are counted as they arrive
+
+
+def test_u5_the_import_runs_off_the_event_loop(client, games, monkeypatch):
+    seen = []
+
+    def spy(session, season, data):
+        seen.append(threading.current_thread().name)
+        return ImportResult("picks", 0)
+
+    monkeypatch.setattr(group_api, "import_group_csv", spy)
+    assert upload(client).status_code == 200
+    assert seen and all("AnyIO worker" in name for name in seen)
+
+
 def test_u5_the_cap_is_read_from_the_importer_at_request_time(client, games, monkeypatch):
     monkeypatch.setattr(importer, "MAX_BYTES", len(PICKS) - 1)
     assert upload(client).status_code == 413
@@ -158,7 +213,9 @@ def test_u6_empty_binary_unknown_and_headers_only_files_are_422(client, games, d
 
 @pytest.mark.parametrize("season", ["", "abc", "1999", "2101", "2023.5", "-2023"])
 def test_u7_the_season_must_be_a_year_between_2000_and_2100(client, games, season):
-    assert upload(client, season=season).status_code == 422
+    reply = upload(client, season=season)
+    assert reply.status_code == 422
+    assert isinstance(reply.json()["detail"], list)  # FastAPI's own check, not the importer's message
     assert stored(games) == ({}, {})
 
 
