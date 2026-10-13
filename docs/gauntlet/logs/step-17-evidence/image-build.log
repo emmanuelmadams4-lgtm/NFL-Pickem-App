@@ -1,0 +1,251 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 926B 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:22-slim
+#2 ...
+
+#3 [internal] load metadata for docker.io/library/python:3.13-slim
+#3 DONE 0.6s
+
+#2 [internal] load metadata for docker.io/library/node:22-slim
+#2 DONE 0.7s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 184B done
+#4 DONE 0.0s
+
+#5 [stage-1 1/8] FROM docker.io/library/python:3.13-slim@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f
+#5 resolve docker.io/library/python:3.13-slim@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f 0.0s done
+#5 DONE 0.0s
+
+#6 [web 1/9] FROM docker.io/library/node:22-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+#6 resolve docker.io/library/node:22-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 0.0s done
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 2.38MB 0.2s done
+#7 DONE 0.2s
+
+#8 [stage-1 2/8] WORKDIR /app
+#8 CACHED
+
+#9 [stage-1 3/8] RUN pip install --no-cache-dir uv
+#9 CACHED
+
+#10 [web 2/9] WORKDIR /src
+#10 CACHED
+
+#11 [web 4/9] COPY packages/shared/package.json packages/shared/
+#11 CACHED
+
+#12 [web 3/9] COPY package.json package-lock.json ./
+#12 CACHED
+
+#13 [web 5/9] COPY apps/web/package.json apps/web/
+#13 CACHED
+
+#14 [web 6/9] RUN npm ci --workspace apps/web --include-workspace-root --no-audit --no-fund
+#14 CACHED
+
+#15 [stage-1 4/8] COPY backend/pyproject.toml backend/uv.lock ./
+#15 DONE 0.1s
+
+#16 [web 7/9] COPY packages/shared packages/shared
+#16 DONE 0.1s
+
+#17 [web 8/9] COPY apps/web apps/web
+#17 DONE 0.2s
+
+#18 [stage-1 5/8] RUN uv sync --frozen --no-dev --no-install-project
+#18 1.563 Using CPython 3.13.16 interpreter at: /usr/local/bin/python3
+#18 1.563 Creating virtual environment at: .venv
+#18 2.020 Downloading anthropic (1.9MiB)
+#18 2.211 Downloading cryptography (4.5MiB)
+#18 2.211 Downloading psycopg-binary (6.5MiB)
+#18 2.249 Downloading numpy (15.0MiB)
+#18 2.315 Downloading scikit-learn (8.4MiB)
+#18 2.333 Downloading pydantic-core (2.0MiB)
+#18 2.361 Downloading sqlalchemy (4.4MiB)
+#18 2.372 Downloading aiohttp (1.8MiB)
+#18 2.391 Downloading uvloop (4.2MiB)
+#18 2.560 Downloading claude-agent-sdk (102.5MiB)
+#18 2.566 Downloading scipy (32.4MiB)
+#18 2.575 Downloading pandas (9.8MiB)
+#18 4.574    Building http-ece==1.2.1
+#18 5.019  Downloaded aiohttp
+#18 5.024  Downloaded pydantic-core
+#18 5.893  Downloaded sqlalchemy
+#18 5.930  Downloaded uvloop
+#18 6.160  Downloaded cryptography
+#18 6.926  Downloaded psycopg-binary
+#18 8.343  Downloaded anthropic
+#18 8.408  Downloaded scikit-learn
+#18 ...
+
+#19 [web 9/9] RUN npm run build -w apps/web
+#19 4.657 
+#19 4.657 > @nflpi/web@0.1.0 build
+#19 4.657 > next build && node scripts/stamp-sw.mjs
+#19 4.657 
+#19 ...
+
+#18 [stage-1 5/8] RUN uv sync --frozen --no-dev --no-install-project
+#18 11.93  Downloaded numpy
+#18 12.61  Downloaded pandas
+#18 17.19  Downloaded scipy
+#18 ...
+
+#19 [web 9/9] RUN npm run build -w apps/web
+#19 17.34 ▲ Next.js 16.4.0 (Turbopack)
+#19 18.40 ✓ Running next.config.ts took 1061ms
+#19 18.45 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#19 18.45 This information is used to shape Next.js' roadmap and prioritize features.
+#19 18.45 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#19 18.45 https://nextjs.org/telemetry
+#19 18.45 
+#19 18.66 
+#19 18.96   Creating an optimized production build ...
+#19 ...
+
+#18 [stage-1 5/8] RUN uv sync --frozen --no-dev --no-install-project
+#18 18.40       Built http-ece==1.2.1
+#18 22.29  Downloaded claude-agent-sdk
+#18 22.31 Prepared 74 packages in 20.72s
+#18 25.61 Installed 74 packages in 3.29s
+#18 25.61  + aiohappyeyeballs==2.7.1
+#18 25.61  + aiohttp==3.14.5
+#18 25.61  + aiosignal==1.4.0
+#18 25.61  + alembic==1.20.0
+#18 25.61  + annotated-doc==0.0.5
+#18 25.61  + annotated-types==0.8.0
+#18 25.61  + anthropic==1.13.0
+#18 25.61  + anyio==4.15.1
+#18 25.61  + attrs==26.1.0
+#18 25.61  + certifi==2026.7.22
+#18 25.61  + cffi==2.1.1
+#18 25.61  + charset-normalizer==3.5.2
+#18 25.61  + claude-agent-sdk==0.2.165
+#18 25.61  + click==8.5.0
+#18 25.61  + cloudpickle==3.1.2
+#18 25.61  + cryptography==50.0.2
+#18 25.61  + docstring-parser==0.18.0
+#18 25.61  + fastapi==0.143.0
+#18 25.61  + frozenlist==1.8.0
+#18 25.61  + h11==0.16.0
+#18 25.61  + http-ece==1.2.1
+#18 25.61  + httpcore==1.0.9
+#18 25.61  + httpcore2==2.13.1
+#18 25.61  + httptools==0.9.0
+#18 25.61  + httpx==0.28.1
+#18 25.61  + httpx2==2.13.1
+#18 25.61  + idna==3.20
+#18 25.61  + jiter==0.17.0
+#18 25.61  + joblib==1.6.0
+#18 25.61  + jsonschema==4.26.0
+#18 25.61  + jsonschema-specifications==2025.9.1
+#18 25.61  + mako==1.4.3
+#18 25.61  + markupsafe==3.0.4
+#18 25.61  + mcp==2.3.0
+#18 25.61  + mcp-types==2.3.0
+#18 25.61  + multidict==7.1.0
+#18 25.61  + narwhals==2.27.1
+#18 25.61  + numpy==2.5.4
+#18 25.61  + opentelemetry-api==1.45.1
+#18 25.61  + pandas==3.0.6
+#18 25.61  + propcache==0.5.4
+#18 25.62  + psycopg==3.3.6
+#18 25.62  + psycopg-binary==3.3.6
+#18 25.62  + py-vapid==1.9.4
+#18 25.62  + pycparser==3.11
+#18 25.62  + pydantic==2.14.1
+#18 25.62  + pydantic-core==2.50.1
+#18 25.62  + pydantic-settings==2.15.0
+#18 25.62  + pyjwt==2.15.1
+#18 25.62  + python-dateutil==2.9.0.post0
+#18 25.62  + python-dotenv==1.2.4
+#18 25.62  + python-multipart==0.0.32
+#18 25.62  + pywebpush==2.5.0
+#18 25.62  + pyyaml==6.0.3
+#18 25.62  + referencing==0.37.0
+#18 25.62  + requests==2.34.2
+#18 25.62  + rpds-py==2026.9.1
+#18 25.62  + scikit-learn==1.9.1
+#18 25.62  + scipy==1.18.1
+#18 25.62  + six==1.17.0
+#18 25.62  + sniffio==1.3.1
+#18 25.62  + sqlalchemy==2.1.4
+#18 25.62  + sse-starlette==3.5.0
+#18 25.62  + starlette==1.7.0
+#18 25.62  + threadpoolctl==3.7.0
+#18 25.62  + truststore==0.10.4
+#18 25.62  + typing-extensions==4.16.0
+#18 25.62  + typing-inspection==0.4.4
+#18 25.62  + urllib3==2.8.0
+#18 25.62  + uvicorn==0.54.0
+#18 25.62  + uvloop==0.23.0
+#18 25.62  + watchfiles==1.3.0
+#18 25.62  + websockets==17.2
+#18 25.62  + yarl==1.25.1
+#18 DONE 28.8s
+
+#19 [web 9/9] RUN npm run build -w apps/web
+#19 ...
+
+#20 [stage-1 6/8] COPY backend/ ./
+#20 DONE 2.2s
+
+#19 [web 9/9] RUN npm run build -w apps/web
+#19 ...
+
+#21 [stage-1 7/8] RUN uv sync --frozen --no-dev
+#21 2.225    Building nflpi @ file:///app
+#21 4.333       Built nflpi @ file:///app
+#21 4.365 Prepared 1 package in 2.16s
+#21 4.426 Installed 1 package in 61ms
+#21 4.426  + nflpi==0.1.0 (from file:///app)
+#21 DONE 4.8s
+
+#19 [web 9/9] RUN npm run build -w apps/web
+#19 41.62 ✓ Compiled successfully in 22.6s
+#19 41.65   Running TypeScript ...
+#19 51.72   Finished TypeScript in 10.1s ...
+#19 51.77   Collecting page data using 9 workers ...
+#19 54.45   Generating static pages using 9 workers (0/9) ...
+#19 55.03   Generating static pages using 9 workers (2/9) 
+#19 55.05   Generating static pages using 9 workers (4/9) 
+#19 55.05   Generating static pages using 9 workers (6/9) 
+#19 55.08 ✓ Generating static pages using 9 workers (9/9) in 627ms
+#19 55.09   Finalizing page optimization ...
+#19 55.29 
+#19 55.30 Route (app)
+#19 55.30 ┌ ○ /
+#19 55.30 ├ ○ /_not-found
+#19 55.30 ├ ○ /backtest
+#19 55.30 ├ ○ /game
+#19 55.30 ├ ○ /manifest.webmanifest
+#19 55.30 ├ ○ /performance
+#19 55.30 ├ ○ /settings
+#19 55.30 └ ○ /sheet
+#19 55.30 
+#19 55.30 
+#19 55.30 ○  (Static)  prerendered as static content
+#19 55.30 
+#19 DONE 56.1s
+
+#22 [stage-1 8/8] COPY --from=web /src/apps/web/out /app/web
+#22 DONE 0.3s
+
+#23 exporting to image
+#23 exporting layers
+#23 exporting layers 32.0s done
+#23 exporting manifest sha256:db22f4582282f4e6dd70751d059120bf31f082e1f389c5ef00ce24726b9c00e4 done
+#23 exporting config sha256:1368dea2fef4928959525ded20fd6e4ea074dd4e3d2481a1ed61cadd9d3e6d72 done
+#23 exporting attestation manifest sha256:28cc9b992ce30b8d70f8fa6459146cc465aea6c855475c7caad4b9795ef1105b 0.0s done
+#23 exporting manifest list sha256:1f11bd9a5fc65f436e9743cab0a4d13c9b63a90830e1038b9c2fa5913ebf972e done
+#23 naming to docker.io/library/nflpi-lane-sdk-img:latest done
+#23 unpacking to docker.io/library/nflpi-lane-sdk-img:latest
+#23 unpacking to docker.io/library/nflpi-lane-sdk-img:latest 18.6s done
+#23 DONE 50.7s

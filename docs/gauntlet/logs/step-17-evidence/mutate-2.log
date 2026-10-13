@@ -1,0 +1,37 @@
+KILLED   C1 tools allowed
+KILLED   C1 user settings loaded
+KILLED   C1 api key not blanked
+KILLED   C1 auth token not blanked
+KILLED   C1 wrong model
+KILLED   C2 schema not sent
+KILLED   C2 structured output as str
+KILLED   C3 key-only route starts sdk
+KILLED   C4 available ignores token
+KILLED   C4 neither configured does not raise
+KILLED   C5 no fallback
+KILLED   C5 narrow except
+KILLED   C5 no timeout
+KILLED   C5 route not set to api
+KILLED   C5 schema without output accepted
+KILLED   C5 empty text accepted
+KILLED   C5 error result accepted
+KILLED   C6 no setup-token advice
+KILLED   C7 api detail dropped
+KILLED   C8 error leaks exception text
+KILLED   C8 repr leaks token
+KILLED   C8 setting not secret
+KILLED   C8 settings repr shows keys
+KILLED   C8 settings repr shows openrouter key
+KILLED   C9 no thread when loop runs
+KILLED   C12 base url not blanked
+KILLED   C12 proxy not blanked
+KILLED   C12 updater not disabled
+KILLED   C13 deadline not enforced
+KILLED   C14 cwd not throwaway
+KILLED   C14 config dir not throwaway
+KILLED   C16 route set before answer
+KILLED   C17 refusal falls back
+KILLED   C18 subtype hidden
+KILLED   C19 cut-off accepted
+
+35/35 killed; survivors: []

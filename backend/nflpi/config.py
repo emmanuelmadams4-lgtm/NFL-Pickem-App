@@ -1,7 +1,10 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_HIDDEN_REPR_FIELDS = frozenset({"anthropic_api_key", "openrouter_api_key", "app_access_token", "vapid_private_key"})
 
 
 class Settings(BaseSettings):
@@ -31,6 +34,7 @@ class Settings(BaseSettings):
 
     # AI (keys stay on the server)
     anthropic_api_key: str = ""
+    claude_code_oauth_token: SecretStr = SecretStr("")
     anthropic_model: str = "claude-sonnet-5-5"
     openrouter_api_key: str = ""
     openrouter_model: str = "typesafe/jev-1.13"
@@ -47,6 +51,9 @@ class Settings(BaseSettings):
 
     # News
     news_contact: str = ""
+
+    def __repr_args__(self) -> list[tuple[str | None, object]]:
+        return [(name, value) for name, value in super().__repr_args__() if name not in _HIDDEN_REPR_FIELDS]
 
 
 @lru_cache

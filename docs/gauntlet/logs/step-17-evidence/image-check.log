@@ -1,0 +1,8 @@
+bin=/app/.venv/lib/python3.13/site-packages/claude_agent_sdk/_bundled/claude
+aarch64
+2.1.294 (Claude Code)
+{
+  "loggedIn": true,
+  "authMethod": "oauth_token",
+  "apiProvider": "firstParty",
+provider import ok
