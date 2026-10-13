@@ -65,6 +65,8 @@ No change needed: one new module (197 lines, one helper shared by three checks),
 * **Critic (new subagent `ecc:code-reviewer`, no build transcript) at 8c4afb5: PASS.** 48 passed in `test_star_alerts.py`, ruff clean; clauses checked once by reading code against the spec, no failures, one advisory (a star Out then cleared is skipped, which is the intended C1 fix). It could not get a gate slot for the full suite; the full-suite proof is the coordinator's gate above.
 * **Lane-guard** (`step-8i-evidence/lane-guard.txt`): only `backend/nflpi/config.py` (one setting) and `backend/nflpi/jobs.py` (5 lines in `tick`), the granted seams.
 
+* **Dwight delta review of the fixes: PASS** (own read; no CRITICAL; C2 across rounds still one push per flip, advisory; C3 about two more queries per recent row, advisory).
+
 ## 6. LANDING
 
 Ready for the integrator. Branch `lane/staralerts`, rebased on main. No push, no PR. Nothing to deploy beyond the worker (no migration, no route, no schema change). Owner-visible: from the first worker tick after deploy, the first round only stores a baseline; changes after that reach his phone. Open owner items: IR / suspension / trade / inactive / return-after-missed-games triggers need the D26 ESPN source (carried); the 8 AM Eastern hour is the setting `STAR_SUMMARY_HOUR`.
