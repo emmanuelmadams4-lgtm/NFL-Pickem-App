@@ -2,22 +2,9 @@
 
 import { useState } from "react";
 import { ago, type GameDetail, type Injury, type Team } from "@nflpi/shared";
-import { Button, Chip, Section, type ChipTone } from "@/components/ui";
+import { Button, Chip, Section } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
-import { StarPlayers } from "@/components/game/star-players";
-
-function statusTone(status: string | null): ChipTone | null {
-  switch ((status ?? "").toLowerCase()) {
-    case "out":
-      return "bad";
-    case "doubtful":
-      return "warn";
-    case "questionable":
-      return "warn-soft";
-    default:
-      return null;
-  }
-}
+import { StarPlayers, statusTone } from "@/components/game/star-players";
 
 const COLLAPSED = 8;
 
@@ -72,7 +59,7 @@ export function Injuries({ game }: { game: GameDetail }) {
   const latest = game.injuries.reduce<string | null>((m, r) => (!m || r.observed_at > m ? r.observed_at : m), null);
   return (
     <Section id="injuries" title="Injuries">
-      <StarPlayers game={game} statusTone={statusTone} />
+      <StarPlayers game={game} />
       <h3 className="text-sm font-semibold text-text">Full injury report</h3>
       <p className="mt-0.5 text-label text-subtle">{latest ? `Report as of ${ago(latest)}.` : "Official injury report entries for both teams."}</p>
       {game.injuries.length === 0 ? (

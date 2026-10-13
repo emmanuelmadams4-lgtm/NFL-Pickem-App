@@ -4,12 +4,24 @@ import { TeamLogo } from "@/components/team";
 
 const slotName = { qb: "QB", off: "Offense", def: "Defense" } as const;
 
-function StarTeam({ team, club, week, reportsSeen, statusTone }: {
+export function statusTone(status: string | null): ChipTone | null {
+  switch ((status ?? "").toLowerCase()) {
+    case "out":
+      return "bad";
+    case "doubtful":
+      return "warn";
+    case "questionable":
+      return "warn-soft";
+    default:
+      return null;
+  }
+}
+
+function StarTeam({ team, club, week, reportsSeen }: {
   team: Team;
   club: GameDetail["stars"][number] | undefined;
   week: number;
   reportsSeen: number;
-  statusTone: (status: string | null) => ChipTone | null;
 }) {
   return (
     <div className="min-w-0">
@@ -51,10 +63,7 @@ function StarTeam({ team, club, week, reportsSeen, statusTone }: {
   );
 }
 
-export function StarPlayers({ game, statusTone }: {
-  game: GameDetail;
-  statusTone: (status: string | null) => ChipTone | null;
-}) {
+export function StarPlayers({ game }: { game: GameDetail }) {
   return (
     <div className="mb-6">
       <h3 className="text-sm font-semibold text-text">Star players</h3>
@@ -63,9 +72,9 @@ export function StarPlayers({ game, statusTone }: {
       {game.stars_out.reports_seen === 0 && <p className="mt-2 text-label text-subtle">No injury report yet this week</p>}
       <div className="mt-3 grid gap-6 md:grid-cols-2">
         <StarTeam team={game.away} club={game.stars.find((club) => club.team === game.away.abbr)} week={game.week}
-          reportsSeen={game.stars_out.reports_seen} statusTone={statusTone} />
+          reportsSeen={game.stars_out.reports_seen} />
         <StarTeam team={game.home} club={game.stars.find((club) => club.team === game.home.abbr)} week={game.week}
-          reportsSeen={game.stars_out.reports_seen} statusTone={statusTone} />
+          reportsSeen={game.stars_out.reports_seen} />
       </div>
     </div>
   );

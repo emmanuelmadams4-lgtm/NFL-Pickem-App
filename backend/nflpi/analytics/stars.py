@@ -24,6 +24,7 @@ FUMBLE_POINTS = 4
 SAFETY_POINTS = 2
 SIDE_LIMIT = 2
 OUT_STATUSES = {"out", "doubtful"}
+ALERT_STATUSES = ("Out", "Doubtful", "Questionable")
 SLOT_ORDER = {"qb": 0, "off": 1, "def": 2}
 
 
@@ -208,7 +209,7 @@ def _qb_alert(report: InjuryReport | None) -> bool:
     return (
         report is not None
         and report.position == "QB"
-        and report.report_status in {"Out", "Doubtful", "Questionable"}
+        and report.report_status in ALERT_STATUSES
     )
 
 

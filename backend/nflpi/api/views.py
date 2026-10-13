@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from nflpi.analytics import stars
 from nflpi.analytics.metrics import calibration, wilson_ci
+from nflpi.analytics.stars import ALERT_STATUSES
 from nflpi.api import schemas as s
 from nflpi.ingestion.service import freshness
 from nflpi.models import (
@@ -27,8 +28,6 @@ from nflpi.models import (
     WeeklyRank,
 )
 from nflpi.predictions import sheet
-
-ALERT_STATUSES = ("Out", "Doubtful", "Questionable")
 
 
 def _clean_star_text(value: str | None) -> str | None:
@@ -190,18 +189,13 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
         win = winner(g)
         pick = picks.get(g.game_id)
         inj = injuries[g.week]
-        star_data = stars.stars_out(session, g.game_id, now)
-        all_star_data = stars.game_stars(session, g.game_id, now)
-        star_qb_rows = [
-            row
-            for club in all_star_data["teams"]
+        star_data = stars.game_stars(session, g.game_id, now)
+        star_qb_report_ids = {
+            row["report_id"]
+            for club in star_data["teams"]
             for row in club["stars"]
             if row["qb_alert"]
-        ]
-        star_qb_report_ids = {
-            row["report_id"] for row in star_qb_rows
         }
-        star_qb_keys = {(row["team"], row["slot"], row["rank"]) for row in star_qb_rows}
         qb_rows = [
             r
             for team in (g.away_team, g.home_team)
@@ -210,11 +204,7 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
         ]
         qb_rows.sort(key=lambda r: r.id not in star_qb_report_ids)
         qb_alerts = [f"{r.team} QB {r.player}: {r.report_status}" for r in qb_rows]
-        no_list = [
-            club["team"]
-            for club in all_star_data["teams"]
-            if club["stars_week"] is None
-        ]
+        no_list = [club["team"] for club in star_data["teams"] if club["stars_week"] is None]
         out.append(
             s.GameSummary(
                 game_id=g.game_id,
@@ -250,8 +240,10 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                 ),
                 stars_out=s.StarsOut(
                     out=[
-                        _star_status(row | {"qb_alert": (row["team"], row["slot"], row["rank"]) in star_qb_keys})
-                        for row in star_data["out"]
+                        _star_status(row)
+                        for club in star_data["teams"]
+                        for row in club["stars"]
+                        if (row["status"] or "").lower() in stars.OUT_STATUSES
                     ],
                     no_list=no_list,
                     reports_seen=star_data["reports_seen"], checked_at=star_data["checked_at"],
