@@ -59,7 +59,7 @@ def scoring_form(df: pd.DataFrame, games: int = FORM_GAMES) -> dict[str, list[fl
 
 
 def add_score_features(df: pd.DataFrame, elo: EloParams) -> pd.DataFrame:
-    out = add_features(df, elo).copy()
+    out = add_features(df, elo)
     for key, values in scoring_form(out).items():
         out[key] = values
     implied = [

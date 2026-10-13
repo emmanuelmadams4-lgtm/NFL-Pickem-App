@@ -11,6 +11,7 @@ from nflpi.predictions.elo import EloParams
 from nflpi.predictions.scores import BLEND_FEATURES, STATS_FEATURES, ScoreModel, add_score_features, entry_pair
 
 METHODS = ["implied", "stats", "blend"]
+PRED_COLS = [f"pred_{method}_{side}" for method in METHODS for side in ("home", "away")]
 MIN_SHIP_GAMES = 200
 LABELS = {
     "implied": "Closing line implied score",
@@ -24,6 +25,12 @@ def is_tiebreak_slot(weekday: str, kickoff_utc: datetime) -> bool:
                 (weekday == "Sunday" and kickoff_utc.astimezone(ZoneInfo("America/New_York")).hour >= 19))
 
 
+def _entry_columns(home, away) -> tuple[np.ndarray, np.ndarray]:
+    pairs = [entry_pair(h, a) if np.isfinite(h) and np.isfinite(a) else (np.nan, np.nan)
+             for h, a in zip(home, away, strict=True)]
+    return np.array([pair[0] for pair in pairs], dtype=float), np.array([pair[1] for pair in pairs], dtype=float)
+
+
 def predict_season(frame: pd.DataFrame, season: int, window: int) -> pd.DataFrame:
     train = frame.loc[frame["season"].between(season - window, season - 1)]
     test = frame.loc[
@@ -34,24 +41,17 @@ def predict_season(frame: pd.DataFrame, season: int, window: int) -> pd.DataFram
         "stats": ScoreModel.fit(train, STATS_FEATURES),
         "blend": ScoreModel.fit(train, BLEND_FEATURES),
     }
-    implied = [
-        entry_pair(home, away) if pd.notna(home) and pd.notna(away) else (np.nan, np.nan)
-        for home, away in zip(test["implied_home"], test["implied_away"], strict=True)
-    ]
-    test["pred_implied_home"] = np.array([pair[0] for pair in implied], dtype=float)
-    test["pred_implied_away"] = np.array([pair[1] for pair in implied], dtype=float)
+    test["pred_implied_home"], test["pred_implied_away"] = _entry_columns(
+        test["implied_home"], test["implied_away"]
+    )
     for method, model in models.items():
         home, away = model.predict(test)
-        pairs = [entry_pair(h, a) if np.isfinite(h) and np.isfinite(a) else (np.nan, np.nan)
-                 for h, a in zip(home, away, strict=True)]
-        test[f"pred_{method}_home"] = np.array([pair[0] for pair in pairs], dtype=float)
-        test[f"pred_{method}_away"] = np.array([pair[1] for pair in pairs], dtype=float)
+        test[f"pred_{method}_home"], test[f"pred_{method}_away"] = _entry_columns(home, away)
     return test
 
 
 def summary(preds: pd.DataFrame) -> dict:
-    required = [f"pred_{method}_{side}" for method in METHODS for side in ("home", "away")]
-    required.extend(("home_score", "away_score"))
+    required = [*PRED_COLS, "home_score", "away_score"]
     if preds[required].isna().any().any():
         raise ValueError("Summary inputs contain missing values")
     n = len(preds)
@@ -92,9 +92,8 @@ def run_score_backtest(df: pd.DataFrame, seasons: list[int], window: int = 10) -
     ordered = df.sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)
     frame = add_score_features(ordered, EloParams())
     predictions = pd.concat([predict_season(frame, season, window) for season in seasons], ignore_index=True)
-    prediction_cols = [f"pred_{method}_{side}" for method in METHODS for side in ("home", "away")]
     tested = len(predictions)
-    predictions = predictions.dropna(subset=prediction_cols)
+    predictions = predictions.dropna(subset=PRED_COLS)
     excluded = tested - len(predictions)
     overall = summary(predictions)
     by_season = []
