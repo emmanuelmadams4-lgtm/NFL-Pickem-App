@@ -142,6 +142,11 @@ def test_a3_a_quarterback_change_step_7_already_alerted_is_not_alerted_again(wor
     assert pushes.calls == []
 
 
+def test_a3_a_quarterback_whose_step_7_alert_never_reached_a_device_is_alerted_here(world, pushes):  # noqa: F811
+    report(world, "A1", "Josh Allen", "BUF", "Out", position="QB")  # no inj: record, so step 7 did not deliver it
+    assert star_alerts.run(world, KICKOFF - timedelta(minutes=60))["immediate"] == 1
+
+
 # A4 ---------------------------------------------------------------------------------------------------------------
 
 
@@ -197,7 +202,7 @@ def test_a5_a_game_that_has_kicked_off_is_left_out_of_the_summary(world, pushes)
 
 
 def test_a6_one_summary_per_eastern_day_at_the_set_hour_with_that_days_changes(world, pushes):  # noqa: F811
-    report(world, "W1", "Jaylen Waddle", "MIA", "Questionable", observed=MORNING - timedelta(hours=26))  # too old
+    report(world, "W1", "Jaylen Waddle", "MIA", "Questionable", observed=MORNING - timedelta(hours=50))  # too old
     report(world, "P1", "Jalen Ramsey", "MIA", "Out", observed=MORNING - timedelta(hours=5), position="CB")
     assert star_alerts.run(world, SATURDAY_8_ET - timedelta(minutes=1)) == {"immediate": 0, "summary": 0}  # 07:59
     assert star_alerts.run(world, SATURDAY_8_ET) == {"immediate": 0, "summary": 1}  # 08:00
@@ -219,7 +224,7 @@ def test_a6_the_summary_waits_for_the_hour_and_is_dropped_after_three_hours(worl
 def test_a6_the_hour_is_a_setting_and_follows_eastern_time_across_the_clock_change(world, pushes, monkeypatch):  # noqa: F811
     assert Settings.model_fields["star_summary_hour"].default == 8
     with pytest.raises(ValueError):
-        Settings(star_summary_hour=24)
+        Settings(star_summary_hour=21)  # the 3-hour window would cross midnight
     with pytest.raises(ValueError):
         Settings(star_summary_hour=-1)
     report(world, "P1", "Jalen Ramsey", "MIA", "Out", observed=MORNING - timedelta(hours=5), position="CB")
@@ -281,7 +286,38 @@ def test_a8_the_immediate_alert_cleans_the_name_and_injury_text_too(world, pushe
     (message,) = sent(pushes)
     for text in (message["title"], message["body"]):
         assert all(ch.isprintable() for ch in text)
-    assert len(message["title"]) < 80 and len(message["body"]) < 120
+    assert len(message["title"]) < 80 and len(message["body"]) < 160
+
+
+def test_a8_format_characters_are_removed_and_a_huge_injury_text_cannot_make_the_payload_too_big(world, pushes):  # noqa: F811
+    world.get(TeamStar, (SEASON, WEEK, "MIA", "off", 1)).player = "Jay\u202elen\u200b Wad\u2066dle"
+    world.commit()
+    report(world, "W1", "x", "MIA", "Out", injury="K" * 10_000)
+    star_alerts.run(world, KICKOFF - timedelta(minutes=30))
+    (message,) = sent(pushes)
+    assert message["title"] == "Star out: Jaylen Waddle (MIA)"
+    assert len(json.dumps(message)) < 500
+
+
+def test_a6_a_change_seen_just_after_a_summary_is_in_the_next_one(world, pushes):  # noqa: F811
+    report(world, "P1", "Jalen Ramsey", "MIA", "Out", observed=SATURDAY_8_ET - timedelta(hours=3), position="CB")
+    assert star_alerts.run(world, SATURDAY_8_ET)["summary"] == 1  # day one
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out", observed=SATURDAY_8_ET + timedelta(minutes=2))
+    day_two = SATURDAY_8_ET + timedelta(days=1, minutes=5)  # 24 h 03 min after the change; the game is at 13:00
+    world.get(Game, "2026_07_MIA_BUF").kickoff_utc = day_two + timedelta(hours=6)
+    world.commit()
+    assert star_alerts.run(world, day_two)["summary"] == 1
+    assert [m["body"] for m in sent(pushes)] == ["Jalen Ramsey (MIA) Out", "Jaylen Waddle (MIA) Out"]
+
+
+def test_m2_a_game_with_no_confirmed_time_never_gets_its_own_alert_but_is_in_the_summary(world, pushes):  # noqa: F811
+    game = world.get(Game, "2026_07_MIA_BUF")
+    game.time_tbd = True
+    world.commit()
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out", observed=MORNING)
+    assert star_alerts.run(world, KICKOFF - timedelta(minutes=30)) == {"immediate": 0, "summary": 0}
+    assert star_alerts.run(world, MORNING + timedelta(days=1))["summary"] == 1  # Sunday 08:30 ET, game 4.5 h away
+    assert [m["body"] for m in sent(pushes)] == ["Jaylen Waddle (MIA) Out"]
 
 
 # A9, A10 ----------------------------------------------------------------------------------------------------------
@@ -308,6 +344,16 @@ def test_a9_a_failed_summary_is_retried_inside_its_window(world, pushes):  # noq
     assert notes(world, "starsum") == 0
     pushes.fail = None
     assert star_alerts.run(world, MORNING + timedelta(minutes=5))["summary"] == 1
+
+
+def test_m4_an_error_inside_the_module_logs_its_class_only_never_its_text(world, pushes, monkeypatch, caplog):  # noqa: F811
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out")
+    secret = "https://push.example.test/iphone p256dh=" + "B" * 87
+    monkeypatch.setattr(push, "_send", lambda *a, **k: (_ for _ in ()).throw(RuntimeError(secret)))
+    caplog.set_level(logging.DEBUG)
+    assert star_alerts.run(world, KICKOFF - timedelta(minutes=60)) == {"immediate": 0, "summary": 0}
+    assert "RuntimeError" in caplog.text and "push.example.test" not in caplog.text and "B" * 20 not in caplog.text
+    assert "Traceback" not in caplog.text
 
 
 def test_a10_the_round_completes_without_a_subscription_keys_a_list_or_reports(session, pushes, monkeypatch):  # noqa: F811
@@ -345,13 +391,16 @@ def test_a13_the_immediate_alert_reads_exactly_like_this(world, pushes):  # noqa
 # A12 --------------------------------------------------------------------------------------------------------------
 
 
-def test_a12_the_worker_tick_runs_star_alerts_and_survives_their_failure(session, monkeypatch):
+def test_a12_the_worker_tick_runs_star_alerts_and_survives_their_failure(session, monkeypatch, caplog):
     calls = []
-    monkeypatch.setattr(star_alerts, "run", lambda s, now: calls.append(now) or (_ for _ in ()).throw(RuntimeError("x")))
+    monkeypatch.setattr(
+        star_alerts, "run", lambda s, now: calls.append(now) or (_ for _ in ()).throw(RuntimeError("secret-endpoint"))
+    )
     monkeypatch.setattr(push, "send_kickoff_reminders", lambda s, now: calls.append("reminders") or 0)
     now = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
     jobs.tick(session, now)
     assert now in calls and "reminders" in calls
+    assert "RuntimeError" in caplog.text and "secret-endpoint" not in caplog.text
 
 
 # A14 --------------------------------------------------------------------------------------------------------------
