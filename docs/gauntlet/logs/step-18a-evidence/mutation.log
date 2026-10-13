@@ -1,0 +1,104 @@
+KILLED M1 own score leaks into a feature: tests/test_model_audit.py::test_live_features_and_probability_ignore_the_games_own_and_later_scores, tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability
+KILLED M2 live path ignores the market: tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability
+KILLED M3 the fit sees the test season: tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores, tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability, tests/test_model_audit.py::test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later
+KILLED M4 the home rate is taken from the test games: tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores, tests/test_model_audit.py::test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later
+KILLED M5 the job trains through the current season: tests/test_model_audit.py::test_live_model_is_fitted_only_on_seasons_before_the_one_it_predicts
+KILLED M7 own score leaks into the bench's own copy of the feature: tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores, tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability
+KILLED M8 every line is labelled closing: tests/test_model_audit.py::test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_closing_line
+KILLED M9 the live fit window reaches into the season it predicts: tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability, tests/test_model_audit.py::test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_closing_line, tests/test_model_audit.py::test_live_model_is_fitted_only_on_seasons_before_the_one_it_predicts
+KILLED M10 the game's total points leak into a feature on both paths: tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores, tests/test_model_audit.py::test_live_features_and_probability_ignore_the_games_own_and_later_scores
+KILLED M6 live features differ from the bench: tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability
+{
+ "results": {
+  "M1 own score leaks into a feature": {
+   "file": "nflpi/predictions/features.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_live_features_and_probability_ignore_the_games_own_and_later_scores",
+    "tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability"
+   ]
+  },
+  "M2 live path ignores the market": {
+   "file": "nflpi/predictions/engine.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability"
+   ]
+  },
+  "M3 the fit sees the test season": {
+   "file": "nflpi/analytics/backtest.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores",
+    "tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability",
+    "tests/test_model_audit.py::test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later"
+   ]
+  },
+  "M4 the home rate is taken from the test games": {
+   "file": "nflpi/analytics/backtest.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores",
+    "tests/test_model_audit.py::test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later"
+   ]
+  },
+  "M5 the job trains through the current season": {
+   "file": "nflpi/jobs.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_live_model_is_fitted_only_on_seasons_before_the_one_it_predicts"
+   ]
+  },
+  "M7 own score leaks into the bench's own copy of the feature": {
+   "file": "nflpi/analytics/backtest.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores",
+    "tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability"
+   ]
+  },
+  "M8 every line is labelled closing": {
+   "file": "nflpi/ingestion/service.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_closing_line"
+   ]
+  },
+  "M9 the live fit window reaches into the season it predicts": {
+   "file": "nflpi/predictions/engine.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability",
+    "tests/test_model_audit.py::test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_closing_line",
+    "tests/test_model_audit.py::test_live_model_is_fitted_only_on_seasons_before_the_one_it_predicts"
+   ]
+  },
+  "M10 the game's total points leak into a feature on both paths": {
+   "file": "nflpi/predictions/features.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores",
+    "tests/test_model_audit.py::test_live_features_and_probability_ignore_the_games_own_and_later_scores"
+   ]
+  },
+  "M6 live features differ from the bench": {
+   "file": "nflpi/predictions/engine.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability"
+   ]
+  }
+ },
+ "files_left_changed": false,
+ "ok": true
+}

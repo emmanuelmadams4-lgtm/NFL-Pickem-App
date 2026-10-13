@@ -1,0 +1,7 @@
+games 3649 blend pick differs from market pick 72 (1.97%)
+when they differ, blend right 34 of 72
+mean |p_blend - p_market| 0.0157 ; max 0.24
+correlation of p_blend and p_market 0.993
+live-equivalent fit, seasons 2016-2025, Elo {'k': 20.0, 'hfa': 30.0, 'revert': 0.3333333333333333, 'mean': 1505.0} rows 2751
+stats model {'features': ['elo_diff', 'home_field', 'home_qb_change', 'away_qb_change'], 'coef': [0.5330989458138993, 0.03913849792770773, -0.48290347380884946, 0.547925543580803], 'intercept': 0.17764436966448438}
+blend {'features': ['market_logit', 'elo_diff', 'home_field', 'home_qb_change', 'away_qb_change'], 'coef': [1.0315897897755704, 0.01610982465297912, -0.14004592805923122, -0.14017339617632926, 0.2549143523491983], 'intercept': 0.09611105756030226}
