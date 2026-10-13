@@ -16,7 +16,7 @@ from nflpi.ingestion import nflverse
 from nflpi.models import Prediction
 from nflpi.predictions import engine
 from nflpi.predictions.elo import EloParams, run_elo
-from nflpi.predictions.features import add_features, games_frame
+from nflpi.predictions.features import BLEND_FEATURES, add_features, epa_diff, games_frame, team_game_epa
 from tests.conftest import CURRENT, schedule_rows
 
 
@@ -253,3 +253,81 @@ def test_candidate_preds_scores_market_games_of_the_asked_seasons():
         assert np.allclose(preds.loc[preds["season"] == season, "p_inseason"], want)
         assert np.allclose(preds.loc[preds["season"] == season, "p_blend"],
                            predict_season(frames, season, 3).loc[want.index, "p_blend"])
+
+
+def _epa_row(game_id: str, team: str, passing, rushing, attempts, sacks, carries) -> dict:
+    return {"game_id": game_id, "team": team, "passing_epa": str(passing), "rushing_epa": str(rushing),
+            "attempts": str(attempts), "sacks_suffered": str(sacks), "carries": str(carries)}
+
+
+def test_team_game_epa_is_net_epa_per_play_and_leaves_out_incomplete_games():
+    rows = [
+        _epa_row("g1", "A", 6, 2, 30, 2, 8),  # 8 EPA on 40 plays = 0.2
+        _epa_row("g1", "B", 1, -3, 20, 0, 20),  # -2 EPA on 40 plays = -0.05
+        _epa_row("g2", "A", 5, 5, 30, 0, 10),  # no row for the opponent
+        _epa_row("g3", "A", 5, 5, 30, 0, 10),
+        _epa_row("g3", "B", 0, 0, 0, 0, 0),  # zero plays
+        _epa_row("g4", "A", "NA", 5, 30, 0, 10),  # missing value
+        _epa_row("g4", "B", 1, 1, 30, "", 10),
+    ]
+    got = team_game_epa(rows)
+    assert list(got.columns) == ["game_id", "team", "net_epa"]
+    assert got["game_id"].tolist() == ["g1", "g1"] and got["team"].tolist() == ["A", "B"]
+    assert np.allclose(got["net_epa"], [0.25, -0.25])
+
+
+def test_epa_diff_is_a_pregame_weighted_mean_of_earlier_games():
+    start = pd.Timestamp("2022-09-11", tz="UTC")
+    games = [("g1", "A", "B"), ("g2", "B", "A"), ("g3", "A", "B"), ("g4", "A", "C")]
+    df = pd.DataFrame([
+        {"game_id": g, "home_team": h, "away_team": a, "kickoff_utc": start + pd.Timedelta(days=7 * i)}
+        for i, (g, h, a) in enumerate(games)
+    ])
+    epa = pd.DataFrame({
+        "game_id": ["g1", "g1", "g2", "g2", "g3", "g3"],
+        "team": ["A", "B", "A", "B", "A", "B"],
+        "net_epa": [0.2, -0.2, 0.4, -0.4, 9.0, -9.0],
+    })
+    got = epa_diff(df, epa, half_life=1).to_numpy()
+    assert np.isnan(got[0])  # nobody has an earlier game: missing, never zero
+    assert np.isclose(got[1], -0.2 - 0.2)  # home B is -0.2, away A is 0.2
+    rating = (0.4 + 0.5 * 0.2) / 1.5  # half-life 1: the last game weighs 1, the one before 0.5
+    assert np.isclose(got[2], 2 * rating)  # game 3's own 9.0 is not known before game 3
+    assert np.isnan(got[3])  # C has no earlier game
+    slower = 0.5**0.5
+    assert np.isclose(epa_diff(df, epa, half_life=2).to_numpy()[2], 2 * (0.4 + slower * 0.2) / (1 + slower))
+    # A game with no EPA rows leaves both ratings where they were.
+    assert np.isclose(epa_diff(df, epa[epa["game_id"] != "g2"], half_life=1).to_numpy()[2], 0.4)
+
+
+def test_epa_candidate_fits_on_past_seasons_and_falls_back_to_the_blend_when_missing(monkeypatch):
+    df = frame()
+    rows = []
+    for g in df[df["status"] == "final"].itertuples():
+        if "LV" in (g.home_team, g.away_team):
+            continue  # LV never gets a rating
+        net = (g.home_score - g.away_score) / 100
+        rows += [{"game_id": g.game_id, "team": g.home_team, "net_epa": net},
+                 {"game_id": g.game_id, "team": g.away_team, "net_epa": -net}]
+    seen = []
+    from nflpi.predictions import model as model_mod
+
+    real_fit = model_mod.LogitModel.fit.__func__
+
+    def spy(cls, df, features):
+        seen.append((list(features), set(df["season"])))
+        return real_fit(cls, df, features)
+
+    monkeypatch.setattr(model_mod.LogitModel, "fit", classmethod(spy))
+    assert "p_epa_8" not in candidate_preds(df, [2022], window=3)
+    seen.clear()
+    preds = candidate_preds(df, [2022], window=3, epa=pd.DataFrame(rows))
+    lv = (preds["home_team"] == "LV") | (preds["away_team"] == "LV")
+    assert lv.any() and not lv.all()
+    for half_life in (4, 8, 16):
+        col = f"p_epa_{half_life}"
+        assert preds[col].between(0, 1).all()
+        assert np.allclose(preds.loc[lv, col], preds.loc[lv, "p_blend"])  # no rating: the blend's own number
+        assert not np.allclose(preds.loc[~lv, col], preds.loc[~lv, "p_blend"])
+        fits = [seasons for features, seasons in seen if features == [*BLEND_FEATURES, f"epa_diff_{half_life}"]]
+        assert fits and all(seasons == {2019, 2020, 2021} for seasons in fits)
