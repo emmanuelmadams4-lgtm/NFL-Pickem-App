@@ -9,6 +9,8 @@ import { useToast } from "@/components/toast";
 import { isNetworkError, isServerReachable, lastQueueWriteDroppedStored, orderedPickSend, queuePick, queuedPick, unqueueIfCurrent } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
+const LIVE_POLL_MS = 30_000;
+const LIVE_ENDED_POLL_MS = 120_000;
 
 // ponytail: at most one ended row per game seen this session; reload clears the map.
 const heldPosts = new Map<string, LiveGameOut>();
@@ -34,13 +36,14 @@ export function useLive(games: GameSummary[]) {
       return data;
     },
     enabled: started.length > 0,
+    // useNow rebuilds this callback each tick; the query compares its computed interval before resetting the timer.
     refetchInterval: (q) => {
       const data = q.state.data as LiveOut | undefined;
       const allEnded = started.every((game) => {
         const row = data?.games.find((item) => item.game_id === game.game_id);
         return row?.state === "post" || (!row && heldPosts.has(game.game_id));
       });
-      return allEnded ? 120_000 : 30_000;
+      return allEnded ? LIVE_ENDED_POLL_MS : LIVE_POLL_MS;
     },
     refetchIntervalInBackground: false,
     retry: false,

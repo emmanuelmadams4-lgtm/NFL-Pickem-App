@@ -11,6 +11,7 @@ import { Refresh } from "@/components/icons";
 import { isLocked, useNow } from "@/lib/clock";
 import { startedGame, type useLive } from "@/lib/queries";
 import { cardLiveState } from "@/components/live/state";
+import { LiveLabel } from "@/components/live/live-label";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { kickoffClock, scoreTone, shortDate, type ScoreTone } from "@/lib/fmt";
 
@@ -93,13 +94,7 @@ export function GameCard({ game, live, highlight, pointsCount }: { game: GameSum
         <div className="flex flex-wrap items-end justify-between gap-2 lg:gap-3">
           <div className="min-w-0">
             {liveState ? (
-              <p className="text-sm text-text-2">
-                <span aria-hidden="true" className="break-words">
-                  {liveState.kind === "S3" || liveState.kind === "S4" ? <><span className="text-warn">Not updating</span>{liveState.label.slice("Not updating".length)}</>
-                    : liveState.kind === "S5" ? <><span className="text-text">Live<span className="text-text-2">{liveState.label.slice(4, 6)}</span></span>{liveState.label.slice(6)}</> : liveState.label}
-                </span>
-                <span className="sr-only">{liveState.reader}</span>
-              </p>
+              <LiveLabel state={liveState} className="text-sm text-text-2" />
             ) : (
               <p className="text-label text-text-2">
                 {shortDate(game.kickoff_utc)}
@@ -108,7 +103,7 @@ export function GameCard({ game, live, highlight, pointsCount }: { game: GameSum
             )}
             {liveState ? (
               liveState.score ? (
-                <p aria-hidden="true" className={cx("flex flex-wrap items-baseline gap-x-1.5 font-display text-3xl leading-8 tabular-nums lg:text-[32px] lg:leading-9", liveState.kind === "S3" || liveState.kind === "S4" ? "text-text-2" : "text-text")}>
+                <p aria-hidden="true" className={cx("flex flex-wrap items-baseline gap-x-1.5 font-display text-3xl leading-8 tabular-nums lg:text-[32px] lg:leading-9", liveState.dim ? "text-text-2" : "text-text")}>
                   <span><span className="mr-1 font-sans text-sm">{game.away.abbr}</span>{liveState.score.away}</span>
                   <span className="font-sans font-normal">–</span>
                   <span>{liveState.score.home}<span className="ml-1 font-sans text-sm">{game.home.abbr}</span></span>

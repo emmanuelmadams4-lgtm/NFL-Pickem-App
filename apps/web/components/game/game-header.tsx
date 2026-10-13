@@ -9,6 +9,7 @@ import { cx } from "@/components/ui";
 import { useLocked } from "@/lib/clock";
 import { isIndoor, kickoffWhen, scoreTone, type ScoreTone } from "@/lib/fmt";
 import type { CardLiveState } from "@/components/live/state";
+import { LiveLabel } from "@/components/live/live-label";
 
 function cap(s: string | null | undefined): string {
   if (!s) return "";
@@ -73,18 +74,12 @@ export function GameHeader({ game, live }: { game: GameDetail; live: CardLiveSta
         <div className={cx("flex min-h-16 flex-col items-center justify-center lg:min-h-20", live && "w-28 sm:w-auto")}>
           {live ? (
             <>
-              <p className="flex min-h-10 max-w-full items-end justify-center text-center text-sm text-text-2 sm:min-h-0">
-                <span aria-hidden="true" className="break-words">
-                  {live.kind === "S3" || live.kind === "S4" ? <><span className="text-warn">Not updating</span>{live.label.slice("Not updating".length)}</>
-                    : live.kind === "S5" ? <><span className="text-text">Live<span className="text-text-2">{live.label.slice(4, 6)}</span></span>{live.label.slice(6)}</> : live.label}
-                </span>
-                <span className="sr-only">{live.reader}</span>
-              </p>
+              <LiveLabel state={live} className="flex min-h-10 max-w-full items-end justify-center text-center text-sm text-text-2 sm:min-h-0" />
               {live.score ? (
-                <p aria-hidden="true" className={cx("flex max-w-full items-start gap-1 font-display text-[40px] leading-[42px] tabular-nums lg:gap-4 lg:text-[80px] lg:leading-[80px]", live.kind === "S3" || live.kind === "S4" ? "text-text-2" : "text-text")}>
-                  <ScoreSide abbr={game.away.abbr} score={live.score.away} tone={live.kind === "S3" || live.kind === "S4" ? "lost" : "even"} />
+                <p aria-hidden="true" className={cx("flex max-w-full items-start gap-1 font-display text-[40px] leading-[42px] tabular-nums lg:gap-4 lg:text-[80px] lg:leading-[80px]", live.dim ? "text-text-2" : "text-text")}>
+                  <ScoreSide abbr={game.away.abbr} score={live.score.away} tone={live.dim ? "lost" : "even"} />
                   <span className="font-sans font-normal">–</span>
-                  <ScoreSide abbr={game.home.abbr} score={live.score.home} tone={live.kind === "S3" || live.kind === "S4" ? "lost" : "even"} />
+                  <ScoreSide abbr={game.home.abbr} score={live.score.home} tone={live.dim ? "lost" : "even"} />
                 </p>
               ) : <p aria-hidden="true" className="max-w-full text-center text-label text-text-2">No live score right now</p>}
             </>
