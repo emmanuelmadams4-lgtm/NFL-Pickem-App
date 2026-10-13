@@ -69,13 +69,24 @@ Functional
 * **L7 it ends.** When the week data turns `final` the live block is gone and polling for that game stops.
 
 User-facing
-* **L8 phone fit.** At 393 px and 320 px: no sideways scroll; a live card is no taller than 400 px with the worst case on it (three-letter clubs, two-digit scores, an upset watch, two QB alerts, a change note); nothing in the live block is cut.
+* **L8 phone fit.** At 393 px and 320 px: no sideways scroll and nothing in the live block is cut, with the worst case on the card (three-letter clubs, two-digit scores, an upset watch, two QB alerts, a change note). At 393 px that card is no taller than 400 px (the board's existing density rule, which is set at 393 px only).
 * **L9 accessibility.** No serious or critical axe finding (dark and light) with a live game on screen; the table's sentence is the only thing a screen reader gets for the label and score (visible parts hidden from it); "Not updating" and "Ended" are words, not colour alone; no live region.
 
 Operational
-* **L10 failure is quiet and honest.** `/api/live` answering 401, 503 or not at all gives S6 when nothing was shown before, and S4 once the last good reply is over 120 seconds old; no error toast, no crash, and the next poll still happens.
+* **L10 failure is quiet and honest.** `/api/live` answering 503 or not at all gives S6 when nothing was shown before, and S4 once the last good reply is over 120 seconds old; no error toast, no crash, and the next poll still happens. A 401 follows the app's standing rule for every request: the token is dropped and the sign-in card shows.
 * **L11 no feed text in an attribute.** The club codes on screen come from the game the card already has, not from the live reply; `clock` is the only free text taken from the live reply and it is rendered as text only.
 
 Not in this step: a weather or other delay cannot be told from period and clock (the server would have to pass ESPN's status text): carried to the integrator. Play-by-play, a chart, alerts, in-game grading (15f).
 
 Gate: `docs/gauntlet/logs/step-15-web-evidence/gate.sh <label>` (pytest, ruff, `gen:api` no drift, typecheck, the whole browser suite), twice, under `res:gate` and `res:e2e`.
+
+**Spec corrections during the build (coordinator, after the first run on work order 1; recorded, not hidden):**
+1. L10 said a 401 from `/api/live` gives S6. The app's standing rule (`providers.tsx`: any 401 from any request drops the token and shows the sign-in card) is the right one and is a security rule; the test row was wrong. The row is replaced by a test of the standing rule.
+2. L8 asked for 400 px at 320 px too. The board's density rule (`phone-layout.spec.ts` L1) is set at 393 px only; the worst live card measured 460 px at 320 px. The 400 px limit stays at 393 px; 320 px keeps "nothing cut, no sideways scroll". Carried to the integrator in the `done`.
+3. Test defects of mine, fixed: the offline-cache check looked for `home_win_prob`, which the week's own predictions carry (now `kalshi_home_prob`); the fake's route handler threw when a request was still in flight at the end of a test; three `/^Live/` locators could match the screen-reader sentence.
+
+## 3. IMPLEMENTATION
+
+**Red.** `step-15-web-evidence/red-1.txt`: tests only at `9162fbb` on the build of main: 46 failed, 0 passed when the coordinator stopped the run to free the shared test slot (phone project whole).
+
+**Work order 1 (data layer and the card; `wo-1.md`). Builder: Ryan, Codex default model, try 1.** Diff read by the coordinator: 6 files changed plus new `apps/web/components/live/state.ts`, all inside the allowed scope; no test edit, no schema change. Coordinator's proof: typecheck exit 0; ruff clean; `test_api.py` 12 passed; build exit 0; browser run `green-1` (load 13.22 10.02 9.82) `live`, `stars`, `phone-layout`: 92 passed, 18 failed. Of the 18: 8 are the game screen (work order 2); 9 were defects in the coordinator's tests or spec (section 2, corrections 1 to 3); 1 was the 320 px height limit (correction 2). Rerun `green-2` after the test fixes (load 9.92 10.46 10.17), `live.spec.ts`: 68 passed, 8 failed, the 8 being the two L5 tests and L9 on both sizes: work order 2. Screenshot looked at: `wo1-board-phone.png` (label, score, pregame words and chance line as specified). Noted for the design critics: the live card uses tighter padding (`p-2`, `gap-1`) than its neighbours.

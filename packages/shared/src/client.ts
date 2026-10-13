@@ -6,6 +6,8 @@ export type Week = S["WeekOut"];
 export type WeekSummary = S["WeekSummary"];
 export type GameSummary = S["GameSummary"];
 export type GameDetail = S["GameDetail"];
+export type LiveOut = S["LiveOut"];
+export type LiveGameOut = S["LiveGameOut"];
 export type Prediction = S["PredictionOut"];
 export type Factor = S["Factor"];
 export type Team = S["TeamOut"];
@@ -91,6 +93,7 @@ export function createClient(config: ClientConfig) {
     meta: () => call<Meta>("/meta"),
     week: (season: number, week: number) => call<Week>(`/weeks/${season}/${week}`),
     game: (gameId: string) => call<GameDetail>(`/games/${gameId}`),
+    live: () => call<LiveOut>("/live"),
     setPick: (gameId: string, team: string) =>
       call<Pick>(`/picks/${gameId}`, { method: "PUT", body: JSON.stringify({ team }) }),
     clearPick: (gameId: string) => call<void>(`/picks/${gameId}`, { method: "DELETE" }),
@@ -132,6 +135,7 @@ export const keys = {
   meta: ["meta"] as const,
   week: (season: number, week: number) => ["week", season, week] as const,
   game: (gameId: string) => ["game", gameId] as const,
+  live: ["live"] as const,
   performance: (season: number) => ["performance", season] as const,
   scorecard: (season: number) => ["scorecard", season] as const,
   backtest: ["backtest"] as const,

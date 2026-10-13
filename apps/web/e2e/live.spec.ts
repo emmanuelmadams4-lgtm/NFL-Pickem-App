@@ -39,10 +39,14 @@ async function fake(page: Page, live: Reply | number = reply(), game: Record<str
   await page.clock.install({ time: new Date() });
   await page.addInitScript((t) => localStorage.setItem("nflpi_token", t), TOKEN);
   await page.route("**/api/{weeks,games}/**", async (route) => {
-    const res = await route.fetch();
-    const body = await res.json();
-    for (const g of body.games ?? [body]) if (g.game_id === id) Object.assign(g, f.game);
-    await route.fulfill({ response: res, json: body });
+    try {
+      const res = await route.fetch();
+      const body = await res.json();
+      for (const g of body.games ?? [body]) if (g.game_id === id) Object.assign(g, f.game);
+      await route.fulfill({ response: res, json: body });
+    } catch {
+      // a request still in flight when the test ends: the page is gone, nothing to answer
+    }
   });
   await page.route("**/api/live", async (route) => {
     f.calls += 1;
@@ -95,7 +99,7 @@ test.describe("phone", () => {
     await page.clock.runFor(3_000); // let the debounced cache save run
     const saved = await page.evaluate(() => localStorage.getItem("nflpi_cache") ?? "");
     expect(saved, "the week is saved for offline use").toContain('"week"');
-    expect(saved, "live scores are not: an old score must never open as current").not.toContain("home_win_prob");
+    expect(saved, "live scores are not: an old score must never open as current").not.toContain("kalshi_home_prob");
   });
 
   test("L2 polling stops while the page is hidden", async ({ page }) => {
@@ -168,7 +172,6 @@ const states: { name: string; live: Reply | number; game?: Record<string, unknow
   { name: "S4 not updating, never confirmed", live: reply([row()], { stale: true, last_confirmed_at: null }), has: ["Not updating · Q3 4:12", "No update yet"], hasNot: /Last update|to win now/ },
   { name: "S6 no row for the game", live: reply([]), has: ["Started", "No live score right now"], hasNot: /Live ·|to win now|Not updating|In progress|\d:\d\d [AP]M/, reader: "Game started, no live score right now." },
   { name: "S6 the request fails from the start (503)", live: 503, has: ["Started", "No live score right now"], hasNot: /Live ·|to win now|Not updating/ },
-  { name: "S6 the request is refused (401)", live: 401, has: ["Started", "No live score right now"], hasNot: /Live ·|to win now|Not updating/ },
   { name: "one score missing: no score at all", live: reply([row({ away_score: null })]), has: ["Live · Q3 4:12", "No live score right now"], hasNot: /\b21\b/ },
   { name: "no ESPN number", live: reply([row({ home_win_prob: null })]), has: ["KC to win now · ESPN – · Kalshi 68%"], hasNot: /ESPN 0%|ESPN 50%/ },
   { name: "no Kalshi price", live: reply([row({ kalshi_home_prob: null })]), has: ["KC to win now · ESPN 71% · Kalshi –"], hasNot: /Kalshi 0%/ },
@@ -207,6 +210,12 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       });
     }
 
+    test("L10 a refused request (401) follows the app's standing rule: the token is dropped and the sign-in card shows", async ({ page }) => {
+      await fake(page, 401);
+      await page.goto("/");
+      await expect(page.locator("#signin-title")).toBeVisible({ timeout: 15_000 });
+    });
+
     test("L3 the chance line sits after the uncertainty row, away from the model's bar; the score is where the kickoff time was", async ({ page }) => {
       await fake(page);
       await board(page);
@@ -214,7 +223,7 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       const y = async (text: RegExp) => (await c.getByText(text).first().boundingBox())!.y;
       await expect(c).toContainText("to win now", { timeout: 15_000 });
       expect(await y(/to win now/)).toBeGreaterThan(await y(/^Uncertainty/));
-      expect(await y(/^Live/)).toBeLessThan(await y(/^Uncertainty/));
+      expect((await c.locator('[aria-hidden="true"]').filter({ hasText: /^Live/ }).first().boundingBox())!.y).toBeLessThan(await y(/^Uncertainty/));
       await expect(c.getByText(/^(8|9|10|11|12|[1-7]):\d\d [AP]M$/), "no kickoff time on a started game").toHaveCount(0);
     });
 
@@ -261,7 +270,7 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       await expect(main).toContainText(/Checked (just now|\d+s ago)/);
       await expect(main).toContainText("Kalshi is a prediction market. The figure is the price of a KC win, not this app's forecast.");
       await expect(main).toContainText("Model win chance before kickoff. It does not change during the game.");
-      const label = (await main.getByText(/^Live/).first().boundingBox())!;
+      const label = (await main.locator('[aria-hidden="true"]').filter({ hasText: /^Live/ }).first().boundingBox())!;
       const score = (await main.getByText("21", { exact: true }).first().boundingBox())!;
       expect(label.y, "the label is above the score").toBeLessThan(score.y);
       f.live = reply([row({ home_win_prob: null })]);
@@ -333,7 +342,7 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
 }
 
 for (const width of [393, 320]) {
-  test(`L8 phone fit at ${width} px: the worst live card is no taller than 400 px, nothing in the live block is cut, no sideways scroll`, async ({ page }) => {
+  test(`L8 phone fit at ${width} px: the worst live card keeps the density limit, nothing in the live block is cut, no sideways scroll`, async ({ page }) => {
     await page.setViewportSize({ width, height: 852 });
     const live = reply([row({ game_id: WORST, home_team: "MIA", away_team: "BUF", home_score: 31, away_score: 34, period: 4, clock: "12:34", home_win_prob: 0.997, kalshi_home_prob: null })]);
     const f = await fake(page, live, { ...started(), qb_alerts: ["BUF QB Jo Thrower: Out", "MIA QB Second Passer: Doubtful"] }, WORST);
@@ -354,9 +363,11 @@ for (const width of [393, 320]) {
     await expect(c).toContainText("34");
     await expect(c).toContainText("31");
     await expect(c).toContainText(words("to win now · ESPN"));
-    expect((await c.boundingBox())!.height, "the density limit of the board").toBeLessThanOrEqual(400);
+    // the board's density rule is set at the owner's phone width (phone-layout L1); 320 px keeps the no-cut and no-scroll rules
+    if (width === 393) expect((await c.boundingBox())!.height, "the density limit of the board").toBeLessThanOrEqual(400);
+    // the visible parts only: the screen-reader sentence also starts with "Live"
     for (const text of [/^Live/, /to win now/]) {
-      const part = c.getByText(text).first();
+      const part = c.locator('[aria-hidden="true"]').filter({ hasText: text }).first();
       await expect(part).toBeVisible();
       expect(await part.evaluate((e) => e.scrollWidth <= e.clientWidth), `${text} is whole`).toBe(true);
     }

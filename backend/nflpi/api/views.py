@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from nflpi.analytics import stars
 from nflpi.analytics.metrics import calibration, wilson_ci
-from nflpi.analytics.stars import ALERT_STATUSES
 from nflpi.api import schemas as s
 from nflpi.ingestion.service import freshness
 from nflpi.models import (
@@ -200,7 +199,7 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
             r
             for team in (g.away_team, g.home_team)
             for r in inj.get(team, [])
-            if r.position == "QB" and r.report_status in ALERT_STATUSES
+            if r.position == "QB" and r.report_status in stars.ALERT_STATUSES
         ]
         qb_rows.sort(key=lambda r: r.id not in star_qb_report_ids)
         qb_alerts = [f"{r.team} QB {r.player}: {r.report_status}" for r in qb_rows]
@@ -236,7 +235,7 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                     1
                     for team in (g.away_team, g.home_team)
                     for r in inj.get(team, [])
-                    if r.report_status in ALERT_STATUSES
+                    if r.report_status in stars.ALERT_STATUSES
                 ),
                 stars_out=s.StarsOut(
                     out=[

@@ -8,7 +8,9 @@ import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-
 import { PickButtons } from "@/components/pick-buttons";
 import { PointsControl } from "@/components/week/points-control";
 import { Refresh } from "@/components/icons";
-import { useLocked } from "@/lib/clock";
+import { isLocked, useNow } from "@/lib/clock";
+import { startedGame, type useLive } from "@/lib/queries";
+import { cardLiveState } from "@/components/live/state";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { kickoffClock, scoreTone, shortDate, type ScoreTone } from "@/lib/fmt";
 
@@ -49,14 +51,16 @@ function statusTone(status: string): "bad" | "warn" | "warn-soft" {
  */
 const labelWords = { easy_pick: ["Easy pick", "Easy picks"], tough_matchup: ["Tough matchup", "Tough matchups"], coin_flip: ["Coin flip", "Coin flips"] } as const;
 
-export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; highlight?: boolean; pointsCount: number }) {
+export function GameCard({ game, live, highlight, pointsCount }: { game: GameSummary; live: ReturnType<typeof useLive>; highlight?: boolean; pointsCount: number }) {
   const p = game.prediction;
   const fav = marketFavorite(game);
-  const locked = useLocked(game);
+  const now = useNow();
+  const locked = isLocked(game, now);
   const pending = usePendingPicks();
   const mine = effectivePick(pending, game.game_id, game.my_pick).pick;
-  const started = game.status !== "scheduled";
+  const started = startedGame(game, now);
   const final = game.status === "final";
+  const liveState = started ? cardLiveState(game, live, now) : null;
   const pickTeam: Team | null = p ? (p.pick === game.home.abbr ? game.home : game.away) : null;
   const prob = p ? pickProb(p) : null;
   const differs = !!(p && mine && mine !== p.pick);
@@ -64,7 +68,8 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
   const home = game.home_score;
   const stars = game.stars_out.out.filter((star) => !star.qb_alert);
   const star = stars[0];
-  const starNote = game.stars_out.no_list.length > 0
+  const hasNoStarList = game.stars_out.no_list.length > 0;
+  const starNote = hasNoStarList
     ? `No star list yet for ${game.stars_out.no_list.join(", ")}`
     : game.stars_out.reports_seen === 0 ? "Injury report not in yet" : null;
 
@@ -76,7 +81,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
         className="absolute inset-0 z-0 rounded-card focus-visible:outline-offset-[-2px]"
       />
 
-      <div className={cx("grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 p-3 lg:gap-3 lg:p-4", highlight ? "bg-accent text-accent-ink" : "text-text")}>
+      <div className={cx("grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 lg:gap-3 lg:p-4", liveState ? "p-2" : "p-3", highlight ? "bg-accent text-accent-ink" : "text-text")}>
         <TeamSide team={game.away} record={game.away_record} onLime={highlight} />
         <span className={cx("font-display grid size-9 shrink-0 place-items-center rounded-full text-base lg:size-11 lg:text-lg", highlight ? "bg-accent-ink text-accent" : "border border-border bg-elevated text-text")}>
           VS
@@ -84,14 +89,29 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
         <TeamSide team={game.home} record={game.home_record} right onLime={highlight} />
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 border-t border-border p-3 lg:gap-3 lg:p-4">
+      <div className={cx("flex flex-1 flex-col border-t border-border lg:gap-3 lg:p-4", liveState ? "gap-1 p-2" : "gap-2 p-3")}>
         <div className="flex flex-wrap items-end justify-between gap-2 lg:gap-3">
           <div className="min-w-0">
-            <p className="text-label text-text-2">
-              {shortDate(game.kickoff_utc)}
-              {highlight && <span>, next kickoff</span>}
-            </p>
-            {started && away !== null && home !== null ? (
+            {liveState ? (
+              <p className="text-label text-text-2">
+                <span aria-hidden="true" className="break-words">{liveState.label}</span>
+                <span className="sr-only">{liveState.reader}</span>
+              </p>
+            ) : (
+              <p className="text-label text-text-2">
+                {shortDate(game.kickoff_utc)}
+                {highlight && <span>, next kickoff</span>}
+              </p>
+            )}
+            {liveState ? (
+              liveState.score ? (
+                <p aria-hidden="true" className={cx("flex flex-wrap items-baseline gap-x-1.5 font-display text-3xl leading-8 tabular-nums lg:text-[32px] lg:leading-9", liveState.kind === "S3" || liveState.kind === "S4" ? "text-text-2" : "text-text")}>
+                  <span><span className="mr-1 font-sans text-sm">{game.away.abbr}</span>{liveState.score.away}</span>
+                  <span className="font-sans font-normal">–</span>
+                  <span>{liveState.score.home}<span className="ml-1 font-sans text-sm">{game.home.abbr}</span></span>
+                </p>
+              ) : <p aria-hidden="true" className="text-label text-text-2">No live score right now</p>
+            ) : final && away !== null && home !== null ? (
               <p className="font-display flex items-baseline gap-1.5 text-3xl leading-8 whitespace-nowrap lg:text-[32px] lg:leading-9">
                 <span className="sr-only">
                   {final ? "Final score" : "Score"} {game.away.abbr} {away}, {game.home.abbr} {home}
@@ -116,7 +136,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
           </div>
           {p && pickTeam && prob !== null && (
             <div className="text-right">
-              <p className="text-label text-text-2">Model pick</p>
+              <p className="text-label text-text-2">{started ? "Pregame model pick" : "Model pick"}</p>
               <p className="flex items-center justify-end gap-1.5">
                 <TeamLogo team={pickTeam} size={20} />
                 <span className="text-sm font-semibold">{p.pick}</span>
@@ -133,7 +153,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
               {game.sheet.label && game.sheet.label in labelWords && (
                 <p className="text-sm font-medium text-text">
                   <span data-testid="pick-label">{labelWords[game.sheet.label as keyof typeof labelWords][0]}</span>
-                  {game.sheet.label_hit_rate !== null && (
+                  {!started && game.sheet.label_hit_rate !== null && (
                     <span className="font-normal text-text-2"> · {labelWords[game.sheet.label as keyof typeof labelWords][1]} have won {pct(game.sheet.label_hit_rate)} since 2012</span>
                   )}
                 </p>
@@ -150,7 +170,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
             </span>
           )}
           <p className="text-label text-text-2">
-            Market{" "}
+            {started ? "Pregame line" : "Market"}{" "}
             {fav ? (
               <>
                 <span className="font-semibold text-text">{fav.team}</span> {pct(fav.prob)}
@@ -161,8 +181,14 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
           </p>
         </div>
 
+        {liveState?.chanceLine && (
+          <p className="text-label text-text-2">
+            <span aria-hidden="true" className="break-words">{liveState.chanceLine}</span>
+            {liveState.chanceReader && <span className="sr-only">{liveState.chanceReader}</span>}
+          </p>
+        )}
+
         <div className="flex flex-wrap items-center gap-1.5">
-          {game.status === "in_progress" && <Chip>In progress</Chip>}
           {final && <Chip>Final</Chip>}
           {p?.kind === "backfill" && <BackfillChip />}
           {differs && <Chip tone="accent">Differs from model</Chip>}
@@ -196,16 +222,16 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
 
         {game.status === "scheduled" && (star ? (
           <div>
-          <div role="group" aria-label="Stars out" className="flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-label text-text-2">
-            <span className="shrink-0 font-medium text-text">Stars out</span>
-            <span className="min-w-0 truncate">{star.team} {star.player}</span>
-            {star.position && <span className="shrink-0 text-subtle">{star.position}</span>}
-            {star.status && <span className={cx("shrink-0", statusTone(star.status) === "bad" ? "text-bad" : "text-warn")}>{star.status}</span>}
-            {stars.length > 1 && <span className="shrink-0 text-subtle">+{stars.length - 1} more</span>}
-            {star.observed_at && <span aria-hidden="true" className="shrink-0 text-subtle">·</span>}
-            {star.observed_at && <span className="shrink-0 text-subtle">{ago(star.observed_at)}</span>}
-          </div>
-          {game.stars_out.no_list.length > 0 && <p className="text-label text-text-2">{starNote}</p>}
+            <div role="group" aria-label="Stars out" className="flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-label text-text-2">
+              <span className="shrink-0 font-medium text-text">Stars out</span>
+              <span className="min-w-0 truncate">{star.team} {star.player}</span>
+              {star.position && <span className="shrink-0 text-subtle">{star.position}</span>}
+              {star.status && <span className={cx("shrink-0", statusTone(star.status) === "bad" ? "text-bad" : "text-warn")}>{star.status}</span>}
+              {stars.length > 1 && <span className="shrink-0 text-subtle">+{stars.length - 1} more</span>}
+              {star.observed_at && <span aria-hidden="true" className="shrink-0 text-subtle">·</span>}
+              {star.observed_at && <span className="shrink-0 text-subtle">{ago(star.observed_at)}</span>}
+            </div>
+            {hasNoStarList && <p className="text-label text-text-2">{starNote}</p>}
           </div>
         ) : starNote ? <p className="text-label text-text-2">{starNote}</p> : null)}
 

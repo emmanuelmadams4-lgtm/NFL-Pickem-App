@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { SORTS, ago, kickoffDay, needsAttention, sortGames, type SortKey, type GameSummary } from "@nflpi/shared";
-import { useWeek } from "@/lib/queries";
+import { useLive, useWeek } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
 import { isLocked, useNow } from "@/lib/clock";
 import { safeGet, safeSet } from "@/lib/fmt";
@@ -65,6 +65,7 @@ export function WeekBoard() {
   };
 
   const data = q.data;
+  const live = useLive(data?.games ?? []);
   const pointsCount = data?.games.filter((g) => g.status !== "postponed").length ?? 0; // the server numbers 1..N over every game that is not postponed
   const now = useNow();
   const games = useMemo(() => {
@@ -190,7 +191,7 @@ export function WeekBoard() {
                         </li>
                       )}
                       {grp.games.map((g) => (
-                        <GameCard key={g.game_id} game={g} highlight={g.game_id === nextId} pointsCount={pointsCount} />
+                        <GameCard key={g.game_id} game={g} live={live} highlight={g.game_id === nextId} pointsCount={pointsCount} />
                       ))}
                     </Fragment>
                   ))}
