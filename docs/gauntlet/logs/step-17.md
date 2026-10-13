@@ -103,3 +103,6 @@ Evidence directory: `docs/gauntlet/logs/step-17-evidence/` (gate logs, mutation 
 
 ## 6. LANDING
 Not mine: god lands it.
+
+## Resume note (usage limit reached, 2026-10-13)
+Code done on lane/sdk (33 tests in test_ai.py, mutation sweep 37/37 killed: `mutate-4.log`). NOT yet done: full gate twice on the final commit (last full gate: 460 passed twice at 94ae938, before wo-6), a new fresh critic with the gate (critic 1 could not take res:gate, its clause reading was all PASS), Dwight delta for wo-6 (LOW items L1, L2 only), done message to god.
