@@ -68,7 +68,7 @@ Mode: Gauntlet Loop ONE_SHOT, one session. Tier **T3** (the app's sign-in). Land
 | P14 | Every sign-in failure answers the same; begin looks the same with and without a passkey | `p14_*` (2) |
 | P15 | Nothing secret in any log record | `p15_*` |
 | P16 | One rate window over the public routes (refused before any row or body); challenge cap; 64 KB body; 10 passkeys | `p16_*` (4) |
-| P17 | The existing suite stays green with no test edited (one granted migration-list line) | gate + `git diff b73038e -- backend/tests` |
+| P17 | The existing suite stays green with no test edited (one granted migration-list line) | gate + `git diff <base> -- backend/tests` |
 | P18 | Migration: upgrade, check, downgrade one, upgrade | gate (alembic) + `test_hardening.py` list line |
 | P19 | App token check unchanged; a plain wrong token costs no database call; 503 when no app token | `p19_*` (3) |
 | P20 | Relying party and origin come from settings, never the request | `p20_*` |
@@ -174,3 +174,89 @@ never retry a finish; ask for a platform passkey (the options already require Fa
 passkey); render `label` as plain text; list, remove and sign-out work even when passkeys are not configured; the
 server refuses the 11th passkey. Only the mock proves nothing here: lane web's browser test with a virtual
 authenticator is the first end-to-end proof, the owner's iPhone the second.
+
+## 5. Evidence
+
+Commits (after the branch was moved onto main `11cc401`): `3c81c72` spec, red · `a818128` implementation ·
+`edcd32f` review fixes and cleanup (**last production change**) · `14b013b` tests for the three mutation gaps ·
+`def9ce7` gate commit (docs and scripts after `14b013b`). Raw logs: `~/.claude/plans/nfl-pickem-lanes/logs/passkey/`.
+
+| Evidence | Result | Log |
+|---|---|---|
+| Baseline, main `b73038e` (throwaway copy) | 1292 passed, 1 failed only because the copy had no repo-root `.env.example`: 1293 tests | `baseline-b73038e.log` |
+| Red (spec, before any production code) | 9 failed, 51 errors: `No module named 'nflpi.auth'`, routes 404 | `red-1.log` |
+| Red for each later fix | 2 failed each time, then green | `red-2.log`, `red-3.log`, `green-1..3.log` |
+| Gate run 1 (before the first move onto a newer main, `098e0b0`) | 1360 passed in 1007 s; ruff clean; alembic clean; API types no drift | `gate-1-098e0b0.log` |
+| Mutation sweep 1 (`516ba39`) | 56 mutants, **3 survived** (test gaps: wildcard relying party with dots, content-length cap, unknown passkey id in a log); tests added in `14b013b`, no production change | `mutation-516ba39.log` |
+| **Mutation sweep 2** (`60c7da1` = `531a001` before the last move; same lane code) | **56 mutants, 0 survived, 0 not applied**; each mutant run against its own clause's tests | `mutation-60c7da1.log` |
+| Critic's own gate run (`60c7da1`) | 1408 passed in 249 s; ruff clean; alembic clean; no drift | `critic-60c7da1.log` |
+| **Gate run A on `def9ce7`** | **1456 passed in 306 s; ruff clean; alembic up, check, down one, up clean; API types no drift; exit 0** | `gate-A-def9ce7.log` |
+| **Gate run B on `def9ce7`** (same commit, separate hold of the slot) | **1456 passed in 235 s; all four parts clean; exit 0** | `gate-B-def9ce7.log` |
+| P17 | `git diff 11cc401 def9ce7 --stat -- backend/tests`: two new files and one line in `test_hardening.py` | critic.md |
+
+Suite size: main had 1293 tests at `b73038e`, 1339 at `c55827f`, 1387 at `11cc401` (other lanes landed); this lane
+adds 69 cases each time (1360 at first with 67, then 1408, then 1456).
+
+**Lane guard** (`lane-guard.py check lanes.md passkey 11cc401`): 10 lines, every one a file the lane was GRANTED in
+the note above its `lanes.md` section, none outside the grants:
+`.env.example` (add-only settings) · `backend/migrations/versions/0008_passkeys.py` (the one migration) ·
+`backend/nflpi/api/main.py` (one import, one include_router, +3/-1 in `require_token`) · `backend/nflpi/config.py`
+(add-only) · `backend/nflpi/models.py` (append-only) · `backend/pyproject.toml` and `backend/uv.lock` (the one
+dependency) · `backend/tests/test_hardening.py` (the migration-list line) · `packages/shared/openapi.json` and
+`packages/shared/src/api-types.ts` (regenerated, never hand-edited).
+
+## 6. VERIFICATION
+
+* **Security review (Dwight, hive agent `dwight-mv5mkpow`):** design **PASS to build** with R1-R5 (all folded in
+  before code); code **PASS on security** at `d4bf199` with both ecc agents, C1 to fix; delta **PASS** at `098e0b0`,
+  "nothing CRITICAL, HIGH or MEDIUM is open". The later commits changed tests and scripts only, no production line.
+* **Fresh critic** (`ecc:code-reviewer`, no build transcript, `60c7da1`): **PASS**; all 28 clauses covered, grants
+  kept, sections 1-4 evidenced (`step-10-server-evidence/critic.md`). One critic round; no FAIL.
+* **Coordinator's validation on the commit to land (`def9ce7`):** gate runs A and B above, both exit 0.
+* **Moves onto a newer main:** twice (`b73038e` to `c55827f` at 18:20 UTC, then to `11cc401` at 18:58 UTC), both
+  clean, under `res:git-integrate`; `uv lock` and `npm run gen:api` rerun each time with no change; the migration
+  stayed `0008` on `0007` (no other migration landed). The critic and sweep 2 ran before the second move; the gate
+  ran twice after it.
+* **JEV (Job 4):** `passed` scored 0.78, inside the grey zone, so the advisor ruled.
+  **ADVISOR: opus "did the review truly pass?" -> PASS for the server scope only.** It asked for these to be said
+  plainly: the browser test and the real-iPhone check are PENDING, not passed; the critic's verdict and sweep 2 are
+  on `60c7da1`, and `def9ce7` was gated twice but not swept again (no passkey line differs between the two); the last
+  move onto main brought one unrelated change into a file this lane also edits (`backend/nflpi/config.py`: a `Field`
+  import and a `star_summary_hour` setting from lane staralerts; it combined cleanly and the gate ran after it);
+  Dwight did not see the later tests-only commits.
+* **Done by outcome.** functional: PASS (table above). user-facing: **PENDING**, lane web's browser test with a
+  virtual authenticator, then the owner's iPhone. operational: log events, the alert on add and remove, 503 texts,
+  all under test; a real push to a real device is PENDING with step 11.
+
+**Carried, advisory (none tied to a clause):** one shared rate window, so a flood on the tailnet keeps passkey
+sign-in at 429 for as long as it lasts (owner decision 8); the two caps are check-then-insert; a database error on a
+non-auth passkey route is a 500; a session may remove a passkey (owner decision 12); restored settings revive
+sessions under 30 days old (decision 5); Dwight N1 one warning line per refused session while passkeys are off; N2 no
+notifications row if the push sender itself raises (the change is still logged); private push functions (seam);
+synced passkeys always report sign count 0, so clone detection only works for authenticators that count.
+
+**Mistake to record:** at about 18:39 and 18:57 UTC the coordinator stopped its own gate script with a process match
+that was too wide (any `evidence/gate.sh`) and at 18:57 it also signalled lane web's `step-15-web-evidence/gate.sh
+g4`. Jim was told at once (hive inform). No file, database or lock of another lane was touched.
+
+## 7. LANDING
+
+Not done by this lane. Tier T3: god asks the owner to sign off, then lands. Nothing was pushed, no pull request
+opened, nothing deployed. Passkeys stay off until `PASSKEY_RP_ID` and `PASSKEY_ORIGINS` are set on the server.
+
+**Decisions for the owner (each two-way):**
+1. A passkey session lasts 30 days from sign-in and is not extended by use.
+2. The session is kept on the device where the app token is kept today and sent the same way.
+3. Up to 10 passkeys, one per device.
+4. Adding a passkey needs the app token; a passkey sign-in alone cannot add another passkey.
+5. Removing a passkey signs that device out at once; a passkey sign-in may remove a passkey.
+6. Every add and every removal sends an alert to your devices and is kept on record.
+7. Face ID / Touch ID is required on every passkey sign-in.
+8. Clearing the two passkey settings switches passkey sign-in off at once (sessions stop working; they work again if
+   the settings come back within their 30 days, so remove a passkey to end its sessions for good). The app token is
+   never affected.
+9. A passkey is tied to the app's host name; a new host name means registering again.
+10. Someone on your tailnet could make passkey sign-in refuse for as long as they keep flooding it; the app token
+    still works.
+11. After changing the app token or restoring a backup, open the passkey list and remove any you do not know.
+12. New library: `webauthn` (py_webauthn, BSD licence), agreed by the security reviewer.
