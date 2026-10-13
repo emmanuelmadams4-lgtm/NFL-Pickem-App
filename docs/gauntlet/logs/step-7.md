@@ -239,3 +239,27 @@ Work order 7 try 1 failed through **my** spec, not the builder: I wrote "whateve
 * Not built, with the reason: his send-time check of stored rows (point 2): the tests' stand-in push service lives on `127.0.0.1` and `push.example.test`, which that check would refuse, and rows from before the check can only have been stored by the token holder; on the real iPhone checklist: turn alerts off and on once after go-live. F2 (a database error while recording would undo earlier records in the same pass) and F3 (if the phone also refuses to remove the stored queue, the old copy stays, and the stronger notice can be replaced by the weaker one): no failing test written; carried.
 
 The gate runs `r2-a`, `r2-b` that had started on `585e3f5` were stopped when this arrived (r2-a had reached: pytest 203 passed, ruff, no drift, typecheck 0; browser tests not finished). They do not count.
+
+### Security delta 2 (Dwight, read-only, at `baef330`): PASS
+
+S1a closed: 271,232 crafted addresses, none accepted that would send to a host outside the four services. No CRITICAL, HIGH or MEDIUM security finding open. The send-time check is not a condition. For the owner's go-live list: remove any stored subscription whose address fails the new check, or turn alerts off and on once. His lows (use `%r` for the key in the "reached 0 devices" log line; redirects left on; empty host labels) are carried, not built.
+
+### Gate round 2 on `baef330` (interim: main moved under it)
+
+| Run | Load before | pytest | ruff | drift | typecheck | browser |
+|---|---|---|---|---|---|---|
+| `r2-a` | 5.83 | 211 passed | clean | none | 0 | 102 passed, 2 skipped |
+| `r2-b` | 6.91 | 211 passed | clean | none | 0 | **5 failed**, 97 passed, 2 skipped |
+
+**r2-b, the cause.** P20 hung on its first click and its cleanup never ran, so P22, P23, P23b and P23c failed after it. The saved trace of P20 shows the server answering `GET /api/weeks/2023/4` at 04:39:57Z with `my_pick: "LV"` for `2023_04_MIA_LV`, while this run's server log has no write of that pick after the last delete (line 2697). So another process wrote to the shared test database during my run. My coordination lease had expired while I waited on the background run (the coord log notes it at 04:40), which released `res:gate` and `res:e2e`; session s35 held `res:gate` right after. I did not see the other writer directly: this is the most likely cause, not a proven one. No timeout was changed. Fix on my side: the gate script now renews the lease every 45 seconds and re-checks both locks after each run (`gate-r3.sh` in the session scratchpad).
+
+Main then moved to `53b1c89` (coach fix). The lane was moved onto it with no conflict; lane-guard against `53b1c89`: OK. Gate round 3 (`r3-a`, `r3-b`) runs on that HEAD.
+
+### Gate round 3 on `41aa9bb` (lane on main `53b1c89`), locks held and re-checked after each run
+
+| Run | Load before | pytest | ruff | drift | typecheck | browser |
+|---|---|---|---|---|---|---|
+| `r3-a` | 4.85 | 222 passed | clean | none | 0 | 102 passed, 2 skipped |
+| `r3-b` | 4.52 | 222 passed | clean | none | 0 | 102 passed, 2 skipped |
+
+Lane-guard against `53b1c89`: OK. CLEANUP for the round 2 code (work orders 7, 8, 8b, 9): diffs read again after the fixes; no change needed (each is the smallest change for its red test; the one shared pattern, send then record, already reads the same in the three callers).
