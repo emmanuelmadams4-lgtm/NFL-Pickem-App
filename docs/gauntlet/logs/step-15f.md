@@ -38,7 +38,13 @@ Frozen in `step-15f-evidence/design.md` (clauses G1-G12), each with tests in `ba
 Scope-locked to own files. `ruff format` on the three own files. No other change: module is 160 lines, one job, functions under 50 lines.
 
 ## 5. VERIFICATION
-(see bottom: filled when the locked runs finish)
+* **Gate x2 on the rebased code** (base `main@43dfc46`; `main` is now `f0f5308`, one docs-only commit that touches only `docs/gauntlet/STATE.md`, so the code is the same): `step-15f-evidence/r1-summary.txt`, `r2-summary.txt`. Each: pytest **1268 passed** (r1 260 s, r2 164 s), `ruff check nflpi tests migrations` clean, `npm run gen:api` exit 0 and `git status packages/shared` empty (no drift). Earlier pair before the rebase: **1236 passed** twice (`final1-*`, `final2-*`).
+* **`alembic check`:** r1 and r2 printed "Target database is not up to date" because the shared test database is built by `create_all`, not by migrations. Rerun on a fresh scratch database (`nflpi_alembic` on `nflpi-lane-live-db`, dropped after): `alembic upgrade head` reached `0007 (head)`; `alembic check` printed **"No new upgrade operations detected."** (`alembic-final.log`).
+* **Targeted:** 81 tests (`test_live_grade.py`, `test_live_api.py`); every clause G1-G12 has a test that fails when it is broken.
+* **Mutation sweep** (`mutate.py`, `mutation.log`): 24 of 26 caught; the 2 survivors are equivalent mutants (documented); one real survivor (a mid-game lost row counts as a point) was fixed in `c3bcbfd`/`2b37b66`.
+* **Security (Dwight):** PASS. D1 (window end) and D3 (pregame fallback labelling) fixed in `8dd7bed`. S1 carried: the route reads a whole season per call; the Results page must open it once, not poll it.
+* **Critic (new, no build transcript):** see the done message.
+* **Real-game hand count: PENDING (after 2026-10-15).** All numbers above are from made-up series.
 
 ## 6. LANDING
 Not mine: god lands it. Nothing pushed, no PR, no deploy, no paid AI call, no network call. Live app, the PC, ports 8000/5432 and its containers were never touched. The sandbox blocks the local test database, uv cache and docker, so pytest/ruff/uvx/codex ran with the sandbox off (only those commands).
