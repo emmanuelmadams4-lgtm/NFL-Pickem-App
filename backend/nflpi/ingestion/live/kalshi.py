@@ -2,9 +2,11 @@
 
 import re
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from typing import Any
 from urllib.parse import quote
+
+from nflpi.ingestion.live.times import parse_utc
 
 MARKETS_URL = "https://external-api.kalshi.com/trade-api/v2/markets?series_ticker=KXNFLGAME&status=open&limit=200"
 CURSOR = re.compile(r"[A-Za-z0-9_=-]{1,200}")
@@ -74,13 +76,7 @@ def markets_url(cursor: str | None = None) -> str:
 
 
 def _time(value: Any) -> datetime | None:
-    if not isinstance(value, str):
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed.astimezone(UTC) if parsed.tzinfo is not None else None
+    return parse_utc(value) if isinstance(value, str) else None
 
 
 def _market(item: dict) -> Market | None:
@@ -96,7 +92,7 @@ def _market(item: dict) -> Market | None:
     if PRICE.fullmatch(bid) is None or PRICE.fullmatch(ask) is None:
         return None
     bid_value, ask_value = float(bid), float(ask)
-    if not 0 <= bid_value <= ask_value <= 1 or (bid_value == 0 and ask_value == 1):
+    if not 0 < bid_value <= ask_value < 1:
         return None
     return Market(item["event_ticker"], match[5], bid_value, ask_value, _time(item.get("updated_time")))
 

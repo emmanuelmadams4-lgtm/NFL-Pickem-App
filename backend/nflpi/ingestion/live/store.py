@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from nflpi.models import LiveState, MarketQuote, SourceStatus
@@ -17,11 +17,9 @@ _QUOTE_VALUES = ("kind", "home_prob", "away_prob", "raw_yes_bid", "raw_yes_ask",
 def live_states_for(session: Session, game_ids: list[str]) -> dict[str, LiveState]:
     if not game_ids:
         return {}
-    rows = session.scalars(select(LiveState).where(LiveState.game_id.in_(game_ids)).order_by(LiveState.id.desc()))
-    newest: dict[str, LiveState] = {}
-    for row in rows:
-        newest.setdefault(row.game_id, row)
-    return newest
+    latest_ids = select(func.max(LiveState.id)).where(LiveState.game_id.in_(game_ids)).group_by(LiveState.game_id)
+    rows = session.scalars(select(LiveState).where(LiveState.id.in_(latest_ids)))
+    return {row.game_id: row for row in rows}
 
 
 def add_live_state(
@@ -114,6 +112,25 @@ def source_blocked_until(session: Session, source: str) -> datetime | None:
     return row.blocked_until if row is not None else None
 
 
+def last_confirmed(session: Session, source: str) -> datetime | None:
+    row = session.get(SourceStatus, source)
+    return row.last_ok_at if row is not None else None
+
+
+def reserve(session: Session, source: str, now: datetime, interval: timedelta) -> bool:
+    row = session.get(SourceStatus, source, with_for_update=True)
+    if row is None:
+        row = SourceStatus(source=source, consecutive_failures=0, updated_at=now)
+        session.add(row)
+    if row.blocked_until is not None and row.blocked_until > now:
+        session.rollback()
+        return False
+    row.blocked_until = now + interval
+    row.updated_at = now
+    session.commit()
+    return True
+
+
 def _status(session: Session, source: str, now: datetime) -> SourceStatus:
     row = session.get(SourceStatus, source)
     if row is None:
@@ -160,5 +177,5 @@ def mark_stopped(session: Session, source: str, now: datetime, until: datetime, 
     row.credits_left = credits_left
     row.last_ok_at = now
     row.consecutive_failures = 0
-    row.last_error = None
+    row.last_error = "credits low"
     row.updated_at = now

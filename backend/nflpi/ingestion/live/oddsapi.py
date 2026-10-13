@@ -3,9 +3,11 @@
 import math
 import re
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from urllib.parse import urlencode
+
+from nflpi.ingestion.live.times import parse_utc
 
 ODDS_URL = "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds?"
 KEY = re.compile(r"[A-Za-z0-9]{16,64}")
@@ -75,17 +77,14 @@ def odds_url(key: str) -> str:
 def _time(value: Any) -> datetime | None:
     if not isinstance(value, str) or UTC_TIME.fullmatch(value) is None:
         return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC)
-    except ValueError:
-        return None
+    return parse_utc(value)
 
 
 def _price(value: Any) -> bool:
     if type(value) not in (int, float):
         return False
     try:
-        return math.isfinite(value) and abs(value) >= 100
+        return math.isfinite(value) and 100 <= abs(value) <= 100_000
     except OverflowError:
         return False
 

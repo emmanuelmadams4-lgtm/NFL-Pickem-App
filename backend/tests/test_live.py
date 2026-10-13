@@ -908,7 +908,7 @@ def test_kalshi_is_pregame_before_kickoff_and_live_after_and_an_old_source_time_
     rows = {r.game_id: r for r in quote_rows(session)}
     assert rows[games["SEA_DEN"].game_id].kind == "live" and rows[games["BUF_LV"].game_id].kind == "pregame"
     # the recorded markets were last updated on 2026-10-06: a real past time is kept so an old line looks old
-    assert rows[games["SEA_DEN"].game_id].source_ts == datetime(2026, 10, 6, 4, 6, 0, 764221, tzinfo=UTC)
+    assert rows[games["SEA_DEN"].game_id].source_ts == datetime(2026, 10, 6, 4, 5, 0, 760741, tzinfo=UTC)
 
 
 def test_a_source_time_is_kept_when_in_the_past_and_dropped_when_more_than_a_day_ahead(session):
@@ -1113,6 +1113,7 @@ def test_with_no_usable_key_the_odds_adapter_does_nothing_and_says_so(session, k
 def test_the_key_comes_from_the_setting_when_none_is_passed(session, monkeypatch):
     from nflpi.config import get_settings
 
+    seed_four(session)
     monkeypatch.setenv("ODDS_API_KEY", KEY)
     get_settings.cache_clear()
     try:
@@ -1398,7 +1399,13 @@ def test_a_database_error_while_saving_ends_the_run_failed_with_a_back_off_and_n
 
 
 def test_after_the_thirty_five_day_stop_one_call_is_allowed_so_the_credit_count_can_refresh(session):
-    seed_four(session)
+    later = timedelta(days=36)  # a month on: the same four games and quotes, shifted so the reply still matches
+    for away, home, kickoff in FOUR_GAMES:
+        seed_game(session, away, home, kickoff + later, status="scheduled")
+    shifted = recorded("odds_api_h2h.json")
+    for event in shifted:
+        start = datetime.fromisoformat(event["commence_time"].replace("Z", "+00:00")) + later
+        event["commence_time"] = start.strftime("%Y-%m-%dT%H:%M:%SZ")
     session.add(
         SourceStatus(
             source="oddsapi", consecutive_failures=0, credits_left=10, last_ok_at=ODDS_NOW,
@@ -1406,9 +1413,9 @@ def test_after_the_thirty_five_day_stop_one_call_is_allowed_so_the_credit_count_
         )
     )  # fmt: skip
     session.commit()
-    stopped, get = refresh_odds(session, now=ODDS_NOW + timedelta(days=34))
+    stopped, get = refresh_odds(session, odds_routes(shifted), now=ODDS_NOW + timedelta(days=34))
     assert stopped.status == "skipped" and get.calls == []
-    resumed, get = refresh_odds(session, now=ODDS_NOW + timedelta(days=36))
+    resumed, get = refresh_odds(session, odds_routes(shifted), now=ODDS_NOW + later)
     assert resumed.status == "ok" and len(get.calls) == 1
     assert session.get(SourceStatus, "oddsapi").credits_left == 499
 

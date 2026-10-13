@@ -3,8 +3,10 @@
 import math
 import re
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
+
+from nflpi.ingestion.live.times import parse_utc
 
 SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
 _SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="
@@ -81,13 +83,7 @@ def summary_url(event_id: str) -> str:
 
 
 def _date(value: Any) -> datetime | None:
-    if not isinstance(value, str):
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed.astimezone(UTC) if parsed.tzinfo is not None else None
+    return parse_utc(value) if isinstance(value, str) else None
 
 
 def _score(value: Any) -> int | None:

@@ -32,7 +32,9 @@ class RefreshResult:
 
 
 def safe_error(exc: Exception) -> str:
-    if isinstance(exc, fetch.FetchError) or (isinstance(exc, ValueError) and str(exc) in ("shape", "event id")):
+    if isinstance(exc, fetch.FetchError) or (
+        isinstance(exc, ValueError) and str(exc) in ("shape", "event id", "no match")
+    ):
         return f"{type(exc).__name__}: {exc}"[:200]
     return type(exc).__name__[:200]
 
@@ -48,26 +50,25 @@ def run_source(
     job: Callable[[], tuple[int, int, fetch.FetchError | None]],
     floor: timedelta = timedelta(0),
 ) -> RefreshResult:
-    until = store.source_blocked_until(session, status_key)
-    if until is not None and until > now:
+    if not store.reserve(session, status_key, now, max(min_interval, floor)):
+        until = store.source_blocked_until(session, status_key)
         return RefreshResult(status_key, "skipped", detail=f"backing off until {until.isoformat()}")
-    run = IngestionRun(source=ingestion_source, dataset=dataset, status="running", started_at=now)
-    session.add(run)
+    session.add(run := IngestionRun(source=ingestion_source, dataset=dataset, status="running", started_at=now))
     session.commit()
     run_id = run.id
     try:
         inserted, skipped, blocking_error = job()
-        run.rows, run.finished_at = inserted, now
+        run.rows, run.finished_at, run.status = inserted, now, "ok"
         if blocking_error is not None:
             error = safe_error(blocking_error)
             run.status, run.error = "failed", error
             store.mark_failed(session, status_key, now, error, floor)
-            result = RefreshResult(status_key, "failed", inserted, skipped, error)
         else:
-            run.status = "ok"
             store.mark_ok(session, status_key, now, min_interval)
-            result = RefreshResult(status_key, "ok", inserted, skipped)
+        result = RefreshResult(status_key, run.status, inserted, skipped, run.error or "")
         session.commit()
+        if result.status == "ok":
+            log.info("%s: %d inserted, %d skipped", status_key, inserted, skipped)
     except Exception as exc:
         session.rollback()
         error = safe_error(exc)
@@ -120,12 +121,7 @@ def _needs_summary(event: espn.Event, previous: LiveState | None) -> bool:
 
 
 def _summary(event: espn.Event, get: Callable[[str], fetch.JsonResult]) -> espn.WinProb | None:
-    try:
-        return espn.parse_win_probability(get(espn.summary_url(event.event_id)).data)
-    except fetch.Blocked:
-        raise
-    except fetch.FetchError:
-        return None
+    return espn.parse_win_probability(get(espn.summary_url(event.event_id)).data)
 
 
 def _save_event(
@@ -143,6 +139,8 @@ def _save_event(
     tie_wp = probability.tie if probability is not None else None
     if not same_orientation:
         home_wp = 1 - home_wp - tie_wp if home_wp is not None and tie_wp is not None else None
+        if home_wp is not None and not 0 <= home_wp <= 1:
+            home_wp = None
     play_id = probability.play_id if probability is not None else None
     if event.state == "post" and previous is not None and not _needs_summary(event, previous):
         home_wp, tie_wp, play_id = previous.home_wp, previous.tie_wp, previous.last_play_id
@@ -168,9 +166,12 @@ def _espn_job(
     now: datetime,
 ) -> tuple[int, int, fetch.FetchError | None]:
     events, skipped = espn.parse_scoreboard(get(espn.SCOREBOARD_URL).data)
+    active = [event for event in events if event.state in ("in", "post")]
+    if len(active) >= 3 and all(event.home_score is None and event.away_score is None for event in active):
+        raise ValueError("shape")
     games = _candidate_games(session, events)
     newest = store.live_states_for(session, [game.game_id for game in games])
-    inserted, summaries = 0, 0
+    inserted, summaries, summary_failures, matched = 0, 0, 0, 0
     blocking_error: fetch.FetchError | None = None
     for event in events:
         game = _matching_game(event, games)
@@ -178,6 +179,7 @@ def _espn_job(
             skipped += 1
             log.debug("unmatched ESPN event %r", event.event_id[:64])
             continue
+        matched += 1
         probability = None
         if _needs_summary(event, newest.get(game.game_id)) and blocking_error is None and summaries < MAX_SUMMARIES:
             summaries += 1
@@ -185,12 +187,18 @@ def _espn_job(
                 probability = _summary(event, get)
             except fetch.Blocked as exc:
                 blocking_error = exc
+            except fetch.FetchError:
+                summary_failures += 1
         if _save_event(session, event, game, probability, newest.get(game.game_id), now):
             inserted += 1
             session.flush()
             newest[game.game_id] = session.scalar(
                 select(LiveState).where(LiveState.game_id == game.game_id).order_by(LiveState.id.desc()).limit(1)
             )
+    if summary_failures:
+        log.warning("espn_live: %d summaries failed", summary_failures)
+    if len(events) >= 3 and matched == 0:
+        raise ValueError("no match")
     return inserted, skipped, blocking_error
 
 
@@ -226,7 +234,7 @@ def _quote_candidates(session: Session, now: datetime) -> list[Game]:
 
 
 def _source_time(value: datetime | None, now: datetime) -> datetime | None:
-    return value if value is not None and now - timedelta(days=7) <= value <= now + timedelta(days=1) else None
+    return value if value is not None and value <= now + timedelta(days=1) else None
 
 
 def _save_kalshi(session: Session, markets: list[kalshi.Market], game: Game, now: datetime) -> bool:
@@ -275,7 +283,7 @@ def _kalshi_job(session: Session, get: Callable[[str], fetch.JsonResult], now: d
         seen_cursors.add(next_cursor)
         cursor = next_cursor
     games = _quote_candidates(session, now)
-    inserted = 0
+    inserted, usable, matched = 0, 0, 0
     for ticker, markets in grouped.items():
         parts = kalshi.event_parts(ticker)
         if parts is None:
@@ -285,14 +293,17 @@ def _kalshi_job(session: Session, get: Callable[[str], fetch.JsonResult], now: d
         if len(markets) != 2 or {market.team for market in markets} != {away, home}:
             skipped += 1
             continue
+        usable += 1
         game = _quote_game(games, {kalshi.TEAM_CODES[away], kalshi.TEAM_CODES[home]}, game_date)
         if game is None:
             skipped += 1
             log.debug("unmatched Kalshi event %r", ticker[:64])
-        elif (markets[0].bid + markets[0].ask + markets[1].bid + markets[1].ask) == 0:
-            skipped += 1
-        elif _save_kalshi(session, markets, game, now):
-            inserted += 1
+        else:
+            matched += 1
+            if _save_kalshi(session, markets, game, now):
+                inserted += 1
+    if usable >= 3 and matched == 0:
+        raise ValueError("no match")
     return inserted, skipped, None
 
 
@@ -351,7 +362,7 @@ def _odds_job(
         credits[0] = int(header)
     events, skipped = oddsapi.parse_events(result.data)
     games = _quote_candidates(session, now)
-    inserted = 0
+    inserted, matched = 0, 0
     for event in events:
         game = _quote_game(
             games,
@@ -361,9 +372,12 @@ def _odds_job(
         if game is None:
             skipped += 1
             continue
+        matched += 1
         for book in event.books:
             if _save_odds(session, event, book, game, now):
                 inserted += 1
+    if len(events) >= 3 and matched == 0:
+        raise ValueError("no match")
     return inserted, skipped, None
 
 
@@ -385,6 +399,7 @@ def refresh_odds_quotes(
         and status.credits_left < 50
         and (status.last_ok_at is None or now < status.last_ok_at + timedelta(days=35))
     ):
+        log.warning("oddsapi stopped: credits low")
         return RefreshResult("oddsapi", "skipped", detail="credits low")
     credits: list[int | None] = [None]
     result = run_source(
@@ -407,5 +422,6 @@ def refresh_odds_quotes(
         )
         if credits[0] is not None and credits[0] < 50:
             store.mark_stopped(session, "oddsapi", now, now + timedelta(days=35), credits[0])
+            log.warning("oddsapi stopped: credits low")
         session.commit()
     return result

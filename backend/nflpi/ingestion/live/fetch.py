@@ -30,6 +30,16 @@ _NAT64 = (
     ipaddress.ip_network("2001::/32"),
 )
 
+
+class _NoApiKeyFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            return "apiKey=" not in record.getMessage()
+        except Exception:
+            return False
+
+
+logging.getLogger("httpx").addFilter(_NoApiKeyFilter())
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
