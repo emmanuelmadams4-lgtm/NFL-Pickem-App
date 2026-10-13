@@ -159,7 +159,7 @@ export function GameView() {
           </p>
           {liveState.kind === "S5" && (
             <>
-              <p className="mt-1">Checked {ago(new Date(live.dataUpdatedAt).toISOString(), new Date(now))}</p>
+              <p className="mt-1">Checked {ago(new Date(live.checkedAt).toISOString(), new Date(now))}</p>
               <p className="mt-1">Kalshi is a prediction market. The figure is the price of a {liveState.chanceClub} win, not this app&apos;s forecast.</p>
             </>
           )}

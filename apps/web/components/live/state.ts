@@ -2,7 +2,7 @@ import { ago, type GameSummary, type LiveGameOut, type LiveOut } from "@nflpi/sh
 
 export type LiveResult = {
   data: LiveOut | undefined;
-  dataUpdatedAt: number;
+  checkedAt: number;
   heldPosts: ReadonlyMap<string, LiveGameOut>;
 };
 
@@ -42,7 +42,8 @@ function spokenChance(value: string): string {
 }
 
 function spokenAge(value: string): string {
-  return value.replace(/^(\d+)m ago$/, "$1 minutes ago").replace(/^(\d+)h ago$/, "$1 hours ago").replace(/^(\d+)s ago$/, "$1 seconds ago");
+  return value.replace(/^1m ago$/, "1 minute ago").replace(/^1h ago$/, "1 hour ago").replace(/^1s ago$/, "1 second ago")
+    .replace(/^(\d+)m ago$/, "$1 minutes ago").replace(/^(\d+)h ago$/, "$1 hours ago").replace(/^(\d+)s ago$/, "$1 seconds ago");
 }
 
 /** The first matching live state for a started game. Final games stay on the week card's existing path. */
@@ -63,7 +64,7 @@ export function cardLiveState(game: GameSummary, live: LiveResult, now: number):
   if (row.state === "lost") {
     return { ...base, kind: "S3", label: `Not updating${period.short ? ` · last seen ${period.short}` : ""}`, reader: `Score may be out of date: ${scoreWords}.` };
   }
-  const notUpdating = live.data?.stale || (live.dataUpdatedAt > 0 && now - live.dataUpdatedAt > 120_000);
+  const notUpdating = live.data?.stale || (live.checkedAt > 0 && now - live.checkedAt > 120_000);
   if (notUpdating) {
     const age = live.data?.last_confirmed_at ? ago(live.data.last_confirmed_at, new Date(now)) : null;
     return {

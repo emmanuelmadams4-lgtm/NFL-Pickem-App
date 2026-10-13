@@ -20,6 +20,7 @@ export function startedGame(game: GameSummary, now: number): boolean {
 
 export function useLive(games: GameSummary[]) {
   const api = useApi();
+  const meta = useMeta();
   const now = useNow();
   const started = games.filter((game) => startedGame(game, now));
   const query = useQuery({
@@ -44,7 +45,8 @@ export function useLive(games: GameSummary[]) {
     refetchIntervalInBackground: false,
     retry: false,
   });
-  return { ...query, heldPosts };
+  const correction = meta.data ? Date.parse(meta.data.server_time) - meta.dataUpdatedAt : 0;
+  return { ...query, heldPosts, checkedAt: query.dataUpdatedAt ? query.dataUpdatedAt + correction : 0 };
 }
 
 export function useMeta() {
