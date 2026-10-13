@@ -22,6 +22,11 @@ def live_states_for(session: Session, game_ids: list[str]) -> dict[str, LiveStat
     return {row.game_id: row for row in rows}
 
 
+def in_progress_game_ids(session: Session) -> list[str]:
+    latest_ids = select(func.max(LiveState.id)).group_by(LiveState.game_id)
+    return list(session.scalars(select(LiveState.game_id).where(LiveState.id.in_(latest_ids), LiveState.state == "in")))
+
+
 def add_live_state(
     session: Session,
     *,

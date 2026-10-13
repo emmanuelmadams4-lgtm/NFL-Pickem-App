@@ -329,7 +329,7 @@ class LiveState(Base):
     game_id: Mapped[str] = mapped_column(ForeignKey("games.game_id"), nullable=False)
     espn_event_id: Mapped[str] = mapped_column(String(16), nullable=False)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    state: Mapped[str] = mapped_column(String(4), nullable=False)  # pre | in | post
+    state: Mapped[str] = mapped_column(String(4), nullable=False)  # pre | in | post | lost (left the scoreboard)
     home_score: Mapped[int | None] = mapped_column(Integer)
     away_score: Mapped[int | None] = mapped_column(Integer)
     period: Mapped[int | None] = mapped_column(Integer)

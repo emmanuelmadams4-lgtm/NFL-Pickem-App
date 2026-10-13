@@ -160,6 +160,31 @@ def _save_event(
     )
 
 
+def _mark_missing_live_games(session: Session, matched_game_ids: set[str], now: datetime) -> int:
+    missing_ids = [game_id for game_id in store.in_progress_game_ids(session) if game_id not in matched_game_ids]
+    newest = store.live_states_for(session, missing_ids)
+    lost = 0
+    for game_id, previous in newest.items():
+        if store.add_live_state(
+            session,
+            game_id=game_id,
+            event_id=previous.espn_event_id,
+            fetched_at=now,
+            state="lost",
+            home_score=previous.home_score,
+            away_score=previous.away_score,
+            period=previous.period,
+            clock=previous.clock,
+            home_wp=None,
+            tie_wp=None,
+            last_play_id=None,
+        ):
+            lost += 1
+    if lost:
+        log.warning("espn_live: %d in-progress games missing from the scoreboard", lost)
+    return lost
+
+
 def _espn_job(
     session: Session,
     get: Callable[[str], fetch.JsonResult],
@@ -172,6 +197,7 @@ def _espn_job(
     games = _candidate_games(session, events)
     newest = store.live_states_for(session, [game.game_id for game in games])
     inserted, summaries, summary_failures, matched = 0, 0, 0, 0
+    matched_game_ids: set[str] = set()
     blocking_error: fetch.FetchError | None = None
     for event in events:
         game = _matching_game(event, games)
@@ -180,6 +206,7 @@ def _espn_job(
             log.debug("unmatched ESPN event %r", event.event_id[:64])
             continue
         matched += 1
+        matched_game_ids.add(game.game_id)
         probability = None
         if _needs_summary(event, newest.get(game.game_id)) and blocking_error is None and summaries < MAX_SUMMARIES:
             summaries += 1
@@ -199,6 +226,7 @@ def _espn_job(
         log.warning("espn_live: %d summaries failed", summary_failures)
     if len(events) >= 3 and matched == 0:
         raise ValueError("no match")
+    inserted += _mark_missing_live_games(session, matched_game_ids, now)
     return inserted, skipped, blocking_error
 
 
