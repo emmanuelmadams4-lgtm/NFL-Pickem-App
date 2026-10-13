@@ -22,10 +22,15 @@ def american_to_decimal(price: float) -> float:
     return 1 + a / 100 if a > 0 else 1 + 100 / -a
 
 
-def decimal_to_american(decimal_odds: float) -> float:
-    d = finite_number(decimal_odds, "decimal price")
+def decimal_price(price: float) -> float:
+    d = finite_number(price, "decimal price")
     if d <= 1:
-        raise BettingError(f"decimal price must be > 1, got {decimal_odds!r}")
+        raise BettingError(f"decimal price must be > 1, got {price!r}")
+    return d
+
+
+def decimal_to_american(decimal_odds: float) -> float:
+    d = decimal_price(decimal_odds)
     return (d - 1) * 100 if d >= 2 else -100 / (d - 1)
 
 
@@ -33,10 +38,7 @@ def to_decimal(price: float, odds_format: str) -> float:
     if odds_format == "american":
         return american_to_decimal(price)
     if odds_format == "decimal":
-        d = finite_number(price, "decimal price")
-        if d <= 1:
-            raise BettingError(f"decimal price must be > 1, got {price!r}")
-        return d
+        return decimal_price(price)
     raise BettingError(f"unknown odds format: {odds_format!r}")
 
 

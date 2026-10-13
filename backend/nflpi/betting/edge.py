@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from nflpi.betting.odds import BettingError, finite_number, to_decimal
+from nflpi.betting.odds import BettingError, decimal_price, finite_number
 from nflpi.betting.snapshot import SELECTIONS, MarketSnapshot, ensure_fresh, no_vig_probability
 
 SUM_TOLERANCE = 1e-9
@@ -47,10 +47,6 @@ class Edge:
     point_difference: float | None
 
 
-def _decimal(decimal_odds: float) -> float:
-    return to_decimal(decimal_odds, "decimal")
-
-
 def _probs(probs: SettlementProbs) -> SettlementProbs:
     if not isinstance(probs, SettlementProbs):
         raise BettingError("probs must be SettlementProbs")
@@ -58,12 +54,12 @@ def _probs(probs: SettlementProbs) -> SettlementProbs:
 
 
 def break_even_probability(decimal_odds: float) -> float:
-    return 1 / _decimal(decimal_odds)
+    return 1 / decimal_price(decimal_odds)
 
 
 def expected_value(probs: SettlementProbs, decimal_odds: float) -> float:
     """EV per unit staked: win * (d - 1) - loss. A refunded push adds zero."""
-    d = _decimal(decimal_odds)
+    d = decimal_price(decimal_odds)
     p = _probs(probs)
     return p.win * (d - 1) - p.loss
 
@@ -118,7 +114,7 @@ def evaluate(
         fair_probability_edge=fair_probability_edge(
             conditional, no_vig_probability(snapshot, opposing, three_way=three_way)
         ),
-        price_edge=conditional - 1 / d,
+        price_edge=price_edge(probs, d),
         expected_value=expected_value(probs, d),
         point_difference=diff,
     )

@@ -15,6 +15,12 @@ def _sign(margin: float) -> str:
     return "win" if margin > 0 else "push" if margin == 0 else "loss"
 
 
+def _side(margin: float, first: bool) -> str:
+    """Result for the first side (margin > 0 wins), or its opposite."""
+    result = _sign(margin)
+    return result if first else {"win": "loss", "loss": "win", "push": "push"}[result]
+
+
 def _check(selection: str, allowed: tuple[str, ...]) -> None:
     if selection not in allowed:
         raise BettingError(f"selection must be one of {allowed}, got {selection!r}")
@@ -34,19 +40,13 @@ def settle_spread(selection: str, home_line: float, home_score: int, away_score:
     """Home covers when (home - away) + home_line > 0; push at 0."""
     _check(selection, ("home", "away"))
     line = finite_number(home_line, "line")
-    result = _sign(_score(home_score) - _score(away_score) + line)
-    if selection == "home":
-        return result
-    return {"win": "loss", "loss": "win", "push": "push"}[result]
+    return _side(_score(home_score) - _score(away_score) + line, selection == "home")
 
 
 def settle_total(selection: str, line: float, home_score: int, away_score: int) -> str:
     _check(selection, ("over", "under"))
     ln = finite_number(line, "line")
-    result = _sign(_score(home_score) + _score(away_score) - ln)
-    if selection == "over":
-        return result
-    return {"win": "loss", "loss": "win", "push": "push"}[result]
+    return _side(_score(home_score) + _score(away_score) - ln, selection == "over")
 
 
 def settle(snapshot: MarketSnapshot, home_score: int, away_score: int, *, three_way: bool = False) -> str:
