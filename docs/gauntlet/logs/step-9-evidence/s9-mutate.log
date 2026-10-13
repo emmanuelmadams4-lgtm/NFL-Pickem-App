@@ -15,6 +15,7 @@ CAUGHT   S2 pair rule rounds both up
 CAUGHT   S2 pair rule rounds the home side down
 CAUGHT   S4 first n games, not last n
 CAUGHT   S4 unfinished game counted
+CAUGHT   S4 only regular-season games counted
 CAUGHT   S4 missing road score counted
 CAUGHT   S4 points for and against swapped
 CAUGHT   S4 window is 8
@@ -52,6 +53,7 @@ CAUGHT   S11 upper end is enough
 CAUGHT   S11 equal total refused
 CAUGHT   S11 total points ignored
 CAUGHT   S11 total tolerance
+CAUGHT   S11 total upper end is enough
 CAUGHT   S11 minimum is 100 games
 CAUGHT   S11 exactly the minimum refused
 CAUGHT   S11 no minimum
@@ -78,4 +80,4 @@ CAUGHT   S15 pandas read_csv
 CAUGHT   S15 imports a database driver
 CAUGHT   S15 np.loadtxt
 CAUGHT   S15 pd.read_json
-80 of 80 caught
+82 of 82 caught
