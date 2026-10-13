@@ -375,3 +375,76 @@ def test_w10_start_returns_a_running_daemon_thread(monkeypatch):
 
 def test_sources_are_still_the_two_landed_feeds():
     assert [s.id for s in sources.SOURCES] == ["espn", "cbs"]
+
+# ---------------------------------------------------------------- Dwight's code review round (C1, C2, C3, L7, L8)
+
+
+def test_c1_the_sweep_leaves_the_row_of_a_run_that_is_still_alive_alone(session, monkeypatch):
+    release, started = threading.Event(), threading.Event()
+    row_started = T0 - timedelta(minutes=30)
+    session.add(IngestionRun(source="espn", dataset="news:espn", started_at=row_started, status="running"))
+    session.commit()
+
+    def hang(*a, **k):
+        started.set()
+        release.wait(5)
+
+    monkeypatch.setattr(news_worker, "news_step", hang)
+    monkeypatch.setattr(news_worker, "RUN_DEADLINE", 0.05)
+    waits: list[float] = []
+    try:
+        news_worker.run_forever(
+            threading.Event(), now=lambda: T0, wait=lambda s: waits.append(s) or len(waits) >= 3
+        )
+        session.expire_all()
+        assert started.is_set()
+        assert session.scalar(select(IngestionRun.status)) == "running"  # a live run is not "interrupted"
+    finally:
+        release.set()
+
+
+def test_c2_a_stuck_run_is_reported_with_its_age_and_becomes_an_error_after_three_skipped_wakes(monkeypatch, caplog):
+    release = threading.Event()
+    monkeypatch.setattr(news_worker, "news_step", lambda *a, **k: release.wait(5))
+    monkeypatch.setattr(news_worker, "RUN_DEADLINE", 0.05)
+    waits: list[float] = []
+    try:
+        with caplog.at_level(logging.WARNING, logger="nflpi.news_worker"):
+            news_worker.run_forever(threading.Event(), wait=lambda s: waits.append(s) or len(waits) >= 6)
+    finally:
+        release.set()
+    skipped = [r for r in caplog.records if "still running" in r.getMessage()]
+    assert len(skipped) >= 4 and all("for" in r.getMessage() and " s" in r.getMessage() for r in skipped)
+    assert [r.levelno for r in skipped[:2]] == [logging.WARNING, logging.WARNING]
+    assert skipped[-1].levelno == logging.ERROR
+
+
+def test_c3_a_database_that_will_not_open_is_logged_by_class_name_and_does_not_escape_the_thread(monkeypatch, caplog):
+    class Down(Exception):
+        pass
+
+    def broken():
+        raise Down("password=hunter2 host=10.0.0.9")
+
+    monkeypatch.setattr(news_worker, "session_factory", lambda: broken)
+    escaped: list[object] = []
+    monkeypatch.setattr(threading, "excepthook", lambda args: escaped.append(args))
+    waits: list[float] = []
+    with caplog.at_level(logging.DEBUG):
+        news_worker.run_forever(threading.Event(), wait=lambda s: waits.append(s) or len(waits) >= 2)
+    news_worker._inflight.join(2)
+    assert escaped == []
+    text = " ".join(r.getMessage() + str(r.exc_info) for r in caplog.records)
+    assert "Down" in text and "hunter2" not in text and "10.0.0.9" not in text
+
+
+def test_l7_l8_a_missing_teams_table_is_a_warning_and_a_sweep_that_marks_rows_logs_the_count(session, caplog):
+    started = T0 - timedelta(minutes=30)
+    session.add(IngestionRun(source="espn", dataset="news:espn", started_at=started, status="running"))
+    session.commit()
+    with caplog.at_level(logging.INFO, logger="nflpi.news_worker"):
+        news_worker.sweep_stale_runs(session, T0)
+        news_worker.news_step(session, T0)
+    levels = {r.getMessage(): r.levelno for r in caplog.records}
+    assert any("1" in m and "interrupted" in m for m in levels)
+    assert any("teams" in m and lv == logging.WARNING for m, lv in levels.items())
