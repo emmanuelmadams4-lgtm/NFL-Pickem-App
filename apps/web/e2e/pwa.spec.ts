@@ -480,6 +480,61 @@ test("P22 while the phone cannot store the queue, an older stored pick never com
   }
 });
 
+test("P23 after the phone refused to store the queue, reopening the app does not send an older stored pick", async ({ page, request }) => {
+  const { open } = await board(request);
+  const a = open[0];
+  const serverPick = async () => (await board(request)).games.find((x) => x.game_id === a.game_id)!.my_pick;
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  try {
+    // An older waiting pick is in storage, then storage stops taking writes (until the app is reopened).
+    await page.evaluate(([id, team]) => {
+      localStorage.setItem("nflpi_pick_queue", JSON.stringify({ [id]: team }));
+      const real = Storage.prototype.setItem;
+      const w = window as unknown as { refused: number };
+      w.refused = 0;
+      Storage.prototype.setItem = function (k: string, v: string) {
+        if (k === "nflpi_pick_queue") {
+          w.refused++;
+          throw new DOMException("full", "QuotaExceededError");
+        }
+        return real.call(this, k, v);
+      };
+    }, [a.game_id, a.away.abbr]);
+    await pickGroup(page, a).getByRole("button", { name: `Pick ${a.home.name}` }).click();
+    await expect.poll(serverPick, { message: "the newer pick is saved" }).toBe(a.home.abbr);
+    await expect(page.getByText("Waiting to sync")).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { refused: number }).refused), "a queue write was refused").toBeGreaterThan(0);
+    await page.reload(); // the app is reopened: memory is gone, only storage is left
+    await boardLoaded(page);
+    await page.waitForTimeout(3_000);
+    expect(await serverPick(), "the older stored pick was not sent on reopening").toBe(a.home.abbr);
+    await expect(pickGroup(page, a).getByRole("button", { name: `${a.home.name} picked` })).toBeVisible();
+  } finally {
+    expect((await request.delete(`/api/picks/${a.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  }
+});
+
+test("P24 offline banner: 'showing data from' is the age of the data on screen, not of the last server reply", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/");
+  await boardLoaded(page);
+  await workerControls(page);
+  await weekPersisted(page);
+  await goOffline(page);
+  // The saved week is five hours old; the app last heard from the server (any reply) just now.
+  await page.addInitScript(() => {
+    const old = Date.now() - 5 * 3_600_000;
+    const cache = localStorage.getItem("nflpi_cache");
+    if (cache) localStorage.setItem("nflpi_cache", cache.replace(/"dataUpdatedAt":\d+/g, `"dataUpdatedAt":${old}`));
+    localStorage.setItem("nflpi_last_sync", String(Date.now()));
+  });
+  await page.reload();
+  await boardLoaded(page);
+  await expect(page.getByRole("status").filter({ hasText: /offline/i })).toContainText("showing data from 5h ago");
+});
+
 test("P15 one queued pick the server keeps refusing does not hold back the others", async ({ page, context, request }) => {
   const { open } = await board(request);
   expect(open.length, "needs two open games").toBeGreaterThanOrEqual(2);

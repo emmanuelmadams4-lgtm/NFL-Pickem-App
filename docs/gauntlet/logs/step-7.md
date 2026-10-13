@@ -1,0 +1,102 @@
+# Step 7 of 14 — Alerts end to end (T2), lane `alerts`
+
+Coordinator: Jim (hive `jim-mv5mje0k`). Builder: Ryan (Codex dev, hive `ryan-mv5mjwq1`). Reviewers: Dwight (security), Angela (review and fresh critic).
+Branch `lane/alerts`, base `main@696c64f`. State file: `~/.claude/plans/nfl-pickem-lanes/lane-alerts.md`. Evidence and logs: `docs/gauntlet/logs/step-7-evidence/`.
+Dispatch: hive message `2026-10-13T00-18-07-540Z-dc6a88` (god). Owner's date: Thursday 2026-10-15.
+
+## What this step builds, in plain words
+
+* **Builds:** the alerts on his phone. One reminder on every game day, an hour before that day's first kickoff. An alert when something drastic changes for a game before it kicks off. A "Send test alert" button that says what the push service answered. The app keeps its alert subscription alive by itself.
+* **First inside it:** the two follow-ups from step 6 (an older stored pick sent after the app is reopened; the offline banner's time).
+* **Does not build:** star-player alerts and the morning summary (they need the star list, step 8). A real alert on his iPhone and the live keys: his go-live step, **PENDING**.
+
+## 1. PLANNING
+
+* **Roadmap row:** `docs/gauntlet/PLAN.md` row 7 (D19, D20, D25, D28), amended by D47 (threshold 0.07, replaces D28's 0.10).
+* **Base and branch:** `lane/alerts` on `main@696c64f`, worktree `.claude/worktrees/lane-alerts`. Depends on step 6 (landed, PR #5).
+* **Rigor tier:** T2 (new user-facing behaviour). No one-way door: no schema change planned, no new dependency.
+* **Deployment reach:** local only. God pushes, opens the pull request, merges and rebuilds the live app. No VAPID key creation on the live app and no real push to his phone by me.
+* **Validation that needs another environment:** a real alert on the owner's iPhone (needs HTTPS through Tailscale Serve and live VAPID keys): **PENDING**, owner's go-live (PLAN row 11).
+* **Lane:** `lanes.md` gives lane alerts `apps/web/**, packages/shared/**, backend/nflpi/**, backend/tests/**, backend/migrations/**, scripts/smoke.sh, scripts/e2e-server.sh, design.md, docs/design/**, docs/IPHONE_PWA.md` and this log. The expected file list went to god (hive outbox `step7-files.json`) so he can narrow it and open step 8a.
+
+### Pre-flight (Product Mode, T2)
+
+1. **Problem:** he misses the pick deadline, or a late change to a game, because the app only tells him when he opens it.
+2. **Why now:** the phone app landed in step 6; alerts are the reason it is installed.
+3. **Scope:** the smallest set that delivers D19 and D20 and proves delivery without his phone. Cut: star alerts and morning summary (D25, step 8), per-alert on/off switches, an alert history screen, quiet hours.
+4. **Success signal:** on a game day he gets exactly one reminder an hour before the first kickoff, and "Send test alert" shows "delivered". Measured locally by tests; on his phone at go-live.
+5. **Reversibility:** two-way. Alerts can be turned off in Settings; the reminder has an Off value.
+
+### Assumptions
+
+| Assumption | State |
+|---|---|
+| "Every game day" uses the US Eastern calendar day (D19 notes). | validated (owner decision notes) |
+| The reminder is on, at one hour, until he changes it. Today it is off until set. D19 is his request for it, so on is the default. | assumed (told to god in the scope message) |
+| "Drastic" = winner flips, label changes, starting QB changes, or win chance moves 7 points (D20 notes, D47). | validated |
+| Headless Chromium cannot get a real push subscription (no push service), so browser tests stand in a fake subscription and deliver the push through the browser's debug protocol. Real encryption and signing are proven server-side against a local mock push service. | assumed; checked in SPECIFICATION |
+| No schema change: the `notifications`, `push_subscriptions` and `app_settings` tables already hold what is needed. | assumed; a need for one goes to god first |
+
+### Skills
+
+* `/graft`, `/jevgrep`: jevgrep's key check fails on this machine (memory note); discovery was by exact-symbol `grep` on `push`, `reminder`, `alert_` and reading the eight files they named (listed in the state file).
+* Project `tdd` skill: none in the repo; `/tdd` rules apply. Public seams: the HTTP API, `push.send_kickoff_reminders`, `push.alert_prediction_changes`, `engine.refresh_predictions`, and the browser.
+* `/ponytail`: in every work order.
+* `harness-engineering`: N/A (no runner, evaluator or approval boundary changes).
+* Design Gauntlet: applies to the Alerts section of Settings (one new button, one result line, reworded reminder). Brief and critic report in the evidence folder.
+* Parallel Lanes: lane alerts; `lane-guard.py check` before landing.
+
+### Baseline
+
+`gate.sh baseline` on `696c64f` (logs `baseline-*.log`): pytest **115 passed** · ruff clean · gen:api no drift · typecheck 0 · e2e **89 passed, 2 failed, 2 skipped**. The 89 are main's own tests, all green; the 2 failures are P23 and P24, which I added to the tree while the run was in flight, so this run is also their red proof. The 2 skips are `shots.spec.ts` (screenshots only). `test_alerts.py` did not exist yet when pytest ran.
+
+## 2. SPECIFICATION
+
+Frozen before any production change. The gate is `docs/gauntlet/logs/step-7-evidence/gate.sh <label>`: pytest, ruff, `gen:api` with no drift, typecheck, `npm run e2e`. Green twice in a row to land.
+
+### Acceptance criteria
+
+**Step 6 follow-ups (browser, `apps/web/e2e/pwa.spec.ts`)**
+
+* **P23** After the phone refused to store the pick queue and the newer pick was sent, reopening the app does not send an older stored pick. (Dwight R7, Angela F-3; also asserts a write was refused, Dwight R8.)
+* **P24** The offline banner's "showing data from" is the age of the data on screen, not of the last server reply of any kind. (Angela F6.)
+
+**Server (`backend/tests/test_alerts.py`)**
+
+* **N1** A win-chance move of 7 points counts as drastic (`alert_move_threshold` default 0.07, D47).
+* **N2** One reminder per game day, sent in the window that opens `reminder_minutes` before that Eastern day's first kickoff and closes at that kickoff. Sent whether or not he has picked. Not for a later game the same day. Not for a day whose games have no clock time. Opens `/sheet/`. Title `Games today: first kickoff 1:00 PM ET` (one game: `Game today: kickoff 8:15 PM ET`), body `2 games today. First: MIA @ BUF.` (one game: `1 game today: NYJ @ LV.`). Time to live = seconds to kickoff, urgency high. Recorded only once delivered, so a failed send is retried (kept from step 1). On at 60 minutes until he changes it; 0 is off.
+* **N3** A starting QB change for a game is alerted even when the win chance barely moves: title `QB change: AWAY @ HOME`, body names the new QB.
+* **N4** A label change (easy pick, tough matchup, coin flip) is alerted even when the win chance barely moves: title `Now a tough matchup: AWAY @ HOME`, body says `Was a ...`.
+* **N5** No change alert once the game has kicked off (`alert_prediction_changes(session, events, now=...)`), and nothing is recorded for it.
+* **N6** `POST /api/push/test` (token required) sends `Test alert` to every subscribed device and returns `{configured, devices, delivered, results: [{host, ok, status, error}]}`: what the push service answered, per device, by host only (never the full endpoint, which is a secret address). A device the push service calls gone (404, 410) is dropped. Push not set up: `configured: false`, nothing sent.
+* **N7** A real push leaves the server signed and encrypted: a local mock push service receives it with a valid VAPID token (ES256, signed by the server key, audience = the push service, not expired) and an `aes128gcm` body that only the phone's key can read.
+
+**Browser (`apps/web/e2e/alerts.spec.ts`), written with work order 3**
+
+* **A1** Opening the app with alerts on re-sends the subscription to the server; after the server's row is deleted, the next open re-creates it.
+* **A2** When the server's public key differs from the one the device subscribed with, the app subscribes again with the new key and sends that.
+* **A3** A push delivered to the service worker shows a notification with the alert's title and body; tapping it opens the game.
+* **A4** Settings, Alerts: "Send test alert" shows the result in words ("Delivered to 1 device." or the push service's refusal). The reminder control reads as one reminder per game day.
+* **A5** Accessibility: no serious or critical axe issue on Settings in dark and light; the result line is announced (`role="status"`).
+
+**Operational**
+
+* **O1** `scripts/smoke.sh <base-url>` checks health, the token, meta and (only with `--push`) the test alert, prints PASS or FAIL per check, exits non-zero on any FAIL. Run by me against the lane server only.
+* **G** The whole gate is green twice in a row on the final commit; no existing test weakened. Tests that pinned the old per-game "No pick yet" rule are rewritten to the D19 rule and listed in this log.
+
+### Instrumentation
+
+Every alert is a row in `notifications` (kind, game, dedupe key, time, payload); failed sends are logged with the push service's status. The test alert returns the same status to the screen.
+
+### Out of scope, with the reason
+
+D25 star alerts and morning summary (need step 8's star list). Per-kind switches, alert history, quiet hours (not asked for). An allowlist of push-service hosts on subscribe: left to Dwight's review to rate.
+
+### First failing tests (red for the intended reason)
+
+* Browser, `red-wo1.log` (from the baseline run): **P23** fails at "the older stored pick was not sent on reopening" (expected `LV`, received `MIA`); **P24** fails with the banner reading "Offline · showing data from just now" where "5h ago" is expected.
+* Server, `red-wo2.log`: **9 failed, 1 passed**. N1 `0.1 == 0.07`; N2 no reminder sent, and the default reads `None` not 60; N3 and N4 no change event; N5 `alert_prediction_changes()` takes no `now`; N6 and N7 `POST /api/push/test` answers 405. The one that passes is a guard (no reminder after the first kickoff or for a day with no clock time): it stays true on the old code because the reminder is off until set.
+
+### Existing tests the D19 rule changes
+
+`backend/tests/test_api.py::test_push_subscribe_alerts_and_reminders_are_deduplicated` and the reminder tests in `backend/tests/test_hardening.py` (A5, A6, A12) pin the old per-game "No pick yet" rule. They are rewritten to the D19 rule in work order 2 by me, not by the builder; what each one guards (time to live, urgency, retry after a failed send, a gone subscription, rescheduled kickoff, postponed, no clock time) is kept.

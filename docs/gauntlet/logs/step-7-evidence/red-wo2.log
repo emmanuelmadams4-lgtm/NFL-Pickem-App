@@ -1,0 +1,51 @@
+[31mF[0m[31mF[0m[31mF[0m[32m.[0m[31mF[0m[31mF[0m[31mF[0m[31mF[0m[31mF[0m[31mF[0m[31m                                                               [100%][0m
+=================================== FAILURES ===================================
+[1m[31mE   assert 0.1 == 0.07[0m
+[1m[31m     +  where 0.1 = FieldInfo(annotation=float, required=False, default=0.1).default[0m
+[1m[31m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_alerts.py[0m:67: assert 0.1 == 0.07
+[1m[31mE   assert 0 == 1[0m
+[1m[31m     +  where 0 = <function send_kickoff_reminders at 0x11565cf40>(<sqlalchemy.orm.session.Session object at 0x117ed8d70>, (datetime.datetime(2026, 10, 18, 17, 0, tzinfo=datetime.timezone.utc) - datetime.timedelta(seconds=3000)))[0m
+[1m[31m     +    where <function send_kickoff_reminders at 0x11565cf40> = push.send_kickoff_reminders[0m
+[1m[31m     +    and   datetime.timedelta(seconds=3000) = timedelta(minutes=50)[0m
+[1m[31m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_alerts.py[0m:78: assert 0 == 1
+[1m[31mE   assert None == 60[0m
+[1m[31m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_alerts.py[0m:95: assert None == 60
+[1m[31mE   AssertionError: assert [] == ['2023_04_MIA_LV'][0m
+[1m[31m      [0m
+[1m[31m      Right contains one more item: [0m[33m'[39;49;00m[33m2023_04_MIA_LV[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31m      Use -v to get more diff[0m
+[1m[31m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_alerts.py[0m:124: AssertionError: assert [] == ['2023_04_MIA_LV']
+[1m[31mE   AssertionError: assert [] == ['2023_04_MIA_LV'][0m
+[1m[31m      [0m
+[1m[31m      Right contains one more item: [0m[33m'[39;49;00m[33m2023_04_MIA_LV[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31m      Use -v to get more diff[0m
+[1m[31m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_alerts.py[0m:146: AssertionError: assert [] == ['2023_04_MIA_LV']
+[1m[31mE   TypeError: alert_prediction_changes() got an unexpected keyword argument 'now'[0m
+[1m[31m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_alerts.py[0m:160: TypeError: alert_prediction_changes() got an unexpected keyword argument 'now'
+[1m[31mE   AssertionError: assert {'detail': 'M... Not Allowed'} == {'configured'...'results': []}[0m
+[1m[31m      [0m
+[1m[31m      Left contains 1 more item:[0m
+[1m[31m      [0m{[33m'[39;49;00m[33mdetail[39;49;00m[33m'[39;49;00m: [33m'[39;49;00m[33mMethod Not Allowed[39;49;00m[33m'[39;49;00m}[90m[39;49;00m[0m
+[1m[31m      Right contains 4 more items:[0m
+[1m[31m      [0m{[33m'[39;49;00m[33mconfigured[39;49;00m[33m'[39;49;00m: [94mTrue[39;49;00m, [33m'[39;49;00m[33mdelivered[39;49;00m[33m'[39;49;00m: [94m0[39;49;00m, [33m'[39;49;00m[33mdevices[39;49;00m[33m'[39;49;00m: [94m0[39;49;00m, [33m'[39;49;00m[33mresults[39;49;00m[33m'[39;49;00m: []}[90m[39;49;00m[0m
+[1m[31m      Use -v to get more diff[0m
+[1m[31m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_alerts.py[0m:170: AssertionError: assert {'detail': 'M... Not Allowed'} == {'configured'...'results': []}
+[1m[31mE   AssertionError: assert 405 == 401[0m
+[1m[31m     +  where 405 = <Response [405 Method Not Allowed]>.status_code[0m
+[1m[31m     +    where <Response [405 Method Not Allowed]> = post('/api/push/test')[0m
+[1m[31m     +      where post = <starlette.testclient.TestClient object at 0x118079d90>.post[0m
+[1m[31m     +        where <starlette.testclient.TestClient object at 0x118079d90> = <class 'starlette.testclient.TestClient'>(<fastapi.applications.FastAPI object at 0x116f16900>)[0m
+[1m[31m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_alerts.py[0m:190: AssertionError: assert 405 == 401
+[1m[31mE   KeyError: 'delivered'[0m
+[1m[31m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/test_alerts.py[0m:233: KeyError: 'delivered'
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n1_a_win_chance_move_of_seven_points_counts_as_drastic[0m - assert 0.1 == 0.07
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n2_one_reminder_per_game_day_an_hour_before_its_first_kickoff[0m - assert 0 == 1
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n2_reminder_is_on_at_one_hour_until_he_changes_it_and_zero_turns_it_off[0m - assert None == 60
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n3_a_starting_qb_change_is_alerted_even_when_the_win_chance_barely_moves[0m - AssertionError: assert [] == ['2023_04_MIA_LV']
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n4_a_label_change_is_alerted_even_when_the_win_chance_barely_moves[0m - AssertionError: assert [] == ['2023_04_MIA_LV']
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n5_no_change_alert_once_the_game_has_kicked_off[0m - TypeError: alert_prediction_changes() got an unexpected keyword argument 'now'
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n6_send_test_alert_reports_what_the_push_service_answered[0m - AssertionError: assert {'detail': 'M... Not Allowed'} == {'configured'...'r...
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n6_send_test_alert_needs_the_token_and_says_when_push_is_not_set_up[0m - AssertionError: assert 405 == 401
+[31mFAILED[0m tests/test_alerts.py::[1mtest_n7_a_real_push_reaches_a_push_service_signed_and_encrypted[0m - KeyError: 'delivered'
+[31m[31m[1m9 failed[0m, [32m1 passed[0m[31m in 14.12s[0m[0m
