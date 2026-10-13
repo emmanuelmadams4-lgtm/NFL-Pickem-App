@@ -1,5 +1,6 @@
 """API contract. TypeScript types for web are generated from these."""
 
+import re
 from datetime import datetime
 from typing import Literal
 from urllib.parse import urlsplit
@@ -362,6 +363,7 @@ class PushKeys(BaseModel):
 
 
 PUSH_SERVICE_HOSTS = ("push.apple.com", "fcm.googleapis.com", "push.services.mozilla.com", "notify.windows.com")
+PUSH_ENDPOINT_PATTERN = r"https://[a-z0-9.-]+(?:/[\x21-\x5b\x5d-\x7e]*)?"
 
 
 class PushSubscriptionIn(BaseModel):
@@ -373,6 +375,8 @@ class PushSubscriptionIn(BaseModel):
     @field_validator("endpoint")
     @classmethod
     def valid_push_service(cls, endpoint: str) -> str:
+        if re.fullmatch(PUSH_ENDPOINT_PATTERN, endpoint) is None:
+            raise ValueError("Endpoint must belong to a supported push service")
         try:
             address = urlsplit(endpoint)
             host = address.hostname

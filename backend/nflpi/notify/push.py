@@ -159,7 +159,9 @@ def alert_prediction_changes(session: Session, events: list[ChangeEvent], now: d
         if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
             continue
         delivered = _send(session, title, body, game_url(e.game_id))
-        if delivered and _record(session, "prediction", e.game_id, key, {"title": title, "body": body}):
+        if not delivered:
+            log.warning("alert %s reached 0 devices", key)
+        elif _record(session, "prediction", e.game_id, key, {"title": title, "body": body}):
             sent += delivered
     session.commit()
     return sent
@@ -185,7 +187,9 @@ def alert_injuries(session: Session, changed: list[InjuryReport], season: int, w
         if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
             continue
         delivered = _send(session, title, body, game_url(gid))
-        if delivered and _record(session, "injury", gid, key, {"title": title, "body": body}):
+        if not delivered:
+            log.warning("alert %s reached 0 devices", key)
+        elif _record(session, "injury", gid, key, {"title": title, "body": body}):
             sent += delivered
     session.commit()
     return sent
