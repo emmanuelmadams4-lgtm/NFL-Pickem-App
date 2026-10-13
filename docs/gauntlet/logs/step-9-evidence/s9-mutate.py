@@ -83,6 +83,8 @@ MUTANTS = [
     ("S13 repeated season accepted", BACK, "if not seasons or len(set(seasons)) != len(seasons):", "if not seasons:"),
     ("S13 excluded count always zero", BACK, '"excluded": int(excluded)', '"excluded": 0'),
     ("S11 smaller gain picked", BACK, "return max(winners", "return min(winners"),
+    ("S11 first winner picked", BACK,
+     'max(winners, key=lambda row: row["team_mae_gain"])["candidate"]', 'winners[0]["candidate"]'),
     ("S11 decided on the tiebreak slots", BACK, '"ships": pick_winner(overall["comparisons"])', '"ships": pick_winner(summary(predictions.loc[slots])["comparisons"])'),
     ("S12 Sunday from 8 pm", BACK, ".hour >= 19", ".hour >= 20"),
     ("S12 Sunday after 7 pm only", BACK, ".hour >= 19", ".hour > 19"),
@@ -93,6 +95,8 @@ MUTANTS = [
     ("S13 season rows use every game", BACK, 'summary(predictions.loc[predictions["season"] == season])', "summary(predictions)"),
     ("S14 unpredicted games kept", BACK, "predictions = predictions.dropna(subset=PRED_COLS)", "pass"),
     ("S15 reads the environment", SCORES, "import numpy as np", "import os\nimport numpy as np\n_ = os.environ"),
+    ("S15 pandas read_csv", SCORES, "import pandas as pd", "import pandas as pd\n_ = pd.read_csv"),
+    ("S15 imports a database driver", SCORES, "import numpy as np", "import psycopg\nimport numpy as np"),
 ]
 
 

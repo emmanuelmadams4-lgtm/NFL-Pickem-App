@@ -3,6 +3,7 @@
 Clause ids (S1 ...) are the frozen criteria in docs/gauntlet/logs/step-9.md section 2.
 """
 
+import ast
 import json
 import math
 from datetime import UTC, datetime
@@ -348,6 +349,16 @@ def test_s11_with_enough_games_both_candidates_win_and_the_bigger_team_gain_is_p
     assert sb.pick_winner(report["comparisons"]) == "stats"
 
 
+def test_s11_pick_winner_uses_the_largest_gain_only_among_winners():
+    first = {"candidate": "first", "wins": True, "team_mae_gain": 1.0}
+    larger = {"candidate": "larger", "wins": True, "team_mae_gain": 2.0}
+    non_winner = {"candidate": "non_winner", "wins": False, "team_mae_gain": 99.0}
+    assert sb.pick_winner([first, larger]) == "larger"
+    assert sb.pick_winner([larger, first]) == "larger"
+    assert sb.pick_winner([first, non_winner]) == "first"
+    assert sb.pick_winner([{**first, "wins": False}, {**larger, "wins": False}]) is None
+
+
 def test_s11_one_game_short_of_the_minimum_does_not_ship():
     actual, line, cand = [(20, 20)] * 199, [(23, 19)] * 199, [(21, 21)] * 199
     report = sb.summary(preds(actual, implied=line, stats=line, blend=cand))
@@ -492,10 +503,28 @@ def test_s13_an_empty_or_repeated_season_list_is_refused(seasons):
 
 def test_s15_the_new_modules_do_no_file_network_or_database_access():
     root = Path(scores.__file__).resolve().parents[1]
+    allowed_imports = {
+        "__future__", "dataclasses", "datetime", "math", "zoneinfo", "numpy", "pandas",
+        "nflpi.analytics.metrics", "nflpi.predictions.elo", "nflpi.predictions.features", "nflpi.predictions.scores",
+    }
+    banned_names = {
+        "open", "read_csv", "read_parquet", "read_sql", "read_text", "to_csv", "fetch_csv",
+        "getenv", "environ", "Session", "Path",
+    }
     for rel in ("predictions/scores.py", "analytics/score_backtest.py"):
-        text = (root / rel).read_text()
-        for banned in ("sqlalchemy", "httpx", "requests", "urllib", "open(", "os.environ", "subprocess", "socket"):
-            assert banned not in text, f"{rel} uses {banned}"
+        tree = ast.parse((root / rel).read_text(), filename=rel)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                imported = [node.module or ""]
+            else:
+                imported = []
+            assert all(module in allowed_imports for module in imported), f"{rel} imports {imported}"
+            if isinstance(node, ast.Name):
+                assert node.id not in banned_names, f"{rel} uses {node.id}"
+            elif isinstance(node, ast.Attribute):
+                assert node.attr not in banned_names, f"{rel} uses {node.attr}"
 
 
 # ---- S8, S11, S13: what the whole run is built from ----
