@@ -1683,32 +1683,90 @@ def test_a_kalshi_market_with_no_bids_or_no_asks_is_one_sided_and_has_no_price(s
 # ---------------------------------------------------------------- a game that drops off the scoreboard (I2b)
 
 
-def test_a_game_in_progress_that_vanishes_from_a_good_reply_gets_one_lost_row_with_its_last_known_numbers(session):
+def only_dallas_board() -> dict:
+    """A good scoreboard reply that lists TB @ DAL (a game we have) and not BUF @ LA."""
+    board = recorded("espn_scoreboard_final.json")
+    board["events"] = [e for e in board["events"] if e["id"] == "401872980"]
+    return {espn.SCOREBOARD_URL: board, espn.summary_url("401872980"): recorded(SUMMARIES["401872980"])}
+
+
+def seed_la_and_dallas(session):
     seed_game(session, "BUF", "LA", datetime(2026, 10, 13, 0, 15, tzinfo=UTC), status="scheduled")
+    seed_game(session, "TB", "DAL", datetime(2026, 10, 9, 0, 15, tzinfo=UTC))
+
+
+def test_a_game_in_progress_that_vanishes_from_a_good_reply_gets_one_lost_row_with_its_last_known_numbers(session):
+    seed_la_and_dallas(session)
     run.refresh_live_games(session, get=fake_get(in_progress()), now=NOW)
-    gone = fake_get({espn.SCOREBOARD_URL: {"events": []}})
-    result = run.refresh_live_games(session, get=gone, now=NOW + timedelta(minutes=1))
-    assert result.status == "ok" and result.inserted == 1
+    run.refresh_live_games(session, get=fake_get(only_dallas_board()), now=NOW + timedelta(minutes=1))
+    states = [(r.game_id, r.state) for r in live_rows(session)]
+    assert states == [("2026_05_BUF_LA", "in"), ("2026_05_TB_DAL", "post"), ("2026_05_BUF_LA", "lost")]
     lost = live_rows(session)[-1]
-    assert (lost.state, lost.home_score, lost.away_score, lost.period, lost.clock) == ("lost", 34, 30, 4, "2:05")
+    assert (lost.home_score, lost.away_score, lost.period, lost.clock) == (34, 30, 4, "2:05")
     assert (lost.home_wp, lost.tie_wp, lost.last_play_id) == (None, None, None)
-    run.refresh_live_games(session, get=fake_get({espn.SCOREBOARD_URL: {"events": []}}), now=NOW + timedelta(minutes=3))
-    assert len(live_rows(session)) == 2  # one lost row, not one per poll
+    run.refresh_live_games(session, get=fake_get(only_dallas_board()), now=NOW + timedelta(minutes=3))
+    assert len(live_rows(session)) == 3  # one lost row, not one per poll
     run.refresh_live_games(session, get=fake_get(in_progress(clock="1:10")), now=NOW + timedelta(minutes=5))
-    assert [r.state for r in live_rows(session)] == ["in", "lost", "in"]  # it came back
+    assert [r.state for r in live_rows(session) if r.game_id.endswith("LA")] == ["in", "lost", "in"]  # it came back
+
+
+@pytest.mark.parametrize("events", [[], None])
+def test_an_empty_reply_or_one_matching_no_game_never_marks_a_game_lost(session, events):
+    seed_la_and_dallas(session)
+    run.refresh_live_games(session, get=fake_get(in_progress()), now=NOW)
+    board = {"events": []} if events is not None else recorded("espn_scoreboard_final.json")
+    if events is None:  # three events, none of them one of our games
+        board["events"] = [e for e in board["events"] if e["id"] != "401872980"][:2]
+    run.refresh_live_games(session, get=fake_get({espn.SCOREBOARD_URL: board}), now=NOW + timedelta(minutes=1))
+    assert [r.state for r in live_rows(session)] == ["in"]
+
+
+def test_a_game_that_is_still_on_the_board_but_was_dropped_by_validation_is_not_lost(session):
+    seed_la_and_dallas(session)
+    run.refresh_live_games(session, get=fake_get(in_progress()), now=NOW)
+    routes = only_dallas_board()
+    delayed = in_progress()[espn.SCOREBOARD_URL]["events"][0]  # the BUF event, now with a state we do not know
+    delayed["status"]["type"]["state"] = "delayed"
+    routes[espn.SCOREBOARD_URL]["events"].append(delayed)
+    run.refresh_live_games(session, get=fake_get(routes), now=NOW + timedelta(minutes=1))
+    assert [r.state for r in live_rows(session) if r.game_id.endswith("LA")] == ["in"]
 
 
 def test_a_vanished_game_is_logged_and_a_failed_poll_does_not_mark_anything_lost(session, caplog):
     import logging
 
     caplog.set_level(logging.WARNING)
-    seed_game(session, "BUF", "LA", datetime(2026, 10, 13, 0, 15, tzinfo=UTC), status="scheduled")
+    seed_la_and_dallas(session)
     run.refresh_live_games(session, get=fake_get(in_progress()), now=NOW)
     bad = fake_get({espn.SCOREBOARD_URL: fetch.FetchError("status 500")})
     run.refresh_live_games(session, get=bad, now=NOW + timedelta(minutes=1))
     assert [r.state for r in live_rows(session)] == ["in"]  # no reply, so nothing is known
-    run.refresh_live_games(session, get=fake_get({espn.SCOREBOARD_URL: {"events": []}}), now=NOW + timedelta(hours=1))
+    run.refresh_live_games(session, get=fake_get(only_dallas_board()), now=NOW + timedelta(hours=1))
     assert any("1 in-progress games missing" in r.getMessage() for r in caplog.records)
+
+
+# ---------------------------------------------------------------- reserve must see other processes (R1, L1)
+
+
+def test_a_second_session_cannot_reserve_over_a_reservation_another_session_made(session):
+    from nflpi.db import session_factory
+
+    session.add(SourceStatus(source="kalshi", consecutive_failures=0, updated_at=NOW))
+    session.commit()
+    assert session.get(SourceStatus, "kalshi").blocked_until is None  # this session now holds the row
+    with session_factory()() as other:
+        assert store.reserve(other, "kalshi", NOW, timedelta(minutes=1)) is True
+    assert store.reserve(session, "kalshi", NOW + timedelta(seconds=10), timedelta(minutes=1)) is False
+
+
+def test_two_first_runs_racing_to_create_the_status_row_end_with_one_winner(session, monkeypatch):
+    from nflpi.db import session_factory
+
+    with session_factory()() as other:
+        assert store.reserve(other, "kalshi", NOW, timedelta(minutes=1)) is True
+    real_get = session.get
+    monkeypatch.setattr(session, "get", lambda *a, **k: None if a[1] == "kalshi" else real_get(*a, **k))
+    assert store.reserve(session, "kalshi", NOW, timedelta(minutes=1)) is False  # lost the insert race: no fetch
 
 
 def test_finished_games_are_never_marked_lost_when_the_week_rolls_over(session):
