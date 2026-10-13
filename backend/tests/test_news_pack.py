@@ -264,8 +264,9 @@ def test_n6_the_hostile_words_stay_inside_one_line_as_plain_text():
 def test_n6_text_is_cut_to_its_limit_after_normalising():
     (item,) = news_pack.news_items([row("㌀" * 500, "㌀" * 500)], BY_ID, NOW)  # one character folds to several
     lines = item.split("\n")
-    assert len(lines[3]) <= len("title: ") + news_pack.TITLE_MAX
-    assert len(lines[4]) <= len("extract: ") + news_pack.EXTRACT_MAX
+    assert len(lines[3]) <= len("title: ") + 200  # literals: the frozen limits, not the constants under test
+    assert len(lines[4]) <= len("extract: ") + 300
+    assert (news_pack.TITLE_MAX, news_pack.EXTRACT_MAX) == (200, 300)
 
 
 def test_n6_an_item_with_nothing_left_after_cleaning_is_dropped():
