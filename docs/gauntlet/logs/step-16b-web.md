@@ -59,6 +59,19 @@ Executable gate: `apps/web/e2e/group.spec.ts` (clauses below, one test each; it 
 | A1 | Axe finds no violation in dark and light: data, confirm step, error, standings | A1 |
 | R1 | At 375x812 no horizontal scroll (standings, empty, confirm) and Upload/Choose another buttons >= 44px | R1 |
 
+**Amendments from the UX architect critic (round 1, fresh sonnet subagent, before any code; 3 blockers accepted, spec changed, nothing built yet):**
+
+| ID | Clause | Check |
+|---|---|---|
+| L1 | Standings and shares load and fail on their own; a failed one shows an ErrorState (role alert, "Could not load", Retry); the "No standings" text is never shown for an error; a skeleton shows while loading | L1 |
+| L2 | A late reply for an earlier season/week never replaces the one now shown (cancel flag in the hook) | L2 |
+| U1b | The confirm panel says "Saving to the {season} season" next to a season select whose options are `meta.seasons`; after a save into a season other than the one on screen the result carries a link "Show the {season} season"; a double tap sends once; a new file choice clears the old result and error; after a save the same file can be chosen again | U1, U2 |
+| P3b | A week in which nobody picked anything shows ONE message "No group picks for week N yet" (hint: upload the picks file), not a wall of empty cards | P3 |
+| R2 | 32 members and a 70-character name without spaces fit 375px with no sideways scroll, and the last row clears the tab bar | R2 |
+| X1b | "spread" appears nowhere in the body text or markup, in the confirm step either | X1 |
+
+Advisories carried, not built: collapsing the standings to a top ten; showing the detected file kind before saving (the server cannot tell without saving); per-member "x of 32" wording; explaining a null rank beyond the en dash; picks above standings on the page (the owner's order is kept: upload, standings, picks).
+
 Out of the gate on purpose: Dwight's security review of the form and name rendering; design critics; repo gate (§ 5).
 
 ## 3. IMPLEMENTATION

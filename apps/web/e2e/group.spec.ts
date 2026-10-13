@@ -98,7 +98,7 @@ test("P1 each game shows how many members picked each side, the share and the me
   for (const g of withPicks) {
     for (const s of [g.away, g.home]) {
       const row = gameCard(page, g.away_team, g.home_team).getByTestId(`side-${s.team}`);
-      await expect(row).toContainText(`${s.picks} of ${g.picked}`);
+      await expect(row).toContainText(new RegExp(`(^|\\D)${s.picks} of ${g.picked}(\\D|$)`));
       await expect(row).toContainText(s.share === null ? "–" : `${Math.round(s.share * 100)}%`);
       await expect(row).toContainText(s.avg_confidence === null ? "avg –" : `avg ${s.avg_confidence.toFixed(1)} pts`);
     }
@@ -125,9 +125,9 @@ test("P3 empty states: a game nobody picked, a season with no group data, a week
   await expect(card.getByTestId(/^side-/)).toHaveCount(0);
 
   await page.goto(`/group/?season=2022&week=1`);
-  const old = await shares(request, 1, 2022);
-  await expect(page.getByTestId("group-game")).toHaveCount(old.games.length);
-  await expect(page.getByText("No group picks for this game yet")).toHaveCount(old.games.length);
+  expect((await shares(request, 1, 2022)).games.every((g) => g.picked === 0)).toBe(true);
+  await expect(page.getByText("No group picks for week 1 yet")).toBeVisible(); // one message, not a wall of empty cards
+  await expect(page.getByTestId("group-game")).toHaveCount(0);
   await expect(page.getByText("No standings for week 1 yet")).toBeVisible();
 
   await page.route("**/api/group/shares*", (route) => route.fulfill({ json: { season: SEASON, week: 4, games: [] } }));
@@ -138,7 +138,12 @@ test("P3 empty states: a game nobody picked, a season with no group data, a week
 test("X1 the spread is never shown or used as a score", async ({ page }) => {
   await open(page, 4);
   await expect(page.getByTestId("group-game").first()).toBeVisible();
-  await expect(page.locator("main")).not.toContainText(/spread/i);
+  await chooser(page).setInputFiles(csvFile("a.csv", "x"));
+  await expect(confirmPanel(page)).toBeVisible();
+  expect(await page.evaluate(() => document.body.innerText + document.documentElement.outerHTML.replace(/<script[\s\S]*?<\/script>/g, ""))).not.toMatch(/spread/i);
+  await page.goto(`/group/?season=${SEASON}&week=3`);
+  await expect(page.getByRole("table", { name: "Standings for week 3" })).toBeVisible();
+  expect(await page.evaluate(() => document.body.innerText)).not.toMatch(/spread/i);
 });
 
 test("PV1 member names never reach the console or browser storage", async ({ page }) => {
@@ -169,7 +174,7 @@ test("U1 a picks file is shown for confirmation with its season, sent as raw byt
   await open(page, 5);
   await chooser(page).setInputFiles(csvFile("picks-week-5.csv", text));
   await expect(confirmPanel(page)).toContainText("picks-week-5.csv");
-  await expect(confirmPanel(page)).toContainText("The server cannot tell if the year is wrong");
+  await expect(confirmPanel(page)).toContainText("the server cannot tell if the year is wrong");
   await expect(page.getByLabel("Season for this file")).toHaveValue(String(SEASON));
   expect(posts).toHaveLength(0);
 
@@ -181,6 +186,10 @@ test("U1 a picks file is shown for confirmation with its season, sent as raw byt
   expect(posts[0].body?.toString()).toBe(text);
   const g = unique[0];
   await expect(gameCard(page, g.away_team, g.home_team).getByTestId(`side-${g.home_team}`)).toContainText("1 of 1");
+  await expect(confirmPanel(page)).toHaveCount(0);
+  await chooser(page).setInputFiles(csvFile("picks-week-5.csv", text)); // the same file again must work
+  await expect(confirmPanel(page)).toContainText("picks-week-5.csv");
+  await expect(page.getByTestId("upload-result")).toHaveCount(0); // a new choice clears the old result
 });
 
 test("U2 the season can be changed in the confirm step and the chosen season is the one sent", async ({ page, request }) => {
@@ -193,9 +202,12 @@ test("U2 the season can be changed in the confirm step and the chosen season is 
   await open(page, 5);
   await chooser(page).setInputFiles(csvFile("picks.csv", text));
   await page.getByLabel("Season for this file").selectOption("2022");
-  await sendButton(page).click();
-  await expect(page.getByTestId("upload-result")).toHaveText("Picks file saved: 7 picks for the 2022 season.");
+  await expect(confirmPanel(page)).toContainText("Saving to the 2022 season");
+  await sendButton(page).dblclick(); // a double tap must send once
+  await expect(page.getByTestId("upload-result")).toContainText("Picks file saved: 7 picks for the 2022 season.");
   expect(seen.map((u) => new URL(u).searchParams.get("season"))).toEqual(["2022"]);
+  // The page shows 2023; a link says where the saved data went, so a wrong year cannot hide.
+  await expect(page.getByRole("link", { name: "Show the 2022 season" })).toHaveAttribute("href", /season=2022/);
 });
 
 test("U3 a weekly performance file is described in words and the standings show it", async ({ page, request }) => {
@@ -253,6 +265,48 @@ test("E3 a file over the 1,000,000 byte cap is refused on the page without being
   await expect(page.getByTestId("upload-error")).toHaveText(TOO_BIG);
   await expect(sendButton(page)).toHaveCount(0);
   expect(sent).toBe(0);
+});
+
+test("L1 each section fails on its own with a retry, and an error is never shown as 'no data'", async ({ page }) => {
+  await page.route("**/api/group/standings*", (route) => route.fulfill({ status: 500, json: { detail: "boom" } }));
+  await open(page, 3);
+  await expect(page.getByRole("alert").filter({ hasText: "Could not load" })).toHaveCount(1);
+  await expect(page.getByText("No standings for week 3 yet")).toHaveCount(0);
+  await expect(page.getByTestId("group-game")).not.toHaveCount(0); // the other section still works
+  await page.unroute("**/api/group/standings*");
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(page.getByRole("table", { name: "Standings for week 3" })).toBeVisible();
+});
+
+test("L2 a late answer for an earlier week never replaces the week now shown", async ({ page }) => {
+  await page.route("**/api/group/standings?*week=3*", async (route) => {
+    await new Promise((r) => setTimeout(r, 1500));
+    await route.continue();
+  });
+  await open(page, 3);
+  await page.getByRole("button", { name: "Next week" }).click();
+  await expect(page.getByText("No standings for week 4 yet")).toBeVisible();
+  await page.waitForTimeout(2200);
+  await expect(page.getByText("No standings for week 4 yet")).toBeVisible();
+  await expect(page.getByRole("table", { name: /Standings/ })).toHaveCount(0);
+});
+
+test("R2 thirty-two members with a very long name fit a phone and clear the tab bar", async ({ page }) => {
+  const rows = Array.from({ length: 32 }, (_, i) => ({
+    member: i === 5 ? "Averyveryverylongmadeupnamewithoutanyspacesatall Placeholderson-Examplesmith" : `Member ${String(i + 1).padStart(2, "0")} Example`,
+    points: 40 - i, total: 400 - i * 7, rank: i + 1,
+  }));
+  await page.route("**/api/group/standings*", (route) => route.fulfill({ json: { season: SEASON, week: 3, weeks_counted: [1, 2, 3], rows } }));
+  await page.setViewportSize({ width: 375, height: 812 });
+  await open(page, 3);
+  const table = page.getByRole("table", { name: "Standings for week 3" });
+  await expect(table.getByRole("row")).toHaveCount(33);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  await table.getByRole("row").last().scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const last = await table.getByRole("row").last().boundingBox();
+  const bar = await page.getByRole("navigation", { name: "Primary" }).last().boundingBox();
+  expect((last?.y ?? 0) + (last?.height ?? 0)).toBeLessThanOrEqual(bar?.y ?? 0);
 });
 
 for (const scheme of ["dark", "light"] as const) {
