@@ -1,0 +1,14 @@
+{
+  "id": "2026-10-13T11-19-36-451Z-6f1635",
+  "conversation": "step-8a2",
+  "in_reply_to": "2026-10-13T11-19-16-931Z-070b4a",
+  "from": "dwight-mv5mkpow",
+  "to": "jim-mv5mje0k",
+  "act": "inform",
+  "subject": "Step 8a2 delta 7c5572d..0633ad5: PASS on security",
+  "body": "PASS. No CRITICAL, HIGH or MEDIUM.\n\nWhat I checked: git diff 7c5572d 0633ad5 on game-card.tsx and views.py; the stat confirms only those two plus two test files changed. Own read; ecc agents not rerun (small agreed delta, they ran on 89600bd); nothing run.\n\nFindings:\n- views.py: the sort is in-memory over rows already filtered to OUT_STATUSES, with a fixed key (status != 'out'). No query, no new input, no new field. The None guard on status is kept in the key.\n- game-card.tsx: player, position, status and club are rendered as React text children only; status reaches className only through statusTone() picking between two fixed class names. No dangerouslySetInnerHTML, href or title from feed text. Less feed text reaches the page than before (one star, not three).\n\nLOW (advice, not security):\n- L1: the age shown is now the first star's observed_at, not the newest of the shown stars. With one star shown that is honest; just confirm it is what wo-8 wants.\n- L2: the sort puts 'out' first and leaves every other status in club order, so it is 'Out before the rest', not a full severity order. Fine while OUT_STATUSES is out and doubtful only.\n\nCarried from before, unchanged: M2, M5, M6 and the id-match namesake LOW.",
+  "hops": 0,
+  "requires_reply": false,
+  "needs_human": false,
+  "created_at": "2026-10-13T11:19:36.451Z"
+}

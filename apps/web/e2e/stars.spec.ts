@@ -69,13 +69,14 @@ for (const size of [
       await expect(line).not.toContainText("Nick Nickel");
       const box = await line.evaluate((e) => e.getBoundingClientRect().toJSON());
       // Whatever the name's length, these are never cut: his status, how many more, the age, and the club with no list.
-      for (const text of ["Out", "+3 more", "3h ago", "MIA: no list"]) {
+      for (const text of ["Out", "+3 more", "3h ago", "MIA: no star list"]) {
         const part = line.getByText(text, { exact: true });
         await expect(part, text).toBeVisible();
         const r = await part.evaluate((e) => e.getBoundingClientRect().toJSON());
         expect(r.right, `"${text}" ends inside the line`).toBeLessThanOrEqual(box.right + 0.5);
         expect(await part.evaluate((e) => e.scrollWidth <= e.clientWidth), `"${text}" is whole`).toBe(true);
       }
+      await expect(line, "the count and the age are two things: a dot sits between them").toContainText(/\+3 more\s*·\s*3h ago/);
       expect(box.height, "D27 a short line: one line even with five stars out and a very long name").toBeLessThanOrEqual(20);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(0);
     });
