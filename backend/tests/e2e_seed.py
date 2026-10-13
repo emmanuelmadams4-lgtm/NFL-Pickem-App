@@ -98,3 +98,39 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+MEMBERS = ["Pat Example", "Sam Sample", "Kit Demo", "Zed <b>Bold</b> & Co"]  # made up; the last has markup on purpose
+POINTS = [[6, 5, 7], [5, 6, 4], [4, 4, 5], [3, 2, 6]]  # weeks 1 to 3, one list per member
+
+
+def seed_group() -> None:
+    """Step 16b (web): made-up picks for week 4 (a repeated matchup gets none) and weekly points for weeks 1 to 3."""
+    from sqlalchemy import select
+
+    from nflpi.group.importer import import_group_csv
+    from nflpi.models import Game
+
+    header = "Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Confidence,Week_Total_Pts"
+    with session_factory()() as s:
+        query = select(Game).where(Game.season == CURRENT, Game.week == 4).order_by(Game.kickoff_utc, Game.game_id)
+        games = s.scalars(query).all()
+        pairs = [frozenset((g.away_team, g.home_team)) for g in games]
+        # The importer needs a unique matchup, so a repeated one (the fixture has one) gets no picks.
+        games = [g for g, pair in zip(games, pairs, strict=True) if pairs.count(pair) == 1]
+        lines = [header]
+        for m, name in enumerate(MEMBERS):
+            for i, g in enumerate(games):
+                fav = (i + m) % 2 == 0
+                pick, side = (g.home_team, "Favorite") if fav else (g.away_team, "Underdog")
+                lines.append(f'4,"{name}",{i + 1},{g.home_team},3.5,{g.away_team},{pick},{side},{len(games) - i},0')
+        import_group_csv(s, CURRENT, "\n".join(lines).encode())
+        rows = ["Rank,Team,Wk1,Wk2,Wk3,Total_Pts"]
+        for rank, (name, p) in enumerate(zip(MEMBERS, POINTS, strict=True), 1):
+            rows.append(f'{rank},"{name}",{p[0]},{p[1]},{p[2]},{sum(p)}')
+        import_group_csv(s, CURRENT, "\n".join(rows).encode())
+    print("e2e seed: made-up group rows ready")
+
+
+if __name__ == "__main__":
+    seed_group()
