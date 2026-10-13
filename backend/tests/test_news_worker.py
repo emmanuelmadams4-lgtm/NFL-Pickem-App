@@ -381,21 +381,20 @@ def test_sources_are_still_the_two_landed_feeds():
 
 def test_c1_the_sweep_leaves_the_row_of_a_run_that_is_still_alive_alone(session, monkeypatch):
     release, started = threading.Event(), threading.Event()
-    row_started = T0 - timedelta(minutes=30)
-    session.add(IngestionRun(source="espn", dataset="news:espn", started_at=row_started, status="running"))
-    session.commit()
 
-    def hang(*a, **k):
+    def hang(step_session, now, **k):  # the live run writes its own "running" row, long past the sweep limit
+        step_session.add(
+            IngestionRun(source="espn", dataset="news:espn", started_at=T0 - timedelta(minutes=30), status="running")
+        )
+        step_session.commit()
         started.set()
         release.wait(5)
 
     monkeypatch.setattr(news_worker, "news_step", hang)
-    monkeypatch.setattr(news_worker, "RUN_DEADLINE", 0.05)
+    monkeypatch.setattr(news_worker, "RUN_DEADLINE", 0.2)
     waits: list[float] = []
     try:
-        news_worker.run_forever(
-            threading.Event(), now=lambda: T0, wait=lambda s: waits.append(s) or len(waits) >= 3
-        )
+        news_worker.run_forever(threading.Event(), now=lambda: T0, wait=lambda s: waits.append(s) or len(waits) >= 3)
         session.expire_all()
         assert started.is_set()
         assert session.scalar(select(IngestionRun.status)) == "running"  # a live run is not "interrupted"
