@@ -53,7 +53,29 @@ Distributions give the score after regulation. A regulation tie goes to overtime
 
 ## Results
 
-RESULTS_PLACEHOLDER
+All numbers from ONE confirm run on seasons 2022 to 2025, 1,087 regular-season games with a closing line, 10,000 simulations each, every variant (file `docs/gauntlet/logs/step-18c-evidence/confirm-result.json`, written once by `python -m nflpi.analytics.sim_backtest confirm`). The default distribution was picked before that look, on 2012 to 2021 only (`tune-result.json`, 2,576 games): pooled CRPS (margin plus total, lower is better) poisson 16.136, **paired_residual 15.047**, bivariate_normal 15.059, shared_gamma_poisson 15.061. The three learned distributions differ by 0.014 points; the choice among them is a near tie. Poisson is clearly worse.
+
+**Short answer: no edge is shown.** The simulator reproduces the spread of real scores well enough to be useful for ranges and tie rates; it does not beat the betting market or the live blend at picking winners, covers or overs.
+
+| variant (confirm) | margin MAE / RMSE | total MAE / RMSE | margin 50/80/95% coverage | total 50/80/95% coverage |
+|---|---|---|---|---|
+| football_only, poisson | 9.90 / 12.8 | 10.48 / 13.3 | 34 / 57 / 75 | 32 / 52 / 70 |
+| football_only, paired_residual (default) | 9.89 / 12.8 | 10.46 / 13.3 | 55 / 81 / 97 | 54 / 82 / 96 |
+| football_only, bivariate_normal | 9.91 / 12.8 | 10.47 / 13.3 | 58 / 82 / 95 | 53 / 83 / 95 |
+| football_only, shared_gamma_poisson | 9.91 / 12.8 | 10.47 / 13.3 | 56 / 82 / 95 | 53 / 81 / 95 |
+| market_informed, paired_residual | 9.49 / 12.4 | 10.19 / 13.0 | 55 / 82 / 96 | 56 / 83 / 95 |
+| market_informed, bivariate_normal | 9.50 / 12.4 | 10.20 / 13.0 | 57 / 82 / 95 | 54 / 83 / 94 |
+| market_informed, shared_gamma_poisson | 9.50 / 12.4 | 10.20 / 13.0 | 56 / 81 / 95 | 54 / 81 / 94 |
+| market_informed, poisson | 9.50 / 12.4 | 10.20 / 13.0 | 36 / 57 / 75 | 32 / 53 / 72 |
+
+(MAE and RMSE are of the simulated mean against the real margin and total.)
+
+* **Independent Poisson is too narrow.** Its 50/80/95 percent intervals hold only about 35/57/75 percent of real margins. The three learned distributions come close to their nominal levels (a little wide at 50 percent for paired_residual).
+* **Cover and over calibration (Brier; a flat 0.5 scores 0.25).** football_only: cover 0.2600 to 0.2615 and over 0.2574 to 0.2586 for the learned distributions, i.e. worse than a coin, so the football-only simulator has no cover or over edge against the closing line. market_informed: 0.2499 to 0.2502, i.e. about 0.25 by construction. Reliability tables (10 bins) are in the result file.
+* **Ties.** Simulated final-tie rate 0.20 to 0.31 percent for the variants against a real 0.28 percent (3 of 1,087 games): consistent, but 3 games cannot validate it tightly.
+* **Football key numbers (|margin| = 3 and 7).** Real games: 14.8 and 8.0 percent. Simulated: poisson 11.1 and 6.5, the learned distributions 7.1 to 7.8 and 4.9 to 5.3. **Every variant under-represents 3 and 7**, the learned ones by about half. The simulator smooths football's lumpy scoring; do not read exact-margin or middling-spread-push probabilities near 3 and 7 from it.
+* **Win probability against the live blend** (`p_a_win + p_tie/2` for the home side, decided games only, 1,084 games; blend log loss 0.6095, market 0.6082): football_only paired_residual 0.6304, log-loss gain over the blend -0.0209 (95% -0.0317 to -0.0099, the simulator is worse) and accuracy 65.7 percent against the blend's 67.5; market_informed paired_residual 0.6068, gain +0.0027 (95% -0.0011 to +0.0065), accuracy 67.7 against 67.5. **The interval includes zero, so under the D18 ship rule nothing here beats the blend**; it is a tie by construction because the expected points are the market's.
+* **Gap to the blend (cross-check).** football_only paired_residual: mean absolute gap 0.066, 242 of 1,087 games above 0.10, largest 0.36. market_informed: mean 0.023, largest 0.116, 1 game above 0.10. The largest football-only gaps are games the market knew more about than the stats model (checked by name, not by data: 2023 week 18 PIT at BAL, a game where Baltimore was expected to rest starters; 2022 week 1 DEN at SEA, the first game after a quarterback trade; 2025 week 6 LA at BAL). The simulator is consistent with its inputs; it is not independent of them.
 
 ## Limits
 
