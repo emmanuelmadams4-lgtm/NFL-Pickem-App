@@ -291,7 +291,7 @@ def refresh_predictions(
             new_label = pick_label(max(prob, 1 - prob))
             qb_team = next(
                 (team for col, team in (("home_qb", home), ("away_qb", away))
-                 if features.get(col) and features.get(col) != prev.features.get(col)),
+                 if prev.features.get(col) and features.get(col) and features.get(col) != prev.features.get(col)),
                 None,
             )
             qb_name = features.get("home_qb" if qb_team == home else "away_qb") if qb_team else None
