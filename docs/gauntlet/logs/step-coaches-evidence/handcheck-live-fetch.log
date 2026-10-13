@@ -10,3 +10,125 @@ ATL {'Kevin Stefanski'}
 ARI {'Mike LaFleur'}
 LV {'Klint Kubiak'}
 2025 BUF {'Sean McDermott'}
+== final code 5d07b32, Tue Oct 13 00:18:11 EDT 2026 ==
+Traceback (most recent call last):
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py"[0m, line [35m1946[0m, in [35m_exec_single_context[0m
+    [31mself.dialect.do_execute[0m[1;31m([0m
+    [31m~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31mcursor, str_statement, effective_parameters, context[0m
+        [1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py"[0m, line [35m1192[0m, in [35mdo_execute[0m
+    [31mcursor.execute[0m[1;31m(statement, parameters)[0m
+    [31m~~~~~~~~~~~~~~[0m[1;31m^^^^^^^^^^^^^^^^^^^^^^^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/psycopg/cursor.py"[0m, line [35m117[0m, in [35mexecute[0m
+    raise ex.with_traceback(None)
+[1;35mpsycopg.errors.ForeignKeyViolation[0m: [35mupdate or delete on table "games" violates foreign key constraint "market_snapshots_game_id_fkey" on table "market_snapshots"
+DETAIL:  Key (game_id)=(2024_01_BAL_KC) is still referenced from table "market_snapshots".[0m
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File [35m"<stdin>"[0m, line [35m6[0m, in [35m<module>[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py"[0m, line [35m3275[0m, in [35mdelete[0m
+    [31mself.session.execute[0m[1;31m([0m
+    [31m~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31mdelete_,[0m
+        [1;31m^^^^^^^^[0m
+    ...<3 lines>...
+        [1;31m),[0m
+        [1;31m^^[0m
+    [1;31m)[0m,
+    [1;31m^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py"[0m, line [35m2473[0m, in [35mexecute[0m
+    return [31mself._execute_internal[0m[1;31m([0m
+           [31m~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31mstatement,[0m
+        [1;31m^^^^^^^^^^[0m
+    ...<4 lines>...
+        [1;31m_add_event=_add_event,[0m
+        [1;31m^^^^^^^^^^^^^^^^^^^^^^[0m
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py"[0m, line [35m2363[0m, in [35m_execute_internal[0m
+    [31mcompile_state_cls.orm_execute_statement[0m[1;31m([0m
+    [31m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31mself,[0m
+        [1;31m^^^^^[0m
+    ...<4 lines>...
+        [1;31mconn,[0m
+        [1;31m^^^^^[0m
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/bulk_persistence.py"[0m, line [35m2066[0m, in [35morm_execute_statement[0m
+    return [31msuper().orm_execute_statement[0m[1;31m([0m
+           [31m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31msession, statement, params, execution_options, bind_arguments, conn[0m
+        [1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py"[0m, line [35m316[0m, in [35morm_execute_statement[0m
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py"[0m, line [35m1451[0m, in [35mexecute[0m
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py"[0m, line [35m533[0m, in [35m_execute_on_connection[0m
+    return [31mconnection._execute_clauseelement[0m[1;31m([0m
+           [31m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31mself, distilled_params, execution_options[0m
+        [1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py"[0m, line [35m1671[0m, in [35m_execute_clauseelement[0m
+    ret = self._execute_context(
+        dialect,
+    ...<9 lines>...
+        param_dict=param_dict,
+    )
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py"[0m, line [35m1825[0m, in [35m_execute_context[0m
+    return [31mself._exec_single_context[0m[1;31m([0m
+           [31m~~~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31mdialect, context, statement, parameters[0m
+        [1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py"[0m, line [35m1965[0m, in [35m_exec_single_context[0m
+    [31mself._handle_dbapi_exception[0m[1;31m([0m
+    [31m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31me, str_statement, effective_parameters, cursor, context[0m
+        [1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py"[0m, line [35m2335[0m, in [35m_handle_dbapi_exception[0m
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py"[0m, line [35m1946[0m, in [35m_exec_single_context[0m
+    [31mself.dialect.do_execute[0m[1;31m([0m
+    [31m~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31mcursor, str_statement, effective_parameters, context[0m
+        [1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py"[0m, line [35m1192[0m, in [35mdo_execute[0m
+    [31mcursor.execute[0m[1;31m(statement, parameters)[0m
+    [31m~~~~~~~~~~~~~~[0m[1;31m^^^^^^^^^^^^^^^^^^^^^^^[0m
+  File [35m"/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-coaches/backend/.venv/lib/python3.13/site-packages/psycopg/cursor.py"[0m, line [35m117[0m, in [35mexecute[0m
+    raise ex.with_traceback(None)
+[1;35msqlalchemy.exc.IntegrityError[0m: [35m(psycopg.errors.ForeignKeyViolation) update or delete on table "games" violates foreign key constraint "market_snapshots_game_id_fkey" on table "market_snapshots"
+DETAIL:  Key (game_id)=(2024_01_BAL_KC) is still referenced from table "market_snapshots".
+[SQL: DELETE FROM games]
+(Background on this error at: https://sqlalche.me/e/21/gkpj)[0m
+== final code 5d07b32, Tue Oct 13 00:18:19 EDT 2026 ==
+schedules (re-written from nflverse, stale names back, then overlaid) ok 842
+head_coaches ('ok', 68, None)
+production path (no injected names):  ok 0 None
+BUF {'Joe Brady'}
+ATL {'Kevin Stefanski'}
+ARI {'Mike LaFleur'}
+LV {'Klint Kubiak'}
+2025 BUF {'Sean McDermott'}

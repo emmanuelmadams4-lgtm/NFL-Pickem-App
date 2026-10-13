@@ -13,7 +13,7 @@ Owner's words: "some of the team news and coaching rosters are wrong like sean m
 | BUF | Sean McDermott | Joe Brady | Bills release (McDermott relieved Jan 19, 2026): https://www.buffalobills.com/news/buffalo-bills-announce-sean-mcdermott-has-been-relieved-of-his-duties-as-head-coach ; https://www.buffalobills.com/news/joe-brady-agrees-to-terms-to-be-the-next-buffalo-bills-head-coach |
 | ATL | Raheem Morris | Kevin Stefanski | https://www.espn.com/nfl/story/_/id/47646376/matt-ryan-atlanta-falcons-hire-kevin-stefanski-new-coach |
 | ARI | Jonathan Gannon | Mike LaFleur | https://www.azcardinals.com/news/cardinals-choose-mike-lafleur-as-new-head-coach-2026 |
-| LV | "Klint Kubliak" (typo) | Klint Kubiak | https://www.nfl.com/news/klint-kubiak-confi... (Wikipedia ref), https://www.kold.com/2026/02/10/las-vegas-raiders-confirm-klint-kubiak-head-coach-silver-black |
+| LV | "Klint Kubliak" (typo) | Klint Kubiak | AP via https://lasvegassun.com/news/2026/feb/09/raiders-officially-hire-klint-kubiak-as-head-coach/ , https://www.kold.com/2026/02/10/las-vegas-raiders-confirm-klint-kubiak-head-coach-silver-black |
 
   The other 28 clubs match in all three places (ESPN, Wikipedia, nflverse). Wikipedia list: https://en.wikipedia.org/wiki/List_of_current_NFL_head_coaches . ESPN feed: `https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2026/teams/{id}/coaches`.
 * **Direction check (owner's words).** Builds: the head coach shown on a game, and used for "record under this coach", is correct and stays correct as clubs change coaches. Replaces: trusting nflverse alone for the current season. Not: coordinator or play-caller data (no feed, table stays empty), API or web changes, and "team news" (the news lane).
@@ -38,19 +38,44 @@ Owner's words: "some of the team news and coaching rosters are wrong like sean m
 
 ## 3. IMPLEMENTATION
 
-* Provider Codex, `gpt-6-luna` low, try 1 of 2, no climbs (`BUILD_RUNG: gpt-6-luna`, `CLIMBS: none`). Work order 1 (`nflverse.py`, `service.py` only). Codex could not reach the database or PyPI from its sandbox (expected), so the coordinator reran every proof.
-* Coordinator found two faults and fixed them before the commit: C4's test loaded no games first (my test bug, not Codex's: failed for "no games loaded" instead of the ESPN error), and four test lines over the 120-column ruff limit.
-* Commit `549f18d`. Coach tests 3/3 green after the fix (the fourth, C1, was among them: `3 passed` in the `-k coach` selection plus the stale-name test in the full run).
-* Jev/model pick: skipped `decide.sh` (Jev call not needed for one small order; luna low is the Build Ladder default for known call sites). Recorded here as the reason.
+* Provider Codex, `gpt-6-luna`, no climbs (`CLIMBS: none`), 3 work orders + 1 cleanup order, each with two tries available, none needed. Codex cannot reach the database or PyPI from its sandbox (expected), so the coordinator reran every proof. EFFORT: spec and review `high` (coordinator), luna `low`, work order 4 `medium` (many clauses). Jev/`decide.sh` was not called: all picks are the Build Ladder default rung for known call sites, recorded here as the reason.
+* WO-1 `549f18d`: `fetch_head_coaches`, `ingest_head_coaches`, overlay after each schedule load. Coordinator fixed two faults of its own tests (C4's test loaded no games; four lines over 120 columns).
+* Dwight's security review (`dwight-mv5mkpow`, at `f2290d4`): no CRITICAL, no HIGH; three MEDIUM security (C1 link host, C2 name cleaning, C3 id digits) and functional points C4 to C7, L1 to L4. Red tests first (`f2290d4`, `41ab752`, then `step "review findings"` commit), then WO-3 `209a23d` (host pin, 64 limit) and WO-4 `dff233b`:
+
+| Finding | Outcome |
+|---|---|
+| C1 link host | fixed: https scheme, exact host `sports.core.api.espn.com`, no userinfo, port none or 443, ESPN calls do not follow redirects; tests `plain_https`, `another_host` |
+| C2 names | fixed: both parts must be text, control characters dropped, spaces collapsed, at most 64; tests `not_text`, `not_digits` (cleaning) |
+| C3 team id | fixed: digits only |
+| C4 skipped clubs | fixed as a floor: fewer than 30 clubs fails the run and keeps the feed names (`too_few`); a club with 0 or 2 coaches is skipped |
+| C5 `jobs.py` reports ok when ESPN failed | NOT done: `jobs.py` is not this lane's. SEAM for god: `ingest_schedules` returns the schedules run, the head-coach run is its own row in `ingestion_runs` (source `espn`). If god wants it in the job exit code, wave 5 reads `ingestion_runs` |
+| C6 finished games rewritten | kept on purpose and stated: nflverse carries the old name into already played 2026 games (BUF weeks 1 to 4), so the rewrite is the fix; a mid-season replacement lists two coaches on ESPN and is skipped (feed names stay). Needs god's confirmation (Dwight asked) |
+| C7 load | fixed: 6 hour in-process cache (`at_most_once`), User-Agent sent |
+| L1 L2 L3 | fixed: error text shows host and path only; first 40 clubs read; shape errors name the club. L4 (`max(season)` can be next year after the new schedule is published): not done, noted |
+
+* Delta sent to Dwight for a second look (outbox `dwight-delta.json`).
 
 ## 4. CLEANUP
 
-* `/refactor` scope-locked to `ingest_head_coaches`: the inner loop had a `team_side is Game.home_team` conditional twice; rewritten to loop over `"home"` and `"away"` with `getattr`. Behaviour identical. Work order 2 to Codex luna low, commit `refactor: head coach overlay loops over side names`. No other simplification: `fetch_head_coaches` is 15 lines, one network helper shared with `fetch_csv`.
+* Round 1, `/refactor` scope-locked to `ingest_head_coaches`: side loop over `"home"`/`"away"` instead of a column identity test (WO-2, luna low). Round 2, after the review fixes: `fetch_head_coaches` had grown past 40 lines with deep nesting, so `_is_espn_link` and `_clean_name` were extracted (WO-5 `5d07b32`, behaviour identical, `test_data.py` + `test_trends.py` 36 passed). Nothing else touched.
 
 ## 5. VERIFICATION
 
-(filled below after the runs)
+* Commit under test `5d07b32`. Machine rule from god: `res:gate` held by this lane for the full runs (coord lock taken, released after).
+* Gate run 1 and run 2 back to back (`step-coaches-evidence/gate-run1.log`, `gate-run2.log`): `183 passed in 50.34s`, `183 passed in 48.36s`; `uvx ruff check nflpi tests migrations`: `All checks passed!` both; `alembic upgrade head` on a scratch database then `alembic check`: `No new upgrade operations detected.` both (the test database is built with `create_all`, so `alembic check` needs its own migrated database, `nflpi_alembic`). `npm run gen:api`: no diff in `packages/` or `apps/` (`gen-api.log`). The red-to-green history is in the commits (`948c610` red, `549f18d` green).
+* Hand check (the scope named it), `handcheck-live-fetch.log`: the real nflverse download and the real ESPN feed through the new code into a scratch database: `schedules ok 842`, `head_coaches ok 68` (4 clubs x 17 games), BUF `{'Joe Brady'}`, ATL `{'Kevin Stefanski'}`, ARI `{'Mike LaFleur'}`, LV `{'Klint Kubiak'}`, and 2025 BUF stays `{'Sean McDermott'}` (past seasons untouched). Production path with no injected names: `ok 0` (nothing left to change).
+* `lane-guard.py check lanes.md coaches d88d74e`: `OK` (`lane-guard.log`).
+* Fresh critic and Jev Job 4: see the section below once run.
 
 ## 6. LANDING
 
-Not done by this lane. God lands it. Nothing was pushed, deployed or merged. Wave 5 notes for god: none needed for correctness (the API already serves `games.home_coach`).
+Not done by this lane (no push, PR, merge or deploy). God lands it.
+
+## Carried / for god
+
+1. C5: `jobs.py` and the API freshness list know nothing about the `head_coaches` dataset. Not added to `STALE_HOURS`, so the API shape is unchanged. Failed ESPN runs are visible only in `ingestion_runs`.
+2. C6: finished games of the season are rewritten (see above). Confirm with the owner.
+3. The web "Head coach" row (`apps/web/components/game/team-compare.tsx`) and `api/views.py` read `games.*_coach` unchanged; no edit there was needed, the names are fixed at the source.
+4. Play callers: still no feed and the table is empty (owner decision HAG-9); nothing wrong is shown. Coordinators and other staff are not stored anywhere in the app. If the owner wants those, it needs a feed or a sourced table first: a new step.
+5. "Team news" is the news lane (8c), not this defect.
+6. Wikipedia and ESPN both listed one coach per club on 2026-10-13; re-run `check32.py` before the next season starts.
