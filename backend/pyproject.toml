@@ -19,6 +19,7 @@ dependencies = [
   "pywebpush>=2.5",
   "requests>=2.34.2",
   "feedparser>=6.0.14",
+  "claude-agent-sdk>=0.2.165",
 ]
 
 [dependency-groups]
