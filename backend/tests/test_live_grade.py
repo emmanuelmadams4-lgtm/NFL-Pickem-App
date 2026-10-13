@@ -167,10 +167,10 @@ def test_g4_missing_numbers_are_never_filled_the_gap_gets_no_weight(session):
 @pytest.mark.parametrize("bad", [float("nan"), float("inf"), 1.2, -0.1])
 def test_g4_a_stored_number_outside_0_to_1_or_not_finite_is_missing_never_clamped(session, bad):
     g = finished(session, "A")
-    espn(session, g, [(0, "in", 0.6), (20, "in", bad), (40, "in", 0.8), (60, "post", 0.8)])
+    espn(session, g, [(0, "in", 0.6), (20, "in", bad), (30, "in", 0.8), (40, "in", 0.7), (60, "post", 0.7)])
     e = by_id(session)["2026_05_A"].forecasters["espn_live"]
-    assert e.points == 2 and e.coverage == pytest.approx(40 / 60)
-    assert e.brier == pytest.approx((20 * 0.16 + 20 * 0.04) / 40)
+    assert e.points == 3 and e.coverage == pytest.approx(50 / 60)  # the bad row's 10 minutes get no weight
+    assert e.brier == pytest.approx((20 * 0.16 + 10 * 0.04 + 20 * 0.09) / 50)
 
 
 def test_g4_a_null_kalshi_row_ends_the_hold_and_only_live_kalshi_quotes_count(session):
@@ -233,9 +233,11 @@ def test_g8_overtime_rows_are_ordinary_points_and_the_window_runs_to_the_last_ro
 
 def test_g9_log_loss_is_clamped_at_the_metrics_epsilon_but_brier_is_not(session):
     g = finished(session, "A")
-    espn(session, g, [(0, "in", 0.0), (30, "post", 0.0)])  # certain the home team loses; it won
+    espn(
+        session, g, [(0, "in", 0.0), (10, "in", 0.0), (20, "in", 0.0), (30, "post", 0.0)]
+    )  # certain the home team loses; it won
     e = by_id(session)["2026_05_A"].forecasters["espn_live"]
-    assert e.points == 1
+    assert e.points == 3
     assert e.log_loss == pytest.approx(-math.log(EPS)) and math.isfinite(e.log_loss)
     assert e.brier == pytest.approx(1.0)
 
@@ -354,8 +356,9 @@ def test_g12_bad_query_values_are_422_with_a_fixed_message_and_nothing_echoed(cl
     r = client.get(URL, params=params)
     assert r.status_code == 422
     assert r.json() == {"detail": "season must be a year 2000 to 2100 and week a number 1 to 22"}
+    message = r.json()["detail"]
     for value in params.values():
-        assert str(value) not in r.text or str(value) in ("2026", "5")
+        assert str(value) in message or str(value) not in r.text
 
 
 def test_g12_the_route_only_reads_and_never_touches_picks_or_predictions(client, session):
@@ -364,7 +367,8 @@ def test_g12_the_route_only_reads_and_never_touches_picks_or_predictions(client,
     session.commit()
 
     def counts():
-        return [session.scalar(select(func.count()).select_from(t)) for t in (Game, LiveState, MarketQuote, Prediction, UserPick)]
+        tables = (Game, LiveState, MarketQuote, Prediction, UserPick)
+        return [session.scalar(select(func.count()).select_from(t)) for t in tables]
 
     before = counts()
     assert client.get(URL, params={"season": 2026, "week": 5}).status_code == 200

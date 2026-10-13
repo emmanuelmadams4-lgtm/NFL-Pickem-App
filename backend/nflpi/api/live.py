@@ -4,11 +4,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from nflpi.analytics import live_grade
 from nflpi.db import get_session
 from nflpi.ingestion.live import store
 from nflpi.models import Game, LiveState, MarketQuote
@@ -114,3 +115,85 @@ def live(session: Annotated[Session, Depends(get_session)]) -> LiveOut:
     last = store.last_confirmed(session, "espn_live")
     playing = any(game.state in ("in", "lost") for game in games)
     return LiveOut(games=games, stale=playing and (last is None or now - last > STALE_AFTER), last_confirmed_at=last)
+
+
+GRADES_422 = "season must be a year 2000 to 2100 and week a number 1 to 22"
+
+
+class ForecastGradeOut(BaseModel):
+    name: str
+    status: Literal["scored", "not_enough_data"]
+    points: int
+    coverage: float
+    brier: float | None
+    log_loss: float | None
+
+
+class GameGradeOut(BaseModel):
+    game_id: str
+    week: int
+    home_team: str
+    away_team: str
+    home_score: int | None
+    away_score: int | None
+    status: Literal["graded", "tie", "no_live_data", "in_progress"]
+    window_seconds: float | None
+    forecasters: list[ForecastGradeOut]
+
+
+class SummaryForecasterOut(BaseModel):
+    name: str
+    games: int
+    brier: float | None
+    log_loss: float | None
+
+
+class SummaryOut(BaseModel):
+    games_graded: int
+    forecasters: list[SummaryForecasterOut]
+
+
+class LiveGradesOut(BaseModel):
+    season: int
+    week: int
+    games: list[GameGradeOut]
+    week_summary: SummaryOut
+    season_summary: SummaryOut
+
+
+def _whole_number(text: str | None, low: int, high: int) -> int:
+    if text is None or len(text) > 4 or not (text.isascii() and text.isdigit()) or not low <= int(text) <= high:
+        raise HTTPException(422, GRADES_422)
+    return int(text)
+
+
+def _summary_out(grades: list[live_grade.GameGrade]) -> SummaryOut:
+    summary = live_grade.summarise(grades)
+    return SummaryOut(
+        games_graded=summary.games_graded,
+        forecasters=[SummaryForecasterOut(name=n, **vars(f)) for n, f in summary.forecasters.items()],
+    )
+
+
+def _grades_out(season: int, week: int, grades: list[live_grade.GameGrade]) -> LiveGradesOut:
+    weekly = [g for g in grades if g.week == week]
+    games = [
+        GameGradeOut(
+            **{k: v for k, v in vars(g).items() if k != "forecasters"},
+            forecasters=[ForecastGradeOut(name=n, **vars(f)) for n, f in g.forecasters.items()],
+        )
+        for g in weekly
+    ]
+    return LiveGradesOut(
+        season=season, week=week, games=games, week_summary=_summary_out(weekly), season_summary=_summary_out(grades)
+    )
+
+
+@router.get("/live/grades", response_model=LiveGradesOut)
+def live_grades(
+    session: Annotated[Session, Depends(get_session)],
+    season: Annotated[str | None, Query()] = None,
+    week: Annotated[str | None, Query()] = None,
+) -> LiveGradesOut:
+    year, number = _whole_number(season, 2000, 2100), _whole_number(week, 1, 22)
+    return _grades_out(year, number, live_grade.grade_season(session, year))
