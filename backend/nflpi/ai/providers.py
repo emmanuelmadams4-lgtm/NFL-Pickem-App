@@ -50,6 +50,30 @@ class ClaudeDeclined(AIError):
     pass
 
 
+def _result_text(result: ResultMessage | None, json_schema: dict | None) -> str:
+    if result is None or result.is_error or result.subtype != "success":
+        raise AIError(f"Claude sign-in route failed: {result.subtype if result else 'no result'}")
+    if result.stop_reason == "refusal":
+        raise ClaudeDeclined("Claude declined this request")
+    if result.stop_reason == "max_tokens":
+        raise AIError("Claude response was cut off (max_tokens)")
+    if json_schema:
+        if result.structured_output is None:
+            raise AIError("Claude sign-in route failed: no structured output")
+        return json.dumps(result.structured_output)
+    if not result.result:
+        raise AIError("Claude sign-in route failed: empty result")
+    return result.result
+
+
+def _log_sdk_failure(exc: Exception, *secrets: str) -> None:
+    detail = repr(exc)
+    for secret in secrets:
+        if secret:
+            detail = detail.replace(secret, "[redacted]")
+    logging.getLogger("nflpi.ai").warning("Claude sign-in route error: %s", detail)
+
+
 class AIProvider(Protocol):
     name: str
     model: str
@@ -125,26 +149,11 @@ class ClaudeSdkProvider:
                 )
                 result = _run_sync(lambda: last_result(options))
         except Exception as exc:  # noqa: BLE001 - every SDK failure becomes AIError
-            detail = repr(exc).replace(token, "[redacted]")
             api_key = get_settings().anthropic_api_key
-            if api_key:
-                detail = detail.replace(api_key, "[redacted]")
-            logging.getLogger("nflpi.ai").warning("Claude sign-in route error: %s", detail)
+            _log_sdk_failure(exc, token, api_key)
             raise AIError(f"Claude sign-in route failed: {type(exc).__name__}") from None
 
-        if result is None or result.is_error or result.subtype != "success":
-            raise AIError(f"Claude sign-in route failed: {result.subtype if result else 'no result'}")
-        if result.stop_reason == "refusal":
-            raise ClaudeDeclined("Claude declined this request")
-        if result.stop_reason == "max_tokens":
-            raise AIError("Claude response was cut off (max_tokens)")
-        if json_schema:
-            if result.structured_output is None:
-                raise AIError("Claude sign-in route failed: no structured output")
-            return json.dumps(result.structured_output)
-        if not result.result:
-            raise AIError("Claude sign-in route failed: empty result")
-        return result.result
+        return _result_text(result, json_schema)
 
     def __repr__(self) -> str:
         return f"ClaudeSdkProvider(name={self.name!r}, route={self.route!r}, model={self.model!r})"
