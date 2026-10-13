@@ -223,6 +223,18 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       });
     }
 
+    test("polish: a screen reader gets the missing-chance words, 'Not updating' is in the warning ink, pregame star news is gone once a game has started", async ({ page }) => {
+      const f = await fake(page, reply([row({ home_win_prob: null, kalshi_home_prob: null })]), { ...started(), status: "scheduled", stars_out: { out: [], no_list: ["NE"], reports_seen: 0, checked_at: null } });
+      await board(page);
+      const c = card(page);
+      await expect(c).toContainText("No live win chance right now", { timeout: 15_000 });
+      await expect(c.locator(".sr-only").filter({ hasText: "No live win chance right now" })).toHaveCount(1);
+      await expect(c, "a game that has kicked off shows no pregame injury note").not.toContainText(/No star list yet|Injury report not in yet/);
+      f.live = reply([row()], { stale: true, last_confirmed_at: agoIso(60_000) });
+      await page.clock.fastForward(31_000);
+      await expect(c.locator(".text-warn").filter({ hasText: /^Not updating/ })).toHaveCount(1, { timeout: 15_000 });
+    });
+
     test("L10 a refused request (401) follows the app's standing rule: the token is dropped and the sign-in card shows", async ({ page }) => {
       await fake(page, 401);
       await page.goto("/");
@@ -278,6 +290,7 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       await expect(main).toContainText(words("Live · Q3 4:12"), { timeout: 15_000 });
       await expect(main.getByText("Live score NE 14, KC 21, third quarter, 4:12 left.", { exact: true })).toHaveCount(1);
       await expect(main.getByText("In progress", { exact: true }), "the chip gives way to the label").toHaveCount(0);
+      await expect(main.getByText("Live", { exact: true }), "the pick panel's 'Live' chip (a pregame prediction that is not backfilled) is not shown beside live scores").toHaveCount(0);
       await expect(main).toContainText(words("KC to win now · ESPN 71%"));
       await expect(main).toContainText(words("Kalshi – · no fresh price"));
       await expect(main).toContainText(/Checked (just now|1m ago)/);
@@ -294,6 +307,8 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       await page.clock.fastForward(31_000);
       await expect(main).toContainText(words("Not updating · Q3 4:12"));
       await expect(main).toContainText("Last update 4m ago");
+      await expect(main.getByText("Last update 4m ago", { exact: true }), "the age is said once: the header's sentence already carries it for a screen reader").toHaveCount(1);
+      await expect(main.locator(".text-warn").filter({ hasText: /^Not updating/ }), "not updating is marked, in words and in the warning ink").toHaveCount(1);
       await expect(main).not.toContainText(/to win now|ESPN 71%/);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(0);
     });
