@@ -249,7 +249,7 @@ def test_s6_the_number_of_queries_does_not_grow_with_the_number_of_games(client,
     for week_query in ("week=1", "week=2"):  # week 1 has three games, week 2 has one
         seen = []
 
-        def count(conn, cursor, statement, *args):
+        def count(conn, cursor, statement, *args, seen=seen):
             seen.append(statement)
 
         event.listen(get_engine(), "before_cursor_execute", count)
