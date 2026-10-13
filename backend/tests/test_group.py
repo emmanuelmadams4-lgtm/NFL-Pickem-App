@@ -9,7 +9,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import OperationalError
 
 from nflpi.group import importer
 from nflpi.group.importer import GroupImportError, import_group_csv
@@ -22,7 +23,9 @@ STANDINGS = (FIXTURES / "standings_ok.csv").read_bytes()
 SEASON = 2023
 HEADER = "Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Confidence,Week_Total_Pts"
 ROW = "1,Ann A,1,Buf,3.5,Mia,Buf,Favorite,3,5"  # line 2 of picks_ok.csv
-DEE = "Dee ’Q’"
+DEE = "Dee \u2019Q\u2019"
+MEMBERS = ("Ann A", "Bo's Picks", "Cy!!", DEE, "Zed Secret")
+WEEKLY = "Rank,Team,Wk1,Total_Pts"
 # (season, week, away, home). The 2022 game makes sure another season is never matched.
 GAMES = [(2023, 1, "MIA", "BUF"), (2023, 1, "NYJ", "NE"), (2023, 1, "LV", "KC"), (2023, 2, "KC", "LA"),
          (2023, 2, "BUF", "NE"), (2022, 3, "LV", "MIA")]
@@ -60,9 +63,11 @@ def stored_standings(session) -> dict:
 def refused(session, data: bytes, match: str) -> str:
     """The file is refused with a message that matches, and nothing at all is written."""
     before = stored_picks(session), stored_standings(session)
+    session.rollback()  # end the read above, so any open transaction afterwards is the import's own
     with pytest.raises(GroupImportError, match=match) as err:
         import_group_csv(session, SEASON, data)
-    session.rollback()
+    assert not session.in_transaction()  # N12: the caller's session is never left inside a transaction
+    assert not any(name in str(err.value) for name in MEMBERS)  # N8: no member name in any error
     assert (stored_picks(session), stored_standings(session)) == before
     return str(err.value)
 
@@ -109,6 +114,14 @@ def test_p3_a_row_with_no_pick_is_stored_as_missing(games):
 ])
 def test_p4_a_matchup_that_is_not_one_game_of_that_week_is_refused(games, old, new):
     assert refused(games, edit(old, new), "no game").startswith("line ")
+
+
+def test_p4_two_games_with_the_same_teams_in_one_week_are_not_exactly_one_game(games):
+    games.add(Game(game_id="2023_01_BUF_MIA", season=2023, week=1, game_type="REG", weekday="Monday",
+                   kickoff_utc=datetime(2023, 9, 11, 17, tzinfo=UTC), away_team="BUF", home_team="MIA",
+                   status="final", source="test"))
+    games.commit()
+    refused(games, picks(ROW), "line 2: .*no game")
 
 
 def test_p4_games_of_another_season_never_match(games):
@@ -162,7 +175,7 @@ def test_p6_numbers_at_their_bounds_are_accepted(games):
     assert stored_picks(games) == {("2023_22_MIA_BUF", "Ann A"): ("BUF", 16), ("2023_22_MIA_BUF", "Cy!!"): ("MIA", 1)}
 
 
-@pytest.mark.parametrize("bad", ["+1", "1.0", "1_0", " 1", "1 ", "١", "", "one", "0x1"])
+@pytest.mark.parametrize("bad", ["+1", "1.0", "1_0", " 1", "1 ", "\u0661", "", "one", "0x1", '"1\n"'])
 def test_p7_a_whole_number_is_plain_digits_only(games, bad):
     refused(games, picks(f"{bad},Ann A,1,Buf,3.5,Mia,Buf,Favorite,3,5"), "week")
     refused(games, picks(f"1,Ann A,1,Buf,3.5,Mia,Buf,Favorite,{bad},5"), "confidence")
@@ -174,7 +187,7 @@ def test_p8_one_row_per_member_and_game(games):
     message = refused(games, picks(ROW, ROW), "line 3: .*twice")
     assert "confidence" not in message
     # the same member after name cleaning is still the same member
-    refused(games, picks(ROW, ROW.replace("Ann A", "Ann​  A")), "line 3: .*twice")
+    refused(games, picks(ROW, ROW.replace("Ann A", "Ann\u200b  A")), "line 3: .*twice")
 
 
 def test_p9_a_member_uses_each_confidence_number_once_a_week(games):
@@ -253,6 +266,11 @@ def test_n4_a_row_with_the_wrong_number_of_cells_is_refused_with_its_line(games,
     refused(games, picks(ROW.replace("Ann A", "Cy!!"), row), "line 3: .*cells")
 
 
+@pytest.mark.parametrize("row", ["1,Ann A,5,5,5", "1,Ann A,5", ""])
+def test_n4_a_weekly_row_with_the_wrong_number_of_cells_is_refused_with_its_line(games, row):
+    refused(games, picks("2,Cy!!,4,4", row, header=WEEKLY), "line 3: .*cells")
+
+
 def test_n4_a_file_with_no_rows_is_refused(games):
     refused(games, picks(), "no rows")
     refused(games, b"", "columns")
@@ -261,17 +279,22 @@ def test_n4_a_file_with_no_rows_is_refused(games):
 
 @pytest.mark.parametrize(("raw", "clean"), [
     ("Al\x00ice\x1b[31m", "Alice[31m"),  # control characters
-    ("Al‮ice​﻿", "Alice"),  # format characters: right-to-left override, zero width space, mark
-    ("Alice\U000e0001", "Alice"),  # private use and tag characters
-    ("  Al   ice   A ", "Al ice A"),  # outer spaces go, inner runs become one space
+    ("Al\u202eice\u200b\ufeff", "Alice"),  # format characters: right-to-left override, zero width space, mark
+    ("Al\ue000ice\U000e0001", "Alice"),  # a private use character and a tag (format) character
+    ("Al\u0378ice", "Alice"),  # a code point with no character assigned
+    ("A\u00a0\u2003B", "A B"),  # white space of any kind, not only the plain space
+    ("x" * 64 + "\u200b", "x" * 64),  # the length is measured after cleaning
+    ("x" * 32 + "  " + "x" * 31, "x" * 32 + " " + "x" * 31),
+    ("  Al   ice \u00a0 A ", "Al ice A"),  # outer spaces go, inner runs become one space
     ("<script>alert(1)</script>", "<script>alert(1)</script>"),  # stored as plain text, never changed
     ("=cmd|' /C calc'!A0", "=cmd|' /C calc'!A0"),
     ("x" * 64, "x" * 64),
+    ("Jose\u0301", "Jos\u00e9"),  # one written form (NFC), so the same name is the same member in every file
 ])
 def test_n5_names_are_cleaned_before_they_are_stored(games, raw, clean):
     import_group_csv(games, SEASON, picks(f'1,"{raw}",1,Buf,3.5,Mia,Buf,Favorite,3,5'))
     assert stored_picks(games) == {("2023_01_MIA_BUF", clean): ("BUF", 3)}
-    import_group_csv(games, SEASON, picks(f'1,"{raw}",5,5', header="Rank,Team,Wk1,Total_Pts"))
+    import_group_csv(games, SEASON, picks(f'1,"{raw}",5,5', header=WEEKLY))
     assert stored_standings(games) == {(SEASON, 1, clean): (5, 1)}
 
 
@@ -280,10 +303,10 @@ def test_n5_a_tab_or_line_break_inside_a_name_is_removed_not_kept_as_a_space(gam
     assert list(stored_picks(games)) == [("2023_01_MIA_BUF", "AliceA")]
 
 
-@pytest.mark.parametrize("raw", ["", "   ", "\x00​", "x" * 65])
+@pytest.mark.parametrize("raw", ["", "   ", "\x00\u200b", "x" * 65])
 def test_n6_a_name_that_is_empty_or_over_64_characters_after_cleaning_is_refused(games, raw):
     refused(games, picks(f'1,"{raw}",1,Buf,3.5,Mia,Buf,Favorite,3,5'), "line 2: .*name")
-    refused(games, picks(f'1,"{raw}",5,5', header="Rank,Team,Wk1,Total_Pts"), "line 2: .*name")
+    refused(games, picks(f'1,"{raw}",5,5', header=WEEKLY), "line 2: .*name")
 
 
 def test_n7_a_bad_row_refuses_the_whole_file_and_keeps_what_was_stored(games):
@@ -299,18 +322,27 @@ def test_n7_a_bad_row_refuses_the_whole_file_and_keeps_what_was_stored(games):
     assert stored_standings(games)[(SEASON, 1, "Bo's Picks")] == (6, None)
 
 
-def test_n8_an_error_names_the_line_and_never_echoes_a_long_value_or_a_member_name(games):
+def test_n8_an_error_names_the_line_and_never_echoes_a_cell_or_a_member_name(games):
     assert issubclass(GroupImportError, ValueError)
     long_number = f"1,Zed Secret,1,Buf,3.5,Mia,Buf,Favorite,{'9' * 500},5"
-    message = refused(games, picks(ROW.replace("Ann A", "Cy!!"), long_number), "line 3: ")
-    assert "Zed Secret" not in message
-    assert "9" * 41 not in message and "9" * 40 in message
-    message = refused(games, picks(f"1,Zed Secret,1,{'Q' * 500},3.5,Mia,Buf,Favorite,3,5"), "line 2: ")
-    assert "Zed Secret" not in message and "Q" * 41 not in message
+    message = refused(games, picks(ROW.replace("Ann A", "Cy!!"), long_number), "line 3: .*confidence")
+    assert "Zed Secret" not in message and "99" not in message
+    message = refused(games, picks(f"1,Zed Secret,1,{'Q' * 500},3.5,Mia,Buf,Favorite,3,5"), "line 2: .*no game")
+    assert "Zed Secret" not in message and "QQ" not in message
     assert "NNN" not in refused(games, picks(f"1,{'N' * 65},1,Buf,3.5,Mia,Buf,Favorite,3,5"), "line 2: ")
     assert "NNN" not in refused(games, picks(ROW.replace("Ann A", "NNNN"), ROW.replace("Ann A", "NNNN")), "twice")
-    weekly = picks("1,NNNN,5,5", "2,NNNN,4,4", header="Rank,Team,Wk1,Total_Pts")
+    weekly = picks("1,NNNN,5,5", "2,NNNN,4,4", header=WEEKLY)
     assert "NNN" not in refused(games, weekly, "line 3: .*twice")
+    # a name typed into any other column is not echoed either
+    for i in (0, 2, 3, 4, 5, 6, 7, 8, 9):
+        cells = ROW.split(",")
+        cells[i] = "Zed Secret"
+        assert "Zed" not in refused(games, picks(",".join(cells)), "line 2: ")
+    for i in (0, 2, 3):
+        cells = "1,Ann A,5,5".split(",")
+        cells[i] = "Zed Secret"
+        assert "Zed" not in refused(games, picks(",".join(cells), header=WEEKLY), "line 2: ")
+    assert "Zed" not in refused(games, picks(ROW, header=HEADER.replace("Game", "Zed Secret")), "columns")
 
 
 def test_n9_importing_the_same_file_again_changes_nothing(games):
@@ -336,6 +368,40 @@ def test_n10_a_corrected_file_updates_the_row_in_place(games):
     # a file with fewer rows leaves the other rows alone
     import_group_csv(games, SEASON, picks(ROW))
     assert len(stored_picks(games)) == 20 and stored_picks(games)[("2023_01_MIA_BUF", "Ann A")] == ("BUF", 3)
+
+
+def test_n10_imported_at_is_the_time_of_the_last_import_that_wrote_the_row(games):
+    import_group_csv(games, SEASON, PICKS)
+    import_group_csv(games, SEASON, STANDINGS)
+    old = datetime(2020, 1, 1, tzinfo=UTC)
+    games.execute(update(GroupPick).values(imported_at=old))
+    games.execute(update(GroupStanding).values(imported_at=old))
+    games.commit()
+    start = datetime.now(UTC)
+    import_group_csv(games, SEASON, picks(ROW))
+    import_group_csv(games, SEASON, picks("1,Ann A,5,3,8", header="Rank,Team,Wk1,Wk2,Total_Pts"))
+    games.expire_all()
+    pick_times = {(p.game_id, p.member): p.imported_at for p in games.scalars(select(GroupPick))}
+    assert pick_times[("2023_01_MIA_BUF", "Ann A")] >= start.replace(microsecond=0)
+    assert pick_times[("2023_01_NYJ_NE", "Ann A")] == old  # not in the second file: untouched
+    stand_times = {(r.week, r.member): r.imported_at for r in games.scalars(select(GroupStanding))}
+    assert stand_times[(1, "Ann A")] >= start.replace(microsecond=0) <= stand_times[(2, "Ann A")]
+    assert stand_times[(1, "Cy!!")] == old
+
+
+def test_n12_a_database_failure_is_not_reported_as_a_bad_file_and_carries_no_stored_values(games, monkeypatch):
+    def broken_commit():
+        raise OperationalError("INSERT ...", {"member": "Zed Secret"}, Exception("server closed, Zed Secret"))
+
+    monkeypatch.setattr(games, "commit", broken_commit)
+    with pytest.raises(RuntimeError) as err:
+        import_group_csv(games, SEASON, picks(ROW.replace("Ann A", "Zed Secret")))
+    monkeypatch.undo()
+    assert not isinstance(err.value, ValueError)  # so not a GroupImportError: an outage is not a bad file
+    assert "OperationalError" in str(err.value) and "Zed" not in str(err.value)
+    assert err.value.__cause__ is None and err.value.__suppress_context__
+    assert not games.in_transaction()
+    assert stored_picks(games) == {}
 
 
 # Weekly points file ---------------------------------------------------------------------------------------------
@@ -368,6 +434,10 @@ def test_w2_weekly_rows_are_checked(games, old, new, match):
     refused(games, edit(old, new, STANDINGS), match)
 
 
+def test_w2_a_weekly_member_is_the_same_member_after_name_cleaning(games):
+    refused(games, picks("1,Ann A,5,5", "2,Ann\u200b  A,4,4", header=WEEKLY), "line 3: .*twice")
+
+
 def test_w2_weekly_numbers_at_their_bounds_are_accepted(games):
     import_group_csv(games, SEASON, picks("9999,Ann A,136,0,136", header="Rank,Team,Wk1,Wk2,Total_Pts"))
     assert stored_standings(games) == {(SEASON, 1, "Ann A"): (136, None), (SEASON, 2, "Ann A"): (0, 9999)}
@@ -390,7 +460,7 @@ def test_w3_a_later_file_keeps_the_rank_an_earlier_file_gave_a_week(games):
 
 def test_w4_seasons_are_kept_apart(games):
     import_group_csv(games, SEASON, STANDINGS)
-    import_group_csv(games, 2022, picks("1,Ann A,9,9", header="Rank,Team,Wk1,Total_Pts"))
+    import_group_csv(games, 2022, picks("1,Ann A,9,9", header=WEEKLY))
     rows = stored_standings(games)
     assert rows[(2022, 1, "Ann A")] == (9, 1) and rows[(SEASON, 1, "Ann A")] == (5, None)
 
@@ -439,7 +509,7 @@ def test_q3_game_shares_for_an_unknown_game_raises(games):
 
 def test_q4_standings_for_a_week_give_points_running_total_and_rank(games):
     import_group_csv(games, SEASON, STANDINGS)
-    import_group_csv(games, 2022, picks("1,Ann A,90,90", header="Rank,Team,Wk1,Total_Pts"))  # another season
+    import_group_csv(games, 2022, picks("1,Ann A,90,90", header=WEEKLY))  # another season
     # Week 2: totals Bo 9, Dee 8, Ann 8, Cy 6. Dee and Ann tie on total: Yahoo's rank puts Dee first.
     assert standings(games, SEASON, 2) == [
         {"member": "Bo's Picks", "points": 3, "total": 9, "rank": 1},
@@ -469,6 +539,13 @@ def test_q4_running_total_counts_only_weeks_up_to_the_asked_week(games):
                                                                                            ("Cy!!", 11, 2)]
 
 
+def test_q4_a_tie_with_no_rank_goes_by_name_ignoring_letter_case(games):
+    import_group_csv(games, SEASON, picks("1,Zed,5,5,10", "2,bo,5,5,10", "3,Al,5,5,10", "4,carl,9,0,9",
+                                          header="Rank,Team,Wk1,Wk2,Total_Pts"))
+    assert [r["member"] for r in standings(games, SEASON, 1)] == ["carl", "Al", "bo", "Zed"]
+    assert [r["member"] for r in standings(games, SEASON, 2)] == ["Zed", "bo", "Al", "carl"]  # rank beats name
+
+
 def test_n11_a_big_valid_file_under_the_cap_is_stored_whole(games):
     # 3,200 members x 5 games = 16,000 rows: more values than one database statement can carry.
     lines = []
@@ -487,3 +564,39 @@ def test_n11_a_big_valid_file_under_the_cap_is_stored_whole(games):
     weekly = picks(*[f"{i + 1},m{i:04d}," + "1," * 18 + "18" for i in range(3200)], header=header)
     assert import_group_csv(games, SEASON, weekly).rows == 57_600
     assert len(stored_standings(games)) == 57_600
+
+
+def test_q4_on_a_tie_a_member_with_a_rank_comes_before_a_member_without_one(games):
+    import_group_csv(games, SEASON, picks("5,Zed,5,5", header=WEEKLY))  # week 1 is this file's last week: rank 5
+    import_group_csv(games, SEASON, picks("1,Aaa,5,1,6", header="Rank,Team,Wk1,Wk2,Total_Pts"))  # no week 1 rank
+    assert standings(games, SEASON, 1) == [{"member": "Zed", "points": 5, "total": 5, "rank": 5},
+                                           {"member": "Aaa", "points": 5, "total": 5, "rank": None}]
+
+
+def cells(base: str, changes: dict[int, str]) -> str:
+    parts = base.split(",")
+    return ",".join(changes.get(i, part) for i, part in enumerate(parts))
+
+
+# Section 2, "Order of checks": the first problem found is the one reported. Each case here has two problems.
+@pytest.mark.parametrize(("rows", "header", "line", "first", "second"), [
+    ([cells(ROW, {0: "0"}) + ",9"], HEADER, 2, "cells", "week"),
+    ([cells(ROW, {0: "0", 1: ""})], HEADER, 2, "week", "name"),
+    ([cells(ROW, {1: "", 2: "0"})], HEADER, 2, "name", "game"),
+    ([cells(ROW, {2: "0", 4: "x"})], HEADER, 2, "game", "spread"),
+    ([cells(ROW, {4: "x", 8: "0"})], HEADER, 2, "spread", "confidence"),
+    ([cells(ROW, {8: "0", 9: "x"})], HEADER, 2, "confidence", "total"),
+    ([cells(ROW, {9: "x", 3: "Dal"})], HEADER, 2, "total", "no game"),
+    ([cells(ROW, {3: "Dal", 7: "bad"})], HEADER, 2, "no game", "side"),
+    ([cells(ROW, {7: "bad", 6: "KC"})], HEADER, 2, "side", "pick"),
+    ([ROW, cells(ROW, {6: "Mia"})], HEADER, 3, "pick", "twice"),
+    ([ROW, cells(ROW, {8: ""})], HEADER, 3, "confidence", "twice"),
+    (["0,Ann A,5,5,5"], WEEKLY, 2, "cells", "rank"),
+    (["0,,5,5"], WEEKLY, 2, "rank", "name"),
+    (["1,,x,5"], WEEKLY, 2, "name", "points"),
+    (["1,Ann A,x,y"], WEEKLY, 2, "points", "total"),
+    (["1,Ann A,5,5", "2,Ann A,5,6"], WEEKLY, 3, "total", "twice"),
+])
+def test_the_first_problem_in_the_frozen_order_is_the_one_reported(games, rows, header, line, first, second):
+    message = refused(games, picks(*rows, header=header), f"line {line}: .*{first}")
+    assert second not in message
