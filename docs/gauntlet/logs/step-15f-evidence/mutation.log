@@ -12,7 +12,7 @@ CAUGHT   G3 backfill ignored
 CAUGHT   G3 kind label dropped
 CAUGHT   G4 outside 0..1 accepted
 SURVIVED G4 nonfinite accepted
-SURVIVED G4 null espn row filled
+CAUGHT   G4 null espn row filled
 CAUGHT   G5 min points off
 CAUGHT   G5 coverage off
 CAUGHT   G6 tie graded
@@ -24,4 +24,4 @@ CAUGHT   G11 averages weight by nothing: skip filter
 CAUGHT   G11 games_graded counts ties
 CAUGHT   kalshi pregame kind used
 CAUGHT   kalshi any source
-survivors: 3
+survivors: 2
