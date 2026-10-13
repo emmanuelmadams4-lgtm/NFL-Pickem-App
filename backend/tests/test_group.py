@@ -404,6 +404,18 @@ def test_n12_a_database_failure_is_not_reported_as_a_bad_file_and_carries_no_sto
     assert stored_picks(games) == {}
 
 
+def test_n12_any_other_error_also_leaves_the_session_outside_a_transaction(games, monkeypatch):
+    def broken_write(session, rows):
+        session.execute(select(Game))  # the import is inside a transaction when the unexpected error comes
+        raise KeyError("bug")
+
+    monkeypatch.setattr(importer, "_write_picks", broken_write)
+    with pytest.raises(KeyError):
+        import_group_csv(games, SEASON, PICKS)
+    assert not games.in_transaction()
+    assert stored_picks(games) == {}
+
+
 # Weekly points file ---------------------------------------------------------------------------------------------
 
 
