@@ -44,3 +44,23 @@ Design amendment: `NEWS_CHARS_MAX = 3200` (five worst-case items of about 600 ch
 
 ## 4. CLEANUP
 Scope-locked `/refactor` read of `ai/news_pack.py` (about 90 lines), the `_system_for` helper and the news block in `ai/research.py`, and `latest_news_rows`. Simplifications made: the second control-character strip in `model_text` was deleted (proof: no character of Unicode folds under NFKC into a control or format character, checked over all code points, and Dwight re-ran the same check), `rows` typed as `Sequence[NewsItem]`, one comment says why. No change needed: `latest_news_rows` (a straight move), `_system_for` (3 lines), `news_block` (5 lines). Left alone on purpose, carried: `ai/news_pack.py` imports the router module `nflpi.api.news` for the query (Dwight L5; a plain module would cut the layering knot; the dispatch says to share the function from `api/news.py`, so it stays there).
+
+## 4b. Security review round (Dwight, hive agent dwight-mv5mkpow)
+- Design: PASS (residual risk below). Code at 43034bf: PASS. Delta at 69eeb4f: PASS. No CRITICAL, HIGH or MEDIUM left. Findings C1, C2, L1 became red tests first (0806743), then fixes (7b9efe9).
+- Residual risk: a hostile headline can still be read by the model as a claim. The pack says each item is a claim by its source and that injury status comes only from the `injuries` key; `_check` and the report schema still validate every report.
+
+## 5. VERIFICATION (on rebased HEAD 99a5327, base main 173f26b)
+- Gate run 1: pytest 1261 passed in 548.30s; ruff `All checks passed!`; alembic check on a fresh scratch database after `upgrade head`: `No new upgrade operations detected.`; `npm run gen:api` drift lines 0. Logs: `step-8g-pack-evidence/g1-*.log`, `g1-summary.txt`.
+- Gate run 2 (same HEAD, straight after): pytest 1261 passed in 278.31s; ruff clean; alembic clean; gen:api drift 0. Logs: `g2-*.log`, `g2-summary.txt`.
+- Mutation pass over the guard code: 25 of 25 mutants CAUGHT (`step-8g-pack-evidence/mutation-sweep.txt`). Three early survivors (M1 no NFKC, M6 item cap, M18 source allowlist) each got a new test and then died.
+- Lane guard: `python3 ~/.claude/bin/lane-guard.py check lanes.md newspack 173f26b --repo <worktree>` printed `OK`.
+- Main check: `git rev-parse --short main` = 173f26b, same as my base. No rebase needed.
+- Fresh critic and Jev verdict: see the section below.
+
+## 6. LANDING
+Not done by this lane. No push, PR or integration; god integrates. Nothing is deployed.
+
+## Carried items
+- L2, L3, L4, L5 (Dwight's low findings): advisory, not blocking, left for the integrator.
+- SEAM for lane web: report and answer text can now quote news-derived words. The screen must render them as text only (no HTML, no auto-links).
+- Not in scope and untouched: news worker, star alerts (8i), model challenger, fetch-guard consolidation.
