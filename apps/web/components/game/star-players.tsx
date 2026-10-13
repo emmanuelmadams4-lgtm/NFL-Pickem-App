@@ -1,68 +1,71 @@
 import { ago, type GameDetail, type Team } from "@nflpi/shared";
-import { Chip } from "@/components/ui";
+import { Chip, type ChipTone } from "@/components/ui";
 import { TeamLogo } from "@/components/team";
 
 const slotName = { qb: "QB", off: "Offense", def: "Defense" } as const;
 
-function StarTeam({ team, club, week, reportsSeen }: {
+function StarTeam({ team, club, week, reportsSeen, statusTone }: {
   team: Team;
   club: GameDetail["stars"][number] | undefined;
   week: number;
   reportsSeen: number;
+  statusTone: (status: string | null) => ChipTone | null;
 }) {
   return (
     <div className="min-w-0">
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
         <TeamLogo team={team} size={20} />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-text">{team.name}</p>
-          {club?.stars_week !== null && club?.stars_week !== undefined && club.stars_week < week && (
-            <p className="text-label text-subtle">Star list from week {club.stars_week}</p>
-          )}
-        </div>
+        <h4 className="text-sm font-semibold text-text">{team.name}</h4>
+        {club?.stars_week != null && club.stars.length > 0 && club.stars_week < week && (
+          <span className="text-label text-subtle">Star list from week {club.stars_week}</span>
+        )}
       </div>
-      {!club || club.stars_week === null ? (
-        <p className="rounded-ctl border border-dashed border-border px-3 py-4 text-sm text-text-2">No star list yet</p>
+      {!club || club.stars_week === null || club.stars.length === 0 ? (
+        <p className="text-label text-subtle">No star list yet</p>
       ) : (
         <ul aria-label={`${team.name} star players`} className="divide-y divide-border">
-          {club.stars.map((star) => (
-            <li key={`${star.slot}-${star.rank}`} className="flex min-w-0 items-start justify-between gap-3 py-2">
-              <div className="min-w-0">
-                <p className="text-sm text-text break-words">
-                  <span className="mr-1 text-xs text-subtle">{slotName[star.slot]}</span>
-                  {star.player} {star.position && <span className="text-xs text-subtle">{star.position}</span>}
-                </p>
-                {star.status && (
-                  <p className="text-xs text-text-2 break-words">
-                    {[star.injury, star.observed_at && `seen ${ago(star.observed_at)}`].filter(Boolean).join(" · ")}
+          {club.stars.map((star) => {
+            const details = [star.injury, star.observed_at && `seen ${ago(star.observed_at)}`].filter(Boolean);
+            const tone = statusTone(star.status);
+            return (
+              <li key={`${star.slot}-${star.rank}`} className="flex min-w-0 items-start justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm text-text break-words">
+                    {star.player} <span className="text-label text-subtle">{star.position || slotName[star.slot]}</span>
                   </p>
+                  {star.status && details.length > 0 && <p className="text-label text-text-2 break-words">{details.join(" · ")}</p>}
+                </div>
+                {star.status && tone ? <Chip tone={tone}>{star.status}</Chip> : (
+                  <span className={`min-w-0 text-right text-label break-words ${star.status ? "text-text-2" : "text-subtle"}`}>
+                    {star.status || (reportsSeen === 0
+                      ? <><span aria-hidden>–</span><span className="sr-only">Not known yet</span></>
+                      : "Not on injury report")}
+                  </span>
                 )}
-              </div>
-              {star.status === "Out" ? <Chip tone="bad">Out</Chip>
-                : star.status === "Doubtful" ? <Chip tone="warn">Doubtful</Chip>
-                : <span className="shrink-0 text-right text-xs text-text-2">
-                    {star.status || (reportsSeen === 0 ? "–" : "Not on injury report")}
-                  </span>}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
   );
 }
 
-export function StarPlayers({ game }: { game: GameDetail }) {
+export function StarPlayers({ game, statusTone }: {
+  game: GameDetail;
+  statusTone: (status: string | null) => ChipTone | null;
+}) {
   return (
-    <div className="mt-5 mb-6">
+    <div className="mb-6">
       <h3 className="text-sm font-semibold text-text">Star players</h3>
       <p className="mt-0.5 text-label text-subtle">A star being out does not change the pick.</p>
       <p className="text-label text-subtle">Ages count from when this app first saw the status.</p>
       {game.stars_out.reports_seen === 0 && <p className="mt-2 text-label text-subtle">No injury report yet this week</p>}
       <div className="mt-3 grid gap-6 md:grid-cols-2">
         <StarTeam team={game.away} club={game.stars.find((club) => club.team === game.away.abbr)} week={game.week}
-          reportsSeen={game.stars_out.reports_seen} />
+          reportsSeen={game.stars_out.reports_seen} statusTone={statusTone} />
         <StarTeam team={game.home} club={game.stars.find((club) => club.team === game.home.abbr)} week={game.week}
-          reportsSeen={game.stars_out.reports_seen} />
+          reportsSeen={game.stars_out.reports_seen} statusTone={statusTone} />
       </div>
     </div>
   );

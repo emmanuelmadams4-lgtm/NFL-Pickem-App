@@ -31,7 +31,7 @@ function TeamInjuries({ team, rows }: { team: Team; rows: Injury[] }) {
     <div className="min-w-0">
       <div className="mb-2 flex items-center gap-2">
         <TeamLogo team={team} size={20} />
-        <h3 className="text-sm font-semibold">{team.name}</h3>
+        <h4 className="text-sm font-semibold">{team.name}</h4>
         <span className="text-xs text-subtle">
           {rows.length} listed{out > 0 ? `, ${out} out` : ""}
           {dq > 0 ? `, ${dq} doubtful or questionable` : ""}
@@ -71,12 +71,14 @@ function TeamInjuries({ team, rows }: { team: Team; rows: Injury[] }) {
 export function Injuries({ game }: { game: GameDetail }) {
   const latest = game.injuries.reduce<string | null>((m, r) => (!m || r.observed_at > m ? r.observed_at : m), null);
   return (
-    <Section id="injuries" title="Injuries" note={latest ? `Report as of ${ago(latest)}.` : "Official injury report entries for both teams."}>
-      <StarPlayers game={game} />
+    <Section id="injuries" title="Injuries">
+      <StarPlayers game={game} statusTone={statusTone} />
+      <h3 className="text-sm font-semibold text-text">Full injury report</h3>
+      <p className="mt-0.5 text-label text-subtle">{latest ? `Report as of ${ago(latest)}.` : "Official injury report entries for both teams."}</p>
       {game.injuries.length === 0 ? (
-        <p className="rounded-ctl border border-dashed border-border px-3 py-6 text-center text-sm text-text-2">No injury report entries</p>
+        <p className="mt-3 rounded-ctl border border-dashed border-border px-3 py-6 text-center text-sm text-text-2">No injury report entries</p>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="mt-3 grid gap-6 md:grid-cols-2">
           <TeamInjuries team={game.away} rows={game.injuries.filter((r) => r.team === game.away.abbr)} />
           <TeamInjuries team={game.home} rows={game.injuries.filter((r) => r.team === game.home.abbr)} />
         </div>

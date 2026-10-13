@@ -62,14 +62,15 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
   const differs = !!(p && mine && mine !== p.pick);
   const away = game.away_score;
   const home = game.home_score;
-  const stars = game.stars_out.out.filter(
-    (star) => !game.qb_alerts.some((alert) => alert.startsWith(`${star.team} QB ${star.player}:`)),
-  );
+  const stars = game.stars_out.out.filter((star) => !star.qb_alert);
   const shownStars = stars.slice(0, 3);
   const latestSeen = shownStars.reduce<string | null>(
     (latest, star) => star.observed_at && (!latest || star.observed_at > latest) ? star.observed_at : latest,
     null,
   );
+  const starNote = game.stars_out.no_list.length > 0
+    ? `No star list yet for ${game.stars_out.no_list.join(", ")}`
+    : game.stars_out.reports_seen === 0 ? "Injury report not in yet" : null;
 
   return (
     <li data-testid="game-card" className="relative flex flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-border-strong">
@@ -197,24 +198,28 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
           {game.qb_alerts.length > 2 && <span className="text-label text-subtle">+{game.qb_alerts.length - 2} more</span>}
         </div>
 
-        {game.status === "scheduled" && (stars.length > 0 ? (
-          <div role="group" aria-label="Stars out" className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-label text-text-2">
-            <span className="font-medium text-text">Stars out</span>
-            {shownStars.map((star) => (
-              <span key={`${star.team}-${star.player}`} className="inline-flex max-w-full min-w-0 flex-wrap items-center gap-x-1">
-                <span className="min-w-0 break-words">{star.player}</span>
-                {star.position && <span className="text-subtle">{star.position}</span>}
-                {star.status && <Chip tone={statusTone(star.status)}>{star.status}</Chip>}
-              </span>
-            ))}
-            {stars.length > 3 && <span className="text-subtle">+{stars.length - 3} more</span>}
-            {latestSeen && <span className="text-subtle">latest seen {ago(latestSeen)}</span>}
+        {game.status === "scheduled" && (stars.length > 0 || starNote) && (
+          <div className="min-w-0 space-y-1 text-label text-text-2">
+            {stars.length > 0 && (
+              <div role="group" aria-label="Stars out" className="min-w-0">
+                <p className="font-medium text-text">
+                  Stars out {latestSeen && <span className="font-normal text-subtle">· latest seen {ago(latestSeen)}</span>}
+                </p>
+                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  {shownStars.map((star) => (
+                    <span key={`${star.team}-${star.slot}-${star.rank}`} className="inline-flex max-w-full min-w-0 flex-wrap items-center gap-x-1">
+                      <span className="min-w-0 break-words">{star.team} {star.player}</span>
+                      {star.position && <span className="text-subtle">{star.position}</span>}
+                      {star.status && <span className={statusTone(star.status) === "bad" ? "text-bad" : "text-warn"}>{star.status}</span>}
+                    </span>
+                  ))}
+                  {stars.length > 3 && <span className="text-subtle">+{stars.length - 3} more</span>}
+                </div>
+              </div>
+            )}
+            {starNote && <p className="text-subtle">{starNote}</p>}
           </div>
-        ) : game.stars_out.no_list.length > 0 ? (
-          <p className="text-label text-subtle">No star list yet</p>
-        ) : game.stars_out.reports_seen === 0 ? (
-          <p className="text-label text-subtle">Injury report not in yet</p>
-        ) : null)}
+        )}
 
         {p?.change_note && (
           <p className="flex items-start gap-1.5 text-label text-text-2">

@@ -1280,6 +1280,8 @@ export interface components {
             rank: number;
             /** Status */
             status: string | null;
+            /** Qb Alert */
+            qb_alert: boolean;
             /** Injury */
             injury: string | null;
             /** Observed At */

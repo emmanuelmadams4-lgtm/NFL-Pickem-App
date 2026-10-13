@@ -4074,6 +4074,10 @@
       ],
       "title": "Status"
      },
+     "qb_alert": {
+      "type": "boolean",
+      "title": "Qb Alert"
+     },
      "injury": {
       "anyOf": [
        {
@@ -4106,6 +4110,7 @@
      "slot",
      "rank",
      "status",
+     "qb_alert",
      "injury",
      "observed_at"
     ],

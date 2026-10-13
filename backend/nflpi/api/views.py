@@ -42,6 +42,7 @@ def _star_status(row: dict) -> s.StarStatus:
         team=row["team"], player=_clean_star_text(row["player"]) or "",
         position=_clean_star_text(row["position"]), slot=row["slot"], rank=row["rank"],
         status=_clean_star_text(row["status"]), injury=_clean_star_text(row["injury"]),
+        qb_alert=row["qb_alert"],
         observed_at=row["observed_at"],
     )
 
@@ -189,16 +190,29 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
         win = winner(g)
         pick = picks.get(g.game_id)
         inj = injuries[g.week]
-        qb_alerts = [
-            f"{r.team} QB {r.player}: {r.report_status}"
+        star_data = stars.stars_out(session, g.game_id, now)
+        all_star_data = stars.game_stars(session, g.game_id, now)
+        star_qb_rows = [
+            row
+            for club in all_star_data["teams"]
+            for row in club["stars"]
+            if row["qb_alert"]
+        ]
+        star_qb_report_ids = {
+            row["report_id"] for row in star_qb_rows
+        }
+        star_qb_keys = {(row["team"], row["slot"], row["rank"]) for row in star_qb_rows}
+        qb_rows = [
+            r
             for team in (g.away_team, g.home_team)
             for r in inj.get(team, [])
             if r.position == "QB" and r.report_status in ALERT_STATUSES
         ]
-        star_data = stars.stars_out(session, g.game_id, now)
+        qb_rows.sort(key=lambda r: r.id not in star_qb_report_ids)
+        qb_alerts = [f"{r.team} QB {r.player}: {r.report_status}" for r in qb_rows]
         no_list = [
             club["team"]
-            for club in stars.game_stars(session, g.game_id, now)["teams"]
+            for club in all_star_data["teams"]
             if club["stars_week"] is None
         ]
         out.append(
@@ -235,7 +249,10 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
                     if r.report_status in ALERT_STATUSES
                 ),
                 stars_out=s.StarsOut(
-                    out=[_star_status(row) for row in star_data["out"]],
+                    out=[
+                        _star_status(row | {"qb_alert": (row["team"], row["slot"], row["rank"]) in star_qb_keys})
+                        for row in star_data["out"]
+                    ],
                     no_list=no_list,
                     reports_seen=star_data["reports_seen"], checked_at=star_data["checked_at"],
                 ),

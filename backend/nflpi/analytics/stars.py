@@ -204,6 +204,14 @@ def _normal_name(name: str) -> str:
     return " ".join(words)
 
 
+def _qb_alert(report: InjuryReport | None) -> bool:
+    return (
+        report is not None
+        and report.position == "QB"
+        and report.report_status in {"Out", "Doubtful", "Questionable"}
+    )
+
+
 def _listed_star(star: TeamStar, report: InjuryReport, now: datetime) -> dict:
     return dict(
         team=star.team,
@@ -259,6 +267,7 @@ def game_stars(session: Session, game_id: str, now: datetime | None = None) -> d
             rows.append(dict(
                 team=team, player=star.player, position=star.position, slot=star.slot, rank=star.rank,
                 status=status, injury=report.injury if status else None,
+                qb_alert=_qb_alert(report), report_id=report.id if report else None,
                 observed_at=report.observed_at if status else None,
                 age_hours=round((now - report.observed_at).total_seconds() / 3600, 1) if status else None,
             ))

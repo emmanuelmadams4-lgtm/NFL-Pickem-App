@@ -78,6 +78,7 @@ class StarStatus(BaseModel):
     slot: Literal["qb", "off", "def"]
     rank: int
     status: str | None
+    qb_alert: bool
     injury: str | None
     observed_at: datetime | None
 
