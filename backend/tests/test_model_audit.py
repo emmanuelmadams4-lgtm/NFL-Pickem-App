@@ -143,6 +143,24 @@ def test_bench_and_live_path_agree_on_features_and_probability(loaded):
         assert p.home_win_prob == pytest.approx(row["p_blend"], abs=ROUNDING), game_id
 
 
+# --- A6: the bench is scored on the closing line; a live pick is made from an earlier line ---
+
+def test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_closing_line(loaded):
+    engine.backfill_season(loaded, CURRENT)
+    kickoff = {g.game_id: g.kickoff_utc for g in loaded.scalars(select(Game))}
+    by_kind: dict[str, list[Prediction]] = {"live": [], "backfill": []}
+    for p in loaded.scalars(select(Prediction)):
+        by_kind[p.kind].append(p)
+
+    assert by_kind["live"] and by_kind["backfill"]
+    assert all(p.features["market_kind"] == "latest" and p.created_at < kickoff[p.game_id] for p in by_kind["live"])
+    assert all(p.features["market_kind"] == "closing" for p in by_kind["backfill"])
+    # The live model's own weights were fitted on finished games, so on closing lines only.
+    frame = engine.load_frame(loaded)
+    fitted_on = frame[frame["season"].isin(engine.active_model(loaded).params["train_seasons"])]
+    assert set(fitted_on["market_kind"]) == {"closing"}
+
+
 # --- A5: the fit for season S uses no game from season S or later ---
 
 def test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later(monkeypatch):

@@ -49,3 +49,5 @@ Read-only inspection by a subagent on 2026-10-13 (nothing in the repository was 
 - Given the leakage in section 4, treat the 67.4% as unreliable.
 
 **Recommendation:** nothing here is safe to adopt as-is. The rolling and Pythagorean idea is sound but trivial.
+
+> Coordinator correction, 2026-10-13: the reader wrote that a search for `log_loss` found nothing. That is wrong: `src/model_trainer.py:223` reports log loss. There is still no calibration step. `docs/model/REPOS.md` carries the corrected statement.
