@@ -102,13 +102,17 @@ def parse_feed(body: bytes, source: Source, now: datetime) -> list[Item]:
     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
         raise FeedError("not a feed")
     items: list[Item] = []
+    usable = False
     for entry in parsed.entries[:100]:
         title = clean_text(entry.get("title") or "", 200)
         url = canonical_url(entry.get("link"), source.link_suffixes)
         if not title or not url:
             continue
+        usable = True
         published_at = _published(entry, now)
         if published_at is not None and published_at < now - timedelta(days=30):
             continue
         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
+    if parsed.entries and not usable:
+        raise FeedError("no usable items")
     return items

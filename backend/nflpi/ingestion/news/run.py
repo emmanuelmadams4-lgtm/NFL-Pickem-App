@@ -64,6 +64,8 @@ def run_news(
                             value={"etag": result.etag, "last_modified": result.last_modified},
                         )
                     )
+                elif setting is not None:
+                    session.delete(setting)
                 store.prune(session, now)
             run.status = "ok"
         except fetch.Blocked as exc:
@@ -72,6 +74,7 @@ def run_news(
             run.error = parse.clean_text(f"blocked: {exc}", 100)
         except (fetch.FetchError, parse.FeedError) as exc:
             session.rollback()
+            log.warning("news %s: %s", src.id, exc)
             run.status = "failed"
             run.error = parse.clean_text(str(exc), 100)
         except Exception as exc:  # noqa: BLE001 - log and continue to the next source

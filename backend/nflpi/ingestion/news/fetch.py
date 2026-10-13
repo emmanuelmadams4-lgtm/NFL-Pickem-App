@@ -20,7 +20,13 @@ MAX_FEED_BYTES = 2_000_000
 MAX_ROBOTS_BYTES = 512_000
 MAX_REDIRECTS = 3
 MAX_VALIDATOR_LEN = 256
-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
+_NAT64 = (
+    ipaddress.ip_network("64:ff9b::/96"),
+    ipaddress.ip_network("64:ff9b:1::/48"),
+    ipaddress.ip_network("::/96"),
+    ipaddress.ip_network("2002::/16"),
+    ipaddress.ip_network("2001::/32"),
+)
 _REDIRECTS = {301, 302, 303, 307, 308}
 
 
@@ -45,7 +51,11 @@ def _has_control(value: str) -> bool:
 
 
 def _validator(value: str | None) -> str | None:
-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
+    return (
+        value
+        if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable()
+        else None
+    )
 
 
 def user_agent() -> str:
@@ -138,6 +148,7 @@ def fetch_guarded(
             request_headers = httpx.Headers(headers or {})
             request_headers["User-Agent"] = user_agent()
             request_headers["Host"] = hostname
+            request_headers["Accept-Encoding"] = "identity"
             try:
                 with client.stream(
                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
@@ -155,7 +166,7 @@ def fetch_guarded(
                             raise Blocked("url blocked") from exc
                         redirects += 1
                         continue
-                    if status in (403, 429):
+                    if status in (401, 403, 429):
                         raise Blocked(f"status {status}")
                     if status >= 400 and status not in (404, 410):
                         raise FetchError(f"status {status}")
@@ -199,12 +210,14 @@ def check_robots(source: Source, *, resolver=default_resolver, transport: httpx.
             max_bytes=MAX_ROBOTS_BYTES,
             max_redirects=0,
         )
+    except Blocked:
+        raise
     except FetchError as exc:
-        raise Blocked("robots unavailable") from exc
+        raise FetchError("robots unavailable") from exc
     if result.status in (404, 410):
         return
     if result.status != 200:
-        raise Blocked("robots unavailable")
+        raise FetchError("robots unavailable")
     parser = RobotFileParser()
     parser.parse(result.body.decode("utf-8", "replace").splitlines())
     if not parser.can_fetch("NFLPickemIntel", source.url):

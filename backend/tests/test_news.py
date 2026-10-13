@@ -484,9 +484,13 @@ def test_validators_are_sent_and_a_304_is_a_clean_empty_result():
 
 @pytest.mark.parametrize("bad", ["x" * 300, "x" * 257, "ab\x00c", "a\x07b", "caf\u00e9", "\u202e"])
 def test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent(bad):
-    headers = XML | {"etag": bad, "last-modified": bad}
+    raw = [
+        (b"content-type", b"text/xml"),
+        (b"etag", bad.encode()),
+        (b"last-modified", bad.encode()),
+    ]  # as sent on the wire
     web = web_for(
-        ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
+        ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=raw, content=feed_xml())}
     )
     result = fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport)
     assert result.etag is None and result.last_modified is None

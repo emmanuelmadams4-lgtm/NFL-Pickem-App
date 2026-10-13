@@ -1,0 +1,2757 @@
+OpenAI Codex v0.156.1
+--------
+[1mworkdir:[0m /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[1mmodel:[0m gpt-6-sol
+[1mprovider:[0m openai
+[1mapproval:[0m never
+[1msandbox:[0m workspace-write [workdir, /tmp, $TMPDIR]
+[1mreasoning effort:[0m high
+[1mreasoning summaries:[0m none
+[1msession id:[0m 01a13385-8e2f-7470-847a-13555e8d368d
+--------
+[36muser[0m
+CODEX WORK ORDER 3 (review fixes, lane news; the red tests in backend/tests/test_news.py are the spec, read them)
+
+GOAL: make every failing test in backend/tests/test_news.py pass without breaking the rest. Five reviewers read HEAD e24590b; these are the confirmed defects.
+BASELINE: branch lane/news HEAD (last commit adds the new tests). Currently 16 tests fail (see below). The other ~175 pass and must keep passing.
+ALLOWED SCOPE: backend/nflpi/ingestion/news/fetch.py, parse.py, run.py, store.py. Nothing else. No new dependency. Do not commit.
+
+REQUIREMENTS
+fetch.py
+ 1. Robots: only an EXPLICIT refusal is a block. check_robots lets `Blocked` from fetch_guarded through unchanged (private address, 401/403/429, bad url) and raises Blocked("robots disallow") for a rule match. Any other trouble (timeout, DNS error, 5xx, redirect, wrong content type, oversize body, a status other than 200/404/410) is `FetchError("robots unavailable")`, NOT Blocked: the poll stops (fail closed, the feed is not requested) and the source is retried in the next 30-minute window instead of being stopped for 24 hours.
+ 2. fetch_guarded: 401 joins 403 and 429 as Blocked("status 401") (a login wall is a block). Other >= 400 stays FetchError (except 404/410 returned).
+ 3. `_validator` keeps a value only when it is plain printable ASCII (`value.isascii() and value.isprintable()`) and at most 256 chars. A hostile "é" ETag must never reach a header.
+ 4. is_public: also refuse IPv4-compatible `::/96`, 6to4 `2002::/16` and Teredo `2001::/32`, in addition to the NAT64 ranges already refused (keep the ipv4_mapped unwrap).
+ 5. Every request carries `Accept-Encoding: identity` (set after merging caller headers).
+parse.py
+ 6. parse_feed: when the feed HAS entries (within the first 100) and every one of them was rejected for an empty title or an unusable link (none kept, none dropped merely for being older than 30 days) raise FeedError("no usable items"). A feed with zero entries still returns [] and a feed whose entries are all just old still returns [].
+run.py
+ 7. When a good 200 answer carries neither an ETag nor a Last-Modified, DELETE the saved AppSetting validators row for that source if one exists (stale validators must not be re-sent). Validators are still saved only after a successful parse/store.
+ 8. In the FetchError/FeedError branch add `log.warning("news %s: %s", src.id, exc)` (no other change).
+store.py
+ 9. `added += ... is not None` becomes `if ... is not None: added += 1` (do not add a bool to an int).
+
+PROOF (you cannot reach the database): `bash docs/gauntlet/logs/step-8c-evidence/pure.sh` must end PURE OK; also `cd backend && .venv/bin/python -c "import nflpi.ingestion.news.run"`. The coordinator runs the database tests.
+CONSTRAINTS (Ponytail): smallest diff, no new abstraction, ruff line 120, typed; touch only what the 9 items need (a separate cleanup pass follows, do NOT refactor or split functions now).
+DO NOT: commit, push, install, use the network, edit tests.
+RETURN: changed files, a 5-line summary, pure.sh result.
+
+[2m2026-10-13T04:29:14.519960Z[0m [31mERROR[0m [2mrmcp::transport::worker[0m[2m:[0m worker quit with fatal: Transport channel closed, when AuthRequired(AuthRequiredError { www_authenticate_header: "Bearer error=\"invalid_request\", error_description=\"No access token was provided in this request\", resource_metadata=\"https://api.githubcopilot.com/.well-known/oauth-protected-resource/mcp/\"" })
+[35m[3mcodex[0m[0m
+I’ll read the red tests and the four allowed files, make the smallest fixes, then run the two proof commands. I’ll keep the database tests for the coordinator as requested.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'cat /Users/emmanueladams/.agents/skills/stop-slop/SKILL.md'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '1,260p' backend/tests/test_news.py"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+---
+name: stop-slop
+description: Remove AI writing patterns from prose. Use when drafting, editing, or reviewing text to eliminate predictable AI tells.
+metadata:
+  trigger: Writing prose, editing drafts, reviewing content for AI patterns
+  author: Hardik Pandya (https://hvpandya.com)
+---
+
+# Stop Slop
+
+Eliminate predictable AI writing patterns from prose.
+
+## Core Rules
+
+1. **Cut filler phrases.** Remove throat-clearing openers, emphasis crutches, and all adverbs. See [references/phrases.md](references/phrases.md).
+
+2. **Break formulaic structures.** Avoid binary contrasts, negative listings, dramatic fragmentation, rhetorical setups, false agency. See [references/structures.md](references/structures.md).
+
+3. **Use active voice.** Every sentence needs a human subject doing something. No passive constructions. No inanimate objects performing human actions ("the complaint becomes a fix").
+
+4. **Be specific.** No vague declaratives ("The reasons are structural"). Name the specific thing. No lazy extremes ("every," "always," "never") doing vague work.
+
+5. **Put the reader in the room.** No narrator-from-a-distance voice. "You" beats "People." Specifics beat abstractions.
+
+6. **Vary rhythm.** Mix sentence lengths. Two items beat three. End paragraphs differently. No em dashes.
+
+7. **Trust readers.** State facts directly. Skip softening, justification, hand-holding.
+
+8. **Cut quotables.** If it sounds like a pull-quote, rewrite it.
+
+## Quick Checks
+
+Before delivering prose:
+
+- Any adverbs? Kill them.
+- Any passive voice? Find the actor, make them the subject.
+- Inanimate thing doing a human verb ("the decision emerges")? Name the person.
+- Sentence starts with a Wh- word? Restructure it.
+- Any "here's what/this/that" throat-clearing? Cut to the point.
+- Any "not X, it's Y" contrasts? State Y directly.
+- Three consecutive sentences match length? Break one.
+- Paragraph ends with punchy one-liner? Vary it.
+- Em-dash anywhere? Remove it.
+- Vague declarative ("The implications are significant")? Name the specific implication.
+- Narrator-from-a-distance ("Nobody designed this")? Put the reader in the scene.
+- Meta-joiners ("The rest of this essay...")? Delete. Let the essay move.
+
+## Scoring
+
+Rate 1-10 on each dimension:
+
+| Dimension | Question |
+|-----------|----------|
+| Directness | Statements or announcements? |
+| Rhythm | Varied or metronomic? |
+| Trust | Respects reader intelligence? |
+| Authenticity | Sounds human? |
+| Density | Anything cuttable? |
+
+Below 35/50: revise.
+
+## Examples
+
+See [references/examples.md](references/examples.md) for before/after transformations.
+
+## License
+
+MIT
+
+[32m succeeded in 0ms:[0m
+"""Step 8c-8f,8h: news from allowlisted public feeds.
+
+No test touches the network. Requests go to an httpx MockTransport and DNS is an injected function. The two
+recorded real feeds and their robots.txt files (tests/fixtures/news) were fetched by hand on 2026-10-13.
+"""
+
+import gzip
+import hashlib
+import socket
+import ssl
+import unicodedata
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+import httpx
+import pytest
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from nflpi.ingestion.news import fetch, match, parse, run, sources, store
+from nflpi.models import AppSetting, IngestionRun, NewsItem, Team, TeamStar
+
+FIXTURES = Path(__file__).parent / "fixtures" / "news"
+RECORDED_AT = datetime(2026, 10, 13, 4, 0, tzinfo=UTC)  # just after the newest item in the recorded feeds
+PUBLIC_IP = "93.184.216.34"
+XML = {"content-type": "text/xml; charset=UTF-8"}
+TEXT = {"content-type": "text/plain"}
+ESPN, CBS = sources.SOURCES[0], sources.SOURCES[1]
+
+
+def public_dns(host: str) -> list[str]:
+    return [PUBLIC_IP]
+
+
+class Web:
+    """A fake internet: routes[(host, path)] is a Response or a callable(request) -> Response."""
+
+    def __init__(self, routes: dict):
+        self.routes = routes
+        self.requests: list[httpx.Request] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        route = self.routes.get((request.headers["host"], request.url.path))
+        if route is None:
+            return httpx.Response(404, headers=TEXT, content=b"")
+        return route(request) if callable(route) else route
+
+    @property
+    def transport(self) -> httpx.MockTransport:
+        return httpx.MockTransport(self)
+
+    def paths(self) -> list[str]:
+        return [f"{r.headers['host']}{r.url.path}" for r in self.requests]
+
+
+def feed_xml(*items: str) -> bytes:
+    body = "".join(items)
+    return f'<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>{body}</channel></rss>'.encode()
+
+
+def item(title="Bills win", link="https://www.espn.com/nfl/story/_/id/1", desc="Short.", date=None) -> str:
+    date = date or RECORDED_AT.strftime("%a, %d %b %Y %H:%M:%S GMT")
+    link_tag = f"<link>{link}</link>" if link is not None else ""
+    return f"<item><title>{title}</title>{link_tag}<description>{desc}</description><pubDate>{date}</pubDate></item>"
+
+
+def web_for(
+    source, feed: bytes, robots: bytes = b"User-agent: *\nDisallow: /private/\n", extra: dict | None = None
+) -> Web:
+    url = httpx.URL(source.url)
+    routes = {
+        (source.host, "/robots.txt"): httpx.Response(200, headers=TEXT, content=robots),
+        (source.host, url.path): httpx.Response(200, headers=XML, content=feed),
+    }
+    routes.update(extra or {})
+    return Web(routes)
+
+
+def both_webs(feed_a: bytes, feed_b: bytes) -> Web:
+    a, b = web_for(ESPN, feed_a), web_for(CBS, feed_b)
+    return Web({**a.routes, **b.routes})
+
+
+def guarded(url: str, web: Web, **kw) -> fetch.FetchResult:
+    return fetch.fetch_guarded(
+        url,
+        host=kw.pop("host", "www.espn.com"),
+        resolver=kw.pop("resolver", public_dns),
+        transport=web.transport,
+        content_types=("xml",),
+        **kw,
+    )
+
+
+# ---------------------------------------------------------------- allowlist (8c)
+
+
+def test_the_allowlist_is_https_feeds_on_exact_hosts():
+    assert {s.id for s in sources.SOURCES} == {"espn", "cbs"}
+    for s in sources.SOURCES:
+        url = httpx.URL(s.url)
+        assert url.scheme == "https" and url.host == s.host and url.port is None
+        assert s.link_suffixes and all(s.host.endswith(x) for x in s.link_suffixes)
+
+
+# ---------------------------------------------------------------- guards (8c)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://www.espn.com/x",
+        "https://evil.example/x",
+        "https://www.espn.com.evil.example/x",
+        "https://user:pw@www.espn.com/x",
+        "https://www.espn.com:8443/x",
+        "file:///etc/passwd",
+        "https://www.espn.com/a\\b",
+        "https://www.espn.com/a\x01b",
+        "https://www.espn.com/a\tb",
+        "https://www.espn.com:443@evil.example/x",
+    ],
+)
+def test_a_url_that_is_not_https_on_the_exact_host_is_refused_before_any_lookup(url):
+    web, looked_up = Web({}), []
+    with pytest.raises(fetch.Blocked):
+        guarded(url, web, resolver=lambda h: looked_up.append(h) or [PUBLIC_IP])
+    assert web.requests == [] and looked_up == []
+
+
+@pytest.mark.parametrize(
+    "addresses",
+    [
+        ["10.0.0.5"],
+        ["192.168.1.1"],
+        ["172.16.0.9"],
+        ["127.0.0.1"],
+        ["169.254.169.254"],
+        ["0.0.0.0"],
+        ["100.64.0.1"],
+        ["224.0.0.1"],
+        ["::1"],
+        ["64:ff9b::1"],  # NAT64: Python calls it global, we do not
+        ["64:ff9b:1::1"],  # local-use NAT64
+        ["::7f00:1"],  # IPv4-compatible 127.0.0.1
+        ["2002:7f00:1::1"],  # 6to4 wrapping 127.0.0.1
+        ["2001:0:4136:e378:8000:63bf:3fff:fdd2"],  # Teredo
+        ["::ffff:100.64.0.1"],
+        ["fd00::1"],
+        ["fe80::1"],
+        ["::ffff:10.0.0.1"],
+        [PUBLIC_IP, "127.0.0.1"],  # one bad answer among good ones is enough
+    ],
+)
+def test_a_host_that_resolves_to_any_private_address_is_refused(addresses):
+    web = Web({})
+    with pytest.raises(fetch.Blocked):
+        guarded("https://www.espn.com/feed", web, resolver=lambda h: addresses)
+    assert web.requests == []
+
+
+@pytest.mark.parametrize("resolver", [lambda h: [], lambda h: (_ for _ in ()).throw(socket.gaierror("nope"))])
+def test_a_host_that_does_not_resolve_is_a_fetch_error_and_nothing_is_sent(resolver):
+    web = Web({})
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", web, resolver=resolver)
+    assert web.requests == []
+
+
+def test_when_several_public_addresses_come_back_one_checked_address_is_used():
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=feed_xml())})
+    guarded("https://www.espn.com/feed", web, resolver=lambda h: [PUBLIC_IP, "93.184.216.35"])
+    assert [r.url.host for r in web.requests] == [PUBLIC_IP]
+
+
+def test_the_client_ignores_proxy_environment_and_keeps_certificate_checks(monkeypatch):
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:9")
+    client = fetch.build_client(None)
+    assert client.trust_env is False and client.follow_redirects is False
+    assert client._transport._pool._ssl_context.verify_mode == ssl.CERT_REQUIRED  # verify is on
+    client.close()
+
+
+def test_the_connection_goes_to_the_checked_address_with_the_real_name_as_host_and_sni():
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=feed_xml())})
+    guarded("https://www.espn.com/feed", web)
+    (req,) = web.requests
+    assert req.url.host == PUBLIC_IP and req.url.scheme == "https"
+    assert req.headers["host"] == "www.espn.com"
+    assert req.extensions["sni_hostname"] == "www.espn.com"
+
+
+def test_redirects_on_the_same_host_are_followed_up_to_three_hops():
+    def hop(n):
+        return lambda r: httpx.Response(301, headers={"location": f"/h{n}"})
+
+    routes = {("www.espn.com", "/feed"): hop(1), ("www.espn.com", "/h1"): hop(2), ("www.espn.com", "/h2"): hop(3)}
+    routes[("www.espn.com", "/h3")] = httpx.Response(200, headers=XML, content=feed_xml())
+    assert guarded("https://www.espn.com/feed", Web(routes)).status == 200
+    routes[("www.espn.com", "/h3")] = hop(4)  # a fourth hop is one too many
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", Web(routes))
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "https://www.nbcsports.com/x",
+        "http://www.espn.com/x",
+        "https://www.espn.com.evil.example/x",
+        "//evil.example/x",
+        "/ok\\evil",
+    ],
+)
+def test_a_redirect_off_the_host_or_to_http_is_refused_and_never_followed(location):
+    web = Web({("www.espn.com", "/feed"): httpx.Response(301, headers={"location": location})})
+    with pytest.raises(fetch.Blocked):
+        guarded("https://www.espn.com/feed", web)
+    assert web.paths() == ["www.espn.com/feed"]
+
+
+def test_every_hop_is_resolved_and_checked_again():
+    calls = []
+
+    def dns(host):
+        calls.append(host)
+        return [PUBLIC_IP] if len(calls) == 1 else ["127.0.0.1"]
+
+    web = Web({("www.espn.com", "/feed"): httpx.Response(302, headers={"location": "/next"})})
+    with pytest.raises(fetch.Blocked):
+        guarded("https://www.espn.com/feed", web, resolver=dns)
+    assert len(calls) == 2 and web.paths() == ["www.espn.com/feed"]
+
+
+def test_a_body_over_the_cap_is_refused_even_when_it_is_compressed():
+    big = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=b"x" * 3_000_000)})
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", big)
+    bomb = gzip.compress(b"0" * 20_000_000)
+    assert len(bomb) < fetch.MAX_FEED_BYTES  # small on the wire, huge once decoded
+    web = Web(
+        {("www.espn.com", "/feed"): httpx.Response(200, headers=XML | {"content-encoding": "gzip"}, content=bomb)}
+    )
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", web)
+
+
+def test_a_body_at_the_cap_is_accepted():
+    body = b"x" * fetch.MAX_FEED_BYTES
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=body)})
+    assert guarded("https://www.espn.com/feed", web).body == body
+
+
+def test_a_slow_response_hits_the_wall_clock_deadline():
+    now = [0.0]
+
+    def slow():
+        def chunks():
+            for _ in range(5):
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'for f in backend/nflpi/ingestion/news/{fetch,parse,run,store}.py; do echo "$f"; sed -n '"'1,320p' \""'$f"; done'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+backend/nflpi/ingestion/news/fetch.py
+"""Fetch allowlisted feeds with pinned DNS, bounded bodies, and robots checks."""
+
+import ipaddress
+import socket
+import ssl
+import time
+import unicodedata
+from dataclasses import dataclass
+from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.robotparser import RobotFileParser
+
+import httpx
+
+from nflpi.config import get_settings
+from nflpi.ingestion.news.sources import Source
+
+TIMEOUT_S = 10
+DEADLINE_S = 20
+MAX_FEED_BYTES = 2_000_000
+MAX_ROBOTS_BYTES = 512_000
+MAX_REDIRECTS = 3
+MAX_VALIDATOR_LEN = 256
+_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
+_REDIRECTS = {301, 302, 303, 307, 308}
+
+
+class FetchError(Exception):
+    """A feed could not be fetched safely."""
+
+
+class Blocked(FetchError):
+    """A security or source access rule forbids this fetch."""
+
+
+@dataclass(frozen=True)
+class FetchResult:
+    status: int
+    body: bytes
+    etag: str | None
+    last_modified: str | None
+
+
+def _has_control(value: str) -> bool:
+    return any(unicodedata.category(char).startswith("C") for char in value)
+
+
+def _validator(value: str | None) -> str | None:
+    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
+
+
+def user_agent() -> str:
+    base = "NFLPickemIntel/1.0 (private single-user app"
+    contact = get_settings().news_contact
+    return f"{base}; contact: {contact})" if contact and not _has_control(contact) else f"{base})"
+
+
+def default_resolver(host: str) -> list[str]:
+    addresses: list[str] = []
+    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+        address = result[4][0]
+        if address not in addresses:
+            addresses.append(address)
+    return addresses
+
+
+def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+    return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+
+
+def is_public(address: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        elif any(ip in network for network in _NAT64):
+            return False
+    return ip.is_global and not ip.is_multicast
+
+
+def _checked_url(url: str, host: str) -> tuple[str, str]:
+    try:
+        parts = urlsplit(url)
+        hostname = parts.hostname
+        valid = (
+            parts.scheme.lower() == "https"
+            and hostname is not None
+            and hostname.lower() == host.lower()
+            and parts.username is None
+            and parts.password is None
+            and parts.port in (None, 443)
+            and not _has_control(url)
+            and "\\" not in url
+        )
+    except (ValueError, UnicodeError):
+        valid = False
+        hostname = None
+    if not valid or hostname is None:
+        raise Blocked("url blocked")
+    return hostname, urlunsplit(("https", hostname, parts.path or "/", parts.query, ""))
+
+
+def fetch_guarded(
+    url: str,
+    *,
+    host: str,
+    resolver=default_resolver,
+    transport: httpx.BaseTransport | None = None,
+    headers: dict[str, str] | None = None,
+    max_bytes: int = MAX_FEED_BYTES,
+    content_types: tuple[str, ...] = ("xml",),
+    max_redirects: int = MAX_REDIRECTS,
+    clock=time.monotonic,
+) -> FetchResult:
+    start = clock()
+    redirects = 0
+    with build_client(transport) as client:
+        while True:
+            if clock() > start + DEADLINE_S:
+                raise FetchError("deadline exceeded")
+            hostname, hostname_url = _checked_url(url, host)
+            try:
+                addresses = resolver(hostname)
+            except (OSError, UnicodeError) as exc:
+                raise FetchError("dns error") from exc
+            if not addresses:
+                raise FetchError("dns empty")
+            if any(not is_public(address) for address in addresses):
+                raise Blocked("address blocked")
+            if clock() > start + DEADLINE_S:
+                raise FetchError("deadline exceeded")
+            address = addresses[0]
+            ip_host = f"[{address}]" if ":" in address else address
+            parts = urlsplit(hostname_url)
+            ip_url = urlunsplit(("https", ip_host, parts.path, parts.query, ""))
+            request_headers = httpx.Headers(headers or {})
+            request_headers["User-Agent"] = user_agent()
+            request_headers["Host"] = hostname
+            try:
+                with client.stream(
+                    "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+                ) as response:
+                    status = response.status_code
+                    if status in _REDIRECTS and "location" in response.headers:
+                        if redirects >= max_redirects:
+                            raise FetchError("too many redirects")
+                        location = response.headers["location"]
+                        if _has_control(location) or "\\" in location:
+                            raise Blocked("url blocked")
+                        try:
+                            url = urljoin(hostname_url, location)
+                        except (ValueError, UnicodeError) as exc:
+                            raise Blocked("url blocked") from exc
+                        redirects += 1
+                        continue
+                    if status in (403, 429):
+                        raise Blocked(f"status {status}")
+                    if status >= 400 and status not in (404, 410):
+                        raise FetchError(f"status {status}")
+                    if status == 200:
+                        media_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
+                        if not any(kind in media_type for kind in content_types):
+                            raise FetchError("content type")
+                    if status in (304, 404, 410):
+                        body = b""
+                    elif 200 <= status < 300:
+                        chunks: list[bytes] = []
+                        size = 0
+                        for chunk in response.iter_bytes():
+                            if clock() > start + DEADLINE_S:
+                                raise FetchError("deadline exceeded")
+                            size += len(chunk)
+                            if size > max_bytes:
+                                raise FetchError("too large")
+                            chunks.append(chunk)
+                        body = b"".join(chunks)
+                    else:
+                        raise FetchError(f"status {status}")
+                    return FetchResult(
+                        status,
+                        body,
+                        _validator(response.headers.get("etag")),
+                        _validator(response.headers.get("last-modified")),
+                    )
+            except (httpx.HTTPError, ssl.SSLError, OSError) as exc:
+                raise FetchError(type(exc).__name__) from exc
+
+
+def check_robots(source: Source, *, resolver=default_resolver, transport: httpx.BaseTransport | None = None) -> None:
+    try:
+        result = fetch_guarded(
+            f"https://{source.host}/robots.txt",
+            host=source.host,
+            resolver=resolver,
+            transport=transport,
+            content_types=("text/plain",),
+            max_bytes=MAX_ROBOTS_BYTES,
+            max_redirects=0,
+        )
+    except FetchError as exc:
+        raise Blocked("robots unavailable") from exc
+    if result.status in (404, 410):
+        return
+    if result.status != 200:
+        raise Blocked("robots unavailable")
+    parser = RobotFileParser()
+    parser.parse(result.body.decode("utf-8", "replace").splitlines())
+    if not parser.can_fetch("NFLPickemIntel", source.url):
+        raise Blocked("robots disallow")
+
+
+def fetch_feed(
+    source: Source,
+    *,
+    resolver=default_resolver,
+    transport: httpx.BaseTransport | None = None,
+    validators: dict[str, str] | None = None,
+) -> FetchResult:
+    check_robots(source, resolver=resolver, transport=transport)
+    conditional: dict[str, str] = {}
+    if validators:
+        etag = _validator(validators.get("etag"))
+        last_modified = _validator(validators.get("last_modified"))
+        if etag is not None:
+            conditional["If-None-Match"] = etag
+        if last_modified is not None:
+            conditional["If-Modified-Since"] = last_modified
+    result = fetch_guarded(
+        source.url,
+        host=source.host,
+        resolver=resolver,
+        transport=transport,
+        headers=conditional,
+        content_types=("xml",),
+    )
+    if result.status not in (200, 304):
+        raise FetchError(f"status {result.status}")
+    return result
+backend/nflpi/ingestion/news/parse.py
+"""Turn bounded feed bytes into clean, allowlisted news items."""
+
+import io
+import unicodedata
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from html.parser import HTMLParser
+from urllib.parse import quote, unquote_plus, urlsplit, urlunsplit
+
+import feedparser
+
+from nflpi.ingestion.news.sources import Source
+
+_URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+_TRACKERS = {"fbclid", "gclid", "ocid"}
+
+
+class FeedError(Exception):
+    """The response is not a usable feed."""
+
+
+@dataclass(frozen=True)
+class Item:
+    title: str
+    url: str
+    published_at: datetime | None
+    extract: str
+
+
+class _Text(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.hidden = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("script", "style"):
+            self.hidden += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("script", "style") and self.hidden:
+            self.hidden -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self.hidden:
+            self.parts.append(data)
+
+
+def clean_text(raw: str, limit: int) -> str:
+    parser = _Text()
+    parser.feed(raw)
+    parser.close()
+    text = " ".join("".join(parser.parts).split())
+    text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+    return " ".join(text.split())[:limit].strip()
+
+
+def canonical_url(link: str | None, suffixes: tuple[str, ...]) -> str | None:
+    if not link or any(char.isspace() or unicodedata.category(char).startswith("C") for char in link) or "\\" in link:
+        return None
+    try:
+        parts = urlsplit(link)
+        host = parts.hostname
+        if host is None:
+            return None
+        host.encode("ascii")
+        if (
+            parts.scheme.lower() != "https"
+            or parts.username is not None
+            or parts.password is not None
+            or parts.netloc.lower() != host
+            or host.endswith(".")
+            or not any(host == suffix or host.endswith("." + suffix) for suffix in suffixes)
+        ):
+            return None
+    except (ValueError, UnicodeError):
+        return None
+    query_parts = []
+    for segment in parts.query.split("&"):
+        key = unquote_plus(segment.split("=", 1)[0]).lower()
+        if not key.startswith("utm_") and key not in _TRACKERS:
+            query_parts.append(segment)
+    path = quote(parts.path or "/", safe=_URL_SAFE)
+    query = quote("&".join(query_parts), safe=_URL_SAFE)
+    result = urlunsplit(("https", host, path, query, ""))
+    return result if len(result) <= 2048 else None
+
+
+def _published(entry: dict, now: datetime) -> datetime | None:
+    stamp = entry.get("published_parsed") or entry.get("updated_parsed")
+    if not stamp:
+        return None
+    try:
+        published = datetime(*stamp[:6], tzinfo=UTC)
+    except (TypeError, ValueError):
+        return None
+    return None if published > now + timedelta(days=1) else published
+
+
+def parse_feed(body: bytes, source: Source, now: datetime) -> list[Item]:
+    parsed = feedparser.parse(io.BytesIO(body))
+    if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+        raise FeedError("not a feed")
+    items: list[Item] = []
+    for entry in parsed.entries[:100]:
+        title = clean_text(entry.get("title") or "", 200)
+        url = canonical_url(entry.get("link"), source.link_suffixes)
+        if not title or not url:
+            continue
+        published_at = _published(entry, now)
+        if published_at is not None and published_at < now - timedelta(days=30):
+            continue
+        items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
+    return items
+backend/nflpi/ingestion/news/run.py
+"""Poll each news source and record its outcome."""
+
+import logging
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from nflpi.ingestion.news import fetch, match, parse, sources, store
+from nflpi.models import AppSetting, IngestionRun
+
+log = logging.getLogger(__name__)
+
+POLL_MINUTES = 30
+BLOCK_HOURS = 24
+
+
+def run_news(
+    session: Session,
+    *,
+    now: datetime | None = None,
+    resolver=None,
+    transport=None,
+    sources=sources.SOURCES,
+) -> list[IngestionRun]:
+    now = now if now is not None else datetime.now(UTC)
+    resolver = resolver if resolver is not None else fetch.default_resolver
+    names = match.load_names(session)
+    made: list[IngestionRun] = []
+    for src in sources:
+        dataset = f"news:{src.id}"
+        latest = session.scalars(
+            select(IngestionRun)
+            .where(IngestionRun.dataset == dataset)
+            .order_by(IngestionRun.started_at.desc(), IngestionRun.id.desc())
+            .limit(1)
+        ).first()
+        if latest and (
+            latest.started_at > now - timedelta(minutes=POLL_MINUTES)
+            or (
+                (latest.error or "").startswith("blocked:")
+                and latest.started_at > now - timedelta(hours=BLOCK_HOURS)
+            )
+        ):
+            continue
+
+        run = IngestionRun(source=src.id, dataset=dataset, started_at=now, status="running")
+        session.add(run)
+        session.commit()
+        try:
+            setting = session.get(AppSetting, f"{dataset}:validators")
+            validators = setting.value if setting else None
+            result = fetch.fetch_feed(src, resolver=resolver, transport=transport, validators=validators)
+            if result.status == 304:
+                run.rows = 0
+                store.prune(session, now)
+            else:
+                items = parse.parse_feed(result.body, src, now)
+                run.rows = store.store_items(session, src.id, items, names, now)
+                if result.etag is not None or result.last_modified is not None:
+                    session.merge(
+                        AppSetting(
+                            key=f"{dataset}:validators",
+                            value={"etag": result.etag, "last_modified": result.last_modified},
+                        )
+                    )
+                store.prune(session, now)
+            run.status = "ok"
+        except fetch.Blocked as exc:
+            session.rollback()
+            run.status = "failed"
+            run.error = parse.clean_text(f"blocked: {exc}", 100)
+        except (fetch.FetchError, parse.FeedError) as exc:
+            session.rollback()
+            run.status = "failed"
+            run.error = parse.clean_text(str(exc), 100)
+        except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+            session.rollback()
+            log.exception("news ingestion failed for %s", src.id)
+            run.status = "failed"
+            run.error = parse.clean_text(f"unexpected: {type(exc).__name__}", 100)
+        run.finished_at = datetime.now(UTC)
+        session.add(run)
+        session.commit()
+        made.append(run)
+    return made
+backend/nflpi/ingestion/news/store.py
+"""Store deduplicated news items in step 8f."""
+
+import hashlib
+from datetime import datetime, timedelta
+
+from sqlalchemy import delete
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import Session
+
+from nflpi.ingestion.news import match, parse
+from nflpi.models import NewsItem
+
+KEEP_DAYS = 30
+
+
+def store_items(
+    session: Session, source_id: str, items: list[parse.Item], names: match.Names, fetched_at: datetime
+) -> int:
+    added = 0
+    for item in items:
+        tied = match.tie(item.title, item.extract, names)
+        stmt = insert(NewsItem).values(
+            source=source_id,
+            title=item.title,
+            title_sha256=hashlib.sha256(item.title.encode()).hexdigest(),
+            url_canonical=item.url,
+            published_at=item.published_at,
+            fetched_at=fetched_at,
+            extract=item.extract,
+            team_ids=tied.team_ids,
+            player_ids=tied.player_ids,
+            tags=tied.tags,
+        ).returning(NewsItem.id)
+        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
+    session.commit()
+    return added
+
+
+def prune(session: Session, now: datetime) -> int:
+    result = session.execute(delete(NewsItem).where(NewsItem.fetched_at < now - timedelta(days=KEEP_DAYS)))
+    session.commit()
+    return result.rowcount
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "git status --short && git rev-parse --short HEAD && rg --files -g 'AGENTS.md' -g 'backend/tests/test_news.py' -g 'backend/nflpi/ingestion/news/*.py' -g 'docs/gauntlet/logs/step-8c-evidence/pure.sh'"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+?? docs/gauntlet/logs/step-8c-evidence/wo-3-codex.log
+77baa8c
+apps/web/AGENTS.md
+backend/tests/test_news.py
+docs/gauntlet/logs/step-8c-evidence/pure.sh
+backend/nflpi/ingestion/news/match.py
+backend/nflpi/ingestion/news/parse.py
+backend/nflpi/ingestion/news/sources.py
+backend/nflpi/ingestion/news/__init__.py
+backend/nflpi/ingestion/news/run.py
+backend/nflpi/ingestion/news/store.py
+backend/nflpi/ingestion/news/fetch.py
+
+[35m[3mcodex[0m[0m
+The tests cover the nine fixes you listed. The checkout is at `77baa8c`, rather than the stated baseline `e24590b`; I’ll keep the edits within the four allowed files and leave the existing untracked log alone. I also read the stop-slop skill for the final report.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '1,220p' docs/gauntlet/logs/step-8c-evidence/pure.sh && git log -3 --oneline"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+#!/usr/bin/env bash
+# The tests that need no database: conftest is skipped, so every test that asks for the `session` fixture errors with
+# "fixture 'session' not found" (those are run later by the coordinator, who can reach the lane database).
+# PASS = no failure, no collection error, and every error is exactly that one.
+set -uo pipefail
+cd "$(dirname "$0")/../../../../backend"
+out=$(COLUMNS=300 .venv/bin/python -m pytest --noconftest -q --color=no -p no:cacheprovider tests/test_news.py 2>&1)
+echo "$out" | tail -n 4
+if echo "$out" | grep -qE "ImportError|ModuleNotFoundError|errors? during collection"; then echo "FAIL: collection error"; exit 1; fi
+if echo "$out" | grep -qE "[0-9]+ failed"; then echo "FAIL: tests failed"; echo "$out" | grep -E "^FAILED" | head -20; exit 1; fi
+errs=$(echo "$out" | grep -c '^ERROR ')
+nofix=$(echo "$out" | grep -c "fixture 'session' not found")
+[ "$errs" = "$nofix" ] || { echo "FAIL: $errs errors but only $nofix are the missing session fixture"; exit 1; }
+echo "PURE OK"
+77baa8c test: step 8c review round 1: robots trouble is not a block, ascii validators, more address ranges, unusable feed, boundaries (red)
+e24590b fix: step 8c work order 2c: headline text can never break matching; a 304 poll also prunes
+5a6aba9 test: step 8c: casefold headline crash and prune-on-304 (red)
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '260,760p' backend/tests/test_news.py"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+            for _ in range(5):
+                now[0] += 10  # each chunk takes ten fake seconds
+                yield b"<rss>"
+
+        return httpx.Response(200, headers=XML, content=chunks())
+
+    web = Web({("www.espn.com", "/feed"): lambda r: slow()})
+    with pytest.raises(fetch.FetchError, match="deadline"):
+        guarded("https://www.espn.com/feed", web, clock=lambda: now[0])
+
+
+@pytest.mark.parametrize("exc", [httpx.ReadTimeout("slow"), httpx.ConnectError("down"), httpx.RemoteProtocolError("x")])
+def test_network_errors_are_fetch_errors(exc):
+    def boom(request):
+        raise exc
+
+    with pytest.raises(fetch.FetchError):
+        fetch.fetch_guarded(
+            "https://www.espn.com/feed",
+            host="www.espn.com",
+            resolver=public_dns,
+            transport=httpx.MockTransport(boom),
+            content_types=("xml",),
+        )
+
+
+def test_the_timeout_is_ten_seconds_and_the_whole_fetch_twenty():
+    assert fetch.TIMEOUT_S == 10 and fetch.DEADLINE_S == 20
+    assert fetch.MAX_FEED_BYTES == 2_000_000 and fetch.MAX_REDIRECTS == 3
+    client = fetch.build_client(None)
+    assert client.timeout == httpx.Timeout(10)
+    client.close()
+
+
+def test_a_redirect_with_no_location_is_a_fetch_error():
+    web = Web({("www.espn.com", "/feed"): httpx.Response(301)})
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", web)
+
+
+def test_a_public_ipv6_answer_is_pinned_and_compressed_bodies_are_not_requested():
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=feed_xml())})
+    guarded("https://www.espn.com/feed", web, resolver=lambda h: ["2606:4700:4700::1111"])
+    (req,) = web.requests
+    assert req.url.host == "2606:4700:4700::1111" and req.headers["host"] == "www.espn.com"
+    assert req.headers["accept-encoding"] == "identity"
+
+
+def test_default_resolver_asks_for_port_443_and_returns_each_address_once(monkeypatch):
+    asked = []
+
+    def fake(host, port, **kw):
+        asked.append((host, port))
+        rows = ["93.184.216.34", "93.184.216.34", "93.184.216.35"]
+        return [(2, 1, 6, "", (address, 443)) for address in rows]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    assert fetch.default_resolver("www.espn.com") == ["93.184.216.34", "93.184.216.35"]
+    assert asked == [("www.espn.com", 443)]
+
+
+@pytest.mark.parametrize("ctype", ["text/html", "application/json", "image/png", ""])
+def test_a_feed_with_the_wrong_content_type_is_a_fetch_error(ctype):
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers={"content-type": ctype}, content=b"<rss/>")})
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", web)
+
+
+@pytest.mark.parametrize(
+    "ctype", ["application/rss+xml", "application/atom+xml; charset=utf-8", "application/xml", "text/xml"]
+)
+def test_feed_content_types_are_accepted(ctype):
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers={"content-type": ctype}, content=b"<rss/>")})
+    assert guarded("https://www.espn.com/feed", web).status == 200
+
+
+@pytest.mark.parametrize("status", [401, 403, 429])
+def test_401_403_and_429_are_blocked(status):
+    web = Web({("www.espn.com", "/feed"): httpx.Response(status)})
+    with pytest.raises(fetch.Blocked):
+        guarded("https://www.espn.com/feed", web)
+
+
+@pytest.mark.parametrize("status", [500, 502, 503, 400])
+def test_other_failures_are_fetch_errors_not_blocks(status):
+    web = Web({("www.espn.com", "/feed"): httpx.Response(status)})
+    with pytest.raises(fetch.FetchError) as caught:
+        guarded("https://www.espn.com/feed", web)
+    assert not isinstance(caught.value, fetch.Blocked)
+
+
+def test_the_user_agent_names_the_app_and_adds_the_contact_when_set(monkeypatch):
+    from nflpi.config import get_settings
+
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=feed_xml())})
+    guarded("https://www.espn.com/feed", web)
+    assert web.requests[0].headers["user-agent"] == fetch.user_agent()
+    assert "NFLPickemIntel/1.0" in fetch.user_agent() and "@" not in fetch.user_agent()
+    monkeypatch.setenv("NEWS_CONTACT", "owner@example.test")
+    get_settings.cache_clear()
+    try:
+        assert fetch.user_agent().endswith("owner@example.test)") or "owner@example.test" in fetch.user_agent()
+        monkeypatch.setenv("NEWS_CONTACT", "a@b.test\r\nX-Evil: 1")
+        get_settings.cache_clear()
+        assert "\r" not in fetch.user_agent() and "\n" not in fetch.user_agent() and "X-Evil" not in fetch.user_agent()
+    finally:
+        monkeypatch.delenv("NEWS_CONTACT")
+        get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------- robots (8c)
+
+
+def feed_through_robots(robots: httpx.Response | None, **kw) -> tuple[Web, fetch.FetchResult | None, Exception | None]:
+    routes = {(ESPN.host, httpx.URL(ESPN.url).path): httpx.Response(200, headers=XML, content=feed_xml())}
+    if robots is not None:
+        routes[(ESPN.host, "/robots.txt")] = robots
+    web = Web(routes)
+    try:
+        return web, fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport, **kw), None
+    except Exception as exc:  # noqa: BLE001 - the test inspects it
+        return web, None, exc
+
+
+def test_robots_is_read_before_every_fetch_and_obeyed():
+    deny = httpx.Response(200, headers=TEXT, content=b"User-agent: *\nDisallow: /espn/\n")
+    web, result, exc = feed_through_robots(deny)
+    assert isinstance(exc, fetch.Blocked) and "robots" in str(exc)
+    assert web.paths() == ["www.espn.com/robots.txt"]  # the feed itself is never requested
+    web, result, exc = feed_through_robots(httpx.Response(200, headers=TEXT, content=b"User-agent: *\nDisallow: /x/\n"))
+    assert exc is None and web.paths() == ["www.espn.com/robots.txt", "www.espn.com/espn/rss/nfl/news"]
+
+
+def test_robots_that_names_our_agent_is_obeyed():
+    body = b"User-agent: NFLPickemIntel\nDisallow: /\n\nUser-agent: *\nDisallow:\n"
+    _, _, exc = feed_through_robots(httpx.Response(200, headers=TEXT, content=body))
+    assert isinstance(exc, fetch.Blocked)
+
+
+@pytest.mark.parametrize("status", [404, 410])
+def test_missing_robots_means_allowed(status):
+    _, result, exc = feed_through_robots(httpx.Response(status, headers=TEXT))
+    assert exc is None and result.status == 200
+
+
+REFUSED = [httpx.Response(401), httpx.Response(403)]
+TROUBLE = [
+    httpx.Response(500),
+    httpx.Response(503),
+    httpx.Response(200, headers={"content-type": "text/html"}, content=b"<html>not rules</html>"),
+    httpx.Response(200, headers=TEXT, content=b"x" * (fetch.MAX_ROBOTS_BYTES + 1)),
+    httpx.Response(301, headers={"location": "https://www.nbcsports.com/robots.txt"}),
+    httpx.Response(301, headers={"location": "/other-robots.txt"}),
+]
+
+
+@pytest.mark.parametrize("robots", REFUSED, ids=["401", "403"])
+def test_robots_that_refuses_us_is_a_block(robots):
+    web, _, exc = feed_through_robots(robots)
+    assert isinstance(exc, fetch.Blocked)
+    assert "www.espn.com/espn/rss/nfl/news" not in web.paths()
+
+
+@pytest.mark.parametrize(
+    "robots", TROUBLE, ids=["500", "503", "html", "oversize", "redirect-off-host", "redirect-same-host"]
+)
+def test_robots_that_cannot_be_trusted_stops_this_poll_but_is_not_a_block(robots):
+    web, _, exc = feed_through_robots(robots)
+    assert isinstance(exc, fetch.FetchError) and not isinstance(exc, fetch.Blocked)
+    assert "www.espn.com/espn/rss/nfl/news" not in web.paths()  # fail closed: the feed is not requested
+
+
+def test_robots_rules_are_parsed_from_text_never_read_by_urllib(monkeypatch):
+    import urllib.request
+
+    def forbidden(*a, **k):
+        raise AssertionError("urllib must not be used")
+
+    monkeypatch.setattr(urllib.request, "urlopen", forbidden)
+    _, result, exc = feed_through_robots(httpx.Response(200, headers=TEXT, content=b"User-agent: *\nDisallow: /x/\n"))
+    assert exc is None and result.status == 200
+
+
+def test_robots_unreachable_stops_this_poll_but_is_not_a_block():
+    def boom(request):
+        raise httpx.ConnectError("down")
+
+    with pytest.raises(fetch.FetchError) as caught:
+        fetch.fetch_feed(ESPN, resolver=public_dns, transport=httpx.MockTransport(boom))
+    assert not isinstance(caught.value, fetch.Blocked)
+
+
+@pytest.mark.parametrize("status", [204, 206, 404, 410])
+def test_only_200_and_304_count_as_a_good_feed_answer(status):
+    web = web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(status, headers=XML)})
+    with pytest.raises(fetch.FetchError):
+        fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport)
+
+
+def test_the_recorded_real_robots_files_allow_our_two_feeds():
+    for source in sources.SOURCES:
+        robots = (FIXTURES / f"{source.id}_robots.txt").read_bytes()
+        web = web_for(source, (FIXTURES / f"{source.id}.xml").read_bytes(), robots=robots)
+        result = fetch.fetch_feed(source, resolver=public_dns, transport=web.transport)
+        assert result.status == 200 and len(result.body) > 1000
+
+
+def test_validators_are_sent_and_a_304_is_a_clean_empty_result():
+    seen = {}
+
+    def not_modified(request):
+        seen.update(request.headers)
+        return httpx.Response(304)
+
+    web = web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): not_modified})
+    result = fetch.fetch_feed(
+        ESPN,
+        resolver=public_dns,
+        transport=web.transport,
+        validators={"etag": 'W/"abc"', "last_modified": "Wed, 01 Jan 2025 00:00:00 GMT"},
+    )
+    assert result.status == 304 and result.body == b""
+    assert seen["if-none-match"] == 'W/"abc"' and seen["if-modified-since"] == "Wed, 01 Jan 2025 00:00:00 GMT"
+
+
+@pytest.mark.parametrize("bad", ["x" * 300, "x" * 257, "ab\x00c", "a\x07b", "caf\u00e9", "\u202e"])
+def test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent(bad):
+    headers = XML | {"etag": bad, "last-modified": bad}
+    web = web_for(
+        ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
+    )
+    result = fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport)
+    assert result.etag is None and result.last_modified is None
+    sent = web_for(ESPN, feed_xml())
+    fetch.fetch_feed(
+        ESPN, resolver=public_dns, transport=sent.transport, validators={"etag": bad, "last_modified": bad}
+    )
+    assert "if-none-match" not in sent.requests[-1].headers and "if-modified-since" not in sent.requests[-1].headers
+
+
+def test_a_validator_of_exactly_256_plain_characters_is_kept_and_sent():
+    good = "a" * 256
+    headers = XML | {"etag": good}
+    web = web_for(
+        ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
+    )
+    assert fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport).etag == good
+    sent = web_for(ESPN, feed_xml())
+    fetch.fetch_feed(ESPN, resolver=public_dns, transport=sent.transport, validators={"etag": good})
+    assert sent.requests[-1].headers["if-none-match"] == good
+
+
+def test_the_result_carries_the_new_validators():
+    headers = XML | {"etag": '"v2"', "last-modified": "Tue, 02 Jan 2025 00:00:00 GMT"}
+    web = web_for(
+        ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
+    )
+    result = fetch.fetch_feed(ESPN, resolver=public_dns, transport=web.transport)
+    assert result.etag == '"v2"' and result.last_modified == "Tue, 02 Jan 2025 00:00:00 GMT"
+
+
+# ---------------------------------------------------------------- extract (8d)
+
+
+def one(feed: bytes, source=ESPN, now=RECORDED_AT) -> list[parse.Item]:
+    return parse.parse_feed(feed, source, now)
+
+
+def test_tags_scripts_and_entities_become_plain_text():
+    desc = "&lt;p&gt;Hello &lt;b&gt;Buffalo&lt;/b&gt;&lt;script&gt;alert(1)&lt;/script&gt; &amp;amp; co&lt;/p&gt;"
+    (got,) = one(feed_xml(item(desc=desc)))
+    assert got.extract == "Hello Buffalo & co" and "alert" not in got.extract and "<" not in got.extract
+
+
+def test_control_bidi_zero_width_and_private_use_characters_are_removed_everywhere():
+    nasty = "Bills‮​ win\x07\x1b[31m big⁦"
+    (got,) = one(feed_xml(item(title=nasty, desc=f"Josh​ Allen {nasty}")))
+    for text in (got.title, got.extract):
+        assert not any(unicodedata.category(c).startswith("C") for c in text), text
+    assert got.title.startswith("Bills win") and "Josh Allen" in got.extract
+
+
+def test_whitespace_is_collapsed_and_lengths_are_capped():
+    (got,) = one(feed_xml(item(title="A\n\n  B\t C" + "x" * 500, desc="word " * 200)))
+    assert got.title.startswith("A B C") and len(got.title) <= 200
+    (glued,) = one(feed_xml(item(title="Bills&#10;win&#9;big")))
+    assert glued.title == "Bills win big"
+    assert len(got.extract) <= 300 and "  " not in got.extract
+
+
+def test_style_blocks_are_dropped_like_scripts():
+    (got,) = one(feed_xml(item(desc="&lt;style&gt;body{x:1}&lt;/style&gt;Kept text")))
+    assert got.extract == "Kept text"
+
+
+def test_tracker_keys_are_dropped_whatever_their_case():
+    link = "https://www.espn.com/a?UTM_Source=x&FBCLID=1&Keep=2".replace("&", "&amp;")
+    assert one(feed_xml(item(link=link)))[0].url == "https://www.espn.com/a?Keep=2"
+
+
+def test_a_feed_whose_every_entry_is_unusable_is_an_error_not_a_quiet_zero():
+    foreign = [item(title=f"t{n}", link=f"https://evil.example/{n}") for n in range(3)]
+    with pytest.raises(parse.FeedError):
+        one(feed_xml(*foreign))
+    old = (RECORDED_AT - timedelta(days=60)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    assert one(feed_xml(item(date=old))) == []  # a quiet feed with only old news is fine
+    assert [i.title for i in one(feed_xml(*foreign, item(title="ok")))] == ["ok"]
+
+
+def test_clean_text_is_the_one_cleaner():
+    assert parse.clean_text("a‮b\x00c", 10) == "abc"
+    assert len(parse.clean_text("é" * 50, 10)) == 10
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "javascript:alert(1)",
+        "data:text/html,hi",
+        "http://www.espn.com/nfl/story/1",
+        "https://evil.example/nfl",
+        "https://notespn.com/nfl",
+        "https://evilespn.com/nfl",
+        "https://www.espn.com./nfl",
+        "https://www.espn.com:8443/nfl",
+        "https://www.espn.com:443/nfl",
+        "https://www.espn.com\\@evil.example/nfl",
+        "https://www.espn.com/a b",
+        "https://www.espn.com/a\\b",
+        "https://www.\u0435spn.com/nfl",
+        "https://www.espn.com.evil.example/nfl",
+        "https://user:pw@www.espn.com/nfl",
+        "https://www.espn.com/" + "a" * 2100,
+        "",
+        None,
+    ],
+)
+def test_an_item_with_an_unsafe_or_foreign_link_is_skipped_not_fatal(link):
+    got = one(feed_xml(item(title="bad", link=link), item(title="good")))
+    assert [i.title for i in got] == ["good"]
+
+
+def test_links_are_canonical_https_without_trackers_or_fragments():
+    link = "https://WWW.ESPN.com/nfl/story?id=1&utm_source=x&fbclid=y&gclid=z&ocid=q&keep=2#frag"
+    (got,) = one(feed_xml(item(link=link.replace("&", "&amp;"))))
+    assert got.url == "https://www.espn.com/nfl/story?id=1&keep=2"
+    assert parse.canonical_url("https://a.espn.com/x", ("espn.com",)) == "https://a.espn.com/x"
+    assert parse.canonical_url("https://www.espn.com/é", ("espn.com",)) == "https://www.espn.com/%C3%A9"
+
+
+def test_a_missing_date_stays_missing_and_a_future_date_is_dropped_not_trusted():
+    fresh = RECORDED_AT.strftime("%a, %d %b %Y %H:%M:%S GMT")
+    future = (RECORDED_AT + timedelta(days=3)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    nodate = "<item><title>no date</title><link>https://www.espn.com/a</link></item>"
+    got = {
+        i.title: i for i in one(feed_xml(item(title="fresh", date=fresh), item(title="future", date=future), nodate))
+    }
+    assert got["fresh"].published_at == RECORDED_AT and got["fresh"].published_at.tzinfo is not None
+    assert got["future"].published_at is None and got["no date"].published_at is None
+
+
+def test_a_date_a_day_ahead_is_kept_and_two_days_ahead_is_dropped():
+    def at(delta):
+        return (RECORDED_AT + delta).strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+    feed = feed_xml(item(title="a", date=at(timedelta(hours=20))), item(title="b", date=at(timedelta(hours=40))))
+    got = {i.title: i.published_at for i in one(feed)}
+    assert got["a"] is not None and got["b"] is None
+
+
+def test_items_older_than_thirty_days_are_skipped():
+    old = (RECORDED_AT - timedelta(days=31)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    assert [i.title for i in one(feed_xml(item(title="old", date=old), item(title="new")))] == ["new"]
+
+
+def test_at_most_one_hundred_entries_are_read():
+    many = [item(title=f"t{n}", link=f"https://www.espn.com/{n}") for n in range(150)]
+    assert len(one(feed_xml(*many))) == 100
+
+
+@pytest.mark.parametrize("body", [b"", b"<html><body>not a feed</body></html>", b"\x00\x01\x02", b"{}"])
+def test_a_body_that_is_not_a_feed_raises(body):
+    with pytest.raises(parse.FeedError):
+        one(body)
+
+
+def test_a_feed_body_that_is_only_a_file_path_is_never_opened(tmp_path):
+    secret = tmp_path / "secret.xml"
+    secret.write_text(feed_xml(item(title="FROM A LOCAL FILE")).decode())
+    with pytest.raises(parse.FeedError):
+        one(str(secret).encode())
+
+
+def test_a_real_feed_with_no_entries_is_just_empty():
+    assert one(feed_xml()) == []
+
+
+@pytest.mark.parametrize("source", sources.SOURCES, ids=lambda s: s.id)
+def test_the_recorded_real_feeds_parse_to_clean_items(source):
+    items = one((FIXTURES / f"{source.id}.xml").read_bytes(), source)
+    assert len(items) >= 5
+    for it in items:
+        assert it.title and it.url.startswith("https://") and httpx.URL(it.url).host.endswith(source.link_suffixes)
+        assert len(it.title) <= 200 and len(it.extract) <= 300 and "<" not in it.title + it.extract
+        assert not any(unicodedata.category(c).startswith("C") for c in it.title + it.extract)
+
+
+# ---------------------------------------------------------------- tie to team and player (8e)
+
+
+def seed_names(session):
+    session.add_all(
+        Team(abbr=a, name=n, nick=k, conference="AFC", division="d", color="#000", color2="#000", logo_url="x")
+        for a, n, k in [
+            ("BUF", "Buffalo Bills", "Bills"),
+            ("NYJ", "New York Jets", "Jets"),
+            ("NYG", "New York Giants", "Giants"),
+            ("MIA", "Miami Dolphins", "Dolphins"),
+        ]
+    )
+
+    def star(season, week, team, rank, pid, name):
+        return TeamStar(
+            season=season, week=week, team=team, slot="off", rank=rank, player_id=pid, player=name, position="QB",
+            snaps=100, production=1.0, score=1.0, source="t", computed_at=RECORDED_AT,
+        )  # fmt: skip
+
+    session.add_all(
+        [
+            star(2026, 5, "BUF", 1, "00-A", "Josh Allen"),
+            star(2026, 5, "NYJ", 1, "00-B", "Garrett Wilson"),
+            star(2026, 5, "MIA", 1, "00-C", "Tyreek Hill"),
+            star(2026, 5, "NYG", 1, "00-D", "Josh Allen"),  # same name, other player: ambiguous
+            star(2026, 4, "NYJ", 2, "00-E", "Old Season Guy"),
+            star(2026, 5, "MIA", 2, "00-F", "Patrick​ Surtain II"),  # a control character in the stored name
+            star(2025, 17, "BUF", 1, "00-G", "Last Year Guy"),  # an earlier season is not today's roster
+            star(2026, 5, "BUF", 2, None, "Nameless Id"),  # no id: cannot be tied
+        ]
+    )
+    session.commit()
+    return match.load_names(session)
+
+
+def tie(session_names, title, extract=""):
+    return match.tie(title, extract, session_names)
+
+
+def test_teams_match_on_whole_names_and_nicknames_ignoring_case(session):
+    names = seed_names(session)
+    assert tie(names, "Bills beat Jets in OT").team_ids == ["BUF", "NYJ"]
+    assert tie(names, "BUFFALO BILLS rally").team_ids == ["BUF"]
+    assert tie(names, "the Jets' secondary", "Giants next").team_ids == ["NYG", "NYJ"]
+    for miss in [
+        "xBills rally",
+        "Billsboro mayor",
+        "Jetsons reboot",
+        "Giantsville",
+        "Bill Belichick",
+        "New York is loud",
+        "Miami heat",
+    ]:
+        assert tie(names, miss).team_ids == [], miss
+
+
+def test_odd_unicode_case_in_a_headline_never_raises_and_never_matches_by_accident(session):
+    names = seed_names(session)
+    for text in [
+        "MIAMI DOLPH\u0130NS win",
+        "Bills\u017f beat Jets",
+        "TYREEK H\u0130LL is back",
+        "STRASSE and Stra\u00dfe",
+    ]:
+        got = tie(names, text)
+        assert got.player_ids == [] or text.startswith("TYREEK")
+    assert tie(names, "BILLS and \u212aELLY").team_ids == [
+        "BUF"
+    ]  # the Kelvin sign is not a K we know; Bills still match
+
+
+def test_a_player_matches_on_his_full_name_and_brings_his_club(session):
+    names = seed_names(session)
+    got = tie(names, "Garrett Wilson limited", "")
+    assert got.player_ids == ["00-B"] and got.team_ids == ["NYJ"]
+    assert tie(names, "Tyreek Hill is back").player_ids == ["00-C"]
+    assert tie(names, "Wilson limited").player_ids == [] and tie(names, "Garrett only").player_ids == []
+
+
+def test_a_name_shared_by_two_players_is_never_guessed(session):
+    names = seed_names(session)
+    assert tie(names, "Josh Allen throws three scores").player_ids == []
+
+
+def test_only_the_newest_season_with_an_id_counts_and_names_are_cleaned_like_headlines(session):
+    names = seed_names(session)
+    assert tie(names, "Last Year Guy retires").player_ids == []
+    assert tie(names, "Nameless Id plays").player_ids == []
+    assert tie(names, "Patrick Surtain II is out").player_ids == ["00-F"]
+    assert tie(names, "Old Season Guy plays").player_ids == [
+        "00-E"
+    ]  # an earlier week of the newest season still counts
+
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'rg -n "robots|validator|encoding|no usable|warning|status 401|stale|old|pure|log" backend/tests/test_news.py'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+4:recorded real feeds and their robots.txt files (tests/fixtures/news) were fetched by hand on 2026-10-13.
+69:    source, feed: bytes, robots: bytes = b"User-agent: *\nDisallow: /private/\n", extra: dict | None = None
+73:        (source.host, "/robots.txt"): httpx.Response(200, headers=TEXT, content=robots),
+243:        {("www.espn.com", "/feed"): httpx.Response(200, headers=XML | {"content-encoding": "gzip"}, content=bomb)}
+305:    assert req.headers["accept-encoding"] == "identity"
+370:# ---------------------------------------------------------------- robots (8c)
+373:def feed_through_robots(robots: httpx.Response | None, **kw) -> tuple[Web, fetch.FetchResult | None, Exception | None]:
+375:    if robots is not None:
+376:        routes[(ESPN.host, "/robots.txt")] = robots
+384:def test_robots_is_read_before_every_fetch_and_obeyed():
+386:    web, result, exc = feed_through_robots(deny)
+387:    assert isinstance(exc, fetch.Blocked) and "robots" in str(exc)
+388:    assert web.paths() == ["www.espn.com/robots.txt"]  # the feed itself is never requested
+389:    web, result, exc = feed_through_robots(httpx.Response(200, headers=TEXT, content=b"User-agent: *\nDisallow: /x/\n"))
+390:    assert exc is None and web.paths() == ["www.espn.com/robots.txt", "www.espn.com/espn/rss/nfl/news"]
+393:def test_robots_that_names_our_agent_is_obeyed():
+395:    _, _, exc = feed_through_robots(httpx.Response(200, headers=TEXT, content=body))
+400:def test_missing_robots_means_allowed(status):
+401:    _, result, exc = feed_through_robots(httpx.Response(status, headers=TEXT))
+411:    httpx.Response(301, headers={"location": "https://www.nbcsports.com/robots.txt"}),
+412:    httpx.Response(301, headers={"location": "/other-robots.txt"}),
+416:@pytest.mark.parametrize("robots", REFUSED, ids=["401", "403"])
+417:def test_robots_that_refuses_us_is_a_block(robots):
+418:    web, _, exc = feed_through_robots(robots)
+424:    "robots", TROUBLE, ids=["500", "503", "html", "oversize", "redirect-off-host", "redirect-same-host"]
+426:def test_robots_that_cannot_be_trusted_stops_this_poll_but_is_not_a_block(robots):
+427:    web, _, exc = feed_through_robots(robots)
+432:def test_robots_rules_are_parsed_from_text_never_read_by_urllib(monkeypatch):
+439:    _, result, exc = feed_through_robots(httpx.Response(200, headers=TEXT, content=b"User-agent: *\nDisallow: /x/\n"))
+443:def test_robots_unreachable_stops_this_poll_but_is_not_a_block():
+459:def test_the_recorded_real_robots_files_allow_our_two_feeds():
+461:        robots = (FIXTURES / f"{source.id}_robots.txt").read_bytes()
+462:        web = web_for(source, (FIXTURES / f"{source.id}.xml").read_bytes(), robots=robots)
+467:def test_validators_are_sent_and_a_304_is_a_clean_empty_result():
+479:        validators={"etag": 'W/"abc"', "last_modified": "Wed, 01 Jan 2025 00:00:00 GMT"},
+486:def test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent(bad):
+495:        ESPN, resolver=public_dns, transport=sent.transport, validators={"etag": bad, "last_modified": bad}
+500:def test_a_validator_of_exactly_256_plain_characters_is_kept_and_sent():
+508:    fetch.fetch_feed(ESPN, resolver=public_dns, transport=sent.transport, validators={"etag": good})
+512:def test_the_result_carries_the_new_validators():
+564:    old = (RECORDED_AT - timedelta(days=60)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+565:    assert one(feed_xml(item(date=old))) == []  # a quiet feed with only old news is fine
+630:def test_items_older_than_thirty_days_are_skipped():
+631:    old = (RECORDED_AT - timedelta(days=31)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+632:    assert [i.title for i in one(feed_xml(item(title="old", date=old), item(title="new")))] == ["new"]
+672:        Team(abbr=a, name=n, nick=k, conference="AFC", division="d", color="#000", color2="#000", logo_url="x")
+777:            logo_url="x",
+910:        web_for(s, (FIXTURES / f"{s.id}.xml").read_bytes(), (FIXTURES / f"{s.id}_robots.txt").read_bytes())
+916:def test_a_poll_stores_both_recorded_feeds_and_logs_one_run_each(session):
+926:def test_a_second_poll_inside_thirty_minutes_sends_nothing_and_logs_nothing(session):
+936:def test_a_running_or_failed_row_inside_the_window_also_holds_the_next_poll_back(session, status):
+945:def test_a_poll_after_thirty_minutes_is_idempotent_and_uses_the_saved_validators(session):
+961:    assert first.rows == 1 and session.get(AppSetting, "news:espn:validators").value["etag"] == '"v1"'
+1013:    assert web.paths() == ["www.espn.com/robots.txt", "www.espn.com/espn/rss/nfl/news"]
+1024:def test_the_newest_run_decides_not_the_oldest(session):
+1038:    assert made.status == "failed" and session.get(AppSetting, "news:espn:validators") is None
+1041:def test_a_feed_with_only_foreign_links_fails_the_run_and_saves_no_validators(session):
+1044:    assert made.status == "failed" and session.get(AppSetting, "news:espn:validators") is None
+1047:def test_old_validators_are_forgotten_when_a_good_answer_brings_none(session):
+1049:    assert session.get(AppSetting, "news:espn:validators") is not None
+1052:    assert session.get(AppSetting, "news:espn:validators") is None
+1069:def test_robots_trouble_fails_the_run_but_is_retried_in_the_next_window(session):
+1071:    web = Web({(ESPN.host, "/robots.txt"): httpx.Response(503), (ESPN.host, "/espn/rss/nfl/news"): feed})
+1074:    assert web.paths() == ["www.espn.com/robots.txt"]
+1076:    assert retry.status == "failed" and web.paths().count("www.espn.com/robots.txt") == 2
+1090:        (lambda: web_for(ESPN, feed_xml(), robots=b"User-agent: *\nDisallow: /\n"), public_dns),
+1094:                    (ESPN.host, "/robots.txt"): httpx.Response(200, headers=TEXT, content=b""),
+1104:    ids=["robots-deny", "redirect-off-host", "private-address"],
+1106:def test_robots_deny_off_host_redirect_and_private_address_are_all_blocks(session, web_factory, dns):
+1131:def test_one_failing_source_never_stops_the_other_or_touches_old_rows(session):
+1142:            (ESPN.host, "/robots.txt"): httpx.Response(200, headers=TEXT, content=b""),
+1151:def test_a_page_that_is_not_a_feed_fails_the_run_and_keeps_old_data(session):
+1169:    old = [
+1177:    store.store_items(session, "espn", old, names, RECORDED_AT - timedelta(days=45))
+
+[1mapply patch[0m
+[1mpatch:[0m completed
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/fetch.py[0m
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/parse.py[0m
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/run.py[0m
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/store.py[0m
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 32467a864e6fc57df7f3728daec584bdd01f5e05..b66e3e3c6b70cf8afd56df40aba254877e23cc20
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -20,7 +20,13 @@
+ MAX_ROBOTS_BYTES = 512_000
+ MAX_REDIRECTS = 3
+ MAX_VALIDATOR_LEN = 256
+-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
++_NAT64 = (
++    ipaddress.ip_network("64:ff9b::/96"),
++    ipaddress.ip_network("64:ff9b:1::/48"),
++    ipaddress.ip_network("::/96"),
++    ipaddress.ip_network("2002::/16"),
++    ipaddress.ip_network("2001::/32"),
++)
+ _REDIRECTS = {301, 302, 303, 307, 308}
+ 
+ 
+@@ -45,7 +51,7 @@
+ 
+ 
+ def _validator(value: str | None) -> str | None:
+-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
++    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable() else None
+ 
+ 
+ def user_agent() -> str:
+@@ -138,6 +144,7 @@
+             request_headers = httpx.Headers(headers or {})
+             request_headers["User-Agent"] = user_agent()
+             request_headers["Host"] = hostname
++            request_headers["Accept-Encoding"] = "identity"
+             try:
+                 with client.stream(
+                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+@@ -155,7 +162,7 @@
+                             raise Blocked("url blocked") from exc
+                         redirects += 1
+                         continue
+-                    if status in (403, 429):
++                    if status in (401, 403, 429):
+                         raise Blocked(f"status {status}")
+                     if status >= 400 and status not in (404, 410):
+                         raise FetchError(f"status {status}")
+@@ -199,12 +206,14 @@
+             max_bytes=MAX_ROBOTS_BYTES,
+             max_redirects=0,
+         )
++    except Blocked:
++        raise
+     except FetchError as exc:
+-        raise Blocked("robots unavailable") from exc
++        raise FetchError("robots unavailable") from exc
+     if result.status in (404, 410):
+         return
+     if result.status != 200:
+-        raise Blocked("robots unavailable")
++        raise FetchError("robots unavailable")
+     parser = RobotFileParser()
+     parser.parse(result.body.decode("utf-8", "replace").splitlines())
+     if not parser.can_fetch("NFLPickemIntel", source.url):
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index 3edd5c9a0f593495836d3961f17a576b5b2ad893..f1eb4e75b8c451587271555f64b2a3cf6d29f805
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -102,13 +102,17 @@
+     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+         raise FeedError("not a feed")
+     items: list[Item] = []
++    usable = False
+     for entry in parsed.entries[:100]:
+         title = clean_text(entry.get("title") or "", 200)
+         url = canonical_url(entry.get("link"), source.link_suffixes)
+         if not title or not url:
+             continue
++        usable = True
+         published_at = _published(entry, now)
+         if published_at is not None and published_at < now - timedelta(days=30):
+             continue
+         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
++    if parsed.entries and not usable:
++        raise FeedError("no usable items")
+     return items
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9..f8753fba6a81eabf93272bc0fdcdaef02851b457
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -64,6 +64,8 @@
+                             value={"etag": result.etag, "last_modified": result.last_modified},
+                         )
+                     )
++                elif setting is not None:
++                    session.delete(setting)
+                 store.prune(session, now)
+             run.status = "ok"
+         except fetch.Blocked as exc:
+@@ -72,6 +74,7 @@
+             run.error = parse.clean_text(f"blocked: {exc}", 100)
+         except (fetch.FetchError, parse.FeedError) as exc:
+             session.rollback()
++            log.warning("news %s: %s", src.id, exc)
+             run.status = "failed"
+             run.error = parse.clean_text(str(exc), 100)
+         except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index de972faf5133d6e063af549389f0ddc4258dbc09..17055827d165949dc021fcb2f8e68728a9f0447a
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -31,7 +31,8 @@
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+         ).returning(NewsItem.id)
+-        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
++        if session.execute(stmt.on_conflict_do_nothing()).first() is not None:
++            added += 1
+     session.commit()
+     return added
+ 
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 32467a864e6fc57df7f3728daec584bdd01f5e05..b66e3e3c6b70cf8afd56df40aba254877e23cc20
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -20,7 +20,13 @@
+ MAX_ROBOTS_BYTES = 512_000
+ MAX_REDIRECTS = 3
+ MAX_VALIDATOR_LEN = 256
+-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
++_NAT64 = (
++    ipaddress.ip_network("64:ff9b::/96"),
++    ipaddress.ip_network("64:ff9b:1::/48"),
++    ipaddress.ip_network("::/96"),
++    ipaddress.ip_network("2002::/16"),
++    ipaddress.ip_network("2001::/32"),
++)
+ _REDIRECTS = {301, 302, 303, 307, 308}
+ 
+ 
+@@ -45,7 +51,7 @@
+ 
+ 
+ def _validator(value: str | None) -> str | None:
+-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
++    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable() else None
+ 
+ 
+ def user_agent() -> str:
+@@ -138,6 +144,7 @@
+             request_headers = httpx.Headers(headers or {})
+             request_headers["User-Agent"] = user_agent()
+             request_headers["Host"] = hostname
++            request_headers["Accept-Encoding"] = "identity"
+             try:
+                 with client.stream(
+                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+@@ -155,7 +162,7 @@
+                             raise Blocked("url blocked") from exc
+                         redirects += 1
+                         continue
+-                    if status in (403, 429):
++                    if status in (401, 403, 429):
+                         raise Blocked(f"status {status}")
+                     if status >= 400 and status not in (404, 410):
+                         raise FetchError(f"status {status}")
+@@ -199,12 +206,14 @@
+             max_bytes=MAX_ROBOTS_BYTES,
+             max_redirects=0,
+         )
++    except Blocked:
++        raise
+     except FetchError as exc:
+-        raise Blocked("robots unavailable") from exc
++        raise FetchError("robots unavailable") from exc
+     if result.status in (404, 410):
+         return
+     if result.status != 200:
+-        raise Blocked("robots unavailable")
++        raise FetchError("robots unavailable")
+     parser = RobotFileParser()
+     parser.parse(result.body.decode("utf-8", "replace").splitlines())
+     if not parser.can_fetch("NFLPickemIntel", source.url):
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index 3edd5c9a0f593495836d3961f17a576b5b2ad893..f1eb4e75b8c451587271555f64b2a3cf6d29f805
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -102,13 +102,17 @@
+     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+         raise FeedError("not a feed")
+     items: list[Item] = []
++    usable = False
+     for entry in parsed.entries[:100]:
+         title = clean_text(entry.get("title") or "", 200)
+         url = canonical_url(entry.get("link"), source.link_suffixes)
+         if not title or not url:
+             continue
++        usable = True
+         published_at = _published(entry, now)
+         if published_at is not None and published_at < now - timedelta(days=30):
+             continue
+         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
++    if parsed.entries and not usable:
++        raise FeedError("no usable items")
+     return items
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9..f8753fba6a81eabf93272bc0fdcdaef02851b457
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -64,6 +64,8 @@
+                             value={"etag": result.etag, "last_modified": result.last_modified},
+                         )
+                     )
++                elif setting is not None:
++                    session.delete(setting)
+                 store.prune(session, now)
+             run.status = "ok"
+         except fetch.Blocked as exc:
+@@ -72,6 +74,7 @@
+             run.error = parse.clean_text(f"blocked: {exc}", 100)
+         except (fetch.FetchError, parse.FeedError) as exc:
+             session.rollback()
++            log.warning("news %s: %s", src.id, exc)
+             run.status = "failed"
+             run.error = parse.clean_text(str(exc), 100)
+         except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index de972faf5133d6e063af549389f0ddc4258dbc09..17055827d165949dc021fcb2f8e68728a9f0447a
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -31,7 +31,8 @@
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+         ).returning(NewsItem.id)
+-        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
++        if session.execute(stmt.on_conflict_do_nothing()).first() is not None:
++            added += 1
+     session.commit()
+     return added
+ 
+
+[35m[3mcodex[0m[0m
+The nine fixes are in place. A robots redirect now reaches the existing redirect limit and becomes a fetch error; an explicit refusal still passes through as a block. I’m running the required proof commands and checking the diff now.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "git diff --check && git diff --stat && git diff -- backend/nflpi/ingestion/news/fetch.py backend/nflpi/ingestion/news/parse.py backend/nflpi/ingestion/news/run.py backend/nflpi/ingestion/news/store.py && awk 'length("'$0)>120 {print FNR ":" length($0) ":" FILENAME}'"' backend/nflpi/ingestion/news/{fetch,parse,run,store}.py"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'bash docs/gauntlet/logs/step-8c-evidence/pure.sh'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '.venv/bin/python -c "import nflpi.ingestion.news.run"'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[32m succeeded in 35ms:[0m
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 32467a8..b66e3e3 100644
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -20,7 +20,13 @@ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+ MAX_REDIRECTS = 3
+ MAX_VALIDATOR_LEN = 256
+-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
++_NAT64 = (
++    ipaddress.ip_network("64:ff9b::/96"),
++    ipaddress.ip_network("64:ff9b:1::/48"),
++    ipaddress.ip_network("::/96"),
++    ipaddress.ip_network("2002::/16"),
++    ipaddress.ip_network("2001::/32"),
++)
+ _REDIRECTS = {301, 302, 303, 307, 308}
+ 
+ 
+@@ -45,7 +51,7 @@ def _has_control(value: str) -> bool:
+ 
+ 
+ def _validator(value: str | None) -> str | None:
+-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
++    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable() else None
+ 
+ 
+ def user_agent() -> str:
+@@ -138,6 +144,7 @@ def fetch_guarded(
+             request_headers = httpx.Headers(headers or {})
+             request_headers["User-Agent"] = user_agent()
+             request_headers["Host"] = hostname
++            request_headers["Accept-Encoding"] = "identity"
+             try:
+                 with client.stream(
+                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+@@ -155,7 +162,7 @@ def fetch_guarded(
+                             raise Blocked("url blocked") from exc
+                         redirects += 1
+                         continue
+-                    if status in (403, 429):
++                    if status in (401, 403, 429):
+                         raise Blocked(f"status {status}")
+                     if status >= 400 and status not in (404, 410):
+                         raise FetchError(f"status {status}")
+@@ -199,12 +206,14 @@ def check_robots(source: Source, *, resolver=default_resolver, transport: httpx.
+             max_bytes=MAX_ROBOTS_BYTES,
+             max_redirects=0,
+         )
++    except Blocked:
++        raise
+     except FetchError as exc:
+-        raise Blocked("robots unavailable") from exc
++        raise FetchError("robots unavailable") from exc
+     if result.status in (404, 410):
+         return
+     if result.status != 200:
+-        raise Blocked("robots unavailable")
++        raise FetchError("robots unavailable")
+     parser = RobotFileParser()
+     parser.parse(result.body.decode("utf-8", "replace").splitlines())
+     if not parser.can_fetch("NFLPickemIntel", source.url):
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index 3edd5c9..f1eb4e7 100644
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -102,13 +102,17 @@ def parse_feed(body: bytes, source: Source, now: datetime) -> list[Item]:
+     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+         raise FeedError("not a feed")
+     items: list[Item] = []
++    usable = False
+     for entry in parsed.entries[:100]:
+         title = clean_text(entry.get("title") or "", 200)
+         url = canonical_url(entry.get("link"), source.link_suffixes)
+         if not title or not url:
+             continue
++        usable = True
+         published_at = _published(entry, now)
+         if published_at is not None and published_at < now - timedelta(days=30):
+             continue
+         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
++    if parsed.entries and not usable:
++        raise FeedError("no usable items")
+     return items
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index b166059..f8753fb 100644
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -64,6 +64,8 @@ def run_news(
+                             value={"etag": result.etag, "last_modified": result.last_modified},
+                         )
+                     )
++                elif setting is not None:
++                    session.delete(setting)
+                 store.prune(session, now)
+             run.status = "ok"
+         except fetch.Blocked as exc:
+@@ -72,6 +74,7 @@ def run_news(
+             run.error = parse.clean_text(f"blocked: {exc}", 100)
+         except (fetch.FetchError, parse.FeedError) as exc:
+             session.rollback()
++            log.warning("news %s: %s", src.id, exc)
+             run.status = "failed"
+             run.error = parse.clean_text(str(exc), 100)
+         except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index de972fa..1705582 100644
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -31,7 +31,8 @@ def store_items(
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+         ).returning(NewsItem.id)
+-        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
++        if session.execute(stmt.on_conflict_do_nothing()).first() is not None:
++            added += 1
+     session.commit()
+     return added
+ 
+54:132:backend/nflpi/ingestion/news/fetch.py
+
+[32m succeeded in 540ms:[0m
+[31m exited 1 in 1186ms:[0m
+ERROR tests/test_news.py::test_pruning_runs_after_a_good_poll_only
+ERROR tests/test_news.py::test_with_every_source_down_the_poll_returns_failed_runs_and_never_raises
+ERROR tests/test_news.py::test_a_bad_dns_answer_for_one_source_does_not_stop_the_other
+2 failed, 132 passed, 55 errors in 0.81s
+FAIL: tests failed
+FAILED tests/test_news.py::test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent[caf\xe9] - UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 3: ordinal not in range(128)
+FAILED tests/test_news.py::test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent[\u202e] - UnicodeEncodeError: 'ascii' codec can't encode character '\u202e' in position 0: ordinal not in range(128)
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 32467a864e6fc57df7f3728daec584bdd01f5e05..b66e3e3c6b70cf8afd56df40aba254877e23cc20
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -20,7 +20,13 @@
+ MAX_ROBOTS_BYTES = 512_000
+ MAX_REDIRECTS = 3
+ MAX_VALIDATOR_LEN = 256
+-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
++_NAT64 = (
++    ipaddress.ip_network("64:ff9b::/96"),
++    ipaddress.ip_network("64:ff9b:1::/48"),
++    ipaddress.ip_network("::/96"),
++    ipaddress.ip_network("2002::/16"),
++    ipaddress.ip_network("2001::/32"),
++)
+ _REDIRECTS = {301, 302, 303, 307, 308}
+ 
+ 
+@@ -45,7 +51,7 @@
+ 
+ 
+ def _validator(value: str | None) -> str | None:
+-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
++    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable() else None
+ 
+ 
+ def user_agent() -> str:
+@@ -138,6 +144,7 @@
+             request_headers = httpx.Headers(headers or {})
+             request_headers["User-Agent"] = user_agent()
+             request_headers["Host"] = hostname
++            request_headers["Accept-Encoding"] = "identity"
+             try:
+                 with client.stream(
+                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+@@ -155,7 +162,7 @@
+                             raise Blocked("url blocked") from exc
+                         redirects += 1
+                         continue
+-                    if status in (403, 429):
++                    if status in (401, 403, 429):
+                         raise Blocked(f"status {status}")
+                     if status >= 400 and status not in (404, 410):
+                         raise FetchError(f"status {status}")
+@@ -199,12 +206,14 @@
+             max_bytes=MAX_ROBOTS_BYTES,
+             max_redirects=0,
+         )
++    except Blocked:
++        raise
+     except FetchError as exc:
+-        raise Blocked("robots unavailable") from exc
++        raise FetchError("robots unavailable") from exc
+     if result.status in (404, 410):
+         return
+     if result.status != 200:
+-        raise Blocked("robots unavailable")
++        raise FetchError("robots unavailable")
+     parser = RobotFileParser()
+     parser.parse(result.body.decode("utf-8", "replace").splitlines())
+     if not parser.can_fetch("NFLPickemIntel", source.url):
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index 3edd5c9a0f593495836d3961f17a576b5b2ad893..f1eb4e75b8c451587271555f64b2a3cf6d29f805
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -102,13 +102,17 @@
+     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+         raise FeedError("not a feed")
+     items: list[Item] = []
++    usable = False
+     for entry in parsed.entries[:100]:
+         title = clean_text(entry.get("title") or "", 200)
+         url = canonical_url(entry.get("link"), source.link_suffixes)
+         if not title or not url:
+             continue
++        usable = True
+         published_at = _published(entry, now)
+         if published_at is not None and published_at < now - timedelta(days=30):
+             continue
+         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
++    if parsed.entries and not usable:
++        raise FeedError("no usable items")
+     return items
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9..f8753fba6a81eabf93272bc0fdcdaef02851b457
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -64,6 +64,8 @@
+                             value={"etag": result.etag, "last_modified": result.last_modified},
+                         )
+                     )
++                elif setting is not None:
++                    session.delete(setting)
+                 store.prune(session, now)
+             run.status = "ok"
+         except fetch.Blocked as exc:
+@@ -72,6 +74,7 @@
+             run.error = parse.clean_text(f"blocked: {exc}", 100)
+         except (fetch.FetchError, parse.FeedError) as exc:
+             session.rollback()
++            log.warning("news %s: %s", src.id, exc)
+             run.status = "failed"
+             run.error = parse.clean_text(str(exc), 100)
+         except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index de972faf5133d6e063af549389f0ddc4258dbc09..17055827d165949dc021fcb2f8e68728a9f0447a
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -31,7 +31,8 @@
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+         ).returning(NewsItem.id)
+-        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
++        if session.execute(stmt.on_conflict_do_nothing()).first() is not None:
++            added += 1
+     session.commit()
+     return added
+ 
+
+[35m[3mcodex[0m[0m
+The first proof run found two validator failures: the test builds a response with a non-ASCII header, and `httpx` raises while reading it. I’ll trace that path, make a narrow fix, and rerun the proof.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python -m pytest --noconftest -q --color=no -p no:cacheprovider tests/test_news.py -k 'validators_that_are_long_or_have_control_characters and caf' --tb=long"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[31m exited 1 in 1474ms:[0m
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_ test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent[caf\xe9] _
+
+bad = 'café'
+
+    @pytest.mark.parametrize("bad", ["x" * 300, "x" * 257, "ab\x00c", "a\x07b", "caf\u00e9", "\u202e"])
+    def test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent(bad):
+        headers = XML | {"etag": bad, "last-modified": bad}
+        web = web_for(
+>           ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(200, headers=headers, content=feed_xml())}
+                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        )
+
+tests/test_news.py:489: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <[AttributeError("'Response' object has no attribute 'extensions'") raised in repr()] Response object at 0x10c712450>
+status_code = 200
+headers = {'content-type': 'text/xml; charset=UTF-8', 'etag': 'café', 'last-modified': 'café'}
+content = b'<?xml version="1.0"?><rss version="2.0"><channel><title>t</title></channel></rss>'
+text = None, html = None, json = None, stream = None, request = None
+extensions = None, history = None, default_encoding = 'utf-8'
+
+    def __init__(
+        self,
+        status_code: int,
+        *,
+        headers: HeaderTypes | None = None,
+        content: ResponseContent | None = None,
+        text: str | None = None,
+        html: str | None = None,
+        json: typing.Any = None,
+        stream: SyncByteStream | AsyncByteStream | None = None,
+        request: Request | None = None,
+        extensions: ResponseExtensions | None = None,
+        history: list[Response] | None = None,
+        default_encoding: str | typing.Callable[[bytes], str] = "utf-8",
+    ) -> None:
+        self.status_code = status_code
+>       self.headers = Headers(headers)
+                       ^^^^^^^^^^^^^^^^
+
+.venv/lib/python3.13/site-packages/httpx/_models.py:532: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <[AttributeError("'Headers' object has no attribute '_encoding'") raised in repr()] Headers object at 0x10c712550>
+headers = {'content-type': 'text/xml; charset=UTF-8', 'etag': 'café', 'last-modified': 'café'}
+encoding = None
+
+    def __init__(
+        self,
+        headers: HeaderTypes | None = None,
+        encoding: str | None = None,
+    ) -> None:
+        self._list = []  # type: typing.List[typing.Tuple[bytes, bytes, bytes]]
+    
+        if isinstance(headers, Headers):
+            self._list = list(headers._list)
+        elif isinstance(headers, Mapping):
+            for k, v in headers.items():
+                bytes_key = _normalize_header_key(k, encoding)
+>               bytes_value = _normalize_header_value(v, encoding)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.venv/lib/python3.13/site-packages/httpx/_models.py:156: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = 'café', encoding = None
+
+    def _normalize_header_value(value: str | bytes, encoding: str | None = None) -> bytes:
+        """
+        Coerce str/bytes into a strictly byte-wise HTTP header value.
+        """
+        if isinstance(value, bytes):
+            return value
+        if not isinstance(value, str):
+            raise TypeError(f"Header value must be str or bytes, not {type(value)}")
+>       return value.encode(encoding or "ascii")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 3: ordinal not in range(128)
+
+.venv/lib/python3.13/site-packages/httpx/_models.py:82: UnicodeEncodeError
+=========================== short test summary info ============================
+FAILED tests/test_news.py::test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent[caf\xe9]
+1 failed, 188 deselected in 0.52s
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 32467a864e6fc57df7f3728daec584bdd01f5e05..b66e3e3c6b70cf8afd56df40aba254877e23cc20
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -20,7 +20,13 @@
+ MAX_ROBOTS_BYTES = 512_000
+ MAX_REDIRECTS = 3
+ MAX_VALIDATOR_LEN = 256
+-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
++_NAT64 = (
++    ipaddress.ip_network("64:ff9b::/96"),
++    ipaddress.ip_network("64:ff9b:1::/48"),
++    ipaddress.ip_network("::/96"),
++    ipaddress.ip_network("2002::/16"),
++    ipaddress.ip_network("2001::/32"),
++)
+ _REDIRECTS = {301, 302, 303, 307, 308}
+ 
+ 
+@@ -45,7 +51,7 @@
+ 
+ 
+ def _validator(value: str | None) -> str | None:
+-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
++    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable() else None
+ 
+ 
+ def user_agent() -> str:
+@@ -138,6 +144,7 @@
+             request_headers = httpx.Headers(headers or {})
+             request_headers["User-Agent"] = user_agent()
+             request_headers["Host"] = hostname
++            request_headers["Accept-Encoding"] = "identity"
+             try:
+                 with client.stream(
+                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+@@ -155,7 +162,7 @@
+                             raise Blocked("url blocked") from exc
+                         redirects += 1
+                         continue
+-                    if status in (403, 429):
++                    if status in (401, 403, 429):
+                         raise Blocked(f"status {status}")
+                     if status >= 400 and status not in (404, 410):
+                         raise FetchError(f"status {status}")
+@@ -199,12 +206,14 @@
+             max_bytes=MAX_ROBOTS_BYTES,
+             max_redirects=0,
+         )
++    except Blocked:
++        raise
+     except FetchError as exc:
+-        raise Blocked("robots unavailable") from exc
++        raise FetchError("robots unavailable") from exc
+     if result.status in (404, 410):
+         return
+     if result.status != 200:
+-        raise Blocked("robots unavailable")
++        raise FetchError("robots unavailable")
+     parser = RobotFileParser()
+     parser.parse(result.body.decode("utf-8", "replace").splitlines())
+     if not parser.can_fetch("NFLPickemIntel", source.url):
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index 3edd5c9a0f593495836d3961f17a576b5b2ad893..f1eb4e75b8c451587271555f64b2a3cf6d29f805
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -102,13 +102,17 @@
+     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+         raise FeedError("not a feed")
+     items: list[Item] = []
++    usable = False
+     for entry in parsed.entries[:100]:
+         title = clean_text(entry.get("title") or "", 200)
+         url = canonical_url(entry.get("link"), source.link_suffixes)
+         if not title or not url:
+             continue
++        usable = True
+         published_at = _published(entry, now)
+         if published_at is not None and published_at < now - timedelta(days=30):
+             continue
+         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
++    if parsed.entries and not usable:
++        raise FeedError("no usable items")
+     return items
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9..f8753fba6a81eabf93272bc0fdcdaef02851b457
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -64,6 +64,8 @@
+                             value={"etag": result.etag, "last_modified": result.last_modified},
+                         )
+                     )
++                elif setting is not None:
++                    session.delete(setting)
+                 store.prune(session, now)
+             run.status = "ok"
+         except fetch.Blocked as exc:
+@@ -72,6 +74,7 @@
+             run.error = parse.clean_text(f"blocked: {exc}", 100)
+         except (fetch.FetchError, parse.FeedError) as exc:
+             session.rollback()
++            log.warning("news %s: %s", src.id, exc)
+             run.status = "failed"
+             run.error = parse.clean_text(str(exc), 100)
+         except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index de972faf5133d6e063af549389f0ddc4258dbc09..17055827d165949dc021fcb2f8e68728a9f0447a
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -31,7 +31,8 @@
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+         ).returning(NewsItem.id)
+-        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
++        if session.execute(stmt.on_conflict_do_nothing()).first() is not None:
++            added += 1
+     session.commit()
+     return added
+ 
+
+[1mapply patch[0m
+[1mpatch:[0m completed
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/fetch.py[0m
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 32467a864e6fc57df7f3728daec584bdd01f5e05..24d66c42fc3310bafcc784be9da95bb2a93fb0a1
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -20,7 +20,13 @@
+ MAX_ROBOTS_BYTES = 512_000
+ MAX_REDIRECTS = 3
+ MAX_VALIDATOR_LEN = 256
+-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
++_NAT64 = (
++    ipaddress.ip_network("64:ff9b::/96"),
++    ipaddress.ip_network("64:ff9b:1::/48"),
++    ipaddress.ip_network("::/96"),
++    ipaddress.ip_network("2002::/16"),
++    ipaddress.ip_network("2001::/32"),
++)
+ _REDIRECTS = {301, 302, 303, 307, 308}
+ 
+ 
+@@ -45,7 +51,11 @@
+ 
+ 
+ def _validator(value: str | None) -> str | None:
+-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
++    return (
++        value
++        if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable()
++        else None
++    )
+ 
+ 
+ def user_agent() -> str:
+@@ -138,6 +148,7 @@
+             request_headers = httpx.Headers(headers or {})
+             request_headers["User-Agent"] = user_agent()
+             request_headers["Host"] = hostname
++            request_headers["Accept-Encoding"] = "identity"
+             try:
+                 with client.stream(
+                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+@@ -155,7 +166,7 @@
+                             raise Blocked("url blocked") from exc
+                         redirects += 1
+                         continue
+-                    if status in (403, 429):
++                    if status in (401, 403, 429):
+                         raise Blocked(f"status {status}")
+                     if status >= 400 and status not in (404, 410):
+                         raise FetchError(f"status {status}")
+@@ -199,12 +210,14 @@
+             max_bytes=MAX_ROBOTS_BYTES,
+             max_redirects=0,
+         )
++    except Blocked:
++        raise
+     except FetchError as exc:
+-        raise Blocked("robots unavailable") from exc
++        raise FetchError("robots unavailable") from exc
+     if result.status in (404, 410):
+         return
+     if result.status != 200:
+-        raise Blocked("robots unavailable")
++        raise FetchError("robots unavailable")
+     parser = RobotFileParser()
+     parser.parse(result.body.decode("utf-8", "replace").splitlines())
+     if not parser.can_fetch("NFLPickemIntel", source.url):
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index 3edd5c9a0f593495836d3961f17a576b5b2ad893..f1eb4e75b8c451587271555f64b2a3cf6d29f805
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -102,13 +102,17 @@
+     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+         raise FeedError("not a feed")
+     items: list[Item] = []
++    usable = False
+     for entry in parsed.entries[:100]:
+         title = clean_text(entry.get("title") or "", 200)
+         url = canonical_url(entry.get("link"), source.link_suffixes)
+         if not title or not url:
+             continue
++        usable = True
+         published_at = _published(entry, now)
+         if published_at is not None and published_at < now - timedelta(days=30):
+             continue
+         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
++    if parsed.entries and not usable:
++        raise FeedError("no usable items")
+     return items
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9..f8753fba6a81eabf93272bc0fdcdaef02851b457
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -64,6 +64,8 @@
+                             value={"etag": result.etag, "last_modified": result.last_modified},
+                         )
+                     )
++                elif setting is not None:
++                    session.delete(setting)
+                 store.prune(session, now)
+             run.status = "ok"
+         except fetch.Blocked as exc:
+@@ -72,6 +74,7 @@
+             run.error = parse.clean_text(f"blocked: {exc}", 100)
+         except (fetch.FetchError, parse.FeedError) as exc:
+             session.rollback()
++            log.warning("news %s: %s", src.id, exc)
+             run.status = "failed"
+             run.error = parse.clean_text(str(exc), 100)
+         except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index de972faf5133d6e063af549389f0ddc4258dbc09..17055827d165949dc021fcb2f8e68728a9f0447a
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -31,7 +31,8 @@
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+         ).returning(NewsItem.id)
+-        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
++        if session.execute(stmt.on_conflict_do_nothing()).first() is not None:
++            added += 1
+     session.commit()
+     return added
+ 
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 32467a864e6fc57df7f3728daec584bdd01f5e05..24d66c42fc3310bafcc784be9da95bb2a93fb0a1
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -20,7 +20,13 @@
+ MAX_ROBOTS_BYTES = 512_000
+ MAX_REDIRECTS = 3
+ MAX_VALIDATOR_LEN = 256
+-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
++_NAT64 = (
++    ipaddress.ip_network("64:ff9b::/96"),
++    ipaddress.ip_network("64:ff9b:1::/48"),
++    ipaddress.ip_network("::/96"),
++    ipaddress.ip_network("2002::/16"),
++    ipaddress.ip_network("2001::/32"),
++)
+ _REDIRECTS = {301, 302, 303, 307, 308}
+ 
+ 
+@@ -45,7 +51,11 @@
+ 
+ 
+ def _validator(value: str | None) -> str | None:
+-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
++    return (
++        value
++        if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable()
++        else None
++    )
+ 
+ 
+ def user_agent() -> str:
+@@ -138,6 +148,7 @@
+             request_headers = httpx.Headers(headers or {})
+             request_headers["User-Agent"] = user_agent()
+             request_headers["Host"] = hostname
++            request_headers["Accept-Encoding"] = "identity"
+             try:
+                 with client.stream(
+                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+@@ -155,7 +166,7 @@
+                             raise Blocked("url blocked") from exc
+                         redirects += 1
+                         continue
+-                    if status in (403, 429):
++                    if status in (401, 403, 429):
+                         raise Blocked(f"status {status}")
+                     if status >= 400 and status not in (404, 410):
+                         raise FetchError(f"status {status}")
+@@ -199,12 +210,14 @@
+             max_bytes=MAX_ROBOTS_BYTES,
+             max_redirects=0,
+         )
++    except Blocked:
++        raise
+     except FetchError as exc:
+-        raise Blocked("robots unavailable") from exc
++        raise FetchError("robots unavailable") from exc
+     if result.status in (404, 410):
+         return
+     if result.status != 200:
+-        raise Blocked("robots unavailable")
++        raise FetchError("robots unavailable")
+     parser = RobotFileParser()
+     parser.parse(result.body.decode("utf-8", "replace").splitlines())
+     if not parser.can_fetch("NFLPickemIntel", source.url):
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index 3edd5c9a0f593495836d3961f17a576b5b2ad893..f1eb4e75b8c451587271555f64b2a3cf6d29f805
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -102,13 +102,17 @@
+     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+         raise FeedError("not a feed")
+     items: list[Item] = []
++    usable = False
+     for entry in parsed.entries[:100]:
+         title = clean_text(entry.get("title") or "", 200)
+         url = canonical_url(entry.get("link"), source.link_suffixes)
+         if not title or not url:
+             continue
++        usable = True
+         published_at = _published(entry, now)
+         if published_at is not None and published_at < now - timedelta(days=30):
+             continue
+         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
++    if parsed.entries and not usable:
++        raise FeedError("no usable items")
+     return items
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9..f8753fba6a81eabf93272bc0fdcdaef02851b457
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -64,6 +64,8 @@
+                             value={"etag": result.etag, "last_modified": result.last_modified},
+                         )
+                     )
++                elif setting is not None:
++                    session.delete(setting)
+                 store.prune(session, now)
+             run.status = "ok"
+         except fetch.Blocked as exc:
+@@ -72,6 +74,7 @@
+             run.error = parse.clean_text(f"blocked: {exc}", 100)
+         except (fetch.FetchError, parse.FeedError) as exc:
+             session.rollback()
++            log.warning("news %s: %s", src.id, exc)
+             run.status = "failed"
+             run.error = parse.clean_text(str(exc), 100)
+         except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index de972faf5133d6e063af549389f0ddc4258dbc09..17055827d165949dc021fcb2f8e68728a9f0447a
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -31,7 +31,8 @@
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+         ).returning(NewsItem.id)
+-        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
++        if session.execute(stmt.on_conflict_do_nothing()).first() is not None:
++            added += 1
+     session.commit()
+     return added
+ 
+
+[35m[3mcodex[0m[0m
+The traceback shows both remaining failures happen while the test constructs `httpx.Response`, before our code runs. This installed `httpx` rejects `"café"` and `"\u202e"` as string header values. I’ll leave the test and dependency untouched, as the work order requires, and finish the local checks.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '.venv/bin/python -m ruff check nflpi/ingestion/news/fetch.py nflpi/ingestion/news/parse.py nflpi/ingestion/news/run.py nflpi/ingestion/news/store.py'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[31m exited 1 in 0ms:[0m
+/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/.venv/bin/python: No module named ruff
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "git diff --check && awk 'length("'$0)>120 {print FNR ":" length($0) ":" FILENAME}'"' backend/nflpi/ingestion/news/{fetch,parse,run,store}.py && git status --short"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+ M backend/nflpi/ingestion/news/fetch.py
+ M backend/nflpi/ingestion/news/parse.py
+ M backend/nflpi/ingestion/news/run.py
+ M backend/nflpi/ingestion/news/store.py
+?? docs/gauntlet/logs/step-8c-evidence/wo-3-codex.log
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'bash docs/gauntlet/logs/step-8c-evidence/pure.sh'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '.venv/bin/python -c "import nflpi.ingestion.news.run"'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[32m succeeded in 345ms:[0m
+[31m exited 1 in 1025ms:[0m
+ERROR tests/test_news.py::test_pruning_runs_after_a_good_poll_only
+ERROR tests/test_news.py::test_with_every_source_down_the_poll_returns_failed_runs_and_never_raises
+ERROR tests/test_news.py::test_a_bad_dns_answer_for_one_source_does_not_stop_the_other
+2 failed, 132 passed, 55 errors in 0.56s
+FAIL: tests failed
+FAILED tests/test_news.py::test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent[caf\xe9] - UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 3: ordinal not in range(128)
+FAILED tests/test_news.py::test_validators_that_are_long_or_have_control_characters_are_never_saved_or_sent[\u202e] - UnicodeEncodeError: 'ascii' codec can't encode character '\u202e' in position 0: ordinal not in range(128)
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 32467a864e6fc57df7f3728daec584bdd01f5e05..24d66c42fc3310bafcc784be9da95bb2a93fb0a1
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -20,7 +20,13 @@
+ MAX_ROBOTS_BYTES = 512_000
+ MAX_REDIRECTS = 3
+ MAX_VALIDATOR_LEN = 256
+-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
++_NAT64 = (
++    ipaddress.ip_network("64:ff9b::/96"),
++    ipaddress.ip_network("64:ff9b:1::/48"),
++    ipaddress.ip_network("::/96"),
++    ipaddress.ip_network("2002::/16"),
++    ipaddress.ip_network("2001::/32"),
++)
+ _REDIRECTS = {301, 302, 303, 307, 308}
+ 
+ 
+@@ -45,7 +51,11 @@
+ 
+ 
+ def _validator(value: str | None) -> str | None:
+-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
++    return (
++        value
++        if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable()
++        else None
++    )
+ 
+ 
+ def user_agent() -> str:
+@@ -138,6 +148,7 @@
+             request_headers = httpx.Headers(headers or {})
+             request_headers["User-Agent"] = user_agent()
+             request_headers["Host"] = hostname
++            request_headers["Accept-Encoding"] = "identity"
+             try:
+                 with client.stream(
+                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+@@ -155,7 +166,7 @@
+                             raise Blocked("url blocked") from exc
+                         redirects += 1
+                         continue
+-                    if status in (403, 429):
++                    if status in (401, 403, 429):
+                         raise Blocked(f"status {status}")
+                     if status >= 400 and status not in (404, 410):
+                         raise FetchError(f"status {status}")
+@@ -199,12 +210,14 @@
+             max_bytes=MAX_ROBOTS_BYTES,
+             max_redirects=0,
+         )
++    except Blocked:
++        raise
+     except FetchError as exc:
+-        raise Blocked("robots unavailable") from exc
++        raise FetchError("robots unavailable") from exc
+     if result.status in (404, 410):
+         return
+     if result.status != 200:
+-        raise Blocked("robots unavailable")
++        raise FetchError("robots unavailable")
+     parser = RobotFileParser()
+     parser.parse(result.body.decode("utf-8", "replace").splitlines())
+     if not parser.can_fetch("NFLPickemIntel", source.url):
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index 3edd5c9a0f593495836d3961f17a576b5b2ad893..f1eb4e75b8c451587271555f64b2a3cf6d29f805
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -102,13 +102,17 @@
+     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+         raise FeedError("not a feed")
+     items: list[Item] = []
++    usable = False
+     for entry in parsed.entries[:100]:
+         title = clean_text(entry.get("title") or "", 200)
+         url = canonical_url(entry.get("link"), source.link_suffixes)
+         if not title or not url:
+             continue
++        usable = True
+         published_at = _published(entry, now)
+         if published_at is not None and published_at < now - timedelta(days=30):
+             continue
+         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
++    if parsed.entries and not usable:
++        raise FeedError("no usable items")
+     return items
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9..f8753fba6a81eabf93272bc0fdcdaef02851b457
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -64,6 +64,8 @@
+                             value={"etag": result.etag, "last_modified": result.last_modified},
+                         )
+                     )
++                elif setting is not None:
++                    session.delete(setting)
+                 store.prune(session, now)
+             run.status = "ok"
+         except fetch.Blocked as exc:
+@@ -72,6 +74,7 @@
+             run.error = parse.clean_text(f"blocked: {exc}", 100)
+         except (fetch.FetchError, parse.FeedError) as exc:
+             session.rollback()
++            log.warning("news %s: %s", src.id, exc)
+             run.status = "failed"
+             run.error = parse.clean_text(str(exc), 100)
+         except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index de972faf5133d6e063af549389f0ddc4258dbc09..17055827d165949dc021fcb2f8e68728a9f0447a
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -31,7 +31,8 @@
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+         ).returning(NewsItem.id)
+-        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
++        if session.execute(stmt.on_conflict_do_nothing()).first() is not None:
++            added += 1
+     session.commit()
+     return added
+ 
+
+[35m[3mcodex[0m[0m
+Changed: [fetch.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/fetch.py), [parse.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/parse.py), [run.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/run.py), [store.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/store.py).
+
+- Robots refusals remain blocks; other robots failures stop this poll for retry.
+- Fetches block 401, reject the added IPv6 ranges, and request identity encoding.
+- Validators now require printable ASCII; feeds with only unusable entries raise `FeedError`.
+- Successful 200 responses clear stale validators; fetch and feed errors log a warning.
+- Store counts inserted rows with an explicit integer increment.
+
+**Proof:** Import passed. `pure.sh` did **not** reach `PURE OK`: 132 passed, 55 had the expected missing database fixture, and 2 failed while the tests constructed non-ASCII `httpx.Response` headers, before the changed code ran. I left tests and dependencies untouched. No commit was made.
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 32467a864e6fc57df7f3728daec584bdd01f5e05..24d66c42fc3310bafcc784be9da95bb2a93fb0a1
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -20,7 +20,13 @@
+ MAX_ROBOTS_BYTES = 512_000
+ MAX_REDIRECTS = 3
+ MAX_VALIDATOR_LEN = 256
+-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
++_NAT64 = (
++    ipaddress.ip_network("64:ff9b::/96"),
++    ipaddress.ip_network("64:ff9b:1::/48"),
++    ipaddress.ip_network("::/96"),
++    ipaddress.ip_network("2002::/16"),
++    ipaddress.ip_network("2001::/32"),
++)
+ _REDIRECTS = {301, 302, 303, 307, 308}
+ 
+ 
+@@ -45,7 +51,11 @@
+ 
+ 
+ def _validator(value: str | None) -> str | None:
+-    return value if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and not _has_control(value) else None
++    return (
++        value
++        if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable()
++        else None
++    )
+ 
+ 
+ def user_agent() -> str:
+@@ -138,6 +148,7 @@
+             request_headers = httpx.Headers(headers or {})
+             request_headers["User-Agent"] = user_agent()
+             request_headers["Host"] = hostname
++            request_headers["Accept-Encoding"] = "identity"
+             try:
+                 with client.stream(
+                     "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+@@ -155,7 +166,7 @@
+                             raise Blocked("url blocked") from exc
+                         redirects += 1
+                         continue
+-                    if status in (403, 429):
++                    if status in (401, 403, 429):
+                         raise Blocked(f"status {status}")
+                     if status >= 400 and status not in (404, 410):
+                         raise FetchError(f"status {status}")
+@@ -199,12 +210,14 @@
+             max_bytes=MAX_ROBOTS_BYTES,
+             max_redirects=0,
+         )
++    except Blocked:
++        raise
+     except FetchError as exc:
+-        raise Blocked("robots unavailable") from exc
++        raise FetchError("robots unavailable") from exc
+     if result.status in (404, 410):
+         return
+     if result.status != 200:
+-        raise Blocked("robots unavailable")
++        raise FetchError("robots unavailable")
+     parser = RobotFileParser()
+     parser.parse(result.body.decode("utf-8", "replace").splitlines())
+     if not parser.can_fetch("NFLPickemIntel", source.url):
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index 3edd5c9a0f593495836d3961f17a576b5b2ad893..f1eb4e75b8c451587271555f64b2a3cf6d29f805
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -102,13 +102,17 @@
+     if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+         raise FeedError("not a feed")
+     items: list[Item] = []
++    usable = False
+     for entry in parsed.entries[:100]:
+         title = clean_text(entry.get("title") or "", 200)
+         url = canonical_url(entry.get("link"), source.link_suffixes)
+         if not title or not url:
+             continue
++        usable = True
+         published_at = _published(entry, now)
+         if published_at is not None and published_at < now - timedelta(days=30):
+             continue
+         items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", 300)))
++    if parsed.entries and not usable:
++        raise FeedError("no usable items")
+     return items
+diff --git a/backend/nflpi/ingestion/news/run.py b/backend/nflpi/ingestion/news/run.py
+index b1660592e746ddd6b56f3ca9cb9f539ec5a8e2a9..f8753fba6a81eabf93272bc0fdcdaef02851b457
+--- a/backend/nflpi/ingestion/news/run.py
++++ b/backend/nflpi/ingestion/news/run.py
+@@ -64,6 +64,8 @@
+                             value={"etag": result.etag, "last_modified": result.last_modified},
+                         )
+                     )
++                elif setting is not None:
++                    session.delete(setting)
+                 store.prune(session, now)
+             run.status = "ok"
+         except fetch.Blocked as exc:
+@@ -72,6 +74,7 @@
+             run.error = parse.clean_text(f"blocked: {exc}", 100)
+         except (fetch.FetchError, parse.FeedError) as exc:
+             session.rollback()
++            log.warning("news %s: %s", src.id, exc)
+             run.status = "failed"
+             run.error = parse.clean_text(str(exc), 100)
+         except Exception as exc:  # noqa: BLE001 - log and continue to the next source
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index de972faf5133d6e063af549389f0ddc4258dbc09..17055827d165949dc021fcb2f8e68728a9f0447a
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -31,7 +31,8 @@
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+         ).returning(NewsItem.id)
+-        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
++        if session.execute(stmt.on_conflict_do_nothing()).first() is not None:
++            added += 1
+     session.commit()
+     return added
+ 
+
+[2mtokens used[0m
+41,094
+Changed: [fetch.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/fetch.py), [parse.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/parse.py), [run.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/run.py), [store.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/store.py).
+
+- Robots refusals remain blocks; other robots failures stop this poll for retry.
+- Fetches block 401, reject the added IPv6 ranges, and request identity encoding.
+- Validators now require printable ASCII; feeds with only unusable entries raise `FeedError`.
+- Successful 200 responses clear stale validators; fetch and feed errors log a warning.
+- Store counts inserted rows with an explicit integer increment.
+
+**Proof:** Import passed. `pure.sh` did **not** reach `PURE OK`: 132 passed, 55 had the expected missing database fixture, and 2 failed while the tests constructed non-ASCII `httpx.Response` headers, before the changed code ran. I left tests and dependencies untouched. No commit was made.
