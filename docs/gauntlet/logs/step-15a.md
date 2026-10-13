@@ -45,6 +45,9 @@ Gate: `backend/tests/test_live.py` (267 cases), then `bash docs/gauntlet/logs/st
 | L11 | Per-source failure handling: any failure or block → that source only backs off 15 min doubling to 24 h (never overflows); after a success it waits its minimum interval (ESPN 30 s, Kalshi 60 s, Odds 6 h); one attempt per call, no retry; old rows kept; every attempt is one `ingestion_runs` row; inside a back-off nothing is fetched or logged; a database error at commit still ends the run failed with a back-off | operational |
 | L12 | A reply of 3 or more items where none is usable is a format change: the run fails and backs off (not "ok, 0 rows"); fewer stay plain skips | operational |
 | L13 | Quotes are only matched to games kicking off within 3 days before now or later | functional |
+| L14 | The next allowed time is committed under a row lock BEFORE the fetch (a crash loop or a second process cannot spend credits); source times are bounded to 2000 to 2100 and can never raise; a moneyline above 100,000 or a swapped-orientation probability outside 0..1 is not stored; the API key cannot reach a log even if the http loggers are turned up | operational |
+| L15 | A reply with 3 or more usable events and no matching game, or 3 or more live/finished events with no readable score, fails the run; a one-sided Kalshi book (no bid or no ask) has no price; quote dedupe includes `kind`; source times keep real past values (an old line looks old) | operational |
+| L16 | `store.last_confirmed(source)` = last good poll (the API step's staleness clock, since an unchanged poll adds no row); a game stored as `in` that is missing from a good scoreboard reply gets one `lost` row with its last numbers (never for finished games, never on a failed poll) | operational |
 
 Decisions (each two-way): a **live_states history table** (insert-only, one row per change) instead of one mutable row, so step 15f can grade the series; **`source_status`** table for back-off and credits (credits cannot live in `ingestion_runs`, whose columns may not change); **Odds floor 6 h not 24 h** (Dwight suggested 24 h; plan budget 3 calls a day Wed to Sun; 6 h is at most 4 calls a day, about 120 credits of 500 a month); **no robots.txt check** for these three API hosts (Dwight agreed); spread and total columns of PLAN row 15a **left out** (nothing fetches them; add with the spreads market).
 * `JEV: model:live:wo1 -> sol (0.80) effort xhigh (0.95)`; `wo2 -> sol (0.89), effort unsure (0.25)`; `wo3 -> sol (0.92), effort unsure (0.59)`; `wo5 -> sol (0.98)`. Where Jev was unsure on effort the coordinator took high (WO-2, WO-5) and xhigh (WO-3), because the code parses untrusted data. Model route was `advisor` for WO-1 to 3 (confidence below 0.8 on one key) but the pick was the same as the only workable choice (luna 0.02; astra needs the owner).
@@ -60,6 +63,10 @@ Decisions (each two-way): a **live_states history table** (insert-only, one row 
 | WO-3 Kalshi and Odds adapters | gpt-6-sol xhigh, try 1 | `26a8598` | 254 of 255 green; the one red was my test (the fixture is 7 days old) and I fixed the test |
 | WO-5 review fixes R1-R9 | gpt-6-sol high, try 1 | `cb6710c` (with WO-6) | 265 of 267, then WO-6 |
 | WO-6 restore the "no item is an object" shape rule | gpt-6-luna low, try 1 | `cb6710c` | 267 passed |
+| WO-7 security review fixes S1-S3, S5, S6, S8, I1-I7 (reserve-before-fetch, `times.py`, key log filter, no-match and format-change failures, `last_confirmed`, one-sided books) | gpt-6-sol xhigh, try 1 | `d6cbdc7` | 296 of 299 green; the 3 reds were my tests (wrong constant for a fixture time; two tests that needed games near their `now`), fixed in the test file |
+| WO-8 `lost` row for a game that drops off a good scoreboard reply (Dwight's second half of I2) | gpt-6-sol high, try 1 | `ee3d841` (after the move onto main) | 299 passed |
+| Moved the branch onto main `a9ed486` (step 7 landed), as the integrator asked: clean, no conflicts | coordinator (`res:git-integrate` held, taken as the hook's session id) | hashes below this point are the moved ones | |
+| Migration renamed `0006` to `0004`, `down_revision` stays `0003`, hardening list `0001, 0002, 0003, 0004` (integrator's ruling: numbers taken at landing time; main has 0001-0003) | coordinator, mechanical (3 lines) | `baee3a4` | |
 * CLIMBS: none. STRIKES: none. Codex never ran astra or Fable. Every proof was rerun by the coordinator on the lane DB; Codex's own sandbox could not reach Postgres or the network.
 * **Review fan-out at IMPLEMENTATION exit** (standard tier): `ecc:code-reviewer` and `ecc:silent-failure-hunter` on `26a8598`, reports in `step-15a-evidence/reviews/` (21 findings; 12 fixed with red tests first, the rest carried with the reason). `ecc:security-reviewer`: replaced by Dwight's full security review (he runs the same agents). AGENTS: ecc:code-reviewer, ecc:silent-failure-hunter, Dwight (security), Angela (general review); ecc:pr-test-analyzer not used (large tier only).
 * **Mistake caught and undone:** running `ruff format` over the whole `nflpi` folder reformatted seven other lanes' files; I reverted those seven with `git checkout` before any commit (`git diff --stat` shows only lane files). Lesson: format only own paths.
@@ -72,5 +79,24 @@ Decisions (each two-way): a **live_states history table** (insert-only, one row 
 * **No change needed, with reasons:** `run.py` is about 410 lines holding three source pipelines (under the 800-line ceiling; splitting is carried); two `mark_ok` calls for the Odds source are kept (the second only adds the credit count, which is known after the job); `fetch.py` duplicates lane news' `fetch.py` on purpose (Dwight L3: merge into one module after both lanes land).
 * Re-ran affected proof after every edit: 267 passed, ruff clean.
 
+## 4b. Second review round (Dwight, security, at `cb6710c`)
+Dwight (hive `dwight-mv5mkpow`, with his two ecc agents): **PASS on security, no CRITICAL or HIGH**; E1-E8 all met; fetch guard met. Conditions for wiring and what was done (each fix has a red test first, commit `33ca5c3`, built in WO-7/WO-8):
+
+| # | Finding | Result |
+|---|---|---|
+| S1 MED | `blocked_until` written only after the job (crash loop or two processes spend credits) | FIXED: committed under `SELECT ... FOR UPDATE` before the fetch |
+| S2 MED | `OverflowError` from odd dates fails the whole refresh | FIXED: one `times.parse_utc`, year 2000-2100, catches Overflow |
+| S3 LOW | http loggers WARNING only at import | FIXED: logging filter drops any record containing `apiKey=` |
+| S4 LOW | no per-run deadline (up to 17 fetches) | CARRIED to the worker step (it must wrap a run deadline) |
+| S5, S6 LOW | swapped probability outside 0..1; moneyline 1e300 | FIXED |
+| S7 LOW | migration number | DONE by the integrator's ruling (0004) |
+| S8 LOW | quote growth; `live_states_for` loaded every row | query FIXED (newest row per game in SQL); retention CARRIED (rows are written only on change) |
+| I1 | all-unmatched reply recorded ok | FIXED (3+ usable events and no match fails; counts logged) |
+| I2 | unchanged poll leaves no new row, so `fetched_at` is not "last confirmed" | FIXED two ways: `last_confirmed(source)` for a stopped clock; a `lost` row when a game vanishes from a good reply. **API step rule: staleness = `last_confirmed("espn_live")` older than 2 minutes, not `LiveState.fetched_at`** |
+| I3-I7 | credits-low stop invisible; failed summaries uncounted; int scores read as missing; old source time hidden; one-sided book | FIXED (logs, reason stored, 3+ no-score events fail, past times kept, one-sided = no price) |
+| I8 LOW | no guard against a score going backwards; `kind` from the clock only; a Blocked summary backs off all of ESPN; a killed run stays `running` | CARRIED to the worker/API step |
+
+Dwight did not exercise the TLS name check; the hand-check logs did (certificate verified against the hostname through the pinned address, real ESPN, Kalshi and Odds API replies).
+
 ## 5. VERIFICATION
-(filled in after the gate runs; see below)
+(filled in after the final gate runs; see below)
