@@ -290,7 +290,7 @@ for (const size of [{ name: "phone", width: 393, height: 852 }, { name: "desktop
       await expect(main).toContainText(words("Live · Q3 4:12"), { timeout: 15_000 });
       await expect(main.getByText("Live score NE 14, KC 21, third quarter, 4:12 left.", { exact: true })).toHaveCount(1);
       await expect(main.getByText("In progress", { exact: true }), "the chip gives way to the label").toHaveCount(0);
-      await expect(main.getByText("Live", { exact: true }), "the pick panel's 'Live' chip (a pregame prediction that is not backfilled) is not shown beside live scores").toHaveCount(0);
+      await expect(main.getByRole("heading", { name: "Model pick", exact: true }).locator("..").getByText("Live", { exact: true }), "the pick panel's 'Live' chip (a pregame prediction that is not backfilled) is not shown beside live scores").toHaveCount(0);
       await expect(main).toContainText(words("KC to win now · ESPN 71%"));
       await expect(main).toContainText(words("Kalshi – · no fresh price"));
       await expect(main).toContainText(/Checked (just now|1m ago)/);
@@ -404,6 +404,7 @@ for (const width of [393, 320]) {
     await expect(c).toContainText("31");
     await expect(c).toContainText(words("to win now · ESPN"));
     // the board's density rule is set at the owner's phone width (phone-layout L1); 320 px keeps the no-cut and no-scroll rules
+    if (process.env.SHOT_DIR) await c.screenshot({ path: `${process.env.SHOT_DIR}/l8-${width}.png` });
     if (width === 393) expect((await c.boundingBox())!.height, "the density limit of the board").toBeLessThanOrEqual(400);
     // the visible parts only: the screen-reader sentence also starts with "Live"
     for (const text of [/^Live/, /to win now/]) {

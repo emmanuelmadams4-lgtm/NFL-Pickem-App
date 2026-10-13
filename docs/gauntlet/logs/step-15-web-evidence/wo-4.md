@@ -27,3 +27,16 @@ NOT TO DO (decided): no chip for "Ended"; no "Live:" prefix; no change of the ch
 PROOF (the coordinator reruns it): `npm run typecheck`; browser `e2e/live.spec.ts`, `e2e/phone-layout.spec.ts`, `e2e/step2.spec.ts`, then the whole suite; screenshots.
 
 CONSTRAINTS: /ponytail, the smallest diff. No test edits. `npm run typecheck` only: no build, server, browser or pytest. Do not commit; report each numbered item and anything you had to decide.
+
+---
+## Work order 4b (try 2 for item 4): the live card at normal padding must still keep the 400 px limit at 393 px
+
+FAILING EVIDENCE: `live.spec.ts` "L8 phone fit at 393 px": 476 px (limit 400) after item 4 (`green-7`, `green-8`; picture `~/.claude/plans/nfl-pickem-lanes-logs/step-15-web/l8-393.png`). Cause, seen in the picture: on a locked card the row "Points [select] (lock) Locked" plus the two pick buttons is 8 px too wide at `p-3`, so the buttons drop to their own row. The earlier `p-2` hid it. The word "Locked" is on the card twice (beside Points and under the pick buttons).
+
+ALLOWED SCOPE: `apps/web/components/week/points-control.tsx` only.
+
+REQUIRED: beside the points select of a locked game keep the lock icon; the word "Locked" there becomes `sr-only` (the pick buttons' own "Locked" line stays visible). Nothing else changes; the unlocked card is untouched. Do not go back to `p-2`.
+
+PROOF (coordinator): typecheck; `live.spec.ts`, `phone-layout.spec.ts`, `step2.spec.ts` (its "Locked" check must stay green), `sheet.spec.ts`.
+
+CONSTRAINTS: as work order 4. If this does not bring the row back onto one line by your reading of the classes, say so instead of trying other changes.

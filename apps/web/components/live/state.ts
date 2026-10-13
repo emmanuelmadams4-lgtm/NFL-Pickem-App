@@ -26,7 +26,7 @@ function periodWords(row: LiveGameOut): { short: string | null; spoken: string |
   }
   const name = period <= 4 ? `Q${period}` : period === 5 ? "OT" : `${period - 4}OT`;
   const spoken = period <= 4 ? `${["first", "second", "third", "fourth"][period - 1]} quarter` : period === 5 ? "overtime" : `${period - 4} overtime`;
-  return { short: row.clock ? `${name} ${row.clock}` : name, spoken: row.clock ? `${spoken}, ${row.clock} left` : spoken };
+  return { short: row.clock ? `${name}\u00a0${row.clock}` : name, spoken: row.clock ? `${spoken}, ${row.clock} left` : spoken };
 }
 
 function chance(prob: number | null, home: boolean): string {

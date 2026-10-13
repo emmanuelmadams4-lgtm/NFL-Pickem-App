@@ -73,8 +73,11 @@ export function GameHeader({ game, live }: { game: GameDetail; live: CardLiveSta
         <div className={cx("flex min-h-16 flex-col items-center justify-center lg:min-h-20", live && "w-28 sm:w-auto")}>
           {live ? (
             <>
-              <p className="max-w-full text-center text-label text-text-2">
-                <span aria-hidden="true" className="break-words">{live.label}</span>
+              <p className="flex min-h-10 max-w-full items-end justify-center text-center text-sm text-text-2 sm:min-h-0">
+                <span aria-hidden="true" className="break-words">
+                  {live.kind === "S3" || live.kind === "S4" ? <><span className="text-warn">Not updating</span>{live.label.slice("Not updating".length)}</>
+                    : live.kind === "S5" ? <><span className="text-text">Live<span className="text-text-2">{live.label.slice(4, 6)}</span></span>{live.label.slice(6)}</> : live.label}
+                </span>
                 <span className="sr-only">{live.reader}</span>
               </p>
               {live.score ? (
@@ -157,7 +160,7 @@ export function WinSplit({ game, started = false }: { game: GameDetail; started?
         })}
       </div>
       <p className="mt-2 text-label text-subtle">
-        {started ? "Model win chance before kickoff. It does not change during the game." : `Model win chance${backfill ? ", backfilled after the fact from pre-game inputs" : ""}. How reliable it is shows separately in the pick panel.`}
+        {started ? `Model win chance before kickoff${backfill ? ", backfilled after the fact from pre-game inputs" : ""}. It does not change during the game.` : `Model win chance${backfill ? ", backfilled after the fact from pre-game inputs" : ""}. How reliable it is shows separately in the pick panel.`}
       </p>
     </section>
   );

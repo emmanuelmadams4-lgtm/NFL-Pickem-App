@@ -81,7 +81,7 @@ export function GameCard({ game, live, highlight, pointsCount }: { game: GameSum
         className="absolute inset-0 z-0 rounded-card focus-visible:outline-offset-[-2px]"
       />
 
-      <div className={cx("grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 lg:gap-3 lg:p-4", liveState ? "p-2" : "p-3", highlight ? "bg-accent text-accent-ink" : "text-text")}>
+      <div className={cx("grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 p-3 lg:gap-3 lg:p-4", highlight ? "bg-accent text-accent-ink" : "text-text")}>
         <TeamSide team={game.away} record={game.away_record} onLime={highlight} />
         <span className={cx("font-display grid size-9 shrink-0 place-items-center rounded-full text-base lg:size-11 lg:text-lg", highlight ? "bg-accent-ink text-accent" : "border border-border bg-elevated text-text")}>
           VS
@@ -89,12 +89,15 @@ export function GameCard({ game, live, highlight, pointsCount }: { game: GameSum
         <TeamSide team={game.home} record={game.home_record} right onLime={highlight} />
       </div>
 
-      <div className={cx("flex flex-1 flex-col border-t border-border lg:gap-3 lg:p-4", liveState ? "gap-1 p-2" : "gap-2 p-3")}>
+      <div className={cx("flex flex-1 flex-col border-t border-border p-3 lg:gap-3 lg:p-4", liveState ? "gap-1.5" : "gap-2")}>
         <div className="flex flex-wrap items-end justify-between gap-2 lg:gap-3">
           <div className="min-w-0">
             {liveState ? (
-              <p className="text-label text-text-2">
-                <span aria-hidden="true" className="break-words">{liveState.label}</span>
+              <p className="text-sm text-text-2">
+                <span aria-hidden="true" className="break-words">
+                  {liveState.kind === "S3" || liveState.kind === "S4" ? <><span className="text-warn">Not updating</span>{liveState.label.slice("Not updating".length)}</>
+                    : liveState.kind === "S5" ? <><span className="text-text">Live<span className="text-text-2">{liveState.label.slice(4, 6)}</span></span>{liveState.label.slice(6)}</> : liveState.label}
+                </span>
                 <span className="sr-only">{liveState.reader}</span>
               </p>
             ) : (
@@ -140,7 +143,7 @@ export function GameCard({ game, live, highlight, pointsCount }: { game: GameSum
               <p className="flex items-center justify-end gap-1.5">
                 <TeamLogo team={pickTeam} size={20} />
                 <span className="text-sm font-semibold">{p.pick}</span>
-                <span className="font-display text-3xl leading-8 text-text lg:text-[32px] lg:leading-9">{pct(prob)}</span>
+                <span className={cx("font-display leading-8 text-text lg:leading-9", started ? "text-xl" : "text-3xl lg:text-[32px]")}>{pct(prob)}</span>
               </p>
             </div>
           )}
@@ -184,7 +187,7 @@ export function GameCard({ game, live, highlight, pointsCount }: { game: GameSum
         {liveState?.chanceLine && (
           <p className="text-label text-text-2">
             <span aria-hidden="true" className="break-words">{liveState.chanceLine}</span>
-            {liveState.chanceReader && <span className="sr-only">{liveState.chanceReader}</span>}
+            {liveState.kind === "S5" && <span className="sr-only">{liveState.chanceReader ?? liveState.chanceLine}</span>}
           </p>
         )}
 
@@ -220,7 +223,7 @@ export function GameCard({ game, live, highlight, pointsCount }: { game: GameSum
           {game.qb_alerts.length > 2 && <span className="text-label text-subtle">+{game.qb_alerts.length - 2} more</span>}
         </div>
 
-        {game.status === "scheduled" && (star ? (
+        {!started && game.status === "scheduled" && (star ? (
           <div>
             <div role="group" aria-label="Stars out" className="flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-label text-text-2">
               <span className="shrink-0 font-medium text-text">Stars out</span>

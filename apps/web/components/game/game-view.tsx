@@ -152,10 +152,14 @@ export function GameView() {
     <div className="space-y-4 lg:space-y-5">
       <GameHeader game={game} live={liveState} />
       {liveState?.gameChanceLine && (
-        <div className="min-w-0 rounded-card border border-border bg-surface p-3 text-label text-text-2 lg:p-4">
+        <div className="min-w-0 text-label text-text-2">
           <p>
-            <span aria-hidden="true" className="break-words">{liveState.gameChanceLine}</span>
-            <span className="sr-only">{liveState.chanceReader ?? liveState.gameChanceLine}</span>
+            {liveState.kind === "S4" ? liveState.gameChanceLine : (
+              <>
+                <span aria-hidden="true" className="break-words">{liveState.gameChanceLine}</span>
+                <span className="sr-only">{liveState.chanceReader ?? liveState.gameChanceLine}</span>
+              </>
+            )}
           </p>
           {liveState.kind === "S5" && (
             <>
