@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
-/* Layout: one narrow column, a drive chart across the top (17 steps = 17 segments of the field), then what's waiting on the owner, then the step table. */
+/* Layout: one narrow column, a drive chart across the top (18 steps = 18 segments of the field), then what's waiting on the owner, then the step table. */
 :root {
   --bg: #f4f5f1; --surface: #ffffff; --line: #d9ddd4; --ink: #15191e; --ink-2: #4f5862; --muted: #7a838c;
   --turf: #2c7448; --turf-soft: #e3efe6; --amber: #9a6400; --amber-soft: #f7ecd6; --red: #b42318; --red-soft: #f9e2df;
@@ -89,11 +89,11 @@ footer { color: var(--muted); font-size: 13px; }
   </header>
 
   <div class="headline">
-    <div class="big">11<small> / 17 steps landed</small></div>
+    <div class="big">11<small> / 18 steps landed</small></div>
     <div class="now">
-      <p><b>Today, 13 October:</b> 18 pieces of work merged into main and 6 deploys to your PC, each with a database backup first. Five more steps are partly landed and still in build.</p>
-      <p><b>Live on your PC now:</b> star players and who is out on the game card, the news worker, news inside the AI report, the data-timing log, live game data in the background, and the grading of win chances during games. Claude runs through your subscription sign-in with the API key as backup.</p>
-      <p><b>In build right now:</b> the live scores screen, the group screen, star alerts with the morning summary, the server half of passkey sign-in, and a third round of model tests.</p>
+      <p><b>Today, 13 October:</b> 19 pieces of work merged into main and 7 deploys to your PC, each with a database backup first. Five more steps are partly landed and still in build.</p>
+      <p><b>Live on your PC now:</b> star players and who is out on the game card, star alerts with a morning summary, the news worker, news inside the AI report, the data-timing log, live game data in the background, and the grading of win chances during games. Claude runs through your subscription sign-in with the API key as backup.</p>
+      <p><b>In build right now:</b> the live scores screen, the group screen, the server half of passkey sign-in, a third round of model tests, and the model rebuild from your brief (step 18), starting with an audit of the current model.</p>
       <p><b>Not deployed yet:</b> passkey sign-in. It is being built and will come to you for sign-off before it lands.</p>
     </div>
   </div>
@@ -116,6 +116,7 @@ footer { color: var(--muted); font-size: 13px; }
     <div class="yd part" role="listitem"><span class="n">15</span><span class="t">Live scores</span></div>
     <div class="yd part" role="listitem"><span class="n">16</span><span class="t">Group picks</span></div>
     <div class="yd done" role="listitem"><span class="n">17</span><span class="t">Claude sign-in</span></div>
+    <div class="yd" role="listitem"><span class="n">18</span><span class="t">Model rebuild</span></div>
   </div>
 
   <div class="waiting">
@@ -143,7 +144,7 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td class="num">5</td><td>Deploy and operate<span class="sub">Docker at home, backups you can restore</span></td><td>Landed (PR #3). The app has run on your Windows PC since 13 October; the Mac is the stopped backup</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">6</td><td>iPhone app<span class="sub">Opens offline, says when it cannot reach the server</span></td><td>Landed (PR #5)</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">7</td><td>Alerts end to end<span class="sub">Flips, quarterback news, "no pick yet", test-alert button</span></td><td>Landed (PR #8). Your test alert on the iPhone is still open</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">8</td><td>Star players and news<span class="sub">5 stars per team, who is out, news from public feeds</span></td><td>Landed and live: the star list and who is out, on the game card and the game screen (PRs #6, #20); news from ESPN and CBS feeds, the news worker and its route (PRs #12, #19); news inside the AI report as quoted data (PR #22). Tested and not shipped: "star out" as a model input (PR #17). Left: news on the game page, and star alerts with the morning summary (in final testing)</td><td><span class="pill prog">In build</span></td></tr>
+          <tr><td class="num">8</td><td>Star players and news<span class="sub">5 stars per team, who is out, news from public feeds</span></td><td>Landed and live: the star list and who is out, on the game card and the game screen (PRs #6, #20); news from ESPN and CBS feeds, the news worker and its route (PRs #12, #19); news inside the AI report as quoted data (PR #22); star alerts in the last 90 minutes before kickoff and one morning summary at 8 AM Eastern (PR #24). Tested and not shipped: "star out" as a model input (PR #17). Left: news on the game page</td><td><span class="pill prog">In build</span></td></tr>
           <tr><td class="num">9</td><td>Tiebreaker scores<span class="sub">Predicted score for the two Yahoo tiebreak games</span></td><td>Landed (PR #11). Result: the score the betting line implies stays the answer; our stats model and a blend did not beat it on 2022 to 2025</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">10</td><td>Passkey sign-in<span class="sub">Face ID / Touch ID; the app token stays as backup</span></td><td>Server half in build since 17:18 UTC. Not landed, not deployed. It needs your sign-off before it lands. The sign-in screen comes after</td><td><span class="pill prog">In build</span></td></tr>
           <tr><td class="num">11</td><td>Go-live: AI and keys<span class="sub">Your keys, your server, your iPhone</span></td><td>Done so far: the PC is live, and Claude answers through your sign-in with the key as backup (both live test calls passed). Open: your iPhone alert test</td><td><span class="pill todo">Yours</span></td></tr>
@@ -153,6 +154,7 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td class="num">15</td><td>Live scores<span class="sub">Score, clock and win chance while games are on</span></td><td>Landed and live: live game data and market prices (PR #14), the live worker and route (PR #15), grading of win chances during games (PR #23). In build: the screen. First check against a real game: Thursday 15 October</td><td><span class="pill prog">In build</span></td></tr>
           <tr><td class="num">16</td><td>Group picks<span class="sub">Your Yahoo group files: standings and how the group picked</span></td><td>Landed and live: tables and import (PR #10), upload and read routes (PR #16). In final testing: the group screen and upload form. No real member name is in the code repository</td><td><span class="pill prog">In build</span></td></tr>
           <tr><td class="num">17</td><td>Claude through your sign-in<span class="sub">Your Claude subscription first, the API key as backup</span></td><td>Landed (PR #18) and proven live on the PC with two test calls</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">18</td><td>Model rebuild from your brief<span class="sub">Audit, spread and totals picks, game simulator, betting value</span></td><td>Opened 13 October from your 13-section brief, kept word for word in the repo. First wave: an audit of the current model with a checked table of six public repositories (started); odds, settlement and expected-value maths (queued); the game-score simulator (queued). The second wave is cut from the audit's plan: pick rules for straight-up, against-the-spread, totals and confidence pools, data checks, the evaluation report, and the screens. The live model changes only on a measured win</td><td><span class="pill prog">In build</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -175,22 +177,23 @@ footer { color: var(--muted); font-size: 13px; }
     </div>
     <div class="card">
       <h3>Live app on your PC</h3>
-      <div class="stat"><span>Deploys today</span><span>6</span></div>
-      <div class="stat"><span>Last deploy</span><span>17:34 UTC</span></div>
+      <div class="stat"><span>Deploys today</span><span>7</span></div>
+      <div class="stat"><span>Last deploy</span><span>18:52 UTC</span></div>
       <div class="stat"><span>Health</span><span>OK</span></div>
       <div class="stat"><span>Your picks</span><span>93</span></div>
-      <p class="note">Runs everything through PR #23. A database backup is taken before every deploy, and the row counts are compared before and after: unchanged every time.</p>
+      <p class="note">Runs everything through PR #24. A database backup is taken before every deploy, and the row counts are compared before and after: unchanged every time.</p>
     </div>
     <div class="card">
       <h3>In build now</h3>
       <div class="stat"><span>Live scores screen</span><span>Jim</span></div>
       <div class="stat"><span>Group screen</span><span>Testing</span></div>
-      <div class="stat"><span>Star alerts</span><span>Testing</span></div>
       <div class="stat"><span>Passkey, server half</span><span>Building</span></div>
-      <div class="stat"><span>Model round three</span><span>Started</span></div>
+      <div class="stat"><span>Model round three</span><span>Running</span></div>
+      <div class="stat"><span>Model rebuild: audit</span><span>Started</span></div>
+      <div class="stat"><span>Odds maths, simulator</span><span>Queued</span></div>
       <p class="note">Each piece runs in its own copy of the code and passes a security review where needed, a fresh reviewer and a final check before it lands. The Claude usage limit paused the build three times today; work restarted from saved state each time.</p>
     </div>
   </div>
 
-  <footer>Updated 2026-10-13 17:53 UTC · 11 of 17 steps landed, 5 more partly landed · 18 landings and 6 deploys today (PRs #6 to #23)</footer>
+  <footer>Updated 2026-10-13 18:54 UTC · 11 of 18 steps landed, 5 more partly landed, step 18 opened · 19 landings and 7 deploys today (PRs #6 to #24)</footer>
 </div>
