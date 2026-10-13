@@ -140,10 +140,18 @@ def main(stage: str) -> dict:
         "baseline_confirm": baseline(confirm),
         "candidates": report,
     }
+    # Scored games where an input was missing, so the variant fell back to the blend's own number.
+    prefixes = ("market_logit_", "spread_", "total_", "off_", "def_", "epa_diff_")
+    inputs = [col for col in scored if col.startswith(prefixes)]
+    out["scored_games_missing_an_input"] = {col: int(scored[col].isna().sum()) for col in inputs}
+    stored = json.loads(STEP14.read_text())
+    if not all(same(out[key][model][field], stored[key][model][field]) for key in ("baseline", "baseline_confirm")
+               for model in ("market", "blend") for field in ("n", "accuracy", "log_loss")):
+        sys.exit("baseline differs from step 14's stored numbers: the data changed or a download was cut short")
     if stage == "cluster":
         out["matches_step14_stored_numbers"] = matches_step14(report)
-    else:
-        out["scored_games_missing"] = {col: int(scored[col].isna().sum()) for col in ("spread_line", "total_line")}
+        if not out["matches_step14_stored_numbers"]:
+            sys.exit("the recomputed step 14 candidates differ from the stored numbers")
     out["seconds"] = round(time.monotonic() - started, 1)
     return out
 
