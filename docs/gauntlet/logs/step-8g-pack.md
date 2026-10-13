@@ -64,3 +64,8 @@ Not done by this lane. No push, PR or integration; god integrates. Nothing is de
 - L2, L3, L4, L5 (Dwight's low findings): advisory, not blocking, left for the integrator.
 - SEAM for lane web: report and answer text can now quote news-derived words. The screen must render them as text only (no HTML, no auto-links).
 - Not in scope and untouched: news worker, star alerts (8i), model challenger, fetch-guard consolidation.
+
+## 7. Critics, rebase and final gate (coordinator)
+- Critic 1 (ecc:code-reviewer, HEAD 5a55467): gate green (1261 passed); FAIL on one gap: the 200/300 limits were only checked against the constants. Fixed once (782e28f, literals asserted).
+- Critic 2 (new, delta brief, HEAD 782e28f): PASS. 1261 passed in 219s, ruff clean, alembic clean, gen:api drift 0; raising EXTRACT_MAX or TITLE_MAX turns the test red.
+- Main moved twice (7c8a3d0, then 43dfc46 with migration 0007). Rebased clean each time. Gates on 0cd4adb (base 7c8a3d0): g3 and g4, 1280 passed twice. Gate on final base 43dfc46 (HEAD 9402431 before this commit): g5, 1293 passed, ruff clean, alembic clean, drift 0. A second consecutive run (g6) was NOT done: usage limit reached. Lane-guard `OK` on base 7c8a3d0.

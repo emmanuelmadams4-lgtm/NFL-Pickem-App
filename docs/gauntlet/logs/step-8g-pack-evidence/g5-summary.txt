@@ -1,0 +1,4 @@
+pytest exit=0 1293 passed in 254.82s (0:04:14)
+ruff exit=0 All checks passed!
+alembic exit=0 No new upgrade operations detected.
+gen:api exit=0 drift_lines=       0
