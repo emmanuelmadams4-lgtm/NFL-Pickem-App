@@ -353,6 +353,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** News */
+        get: operations["news_api_news_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/group/import": {
         parameters: {
             query?: never;
@@ -939,6 +956,44 @@ export interface components {
              * Format: date-time
              */
             server_time: string;
+        };
+        /** NewsItemOut */
+        NewsItemOut: {
+            /**
+             * Title
+             * @description Headline as plain text, at most 200 characters, no angle brackets
+             */
+            title: string;
+            /**
+             * Source
+             * @description Display name of the feed the item came from
+             */
+            source: string;
+            /**
+             * Published At
+             * @description When the feed published it; null when the feed gave none
+             */
+            published_at: string | null;
+            /**
+             * Url
+             * @description Story link; null unless a safe https link on the item's own source host
+             */
+            url: string | null;
+            /**
+             * Tags
+             * @description Any of coach, injury, playcaller, trade, sorted
+             */
+            tags: string[];
+        };
+        /** NewsOut */
+        NewsOut: {
+            /** Game Id */
+            game_id: string;
+            /**
+             * Items
+             * @description Up to 5 newest items that mention either team of the game
+             */
+            items: components["schemas"]["NewsItemOut"][];
         };
         /** PerformanceOut */
         PerformanceOut: {
@@ -2126,6 +2181,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LiveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    news_api_news_get: {
+        parameters: {
+            query?: {
+                game_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsOut"];
                 };
             };
             /** @description Validation Error */

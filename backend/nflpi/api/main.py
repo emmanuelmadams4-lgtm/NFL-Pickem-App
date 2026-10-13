@@ -20,6 +20,7 @@ from nflpi.ai import providers, research
 from nflpi.ai.providers import AIError
 from nflpi.api import group as group_api
 from nflpi.api import live as live_api
+from nflpi.api import news as news_api
 from nflpi.api import schemas as s
 from nflpi.api import views
 from nflpi.config import get_settings
@@ -377,6 +378,7 @@ def create_app() -> FastAPI:
     app.include_router(public)
     app.include_router(api)
     app.include_router(live_api.router, dependencies=[Depends(require_token)])
+    app.include_router(news_api.router, dependencies=[Depends(require_token)])
     app.include_router(group_api.router)
     if settings.web_dist_dir.is_dir():
         app.mount("/", StaticFiles(directory=settings.web_dist_dir, html=True), name="web")

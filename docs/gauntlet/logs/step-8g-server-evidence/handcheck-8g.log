@@ -1,0 +1,10 @@
+espn [('ok', 27, None)]
+cbs [('ok', 36, None)]
+stored: 63 tied teams: [('BUF', 16), ('LA', 16), ('SF', 6)]
+runs: [('news:espn', 'ok'), ('news:cbs', 'ok')]
+GET /api/news 200
+ - ESPN | 2026-10-13T12:54:30Z | After special teams blunders, Rams to 'evaluate everything' about kick | https://www.espn.com/nfl/story/_/id/50171556/sean-mcvay-says-rams-evaluate-everything-kicking-unit-ot-loss-bills | ['coach']
+ - ESPN | 2026-10-13T12:54:30Z | Bills' Allen, 0-7 in OT games entering MNF, finally gets over hump in  | https://www.espn.com/nfl/story/_/id/50171513/bills-josh-allen-earns-first-career-win-vs-rams-mnf | []
+ - ESPN | 2026-10-13T12:54:30Z | Rams OL Jackson punches Bills LB Chubb at midfield after 'emotional ga | https://www.espn.com/nfl/story/_/id/50171415/rams-alaric-jackson-punches-bills-bradley-chubb-mnf | []
+ - ESPN | 2026-10-13T06:04:50Z | Bills, Josh Allen outlast Rams in overtime on MNF | https://www.espn.com/nfl/story/_/id/50170290/buffalo-bills-los-angeles-rams-mnf-week-5-ot-josh-allen | []
+ - CBS Sports | 2026-10-13T05:56:26Z | Rams left tackle throws punch at Bills' Bradley Chubb following Buffal | https://www.cbssports.com/nfl/news/rams-left-tackle-punches-bills-bradley-chubb-mnf/ | []

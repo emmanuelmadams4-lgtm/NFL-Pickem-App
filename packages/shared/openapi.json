@@ -1216,6 +1216,68 @@
     }
    }
   },
+  "/api/news": {
+   "get": {
+    "summary": "News",
+    "operationId": "news_api_news_get",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Game Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NewsOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/group/import": {
    "post": {
     "summary": "Import Csv",
@@ -3059,6 +3121,84 @@
      "server_time"
     ],
     "title": "MetaOut"
+   },
+   "NewsItemOut": {
+    "properties": {
+     "title": {
+      "type": "string",
+      "title": "Title",
+      "description": "Headline as plain text, at most 200 characters, no angle brackets"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source",
+      "description": "Display name of the feed the item came from"
+     },
+     "published_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Published At",
+      "description": "When the feed published it; null when the feed gave none"
+     },
+     "url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Url",
+      "description": "Story link; null unless a safe https link on the item's own source host"
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Tags",
+      "description": "Any of coach, injury, playcaller, trade, sorted"
+     }
+    },
+    "type": "object",
+    "required": [
+     "title",
+     "source",
+     "published_at",
+     "url",
+     "tags"
+    ],
+    "title": "NewsItemOut"
+   },
+   "NewsOut": {
+    "properties": {
+     "game_id": {
+      "type": "string",
+      "title": "Game Id"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/NewsItemOut"
+      },
+      "type": "array",
+      "title": "Items",
+      "description": "Up to 5 newest items that mention either team of the game"
+     }
+    },
+    "type": "object",
+    "required": [
+     "game_id",
+     "items"
+    ],
+    "title": "NewsOut"
    },
    "PerformanceOut": {
     "properties": {
