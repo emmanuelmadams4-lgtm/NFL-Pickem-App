@@ -902,21 +902,28 @@ def test_kalshi_team_codes_that_differ_from_ours_still_match(session):
     assert by_game[games["HOU_JAX"].game_id].home_prob == pytest.approx(0.57)
 
 
-def test_kalshi_is_pregame_before_kickoff_and_live_after_and_an_old_source_time_becomes_null(session):
+def test_kalshi_is_pregame_before_kickoff_and_live_after_and_an_old_source_time_is_kept(session):
     games = seed_four(session)
     run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=datetime(2026, 10, 16, 1, 0, tzinfo=UTC))
     rows = {r.game_id: r for r in quote_rows(session)}
     assert rows[games["SEA_DEN"].game_id].kind == "live" and rows[games["BUF_LV"].game_id].kind == "pregame"
-    assert rows[games["SEA_DEN"].game_id].source_ts is None  # the recorded time is over seven days old by then
+    # the recorded markets were last updated on 2026-10-06: a real past time is kept so an old line looks old
+    assert rows[games["SEA_DEN"].game_id].source_ts == datetime(2026, 10, 6, 4, 6, 0, 764221, tzinfo=UTC)
 
 
-def test_a_kalshi_quote_has_a_source_time_inside_the_window(session):
+def test_a_source_time_is_kept_when_in_the_past_and_dropped_when_more_than_a_day_ahead(session):
     seed_four(session)
-    now = datetime(2026, 10, 10, 12, 0, tzinfo=UTC)  # the recorded markets were last updated on 2026-10-06
+    now = datetime(2026, 10, 10, 12, 0, tzinfo=UTC)
+    future = recorded("kalshi_markets.json")
+    for market in future["markets"]:
+        market["updated_time"] = "2026-10-20T00:00:00Z"
     run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=now)
-    times = [r.source_ts for r in quote_rows(session)]
-    assert all(t is not None and now - timedelta(days=7) <= t <= now + timedelta(days=1) for t in times)
-    assert {t.isoformat() for t in times} <= {"2026-10-06T04:05:00.760741+00:00", "2026-10-06T04:06:00.764221+00:00"}
+    assert all(r.source_ts is not None and r.source_ts <= now for r in quote_rows(session))
+    session.query(SourceStatus).update({"blocked_until": None})
+    session.query(MarketQuote).delete()
+    session.commit()
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes(future)), now=now + timedelta(hours=1))
+    assert len(quote_rows(session)) == 4 and all(r.source_ts is None for r in quote_rows(session))
 
 
 def test_an_unchanged_kalshi_quote_adds_no_row_and_a_changed_price_adds_one(session):
@@ -1354,7 +1361,7 @@ def test_quotes_match_only_games_that_kick_off_within_three_days_before_now_or_l
     far_future = datetime(2026, 10, 20, 12, 0, tzinfo=UTC)  # three days after the last kickoff in the recorded replies
     kalshi_result = run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=far_future)
     odds_result, _ = refresh_odds(session, now=far_future)
-    assert quote_rows(session) == [] and kalshi_result.skipped >= 1 and odds_result.skipped >= 1
+    assert quote_rows(session) == [] and kalshi_result.status == "failed" and odds_result.status == "failed"
     session.query(SourceStatus).update({"blocked_until": None})  # the far run set a wait; this is a separate case
     session.commit()
     near = datetime(2026, 10, 18, 12, 0, tzinfo=UTC)  # two days after kickoff: still matched
@@ -1476,3 +1483,191 @@ def test_more_kalshi_pages_than_we_read_are_logged_not_silent(session, caplog):
     }
     run.refresh_kalshi_quotes(session, get=fake_get(routes), now=KNOW)
     assert any("more pages" in r.getMessage() for r in caplog.records)
+
+
+# ---------------------------------------------------------------- fixes from the security review (S1-S6, I1-I7)
+
+
+def test_the_next_allowed_time_is_written_before_the_fetch_so_a_crash_loop_cannot_spend_credits(session):
+    from nflpi.db import session_factory
+
+    seed_four(session)
+    seen = []
+
+    def spying_get(url):
+        with session_factory()() as other:  # a second connection sees only what is committed
+            row = other.get(SourceStatus, "oddsapi")
+            seen.append(row.blocked_until if row else None)
+        return fetch.JsonResult(200, recorded("odds_api_h2h.json"), {"x-requests-remaining": "480"})
+
+    run.refresh_odds_quotes(session, get=spying_get, now=ODDS_NOW, api_key=KEY)
+    assert seen == [ODDS_NOW + timedelta(hours=6)]
+
+
+def test_a_process_that_dies_mid_fetch_still_leaves_the_floor_in_place(session):
+    seed_four(session)
+
+    def dies(url):
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        run.refresh_odds_quotes(session, get=dies, now=ODDS_NOW, api_key=KEY)
+    session.rollback()
+    assert session.get(SourceStatus, "oddsapi").blocked_until == ODDS_NOW + timedelta(hours=6)
+
+
+@pytest.mark.parametrize("stamp", ["0001-01-01T00:00Z", "9999-12-31T23:59Z", "1999-12-31T23:59Z", "2101-01-01T00:00Z"])
+def test_an_espn_date_outside_2000_to_2100_skips_that_event_not_the_whole_run(session, stamp):
+    seed_recorded_games(session)
+    board = recorded("espn_scoreboard_final.json")
+    board["events"][0]["date"] = stamp
+    result = run.refresh_live_games(session, get=fake_get(recorded_routes() | {espn.SCOREBOARD_URL: board}), now=NOW)
+    assert result.status == "ok" and result.inserted == 2 and result.skipped >= 1
+
+
+@pytest.mark.parametrize(
+    "stamp", ["0001-01-01T00:00:00Z", "9999-12-31T23:59:59Z", "9999-12-31T23:59:59-23:59", "1999-01-01T00:00:00Z"]
+)
+def test_a_kalshi_time_that_overflows_is_just_an_unknown_source_time(session, stamp):
+    seed_four(session)
+    data = recorded("kalshi_markets.json")
+    for market in data["markets"]:
+        market["updated_time"] = stamp
+    result = run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes(data)), now=KNOW)
+    assert result.status == "ok" and result.inserted == 4 and all(r.source_ts is None for r in quote_rows(session))
+
+
+@pytest.mark.parametrize("stamp", ["0001-01-01T00:00:00Z", "9999-12-31T23:59:59Z", "1999-01-01T00:00:00Z"])
+def test_an_odds_time_outside_2000_to_2100_skips_that_event_or_book_not_the_run(session, stamp):
+    seed_four(session)
+    data = recorded("odds_api_h2h.json")
+    data[0]["commence_time"] = stamp  # the SEA @ DEN event: skipped
+    data[1]["bookmakers"][0]["last_update"] = stamp  # one HOU @ JAX book: skipped
+    result, _ = refresh_odds(session, odds_routes(data))
+    assert result.status == "ok" and len(quote_rows(session)) == 26 - 9 - 1
+
+
+def test_a_swapped_orientation_never_stores_a_probability_outside_zero_to_one(session):
+    seed_game(session, "LA", "BUF", datetime(2026, 10, 13, 0, 15, tzinfo=UTC), status="scheduled")
+    routes = in_progress(wp=0.9)
+    routes[espn.summary_url("401872994")]["winprobability"][-1]["tiePercentage"] = 0.3  # 1 - 0.9 - 0.3 < 0
+    run.refresh_live_games(session, get=fake_get(routes), now=NOW)
+    assert live_rows(session)[0].home_wp is None
+
+
+@pytest.mark.parametrize("price", [1e300, 100001, -100001, 10**30])
+def test_a_moneyline_beyond_a_sane_bound_skips_that_book(session, price):
+    seed_four(session)
+    data = recorded("odds_api_h2h.json")
+    data[0]["bookmakers"][0]["markets"][0]["outcomes"][0]["price"] = price
+    result, _ = refresh_odds(session, odds_routes(data))
+    assert result.inserted == 25
+
+
+def test_even_with_the_http_loggers_turned_up_the_key_is_not_logged(session, caplog):
+    import functools
+    import logging
+
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.DEBUG)  # a later logging config could do this
+    caplog.set_level(logging.DEBUG)
+    try:
+        seed_four(session)
+        web = _odds_web("ok")
+        get = functools.partial(fetch.fetch_json, resolver=public_dns, transport=web.transport)
+        run.refresh_odds_quotes(session, get=get, now=ODDS_NOW, api_key=KEY)
+        assert any(KEY in str(r.url) for r in web.requests)
+        assert KEY not in "\n".join(r.getMessage() for r in caplog.records)
+    finally:
+        for name in ("httpx", "httpcore"):
+            logging.getLogger(name).setLevel(logging.WARNING)
+
+
+def test_a_reply_of_three_or_more_usable_events_that_match_no_game_is_a_failure_not_ok_zero(session):
+    seed_game(session, "SEA", "DEN", datetime(2026, 12, 1, 0, 15, tzinfo=UTC), status="scheduled")  # wrong day for all
+    espn_result = run.refresh_live_games(session, get=fake_get(recorded_routes()), now=NOW)
+    kalshi_result = run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes()), now=KNOW)
+    odds_result, _ = refresh_odds(session)
+    assert [espn_result.status, kalshi_result.status, odds_result.status] == ["failed"] * 3
+    for source in ("espn_live", "kalshi", "oddsapi"):
+        assert session.get(SourceStatus, source).consecutive_failures == 1
+
+
+def test_a_refresh_logs_how_many_rows_it_added_and_how_many_events_it_skipped(session, caplog):
+    import logging
+
+    caplog.set_level(logging.INFO)
+    seed_recorded_games(session)
+    session.delete(session.get(Game, "2026_05_TB_DAL"))
+    session.commit()
+    run.refresh_live_games(session, get=fake_get(recorded_routes()), now=NOW)
+    assert any("2 inserted, 1 skipped" in r.getMessage() for r in caplog.records)
+
+
+def test_the_last_confirmed_time_moves_on_every_good_poll_even_when_no_row_changed(session):
+    seed_recorded_games(session)
+    assert store.last_confirmed(session, "espn_live") is None
+    run.refresh_live_games(session, get=fake_get(recorded_routes()), now=NOW)
+    run.refresh_live_games(session, get=fake_get(recorded_routes()), now=NOW + timedelta(seconds=45))
+    assert len(live_rows(session)) == 3
+    assert store.last_confirmed(session, "espn_live") == NOW + timedelta(seconds=45)
+
+
+def test_the_credits_low_stop_is_logged_and_its_reason_is_stored(session, caplog):
+    import logging
+
+    caplog.set_level(logging.WARNING)
+    seed_four(session)
+    refresh_odds(session, odds_routes(headers={"x-requests-remaining": "49"}))
+    assert session.get(SourceStatus, "oddsapi").last_error == "credits low"
+    quiet = odds_get({})
+    run.refresh_odds_quotes(session, get=quiet, now=ODDS_NOW + timedelta(days=1), api_key=KEY)
+    assert any("credits low" in r.getMessage() for r in caplog.records)
+
+
+def test_failed_summaries_are_counted_in_a_warning(session, caplog):
+    import logging
+
+    caplog.set_level(logging.WARNING)
+    seed_game(session, "BUF", "LA", datetime(2026, 10, 13, 0, 15, tzinfo=UTC), status="scheduled")
+    routes = in_progress()
+    routes[espn.summary_url("401872994")] = fetch.FetchError("status 500")
+    run.refresh_live_games(session, get=fake_get(routes), now=NOW)
+    assert any("1 summaries failed" in r.getMessage() for r in caplog.records)
+
+
+def test_scores_that_change_format_in_three_or_more_finished_or_live_events_are_a_format_change(session):
+    seed_recorded_games(session)
+    board = recorded("espn_scoreboard_final.json")
+    for event in board["events"]:
+        for team in event["competitions"][0]["competitors"]:
+            team["score"] = int(team["score"])  # ints instead of digit strings: every score reads as missing
+    assert (
+        run.refresh_live_games(session, get=fake_get(recorded_routes() | {espn.SCOREBOARD_URL: board}), now=NOW).status
+        == "failed"
+    )
+    assert live_rows(session) == []
+    two = recorded("espn_scoreboard_final.json")
+    two["events"] = two["events"][:2]
+    for event in two["events"]:
+        for team in event["competitions"][0]["competitors"]:
+            team["score"] = int(team["score"])
+    session.query(SourceStatus).update({"blocked_until": None})
+    session.commit()
+    assert (
+        run.refresh_live_games(session, get=fake_get(recorded_routes() | {espn.SCOREBOARD_URL: two}), now=NOW).status
+        == "ok"
+    )
+
+
+@pytest.mark.parametrize(
+    ("bid", "ask"), [("0.0000", "0.9900"), ("0.0100", "1.0000"), ("0.00", "0.99"), ("0.01", "1.00")]
+)
+def test_a_kalshi_market_with_no_bids_or_no_asks_is_one_sided_and_has_no_price(session, bid, ask):
+    games = seed_four(session)
+
+    def edit(markets):
+        next(m for m in markets if m["ticker"].endswith("SEADEN-SEA")).update(yes_bid_dollars=bid, yes_ask_dollars=ask)
+
+    run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes(_edit(edit))), now=KNOW)
+    assert games["SEA_DEN"].game_id not in {r.game_id for r in quote_rows(session)} and len(quote_rows(session)) == 3
