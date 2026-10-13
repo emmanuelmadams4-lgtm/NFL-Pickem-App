@@ -6,18 +6,22 @@ validated, retried a limited number of times, and saved even when it fails.
 """
 
 import json
+import logging
 from datetime import UTC, datetime
 
 from pydantic import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from nflpi.ai import news_pack
 from nflpi.ai.providers import AIError, AIProvider, get_provider
 from nflpi.analytics.trends import MIN_GAMES, game_trends
 from nflpi.api import schemas as s
 from nflpi.api.views import ai_report_out, game_detail
 from nflpi.config import get_settings
 from nflpi.models import AIReport, AppSetting, BacktestRun
+
+log = logging.getLogger(__name__)
 
 SYSTEM = """You are an NFL analyst writing for one person making weekly Pick'em picks.
 Use ONLY the evidence pack you are given. Do not add injuries, stats, quotes, news or
@@ -131,7 +135,20 @@ def evidence_pack(session: Session, game_id: str) -> dict:
             "note": "Head-to-head history and rest days showed no proven predictive value in testing.",
         },
     }
+    try:
+        block = news_pack.news_block(session, game_id)
+    except Exception as exc:  # news is optional: the report must still work
+        session.rollback()
+        log.warning("news unavailable for the AI pack: %s", type(exc).__name__)
+        pack["news_unavailable"] = "News could not be read for this game; treat it as missing."
+    else:
+        if block is not None:
+            pack["news"] = block
     return pack
+
+
+def _system_for(pack: dict) -> str:
+    return SYSTEM + "\n" + news_pack.NEWS_SYSTEM_LINE if "news" in pack else SYSTEM
 
 
 def _check(report: s.MatchupReport, pack: dict) -> list[str]:
@@ -181,7 +198,7 @@ def generate_report(
         try:
             _reserve_call(session)
             reserved = True
-            response = provider.complete(SYSTEM, user, REPORT_SCHEMA, max_tokens=16000)
+            response = provider.complete(_system_for(pack), user, REPORT_SCHEMA, max_tokens=16000)
             report = s.MatchupReport.model_validate_json(response)
             problems = _check(report, pack)
             if not problems:
@@ -231,7 +248,7 @@ def answer_question(
         + f"\n\nQuestion: {question}\n\nAnswer in under 150 words. If the pack can't answer it, say what is missing."
     )
     _reserve_call(session)
-    answer = provider.complete(SYSTEM, user, None, max_tokens=16000)
+    answer = provider.complete(_system_for(pack), user, None, max_tokens=16000)
     row = AIReport(
         game_id=game_id,
         kind="answer",
