@@ -49,6 +49,36 @@ def team_game_epa(rows: list[dict]) -> pd.DataFrame:
                         columns=["game_id", "team", "net_epa"])
 
 
+def offence_defence(rows: list[dict]) -> pd.DataFrame:
+    """Return each team's offence rates and its opponent's offence rates."""
+    games: dict[str, list[tuple[int, str, float, float, float]]] = {}
+    for i, row in enumerate(rows):
+        games.setdefault(row["game_id"], []).append((i, row["team"], row["plays"], row["epa"], row["success"]))
+
+    result = []
+    for game_id, sides in games.items():
+        if len(sides) != 2 or sides[0][1] == sides[1][1]:
+            continue
+        try:
+            (first_i, first_team, first_plays, first_epa, first_success) = sides[0]
+            (second_i, second_team, second_plays, second_epa, second_success) = sides[1]
+            first_plays, first_epa, first_success = map(float, (first_plays, first_epa, first_success))
+            second_plays, second_epa, second_success = map(float, (second_plays, second_epa, second_success))
+        except (TypeError, ValueError):
+            continue
+        if (first_plays <= 0 or second_plays <= 0 or
+                not all(map(math.isfinite, (first_plays, first_epa, first_success,
+                                            second_plays, second_epa, second_success)))):
+            continue
+        first_off_epa, second_off_epa = first_epa / first_plays, second_epa / second_plays
+        first_off_sr, second_off_sr = first_success / first_plays, second_success / second_plays
+        result.extend(((first_i, game_id, first_team, first_off_epa, second_off_epa, first_off_sr, second_off_sr),
+                       (second_i, game_id, second_team, second_off_epa, first_off_epa, second_off_sr, first_off_sr)))
+    result.sort(key=lambda row: row[0])
+    return pd.DataFrame([row[1:] for row in result],
+                        columns=["game_id", "team", "off_epa", "def_epa", "off_sr", "def_sr"])
+
+
 def epa_diff(df: pd.DataFrame, epa: pd.DataFrame, half_life: float) -> pd.Series:
     """Return pregame EPA difference; kickoff rows must be ordered."""
     if not df["kickoff_utc"].is_monotonic_increasing:

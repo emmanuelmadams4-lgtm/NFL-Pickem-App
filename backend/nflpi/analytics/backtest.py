@@ -27,6 +27,9 @@ from nflpi.predictions.model import LogitModel
 
 ELO_GRID = [EloParams(k=k, hfa=h) for k in (15.0, 20.0, 25.0) for h in (30.0, 48.0, 65.0)]
 EPA_HALF_LIVES = (4, 8, 16)
+SPLIT_HALF_LIVES = (4, 8, 16)
+SPLIT_EPA_SCALE = 10
+SPLIT_SR_SCALE = 20
 RECENCY_HALF_LIVES = (2, 4, 8)
 SPREAD_SCALE = 7
 TOTAL_CENTER = 45
@@ -130,6 +133,34 @@ def candidate_preds(
                 feature = f"epa_diff_{h}"
                 model = LogitModel.fit(train.dropna(subset=["market_logit"]), [*BLEND_FEATURES, feature])
                 test[f"p_epa_{h}"] = pd.Series(model.predict(test), index=test.index).fillna(test["p_blend"])
+        by_season.append(test)
+    preds = pd.concat(by_season, ignore_index=True)
+    return preds[preds["p_market"].notna()]
+
+
+def split_preds(df: pd.DataFrame, seasons: list[int], split: pd.DataFrame, window: int = 10) -> pd.DataFrame:
+    """Score held-out seasons with offence, defence, and success-rate candidates."""
+    differences = {
+        f"{column}_diff_{h}": scale * epa_diff(
+            df, split[["game_id", "team", column]].rename(columns={column: "net_epa"}), h
+        )
+        for h in SPLIT_HALF_LIVES
+        for column, scale in (("off_epa", SPLIT_EPA_SCALE), ("def_epa", SPLIT_EPA_SCALE),
+                              ("off_sr", SPLIT_SR_SCALE), ("def_sr", SPLIT_SR_SCALE))
+    }
+    frames = {params: frame.assign(**differences) for params, frame in _elo_frames(df).items()}
+    by_season = []
+    for season in seasons:
+        test = predict_season(frames, season, window)
+        _, train = _train_rows(frames, season, window)
+        train = train.dropna(subset=["market_logit"])
+        for h in SPLIT_HALF_LIVES:
+            epa_features = [f"off_epa_diff_{h}", f"def_epa_diff_{h}"]
+            sr_features = [f"off_sr_diff_{h}", f"def_sr_diff_{h}"]
+            for name, features in ((f"p_split_{h}", [*BLEND_FEATURES, *epa_features]),
+                                   (f"p_split_sr_{h}", [*BLEND_FEATURES, *epa_features, *sr_features])):
+                model = LogitModel.fit(train, features)
+                test[name] = pd.Series(model.predict(test), index=test.index).fillna(test["p_blend"])
         by_season.append(test)
     preds = pd.concat(by_season, ignore_index=True)
     return preds[preds["p_market"].notna()]
