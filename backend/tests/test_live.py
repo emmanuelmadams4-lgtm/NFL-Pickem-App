@@ -1678,3 +1678,41 @@ def test_a_kalshi_market_with_no_bids_or_no_asks_is_one_sided_and_has_no_price(s
 
     run.refresh_kalshi_quotes(session, get=fake_get(kalshi_routes(_edit(edit))), now=KNOW)
     assert games["SEA_DEN"].game_id not in {r.game_id for r in quote_rows(session)} and len(quote_rows(session)) == 3
+
+
+# ---------------------------------------------------------------- a game that drops off the scoreboard (I2b)
+
+
+def test_a_game_in_progress_that_vanishes_from_a_good_reply_gets_one_lost_row_with_its_last_known_numbers(session):
+    seed_game(session, "BUF", "LA", datetime(2026, 10, 13, 0, 15, tzinfo=UTC), status="scheduled")
+    run.refresh_live_games(session, get=fake_get(in_progress()), now=NOW)
+    gone = fake_get({espn.SCOREBOARD_URL: {"events": []}})
+    result = run.refresh_live_games(session, get=gone, now=NOW + timedelta(minutes=1))
+    assert result.status == "ok" and result.inserted == 1
+    lost = live_rows(session)[-1]
+    assert (lost.state, lost.home_score, lost.away_score, lost.period, lost.clock) == ("lost", 34, 30, 4, "2:05")
+    assert (lost.home_wp, lost.tie_wp, lost.last_play_id) == (None, None, None)
+    run.refresh_live_games(session, get=fake_get({espn.SCOREBOARD_URL: {"events": []}}), now=NOW + timedelta(minutes=3))
+    assert len(live_rows(session)) == 2  # one lost row, not one per poll
+    run.refresh_live_games(session, get=fake_get(in_progress(clock="1:10")), now=NOW + timedelta(minutes=5))
+    assert [r.state for r in live_rows(session)] == ["in", "lost", "in"]  # it came back
+
+
+def test_a_vanished_game_is_logged_and_a_failed_poll_does_not_mark_anything_lost(session, caplog):
+    import logging
+
+    caplog.set_level(logging.WARNING)
+    seed_game(session, "BUF", "LA", datetime(2026, 10, 13, 0, 15, tzinfo=UTC), status="scheduled")
+    run.refresh_live_games(session, get=fake_get(in_progress()), now=NOW)
+    bad = fake_get({espn.SCOREBOARD_URL: fetch.FetchError("status 500")})
+    run.refresh_live_games(session, get=bad, now=NOW + timedelta(minutes=1))
+    assert [r.state for r in live_rows(session)] == ["in"]  # no reply, so nothing is known
+    run.refresh_live_games(session, get=fake_get({espn.SCOREBOARD_URL: {"events": []}}), now=NOW + timedelta(hours=1))
+    assert any("1 in-progress games missing" in r.getMessage() for r in caplog.records)
+
+
+def test_finished_games_are_never_marked_lost_when_the_week_rolls_over(session):
+    seed_recorded_games(session)
+    run.refresh_live_games(session, get=fake_get(recorded_routes()), now=NOW)
+    run.refresh_live_games(session, get=fake_get({espn.SCOREBOARD_URL: {"events": []}}), now=NOW + timedelta(days=3))
+    assert [r.state for r in live_rows(session)] == ["post", "post", "post"]
