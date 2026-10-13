@@ -3,9 +3,9 @@
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0005"
-# Numbers are taken at landing time: 0005 was the next free number on main eed7c61 (0004 = group picks).
-down_revision = "0004"
+revision = "0006"
+# Numbers are taken at landing time: 0006 was the next free number on main e6c9611 (0005 = news items).
+down_revision = "0005"
 branch_labels = None
 depends_on = None
 
