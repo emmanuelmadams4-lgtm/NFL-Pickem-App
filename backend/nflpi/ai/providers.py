@@ -1,12 +1,18 @@
-"""AI providers behind one small interface. Keys never leave the server."""
+"""AI providers, with Claude sign-in first and the API key as fallback."""
 
+import asyncio
 import json
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Protocol
 
 import anthropic
 import httpx
+from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKError, ResultMessage, query
 
 from nflpi.config import get_settings
+
+SDK_TIMEOUT_S = 120.0
 
 
 class AIError(RuntimeError):
@@ -54,6 +60,99 @@ class ClaudeProvider:
         return "".join(b.text for b in resp.content if b.type == "text")
 
 
+class ClaudeSdkProvider:
+    name = "claude"
+    route = "sdk"
+
+    def __init__(self, token: str, model: str) -> None:
+        self.token, self.model = token, model
+
+    def complete(self, system: str, user: str, json_schema: dict | None = None, max_tokens: int = 16000) -> str:
+        options = ClaudeAgentOptions(
+            system_prompt=system,
+            tools=[],
+            setting_sources=[],
+            model=self.model,
+            max_turns=5 if json_schema else 2,
+            effort="medium" if json_schema else "low",
+            stderr=lambda _line: None,
+            env={"CLAUDE_CODE_OAUTH_TOKEN": self.token, "ANTHROPIC_API_KEY": "", "ANTHROPIC_AUTH_TOKEN": ""},
+        )
+        if json_schema:
+            options.output_format = {"type": "json_schema", "schema": json_schema}
+
+        async def last_result() -> ResultMessage | None:
+            last = None
+            async for message in query(prompt=user, options=options):
+                if isinstance(message, ResultMessage):
+                    last = message
+            return last
+
+        async def run() -> ResultMessage | None:
+            return await asyncio.wait_for(last_result(), SDK_TIMEOUT_S)
+
+        try:
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                result = asyncio.run(run())
+            else:
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    result = pool.submit(lambda: asyncio.run(run())).result()
+        except (ClaudeSDKError, TimeoutError, OSError) as exc:
+            raise AIError(f"Claude sign-in route failed: {type(exc).__name__}") from None
+
+        if result is None or result.is_error or result.subtype != "success":
+            raise AIError("Claude sign-in route failed: no successful result")
+        if json_schema:
+            if result.structured_output is None:
+                raise AIError("Claude sign-in route failed: no structured output")
+            return json.dumps(result.structured_output)
+        if not result.result:
+            raise AIError("Claude sign-in route failed: empty result")
+        return result.result
+
+    def __repr__(self) -> str:
+        return f"ClaudeSdkProvider(name={self.name!r}, route={self.route!r}, model={self.model!r})"
+
+
+class ClaudeRouter:
+    name = "claude"
+
+    def __init__(self, sdk: ClaudeSdkProvider | None, api: ClaudeProvider | None) -> None:
+        self.sdk, self.api = sdk, api
+        self.route = "sdk" if sdk else "api"
+        self.model = sdk.model if sdk else api.model if api else ""
+
+    def complete(self, system: str, user: str, json_schema: dict | None = None, max_tokens: int = 16000) -> str:
+        if self.sdk:
+            try:
+                answer = self.sdk.complete(system, user, json_schema, max_tokens)
+            except AIError as exc:
+                if self.api is None:
+                    raise AIError(
+                        "Claude sign-in failed and may have expired; run claude setup-token and set "
+                        "CLAUDE_CODE_OAUTH_TOKEN on the server"
+                    ) from None
+                logging.getLogger("nflpi.ai").warning("Claude %s route failed: %s", self.sdk.route, type(exc).__name__)
+            else:
+                self.route, self.model = "sdk", self.sdk.model
+                return answer
+
+        if self.api:
+            self.route, self.model = "api", self.api.model
+            if self.sdk:
+                try:
+                    return self.api.complete(system, user, json_schema, max_tokens)
+                except Exception:
+                    raise AIError("Claude sign-in and API key routes failed") from None
+            return self.api.complete(system, user, json_schema, max_tokens)
+        raise AIError("Claude is not configured")
+
+    def __repr__(self) -> str:
+        return f"ClaudeRouter(name={self.name!r}, route={self.route!r}, model={self.model!r})"
+
+
 class OpenRouterProvider:
     """OpenRouter's documented chat completions API. Model id comes from config (Jev by default)."""
 
@@ -81,9 +180,12 @@ class OpenRouterProvider:
 def get_provider(name: str) -> AIProvider:
     s = get_settings()
     if name == "claude":
-        if not s.anthropic_api_key:
-            raise AIError("Claude is not configured: set ANTHROPIC_API_KEY on the server")
-        return ClaudeProvider(s.anthropic_api_key, s.anthropic_model)
+        token = s.claude_code_oauth_token.get_secret_value()
+        if not token and not s.anthropic_api_key:
+            raise AIError("Claude is not configured: set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY on the server")
+        sdk = ClaudeSdkProvider(token, s.anthropic_model) if token else None
+        api = ClaudeProvider(s.anthropic_api_key, s.anthropic_model) if s.anthropic_api_key else None
+        return ClaudeRouter(sdk, api)
     if name == "jev":
         if not s.openrouter_api_key:
             raise AIError("Jev is not configured: set OPENROUTER_API_KEY on the server")
@@ -93,4 +195,5 @@ def get_provider(name: str) -> AIProvider:
 
 def available() -> dict[str, bool]:
     s = get_settings()
-    return {"claude": bool(s.anthropic_api_key), "jev": bool(s.openrouter_api_key)}
+    return {"claude": bool(s.claude_code_oauth_token.get_secret_value() or s.anthropic_api_key),
+            "jev": bool(s.openrouter_api_key)}

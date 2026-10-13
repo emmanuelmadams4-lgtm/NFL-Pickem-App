@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
 
     # AI (keys stay on the server)
     anthropic_api_key: str = ""
+    claude_code_oauth_token: SecretStr = SecretStr("")
     anthropic_model: str = "claude-sonnet-5-5"
     openrouter_api_key: str = ""
     openrouter_model: str = "typesafe/jev-1.13"
@@ -38,6 +40,9 @@ class Settings(BaseSettings):
     openrouter_decisions_url: str = "https://openrouter.ai/api/alpha/decisions"
     ai_daily_call_limit: int = 60
     ai_max_retries: int = 2
+
+    def __repr_args__(self) -> list[tuple[str | None, object]]:
+        return [(name, value) for name, value in super().__repr_args__() if name != "anthropic_api_key"]
 
     # Web Push (PWA). Make keys with: python -m nflpi.jobs vapid
     vapid_public_key: str = ""

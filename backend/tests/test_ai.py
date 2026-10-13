@@ -123,6 +123,7 @@ FAILURES = {
     "schema_without_output": lambda: FakeSdk([result(result="text only")]),
     "empty_text": lambda: FakeSdk([result(result="")]),
     "no_result_at_all": lambda: FakeSdk([]),
+    "unexpected_exception": lambda: FakeSdk(error=ValueError(f"surprise {TOKEN}")),
     "timeout": lambda: FakeSdk([result(result="late")], delay=1.0),
 }
 
@@ -144,15 +145,24 @@ def test_sdk_failure_without_a_key_names_the_sign_in(setup):
 
 
 def test_both_routes_failing_reports_both(setup):
-    setup(token=TOKEN, key=KEY, sdk=FakeSdk(error=ProcessError("exit 1", exit_code=1)), api=FakeAnthropic(error=RuntimeError("down")))
+    sdk = FakeSdk(error=ProcessError("exit 1", exit_code=1))
+    setup(token=TOKEN, key=KEY, sdk=sdk, api=FakeAnthropic(error=RuntimeError("down")))
     with pytest.raises(AIError) as exc:
         providers.get_provider("claude").complete("sys", "q")
     assert "sign-in" in str(exc.value) and "API key" in str(exc.value)
 
 
+def test_both_routes_failing_keeps_the_api_status_for_the_owner(setup):
+    api = FakeAnthropic(error=AIError("Claude API error 401: invalid x-api-key"))
+    setup(token=TOKEN, key=KEY, sdk=FakeSdk(error=ProcessError("exit 1", exit_code=1)), api=api)
+    with pytest.raises(AIError, match="401"):
+        providers.get_provider("claude").complete("sys", "q")
+
+
 def test_the_token_never_appears_in_errors_logs_or_reprs(setup, caplog):
-    leaky = ProcessError(f"cli said token={TOKEN} key={KEY}", exit_code=1, stderr=f"env CLAUDE_CODE_OAUTH_TOKEN={TOKEN}")
-    setup(token=TOKEN, key=KEY, sdk=FakeSdk(error=leaky), api=FakeAnthropic(error=RuntimeError(f"bad {KEY} {TOKEN}")))
+    leaky = ProcessError(f"cli said token={TOKEN} key={KEY}", exit_code=1, stderr=f"env OAUTH={TOKEN}")
+    api = FakeAnthropic(error=RuntimeError(f"bad {KEY} {TOKEN}"))
+    setup(token=TOKEN, key=KEY, sdk=FakeSdk(error=leaky), api=api)
     provider = providers.get_provider("claude")
     with caplog.at_level(logging.DEBUG), pytest.raises(AIError) as exc:
         provider.complete("sys", "q")
