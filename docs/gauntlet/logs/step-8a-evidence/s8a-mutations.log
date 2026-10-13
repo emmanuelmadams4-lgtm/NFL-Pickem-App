@@ -1,0 +1,32 @@
+control: no mutation (control): 57 passed in 28.95s
+KILLED: S11 slot order reversed: 1 failed, 56 passed in 8.81s
+KILLED: S11 rank dropped from the sort: 1 failed, 56 passed in 22.12s
+KILLED: S24 stats-has-pair-snaps-lack branch off: 1 failed, 56 passed in 27.08s
+KILLED: S26 AttributeError not wrapped: 2 failed, 55 passed in 20.14s
+KILLED: S21 any name match joins: 1 failed, 56 passed in 13.30s
+KILLED: S25 only NA counts as blank: 1 failed, 56 passed in 14.88s
+KILLED: S22 quarterback needs snaps: 1 failed, 56 passed in 7.15s
+KILLED: name cut removed (stats): 1 failed, 56 passed in 7.07s
+KILLED: name cut removed (snaps): 1 failed, 56 passed in 5.25s
+KILLED: S10 reports of any season: 1 failed, 56 passed in 3.29s
+KILLED: S13 star list of any season: 1 failed, 56 passed in 4.86s
+KILLED: S12 name matched across clubs: 1 failed, 56 passed in 10.52s
+KILLED: S11 checked_at is the oldest good run: 1 failed, 56 passed in 13.35s
+KILLED: S1 quarterback name tiebreak dropped: 1 failed, 56 passed in 13.74s
+KILLED: S14 side name tiebreak dropped: 1 failed, 56 passed in 4.95s
+KILLED: S19 defence snaps unbounded: 2 failed, 55 passed in 9.97s
+KILLED: S19 week 0 allowed: 4 failed, 53 passed in 17.33s
+KILLED: S19 week 23 allowed: 4 failed, 53 passed in 10.07s
+KILLED: S19 week 22 refused: 5 failed, 52 passed in 10.47s
+KILLED: S23 reports of every club counted: 1 failed, 56 passed in 40.22s
+KILLED: S9 not-a-number stat accepted: 1 failed, 56 passed in 21.27s
+KILLED: S9 large negative stat accepted: 1 failed, 56 passed in 10.03s
+KILLED: S19 300 snaps refused: 1 failed, 56 passed in 21.06s
+KILLED: S19 301 snaps allowed: 2 failed, 55 passed in 38.99s
+KILLED: S19 a stat of 1000 refused: 1 failed, 56 passed in 16.15s
+KILLED: S19 a stat of 1001 allowed: 1 failed, 56 passed in 6.10s
+KILLED: S19 five-letter club allowed: 1 failed, 56 passed in 27.26s
+KILLED: S13 star rows of any season: 1 failed, 56 passed in 72.41s (0:01:12)
+KILLED: S10 oldest matching report wins: 1 failed, 56 passed in 58.62s
+KILLED: S6 players with no id keyed by club: 2 failed, 55 passed in 24.51s
+30 mutations, 0 survived

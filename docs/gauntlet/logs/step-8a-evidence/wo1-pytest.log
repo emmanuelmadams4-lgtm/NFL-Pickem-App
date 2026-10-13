@@ -1,0 +1,40 @@
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 53%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m           [100%][0m
+=================================== FAILURES ===================================
+[31m[1m______________ test_one_migration_builds_the_schema_with_no_drift ______________[0m
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_one_migration_builds_the_schema_with_no_drift[39;49;00m():[90m[39;49;00m
+        url = make_url(os.environ[[33m"[39;49;00m[33mDATABASE_URL[39;49;00m[33m"[39;49;00m]).set(database=[33m"[39;49;00m[33mnflpi_migration_test[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+        admin = create_engine(url.set(database=[33m"[39;49;00m[33mpostgres[39;49;00m[33m"[39;49;00m), isolation_level=[33m"[39;49;00m[33mAUTOCOMMIT[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+        drop = text([33mf[39;49;00m[33m'[39;49;00m[33mdrop database if exists [39;49;00m[33m"[39;49;00m[33m{[39;49;00murl.database[33m}[39;49;00m[33m"[39;49;00m[33m with (force)[39;49;00m[33m'[39;49;00m)[90m[39;49;00m
+        env = os.environ | {[33m"[39;49;00m[33mDATABASE_URL[39;49;00m[33m"[39;49;00m: url.render_as_string(hide_password=[94mFalse[39;49;00m)}[90m[39;49;00m
+    [90m[39;49;00m
+        [94mdef[39;49;00m[90m [39;49;00m[92malembic[39;49;00m(*args: [96mstr[39;49;00m) -> subprocess.CompletedProcess:[90m[39;49;00m
+            [94mreturn[39;49;00m subprocess.run([90m[39;49;00m
+                [sys.executable, [33m"[39;49;00m[33m-m[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33malembic[39;49;00m[33m"[39;49;00m, *args], cwd=BACKEND, env=env, capture_output=[94mTrue[39;49;00m, text=[94mTrue[39;49;00m, timeout=[94m120[39;49;00m[90m[39;49;00m
+            )[90m[39;49;00m
+    [90m[39;49;00m
+        [94mwith[39;49;00m admin.connect() [94mas[39;49;00m c:[90m[39;49;00m
+            c.execute(drop)[90m[39;49;00m
+            c.execute(text([33mf[39;49;00m[33m'[39;49;00m[33mcreate database [39;49;00m[33m"[39;49;00m[33m{[39;49;00murl.database[33m}[39;49;00m[33m"[39;49;00m[33m'[39;49;00m))[90m[39;49;00m
+        [94mtry[39;49;00m:[90m[39;49;00m
+            upgrade = alembic([33m"[39;49;00m[33mupgrade[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mhead[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+            [94massert[39;49;00m upgrade.returncode == [94m0[39;49;00m, upgrade.stderr[90m[39;49;00m
+            check = alembic([33m"[39;49;00m[33mcheck[39;49;00m[33m"[39;49;00m)[90m[39;49;00m
+            [94massert[39;49;00m check.returncode == [94m0[39;49;00m, check.stdout + check.stderr[90m[39;49;00m
+        [94mfinally[39;49;00m:[90m[39;49;00m
+            [94mwith[39;49;00m admin.connect() [94mas[39;49;00m c:[90m[39;49;00m
+                c.execute(drop)[90m[39;49;00m
+            admin.dispose()[90m[39;49;00m
+        versions = [96msorted[39;49;00m((BACKEND / [33m"[39;49;00m[33mmigrations[39;49;00m[33m"[39;49;00m / [33m"[39;49;00m[33mversions[39;49;00m[33m"[39;49;00m).glob([33m"[39;49;00m[33m*.py[39;49;00m[33m"[39;49;00m))[90m[39;49;00m
+>       [94massert[39;49;00m [v.name[:[94m4[39;49;00m] [94mfor[39;49;00m v [95min[39;49;00m versions] == [[33m"[39;49;00m[33m0001[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33m0002[39;49;00m[33m"[39;49;00m]  [90m# initial schema, then the pick sheet (step 4)[39;49;00m[90m[39;49;00m
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE       AssertionError: assert ['0001', '0002', '0003'] == ['0001', '0002'][0m
+[1m[31mE         [0m
+[1m[31mE         Left contains one more item: [0m[33m'[39;49;00m[33m0003[39;49;00m[33m'[39;49;00m[90m[39;49;00m[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mtests/test_hardening.py[0m:490: AssertionError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_hardening.py::[1mtest_one_migration_builds_the_schema_with_no_drift[0m - AssertionError: assert ['0001', '0002', '0003'] == ['0001', '0002']
+[31m[31m[1m1 failed[0m, [32m133 passed[0m[31m in 22.46s[0m[0m

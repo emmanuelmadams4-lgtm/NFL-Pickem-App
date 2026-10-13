@@ -1,0 +1,100 @@
+ingest_stars 2025: ok, 3520 rows 
+ingest_stars 2026: ok, 800 rows 
+
+== 1. Stars: app against the independent count
+-- 2026 stars for week 6: MATCH (40 of 40 rows)
+   KC|qb|1|Patrick Mahomes|00-0033873|QB|261|128.00|261.00
+   KC|off|1|Kenneth Walker III|00-0038134|RB|196|104.10|123.70
+   KC|off|2|Travis Kelce|00-0030506|TE|208|44.60|65.40
+   KC|def|1|George Karlaftis III|00-0037192|DE|234|46.50|58.20
+   KC|def|2|Nick Bolton|00-0036621|LB|273|38.50|52.15
+   BUF|qb|1|Josh Allen|00-0034857|QB|257|119.00|257.00
+   BUF|off|1|James Cook|00-0037248|RB|176|65.50|83.10
+   BUF|off|2|Dalton Kincaid|00-0038933|TE|170|40.50|57.50
+   BUF|def|1|Gregory Rousseau|00-0036914|LB|224|121.50|132.70
+   BUF|def|2|Deone Walker|00-0040710|DL|202|41.00|51.10
+   DET|qb|1|Jared Goff|00-0033106|QB|341|191.00|341.00
+   DET|off|1|Jahmyr Gibbs|00-0039139|RB|264|142.20|168.60
+   DET|off|2|Amon-Ra St. Brown|00-0036963|WR|304|85.70|116.10
+   DET|def|1|Aidan Hutchinson|00-0037236|DE|338|67.50|84.40
+   DET|def|2|Derrick Barnes|00-0036964|LB|313|66.00|81.65
+   PHI|qb|1|Jalen Hurts|00-0036389|QB|300|154.00|300.00
+   PHI|off|1|Dontayvion Wicks|00-0038393|WR|249|40.50|65.40
+   PHI|off|2|DeVonta Smith|00-0036912|WR|169|39.00|55.90
+   PHI|def|1|Jalen Carter|00-0038386|DT|286|57.00|71.30
+   PHI|def|2|Cooper DeJean|00-0039841|DB|348|49.00|66.40
+   DAL|qb|1|Dak Prescott|00-0033077|QB|325|192.00|325.00
+   DAL|off|1|CeeDee Lamb|00-0036358|WR|250|93.60|118.60
+   DAL|off|2|Javonte Williams|00-0036997|RB|250|87.50|112.50
+   DAL|def|1|Caleb Downs|00-0040865|DB|323|44.50|60.65
+   DAL|def|2|Dee Winters|00-0038625|LB|227|37.00|48.35
+   SF|qb|1|Brock Purdy|00-0037834|QB|289|142.00|289.00
+   SF|off|1|Christian McCaffrey|00-0033280|RB|206|81.80|102.40
+   SF|off|2|George Kittle|00-0033288|TE|216|61.30|82.90
+   SF|def|1|Fred Warner|00-0034815|LB|317|68.00|83.85
+   SF|def|2|Renardo Green|00-0039345|CB|326|51.00|67.30
+   BAL|qb|1|Lamar Jackson|00-0034796|QB|223|96.00|223.00
+   BAL|off|1|Derrick Henry|00-0032764|RB|193|105.80|125.10
+   BAL|off|2|Zay Flowers|00-0039064|WR|150|68.80|83.80
+   BAL|def|1|Kyle Hamilton|00-0038038|S|312|62.50|78.10
+   BAL|def|2|Tavius Robinson|00-0038505|LB|249|59.50|71.95
+   PIT|qb|1|Aaron Rodgers|00-0023459|QB|326|184.00|326.00
+   PIT|off|1|Jaylen Warren|00-0037228|RB|253|85.50|110.80
+   PIT|off|2|Pat Freiermuth|00-0036894|TE|227|50.80|73.50
+   PIT|def|1|T.J. Watt|00-0033886|LB|211|86.50|97.05
+   PIT|def|2|Payton Wilson|00-0039741|LB|255|62.00|74.75
+-- 2025 stars for week 19: MATCH (40 of 40 rows)
+   KC|qb|1|Patrick Mahomes|00-0033873|QB|934|502.00|934.00
+   KC|off|1|Travis Kelce|00-0030506|TE|902|153.20|243.40
+   KC|off|2|Kareem Hunt|00-0033923|RB|529|138.40|191.30
+   KC|def|1|Nick Bolton|00-0036621|LB|1011|181.50|232.05
+   KC|def|2|Chamarri Conner|00-0038982|DB|1021|146.00|197.05
+   PHI|qb|1|Jalen Hurts|00-0036389|QB|965|454.00|965.00
+   PHI|off|1|Saquon Barkley|00-0034844|RB|773|213.80|291.10
+   PHI|off|2|A.J. Brown|00-0035676|WR|843|181.30|265.60
+   PHI|def|1|Zack Baun|00-0036418|LB|1038|175.50|227.40
+   PHI|def|2|Jalyx Hunt|00-0039740|LB|693|186.00|220.65
+   PIT|qb|1|Aaron Rodgers|00-0023459|QB|918|498.00|918.00
+   PIT|off|1|Jaylen Warren|00-0037228|RB|489|197.10|246.00
+   PIT|off|2|Kenneth Gainwell|00-0036919|RB|517|186.80|238.50
+   PIT|def|1|T.J. Watt|00-0033886|LB|812|187.00|227.60
+   PIT|def|2|Alex Highsmith|00-0036333|LB|634|181.00|212.70
+   DEN|qb|1|Bo Nix|00-0039732|QB|1136|612.00|1136.00
+   DEN|off|1|Courtland Sutton|00-0034348|WR|975|180.70|278.20
+   DEN|off|2|RJ Harvey|00-0040730|RB|481|185.10|233.20
+   DEN|def|1|Nik Bonitto|00-0037249|LB|684|217.50|251.70
+   DEN|def|2|Zach Allen|00-0035248|DL|797|188.00|227.85
+   CLE|qb|1|Shedeur Sanders|00-0040668|QB|428|212.00|428.00
+   CLE|off|1|Harold Fannin|00-0040663|TE|786|152.40|231.00
+   CLE|off|2|Quinshon Judkins|00-0040784|RB|452|154.80|200.00
+   CLE|def|1|Myles Garrett|00-0033868|DE|868|348.50|391.90
+   CLE|def|2|Carson Schwesinger|00-0040579|LB|956|187.50|235.30
+   LV|qb|1|Geno Smith|00-0030565|QB|863|448.00|863.00
+   LV|off|1|Ashton Jeanty|00-0040122|RB|771|219.60|296.70
+   LV|off|2|Tre Tucker|00-0038563|WR|942|133.20|227.40
+   LV|def|1|Maxx Crosby|00-0034973|DE|935|247.00|293.75
+   LV|def|2|Devin White|00-0035707|LB|1118|204.50|260.40
+   HOU|qb|1|C.J. Stroud|00-0039163|QB|868|423.00|868.00
+   HOU|off|1|Nico Collins|00-0036554|WR|778|190.70|268.50
+   HOU|off|2|Dalton Schultz|00-0034383|TE|827|136.70|219.40
+   HOU|def|1|Danielle Hunter|00-0031565|DE|728|226.00|262.40
+   HOU|def|2|Will Anderson|00-0039108|DE|694|223.50|258.20
+   DET|qb|1|Jared Goff|00-0033106|QB|1083|578.00|1083.00
+   DET|off|1|Jahmyr Gibbs|00-0039139|RB|737|330.40|404.10
+   DET|off|2|Amon-Ra St. Brown|00-0036963|WR|939|265.50|359.40
+   DET|def|1|Aidan Hutchinson|00-0037236|DE|1005|261.00|311.25
+   DET|def|2|Jack Campbell|00-0039018|LB|1097|214.50|269.35
+
+== 2. Who's out: app against a direct read of injuries_2026.csv, every week 5 game
+ok schedules
+ok injuries 1413 rows
+   2026_05_BAL_ATL: BAL Lamar Jackson (qb 1) Out, Ankle
+   2026_05_CHI_GB: CHI Kyle Monangai (off 2) Out, Thumb
+   2026_05_CLE_NYJ: CLE Mason Graham (def 1) Out, Knee
+   2026_05_CLE_NYJ: NYJ Breece Hall (off 2) Out, Quadricep
+   2026_05_HOU_TEN: TEN Amani Hooker (def 2) Out, Concussion
+   2026_05_NYG_WAS: WAS Marcus Mariota (qb 1) Out, Knee
+   2026_05_NYG_WAS: WAS Stefon Diggs (off 1) Out, Hamstring
+   2026_05_PHI_JAX: PHI DeVonta Smith (off 1) Out, Hamstring
+   2026_05_TB_DAL: TB Baker Mayfield (qb 1) Out, Thumb
+-- 15 games, 9 stars out or doubtful: MATCH (independent read: 9)

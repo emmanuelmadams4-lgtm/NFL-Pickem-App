@@ -1,0 +1,22 @@
+season,season_type,game_type,team,week,gsis_id,position,full_name,first_name,last_name,report_primary_injury,report_secondary_injury,report_status,practice_primary_injury,practice_secondary_injury,practice_status
+2026,REG,REG,BUF,5,00-0034827,WR,DJ Moore,Denniston,Moore,Shoulder,,Questionable,Shoulder,,Limited Participation in Practice
+2026,REG,REG,BUF,5,00-0034832,LB,Bradley Chubb,Bradley,Chubb,,,,Thumb,,Full Participation in Practice
+2026,REG,REG,BUF,5,00-0035230,DE,Ed Oliver,Edward,Oliver,Knee,,Out,Knee,,Did Not Participate In Practice
+2026,REG,REG,BUF,5,00-0036888,S,Damar Hamlin,Damar,Hamlin,,,,Rib,,Full Participation in Practice
+2026,REG,REG,BUF,5,00-0036988,WR,Josh Palmer,Joshua,Palmer,Shoulder,,Out,Shoulder,,Did Not Participate In Practice
+2026,REG,REG,BUF,5,00-0037034,CB,Dee Alford,DeAundre,Alford,Ankle,,Questionable,Ankle,,Limited Participation in Practice
+2026,REG,REG,BUF,5,00-0037254,LB,Terrel Bernard,Terrel,Bernard,,,,Knee,Not injury related - resting player,Did Not Participate In Practice
+2026,REG,REG,BUF,5,00-0037288,CB,Christian Benford,Christian,Benford,,,,Toe,,Full Participation in Practice
+2026,REG,REG,BUF,5,00-0038557,LB,Dorian Williams,Dorian,Williams,,,,Hip,,Full Participation in Practice
+2026,REG,REG,BUF,5,00-0039763,LB,Joe Andreessen,Joe,Andreessen,,,,Knee,,Full Participation in Practice
+2026,REG,REG,BUF,5,00-0039875,RB,Ray Davis,Re'Mahn,Davis,,,,Hamstring,,Full Participation in Practice
+2026,REG,REG,BUF,5,00-0039901,WR,Keon Coleman,Keon,Coleman,,,,Ankle,,Full Participation in Practice
+2026,REG,REG,BUF,5,00-0040132,DE,Landon Jackson,Landon,Jackson,Knee,,Questionable,Knee,,Full Participation in Practice
+2026,REG,REG,BUF,5,00-0040724,DE,T.J. Sanders,Tanaeri,Sanders,,,,Illness,,Full Participation in Practice
+2026,REG,REG,BUF,5,00-0041128,G,Ar'maj Reed-Adams,Ar'maj,Reed-Adams,,,,Elbow,,Full Participation in Practice
+2026,REG,REG,DET,5,00-0035637,CB,Rock Ya-Sin,Abdurrahman,Ya-Sin,Hamstring,,Out,Hamstring,,Did Not Participate In Practice
+2026,REG,REG,DET,5,00-0036272,G,Ben Bartch,Ben,Bartch,Foot,,Out,Foot,,Did Not Participate In Practice
+2026,REG,REG,DET,5,00-0036335,DE,D.J. Wonnum,Dennis,Wonnum,,,,Back,,Full Participation in Practice
+2026,REG,REG,DET,5,00-0037297,C,Cade Mays,Cade,Mays,Wrist,,Out,Wrist,,Limited Participation in Practice
+2026,REG,REG,DET,5,00-0039141,S,Brian Branch,Brian,Branch,Achilles,,Out,Achilles,,Limited Participation in Practice
+2026,REG,REG,DET,5,00-0040672,DT,Tyleik Williams,Tyleik,Williams,Foot,,Questionable,Foot,,Limited Participation in Practice

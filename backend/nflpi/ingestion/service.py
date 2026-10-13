@@ -4,13 +4,14 @@ import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, case, delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from nflpi.analytics.stars import rank_stars
 from nflpi.config import get_settings
 from nflpi.ingestion import nflverse, weather
-from nflpi.models import Game, IngestionRun, InjuryReport, MarketSnapshot, Team, WeatherForecast
+from nflpi.models import Game, IngestionRun, InjuryReport, MarketSnapshot, Team, TeamStar, WeatherForecast
 from nflpi.predictions.market import novig_home_prob
 
 log = logging.getLogger(__name__)
@@ -153,6 +154,69 @@ def ingest_injuries(
         return len(changed)
 
     return run_logged(session, nflverse.SOURCE, "injuries", job), changed
+
+
+def _parse_star_file(rows: list[dict[str, str]], parser: Callable, name: str, *args) -> object:
+    try:
+        return parser(rows, *args)
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"{name}: {exc!r}") from exc
+
+
+def _check_star_file_pairs(parsed_snaps: list[dict], parsed_stats: list[dict]) -> None:
+    snap_pairs = {(row["week"], row["team"]) for row in parsed_snaps}
+    stat_pairs = {(row["week"], row["team"]) for row in parsed_stats}
+    if snap_pairs - stat_pairs:
+        week, club = min(snap_pairs - stat_pairs)
+        raise RuntimeError(f"stats_player_week lacks ({week}, {club})")
+    if stat_pairs - snap_pairs:
+        week, club = min(stat_pairs - snap_pairs)
+        raise RuntimeError(f"snap_counts lacks ({week}, {club})")
+
+
+def _check_stars_against_stored(session: Session, season: int, ranked: list[dict]) -> None:
+    last_week = max(row["week"] for row in ranked)
+    stored_week = session.scalar(select(func.max(TeamStar.week)).where(TeamStar.season == season))
+    if stored_week is not None and last_week < stored_week:
+        raise RuntimeError("new stars end before stored stars")
+    stored_clubs = session.scalar(
+        select(func.count(func.distinct(TeamStar.team))).where(
+            TeamStar.season == season,
+            TeamStar.week == last_week,
+        )
+    )
+    new_clubs = {row["team"] for row in ranked if row["week"] == last_week}
+    if len(new_clubs) < stored_clubs:
+        raise RuntimeError("new stars have fewer clubs than stored stars")
+
+
+def ingest_stars(
+    session: Session,
+    season: int,
+    snaps: list[dict[str, str]] | None = None,
+    stats: list[dict[str, str]] | None = None,
+    players: list[dict[str, str]] | None = None,
+) -> IngestionRun:
+    def job() -> int:
+        snap_rows = snaps if snaps is not None else nflverse.fetch_csv(f"snap_counts/snap_counts_{season}.csv")
+        stat_rows = stats if stats is not None else nflverse.fetch_csv(f"stats_player/stats_player_week_{season}.csv")
+        player_rows = players if players is not None else nflverse.fetch_csv("players/players.csv")
+        parsed_snaps = _parse_star_file(snap_rows, nflverse.parse_star_snaps, "snap_counts", season)
+        parsed_stats = _parse_star_file(stat_rows, nflverse.parse_star_stats, "stats_player_week", season)
+        ids = _parse_star_file(player_rows, nflverse.parse_star_players, "players")
+        if not parsed_snaps or not parsed_stats or not ids:
+            raise RuntimeError("incomplete star files; keeping existing season")
+        _check_star_file_pairs(parsed_snaps, parsed_stats)
+        ranked = rank_stars(season, parsed_snaps, parsed_stats, ids, datetime.now(UTC))
+        if not ranked:
+            raise RuntimeError("no stars ranked; keeping existing season")
+        _check_stars_against_stored(session, season, ranked)
+        session.execute(delete(TeamStar).where(TeamStar.season == season))
+        session.add_all(TeamStar(**row) for row in ranked)
+        session.commit()
+        return len(ranked)
+
+    return run_logged(session, nflverse.SOURCE, "stars", job)
 
 
 def ingest_weather(session: Session, now: datetime | None = None) -> IngestionRun:
