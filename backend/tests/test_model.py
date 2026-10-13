@@ -185,6 +185,10 @@ def test_inseason_refit_uses_earlier_weeks_and_never_the_same_or_a_later_week():
     after = inseason_blend(_elo_frames(later), 2022, window=3)
     assert np.allclose(got[week <= 3], after[week <= 3])
     assert not np.allclose(got[week > 3], after[week > 3])
+    # A game's own result never moves its own pick, even for the first game of a week.
+    first = df[(df["season"] == 2022) & (df["week"] == 3)].index[0]
+    own = inseason_blend(_elo_frames(_flip_scores(df, df.index == first)), 2022, window=3)
+    assert np.isclose(got[first], own[first])
 
 
 def test_inseason_refit_skips_a_postponed_game_that_was_not_played_yet():

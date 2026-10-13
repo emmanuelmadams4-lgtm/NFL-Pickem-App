@@ -21,10 +21,11 @@ from nflpi.analytics.metrics import (
     upset_watch,
 )
 from nflpi.predictions.elo import EloParams, run_elo
-from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features
+from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features, epa_diff
 from nflpi.predictions.model import LogitModel
 
 ELO_GRID = [EloParams(k=k, hfa=h) for k in (15.0, 20.0, 25.0) for h in (30.0, 48.0, 65.0)]
+EPA_HALF_LIVES = (4, 8, 16)
 MODELS = ["home", "elo", "logistic", "market", "blend"]
 ABLATE = ["home_qb_change", "away_qb_change"]
 LABELS = {
@@ -103,10 +104,22 @@ def candidate_preds(
 ) -> pd.DataFrame:
     """Score market games with the season blend and candidate refit."""
     frames = _elo_frames(df)
+    if epa is not None:
+        differences = {h: epa_diff(df, epa, h) for h in EPA_HALF_LIVES}
+        frames = {params: frame.assign(**{f"epa_diff_{h}": diff for h, diff in differences.items()})
+                  for params, frame in frames.items()}
     by_season = []
     for season in seasons:
         test = predict_season(frames, season, window)
         test["p_inseason"] = inseason_blend(frames, season, window)
+        if epa is not None:
+            train_seasons = list(range(season - window, season))
+            f = frames[tune_elo(frames, train_seasons)]
+            train = f[f["season"].isin(train_seasons) & f["home_win"].notna()]
+            for h in EPA_HALF_LIVES:
+                feature = f"epa_diff_{h}"
+                model = LogitModel.fit(train.dropna(subset=["market_logit"]), [*BLEND_FEATURES, feature])
+                test[f"p_epa_{h}"] = pd.Series(model.predict(test), index=test.index).fillna(test["p_blend"])
         by_season.append(test)
     preds = pd.concat(by_season, ignore_index=True)
     return preds[preds["p_market"].notna()]

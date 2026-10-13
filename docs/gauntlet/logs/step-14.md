@@ -112,4 +112,16 @@ Committed with this section, before any production code. Red for the intended re
 
 ### Baseline
 
-`gate.sh baseline` on `d88d74e`: see section 3.
+`gate.sh baseline` on `d88d74e` (logs `step-14-evidence/baseline-*.log`):
+
+```text
+PASS pytest exit=0 :: 172 passed in 1563.07s (0:26:03)
+PASS ruff exit=0 :: All checks passed!
+PASS alembic exit=0 :: No new upgrade operations detected.
+PASS genapi exit=0 :: no drift
+```
+
+The suite takes 26 minutes tonight because six lanes share the machine (load average about 40). During the build only
+`tests/test_model.py` is run; the full gate runs on the final commit.
+
+Commit: `a27cfd0` (this section, the gate script, the first failing tests).

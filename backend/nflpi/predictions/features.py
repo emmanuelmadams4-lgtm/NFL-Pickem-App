@@ -11,6 +11,48 @@ BASE_FEATURES = ["elo_diff", "home_field", "home_qb_change", "away_qb_change"]
 BLEND_FEATURES = ["market_logit", *BASE_FEATURES]
 
 
+def team_game_epa(rows: list[dict]) -> pd.DataFrame:
+    """Return each usable team's EPA per play minus its opponent's."""
+    games: dict[str, list[tuple[int, str, float]]] = {}
+    for i, row in enumerate(rows):
+        values = [row[key] for key in ("passing_epa", "rushing_epa", "attempts", "sacks_suffered", "carries")]
+        if any(value in ("", "NA") for value in values):
+            continue
+        passing, rushing, attempts, sacks, carries = map(float, values)
+        plays = attempts + sacks + carries
+        if plays == 0:
+            continue
+        games.setdefault(row["game_id"], []).append((i, row["team"], (passing + rushing) / plays))
+
+    result = []
+    for game_id, sides in games.items():
+        if len(sides) != 2 or sides[0][1] == sides[1][1]:
+            continue
+        (first_i, first_team, first_epa), (second_i, second_team, second_epa) = sides
+        result.extend(((first_i, game_id, first_team, first_epa - second_epa),
+                       (second_i, game_id, second_team, second_epa - first_epa)))
+    result.sort(key=lambda row: row[0])
+    return pd.DataFrame([(game_id, team, net) for _, game_id, team, net in result],
+                        columns=["game_id", "team", "net_epa"])
+
+
+def epa_diff(df: pd.DataFrame, epa: pd.DataFrame, half_life: float) -> pd.Series:
+    """Return the pregame difference between decayed team EPA ratings."""
+    decay = 0.5 ** (1 / half_life)
+    by_game = {game_id: list(zip(group["team"], group["net_epa"], strict=True))
+               for game_id, group in epa.groupby("game_id", sort=False)}
+    ratings: dict[str, tuple[float, float]] = {}
+    differences = []
+    for row in df.itertuples():
+        home = ratings.get(row.home_team)
+        away = ratings.get(row.away_team)
+        differences.append(home[0] / home[1] - away[0] / away[1] if home and away else np.nan)
+        for team, net_epa in by_game.get(row.game_id, []):
+            weighted, weight = ratings.get(team, (0.0, 0.0))
+            ratings[team] = (weighted * decay + net_epa, weight * decay + 1)
+    return pd.Series(differences, index=df.index, dtype=float)
+
+
 def games_frame(rows: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     return df.sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)
