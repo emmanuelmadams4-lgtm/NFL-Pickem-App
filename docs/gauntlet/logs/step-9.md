@@ -1,6 +1,6 @@
 # Step 9 of 17: Tiebreaker scores
 
-Session: owner's Mac, 2026-10-13, lane `scores` (worktree `.claude/worktrees/lane-scores`, branch `lane/scores`, base `main@d88d74e`), wave 4, run beside lanes alerts, news, model, coaches, sdk and group.
+Session: owner's Mac, 2026-10-13, lane `scores` (worktree `.claude/worktrees/lane-scores`, branch `lane/scores`, base `main@d88d74e`, rebased on `main@53b1c89` on the integrator's word before the final gate; commit ids below are the ones after the rebase), wave 4, run beside lanes alerts, news, model, coaches, sdk and group.
 Coordinator: Claude (hive temp "Meredith", dispatched by the integrator). Builder: Codex. Lane claim `claims/scores`, coord task #5.
 Evidence folder: `docs/gauntlet/logs/step-9-evidence/` (every log named below lives there unless a full path is given).
 
@@ -68,12 +68,12 @@ Provider: Codex, every production line. The coordinator wrote the tests, the evi
 
 | Work order | Rung | Decision | Result (coordinator's own rerun) | Commit |
 |---|---|---|---|---|
-| WO-1 the two modules (`wo-1.md`) | `gpt-6-sol` medium, try 1 | `JEV: model:scores:wo-1 -> sol 0.79, medium 0.76`; `ADVISOR: sonnet -> sol medium` | 42 of 42 (`s9-wo1-proof.log`), ruff clean, 2 files in scope | `bf3613e` |
-| WO-2 review fixes + pair rounding (`wo-2.md`) | `gpt-6-luna` medium, try 1 | `JEV: model:scores:wo-2 -> luna 0.97, medium 0.84` (follow) | 50 of 50 (`s9-wo2-proof.log`), ruff clean, 2 files in scope | `1c5e104` |
+| WO-1 the two modules (`wo-1.md`) | `gpt-6-sol` medium, try 1 | `JEV: model:scores:wo-1 -> sol 0.79, medium 0.76`; `ADVISOR: sonnet -> sol medium` | 42 of 42 (`s9-wo1-proof.log`), ruff clean, 2 files in scope | `979721a` |
+| WO-2 review fixes + pair rounding (`wo-2.md`) | `gpt-6-luna` medium, try 1 | `JEV: model:scores:wo-2 -> luna 0.97, medium 0.84` (follow) | 50 of 50 (`s9-wo2-proof.log`), ruff clean, 2 files in scope | `c238ca5` |
 
 CLIMBS: none. STRIKES: none. Codex could not run `uvx ruff` in its sandbox on WO-3 and reported a lint error in the test file on WO-2 (the coordinator's own long line, fixed by the coordinator); the coordinator ran ruff itself each time.
 
-**Review fan-out on `bf3613e`** (read-only, reports in `~/.claude/plans/nfl-pickem-lanes-reviews/`):
+**Review fan-out on `979721a`** (reviewed before the rebase as `bf3613e`, same content) (read-only, reports in `~/.claude/plans/nfl-pickem-lanes-reviews/`):
 * `ecc:code-reviewer` (`s9-wo1-code-reviewer.md`): APPROVE, 0 CRITICAL, 0 HIGH, 1 MEDIUM, 4 LOW. It could not reach the test database, so it read the code only. MEDIUM: rounding both halves up adds a point to the total (fixed, pair rule). LOW: caller must sort (fixed), empty seasons crash (fixed), redundant copy (removed in cleanup), naive timestamp and the `BLEND_FEATURES` name clash (carried).
 * `ecc:silent-failure-hunter` (`s9-wo1-silent-failure-hunter.md`): 3 HIGH, 8 MEDIUM, 3 LOW, all by reading. Fixed in WO-2: F1 ship on a tiny sample, F2 uncounted exclusions, F3 unsorted frame, F4 duplicate seasons, F8 NaN in `summary`. Rejected: F11 (old franchise codes are already mapped in `nflverse.parse_games`). Carried: section 6.
 * `ecc:security-reviewer` and Dwight: not run. Reason: the dispatch asks for a security review only when file or network access is added; the modules are pure maths on a frame (S15 tests it).
@@ -103,4 +103,4 @@ A positive gain would mean the candidate was closer than the line. **Nothing shi
 | `predict_season` turned a pair of number lists into two entry columns twice | Extract function `_entry_columns` | same | same |
 | `.copy()` after `add_features`, which already returns a new frame | Remove dead code | same | S5 and S6 tests still green |
 
-`JEV: model:scores:wo-3 -> luna 0.86 (sure), effort medium 0.37 (unsure)`; the coordinator took `low` from the skill's effort table for cleanup, because the full test file, the mutation pass and the gate all check it. Commit `c8def6e`. After the cleanup the real-data report is byte-identical to the one before it (`cmp` on `s9-report.json`). No change needed, with reasons: `summary` stays one function (splitting the method loop from the comparison loop would add a second pass over the same arrays); `BLEND_FEATURES` keeps its frozen name (carried). Left as findings: section 6.
+`JEV: model:scores:wo-3 -> luna 0.86 (sure), effort medium 0.37 (unsure)`; the coordinator took `low` from the skill's effort table for cleanup, because the full test file, the mutation pass and the gate all check it. Commit `b190371`. After the cleanup the real-data report is byte-identical to the one before it (`cmp` on `s9-report.json`). No change needed, with reasons: `summary` stays one function (splitting the method loop from the comparison loop would add a second pass over the same arrays); `BLEND_FEATURES` keeps its frozen name (carried). Left as findings: section 6.

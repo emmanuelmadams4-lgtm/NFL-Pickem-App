@@ -1,0 +1,72 @@
+CAUGHT   S1 home/road swapped
+SURVIVED  S1 zero total allowed
+CAUGHT   S1 spread equal to total refused
+CAUGHT   S1 spread larger than total allowed
+CAUGHT   S1 non-finite spread allowed
+CAUGHT   S1 non-finite total allowed
+CAUGHT   S2 banker's rounding
+CAUGHT   S2 rounds down
+CAUGHT   S2 negative allowed
+CAUGHT   S3 wrong method name
+CAUGHT   S3 home/away swapped
+CAUGHT   S3 answer rounds each side alone
+CAUGHT   S2 pair rule on one half
+CAUGHT   S2 pair rule rounds both up
+CAUGHT   S2 pair rule rounds the home side down
+CAUGHT   S4 first n games, not last n
+SURVIVED  S4 unfinished game counted
+CAUGHT   S4 missing road score counted
+CAUGHT   S4 points for and against swapped
+CAUGHT   S4 window is 8
+CAUGHT   S5 own result leaks into the form
+CAUGHT   S6 implied home takes the road number
+CAUGHT   S6 missing line becomes zero
+CAUGHT   S6 blend loses a line column
+CAUGHT   S7 no intercept
+CAUGHT   S7 unfinished rows fitted
+CAUGHT   S7 missing road score fitted
+CAUGHT   S7 one row too few accepted
+CAUGHT   S7 missing feature predicts zero
+CAUGHT   S7 road model is the home model
+CAUGHT   S8 test season in the fit
+CAUGHT   S8 one season too many
+CAUGHT   S8 playoff games tested
+CAUGHT   S8 unplayed games tested
+CAUGHT   S8 tuned Elo
+CAUGHT   S8 window default 5
+CAUGHT   S9 entries not rounded
+CAUGHT   S9 backtest rounds each side alone
+CAUGHT   S9 stats model reads the line
+CAUGHT   S10 team error not halved
+CAUGHT   S10 total error is the sum of misses
+CAUGHT   S10 team gain sign flipped
+CAUGHT   S10 total gain sign flipped
+CAUGHT   S10 total interval from team gains
+CAUGHT   S10 empty team error is NaN
+CAUGHT   S10 empty interval is NaN
+CAUGHT   S11 zero gain wins
+CAUGHT   S11 mean gain is enough
+CAUGHT   S11 upper end is enough
+CAUGHT   S11 equal total refused
+CAUGHT   S11 total points ignored
+CAUGHT   S11 minimum is 100 games
+CAUGHT   S11 exactly the minimum refused
+CAUGHT   S11 no minimum
+CAUGHT   S10 missing values accepted
+CAUGHT   S10 missing score accepted
+CAUGHT   S13 games not put in order
+CAUGHT   S13 empty season list accepted
+CAUGHT   S13 repeated season accepted
+CAUGHT   S13 excluded count always zero
+CAUGHT   S11 smaller gain picked
+CAUGHT   S11 decided on the tiebreak slots
+CAUGHT   S12 Sunday from 8 pm
+CAUGHT   S12 Sunday after 7 pm only
+CAUGHT   S12 UTC hour
+CAUGHT   S12 Monday dropped
+CAUGHT   S12 every Sunday game
+CAUGHT   S13 slots are all games
+CAUGHT   S13 season rows use every game
+CAUGHT   S14 unpredicted games kept
+CAUGHT   S15 reads the environment
+69 of 71 caught
