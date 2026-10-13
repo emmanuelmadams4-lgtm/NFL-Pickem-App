@@ -1,28 +1,3 @@
-
-> web:build
-> npm run build -w apps/web
-
-
-> @nflpi/web@0.1.0 build
-> next build && node scripts/stamp-sw.mjs
-
-[1m[38;2;173;127;168m▲ Next.js 16.4.0[39m[22m (Turbopack)
-[32m[1m✓[22m[39m Running next.config.ts took 76ms
-
-[37m[1m [22m[39m Creating an optimized production build ...
-[32m[1m✓[22m[39m Compiled successfully in 1708ms
-[37m[1m [22m[39m Running TypeScript ...
-[37m[1m [22m[39m Finished TypeScript in 2.5s ...
-[37m[1m [22m[39m Collecting page data using 9 workers ...
-[37m[1m [22m[39m Generating static pages using 9 workers (0/10) ...
-[37m[1m [22m[39m Generating static pages using 9 workers (2/10) 
-[37m[1m [22m[39m Generating static pages using 9 workers (4/10) 
-[37m[1m [22m[39m Generating static pages using 9 workers (7/10) 
-[32m[1m✓[22m[39m Generating static pages using 9 workers (10/10) in 208ms
-[37m[1m [22m[39m Finalizing page optimization ...
-
-[4mRoute (app)[24m
-┌ ○ /
 ├ ○ /_not-found
 ├ ○ /backtest
 ├ ○ /game
