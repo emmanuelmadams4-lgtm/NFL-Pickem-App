@@ -943,6 +943,8 @@ def test_game_stars_lists_every_star_of_both_clubs_with_his_status(session):
         ("def", 1, "Cory Corner", "Out"),
         ("def", 2, "Russ Rush", None),  # a practice note is not a game status
     ]
+    # on the report or not is said apart from the game status: a practice note is a row, with no game status
+    assert [r["listed"] for r in home["stars"]] == [False, False, True, True, True]
     corner = home["stars"][3]
     assert (corner["injury"], corner["observed_at"], corner["age_hours"]) == ("Knee", NOW - timedelta(hours=2), 2.0)
     assert (home["stars"][0]["observed_at"], home["stars"][0]["age_hours"]) == (None, None)
@@ -959,6 +961,7 @@ def test_game_stars_lists_every_star_of_both_clubs_with_his_status(session):
         ("Marv Catcher III", "marv catcher"),
         ("D.J. Catcher", "DJ Catcher"),
         ("Marv O'Catcher Sr.", "Marv OCatcher"),
+        ("José Catcher", "Jose Catcher"),  # an accent in one file only
     ],
 )
 def test_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently(session, star, reported):
@@ -976,6 +979,22 @@ def test_a_different_name_is_never_matched_to_a_star(session, reported):
     session.commit()
     _injury(session, 5, "KC", None, reported, "Out", 1)
     assert stars_out(session, game_id, now=NOW)["out"] == []
+
+
+def test_a_name_that_fits_two_reports_takes_the_exact_one_or_none(session):
+    from nflpi.analytics.stars import game_stars
+
+    game_id = _game(session, SEASON, 5, "NYJ", "KC")
+    session.add(_star(SEASON, 4, "KC", "off", 1, None, "Marv Catcher"))
+    session.commit()
+    _injury(session, 5, "KC", None, "Marv Catcher Jr.", "Out", 1)
+    _injury(session, 5, "KC", None, "Marv Catcher Sr.", "Doubtful", 1)
+    # father and son are both on the report and neither is spelled as the star is: nobody's status is borrowed
+    assert stars_out(session, game_id, now=NOW)["out"] == []
+
+    _injury(session, 5, "KC", None, "Marv Catcher", "Questionable", 1)
+    star = game_stars(session, game_id, now=NOW)["teams"][1]["stars"][0]
+    assert (star["status"], star["listed"]) == ("Questionable", True)  # the one spelled exactly as the star
 
 
 def test_an_id_on_both_sides_still_decides_even_when_the_names_look_alike(session):

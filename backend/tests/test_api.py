@@ -202,6 +202,7 @@ def test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them
         ("def", 1, "Cory Corner", None),
         ("def", 2, "Russ Rush", None),
     ]
+    assert [r.listed for r in home.stars] == [False, True, True, False, False]  # on this week's report or not
     assert detail.stars_out == row.stars_out
 
 

@@ -50,7 +50,7 @@ for (const size of [
       await expect(line).toContainText("Out");
       await expect(line).toContainText("Cal Catch");
       await expect(line).toContainText("Doubtful");
-      await expect(line).toContainText(/latest seen 3h ago/i);
+      await expect(line).toContainText(/seen 3h ago/i);
       await expect(line, "Questionable is not on the row").not.toContainText("Ron Runner");
       await expect(line, "a player who is out but not a star").not.toContainText("Not A Star");
     });
@@ -67,7 +67,8 @@ for (const size of [
       await expect(line).toContainText("Ed Edge");
       await expect(line).not.toContainText("Nick Nickel");
       await expect(line).toContainText("+1 more");
-      await expect(card(page, g), "the other club has no star list: said beside the stars, never left silent").toContainText("No star list yet for MIA");
+      await expect(line, "the other club has no star list: said on the same line, never left silent").toContainText("MIA: no star list");
+      expect(await line.evaluate((e) => e.getBoundingClientRect().height), "D27 a short line: one line even with five stars out and a very long name").toBeLessThanOrEqual(20);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(0);
     });
 
@@ -110,6 +111,8 @@ for (const size of [
       await expect(kc.nth(3)).toContainText("Knee");
       await expect(kc.nth(3)).toContainText(/seen 3h ago/i);
       await expect(kc.nth(4)).toContainText("Russ Rush");
+      await expect(kc.nth(4), "on the report with a practice note only: never called 'not on the report'").toContainText("No game status");
+      await expect(kc.nth(4)).not.toContainText("Not on injury report");
 
       const ne = section.getByRole("list", { name: `${g.away.name} star players` }).getByRole("listitem");
       await expect(ne).toHaveCount(5);

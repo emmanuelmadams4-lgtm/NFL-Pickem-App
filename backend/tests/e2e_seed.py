@@ -61,6 +61,11 @@ def _stars(s, now: datetime) -> None:
         report_status="Out", practice_status=None, injury="Ankle", source="nflverse",
         observed_at=now - timedelta(hours=3),
     ))  # fmt: skip
+    s.add(InjuryReport(  # a star with a practice note and no game status: on the report, status not known
+        season=CURRENT, week=4, team="KC", player_id="00-105", player="Russ Rush", position="DE",
+        report_status=None, practice_status="Limited", injury="Rest", source="nflverse",
+        observed_at=now - timedelta(hours=3),
+    ))  # fmt: skip
     s.commit()
     service.run_logged(s, "nflverse", "stars", lambda: 15)
     service.run_logged(s, "espn", "head_coaches", lambda: 6)

@@ -1,0 +1,7 @@
+FAILED tests/test_stars.py::test_game_stars_lists_every_star_of_both_clubs_with_his_status - KeyError: 'listed'
+FAILED tests/test_stars.py::test_a_star_with_no_id_is_matched_when_the_two_files_spell_his_name_differently[Jos\xe9 Catcher-Jose Catcher] - AssertionError: assert [] == ['José Catcher']
+FAILED tests/test_stars.py::test_a_name_that_fits_two_reports_takes_the_exact_one_or_none - AssertionError: assert [{'team': 'KC...': None, ...}] == []
+3 failed, 69 passed in 10.50s
+FAILED tests/test_api.py::test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them - AttributeError: 'StarStatus' object has no attribute 'listed'
+1 failed, 10 passed in 10.57s
+25 passed in 9.80s
