@@ -200,3 +200,47 @@ Explicit scope-locked `/refactor` pass after the review fixes: work order 5 (`wo
 Proof after the edit (mine): ruff clean; `test_api.py` 11 passed; `test_stars.py` 70 passed; typecheck exit 0; `gen:api` no change; `wo5-e2e.log` (load 4.96, build ok): 17 passed. Screenshots `after3-*.png`.
 
 Remaining, classified: the week board reads stars once per game (about five small queries per game, 16 games): acceptable for one user; a single batched read belongs to step 13 (backend speed). Carried to the ingestion lane (not this lane's files): `checked_at` per season, an empty injuries file logging ok, distinct failure messages.
+
+## 5. VERIFICATION
+
+### Polish and first gate pair (before the final HEAD)
+
+* Work order 6 (`wo-6.md`): five class changes from the polish critic and the blind judge. Typecheck exit 0. Lane replayed onto main `a71e112` (no conflicts).
+* **Gate pair g1 on `89600bd`: RED, kept as evidence** (`g1-a-*.log`; load 9.23 before).
+  * `g1-a-pytest.log`: 1 failed, 658 passed: `test_health_is_degraded_without_a_fresh_worker_heartbeat`. Cause: health reports "degraded" while any freshness dataset is stale, and work order 3 added two datasets that the test's setup did not refresh. Production code is right (the worker refreshes both every round; a refresh that fails for days should show). Fixed in the test setup (my file). Operational consequence, said plainly: `/api/health` now turns "degraded" when the star list is more than 8 days old or the head coaches more than 30.
+  * `g1-a-e2e.log`: 1 failed, 118 passed: existing check L1 (phone density): the first card's pick buttons ended at 827 px, limit 778 px. A real regression from this step: the stars block was up to four lines. The earlier browser runs had run only `stars.spec.ts`, so they could not see it.
+  * `g1-b` is **void**: I edited tests and ran three single test files against the shared test database while it ran (661 errors are mine). Lesson recorded: nothing else runs during a gate.
+
+### Security review (Dwight), round 1 on `89600bd`: PASS, no critical, no high
+
+Report and decisions: `reviews/dwight-1.md`. Accepted with red tests first (`red-4.log`): M1 offline cache version, M3 name matching, M4 "No game status". Not changed or carried, with reasons: M2, M5, M6, lows.
+
+### Work order 7 (`wo-7.md`), two tries, commit `7c5572d`
+
+| Part | What | Proof (mine) |
+|---|---|---|
+| A | The card's stars block is one line that never wraps: label, names (truncate with an ellipsis), "+N more", "seen 3h ago", "{club}: no star list". This amends my round-1 decision "names are never cut": owner decision D27 asks for "a short who's-out line" with the full list on the game screen, and the density rule L1 is older than this step. | browser L1 and ST2 in the gate below |
+| B | `persist.ts` `VERSION = 2` | by reading (`persist.ts:19` drops a cache of another version) |
+| C | `_normal_name` folds accents; `_star_report`: id matches plus name matches where one side has no id; more than one distinct raw name: only the exact spelling counts; the newest report wins | `test_stars.py` 72 passed |
+| D | `listed` on star rows and in `StarStatus`; "No game status" on the game screen | `test_stars.py`, `test_api.py` 11 passed, browser ST4 |
+
+Try 1 broke one existing star test (`test_stars_out_takes_the_newest_report_when_one_has_an_id_and_one_has_none`: an id match returned at once, so a newer report without the id lost). Try 2 fixed that one function. Lane replayed onto main `e51ac48` (no conflicts); `npm run gen:api` after the replay: no drift.
+
+### Security review (Dwight), round 2 on the delta at `7c5572d`: PASS
+
+Hive message a0e34f. M1, M3, M4 fixed as described; nothing new of critical, high or medium severity; my decisions on M2, M5, M6 and the lows accepted. He checked that the replayed parent holds the same code he reviewed. One low carried on his advice: a namesake on the same club whose report has no id could still join the candidates when the star matched by id.
+
+### Final gate pair g2 on `7c5572d` (lane replayed onto main `e51ac48`): GREEN twice
+
+Command: `docs/gauntlet/logs/step-8a2-evidence/gate.sh <label>` under coord locks `res:gate` and `res:e2e`, lease renewed every 45 s, locks still mine at the end of each run. Packages installed first (`install-npm.log`, `install-uv.log`).
+
+| Run | Load before (1, 5, 15 min) | pytest | ruff | gen:api | typecheck | browser |
+|---|---|---|---|---|---|---|
+| g2-a | 13.13 11.24 9.64 (measured right after my own package install; above the 12 line, said as it is) | 965 passed | clean | no drift | exit 0 | 119 passed |
+| g2-b | 8.88 9.80 9.50 | 965 passed | clean | no drift | exit 0 | 119 passed |
+
+Logs: `g2-a-*.log`, `g2-b-*.log`. Baseline before the step on the old main: `base-a-*.log`.
+
+**Lane-guard** (`lane-guard.log`, against `e51ac48`): `OUT OF LANE: backend/nflpi/ingestion/service.py: owned by lane coaches`, 1 problem. That is the one edit the integrator granted (hive message 08276f: two `STALE_HOURS` entries) and said he accepts; no other finding.
+
+Builders: work orders 1 to 7 were all built by Ryan (Codex). None by Claude.
