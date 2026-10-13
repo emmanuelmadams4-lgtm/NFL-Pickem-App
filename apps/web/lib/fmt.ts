@@ -45,11 +45,12 @@ export function safeGet(key: string): string | null {
   }
 }
 
-export function safeSet(key: string, value: string): void {
+export function safeSet(key: string, value: string): boolean {
   try {
     localStorage.setItem(key, value);
+    return true;
   } catch {
-    /* storage unavailable */
+    return false;
   }
 }
 

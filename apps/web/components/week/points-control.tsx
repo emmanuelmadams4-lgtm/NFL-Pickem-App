@@ -45,7 +45,7 @@ export function PointsControl({ game, count }: { game: GameSummary; count: numbe
   }
 
   return (
-    <div className="relative z-10 border-t border-border pt-3">
+    <div className="relative z-10 lg:border-t lg:border-border lg:pt-3">
       <div className="flex flex-wrap items-center gap-3">
         {points === null ? <span className="text-sm font-medium text-text">Points</span> : <label htmlFor={`points-${game.game_id}`} className="text-sm font-medium text-text">Points</label>}
         {points === null ? <span className="text-text-2">– <span className="text-label">No points yet</span></span> : <select id={`points-${game.game_id}`}

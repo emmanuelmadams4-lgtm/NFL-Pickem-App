@@ -45,6 +45,8 @@ export interface ClientConfig {
   fetch?: typeof fetch;
 }
 
+export const API_TIMEOUT_MS = 5000;
+
 /** One typed client for web. Every call goes to our own backend only. */
 export function createClient(config: ClientConfig) {
   const f = config.fetch ?? fetch;
@@ -53,6 +55,9 @@ export function createClient(config: ClientConfig) {
   async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
     const res = await f(`${base}/api${path}`, {
       ...init,
+      signal: init.signal ?? (/\/report(?:\?|$)/.test(path) || ["/ask", "/picks/import", "/refresh"].some((slow) => path.endsWith(slow))
+        ? undefined
+        : AbortSignal.timeout(API_TIMEOUT_MS)),
       headers: {
         Authorization: `Bearer ${config.token}`,
         ...(init.body && typeof init.body === "string" && !path.endsWith("import")

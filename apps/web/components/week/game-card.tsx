@@ -18,10 +18,10 @@ const scoreClass = (t: ScoreTone) => (t === "lost" ? "text-text-2 [&>span]:font-
 /** One side of the card's top band: logo, abbreviation in the display face, name and record. */
 function TeamSide({ team, record, right, onLime }: { team: Team; record: string; right?: boolean; onLime?: boolean }) {
   return (
-    <div className={cx("flex min-w-0 flex-col gap-1.5", right ? "items-end text-right" : "items-start")}>
+    <div className={cx("flex min-w-0 items-center gap-2 lg:flex-col lg:gap-1.5", right ? "flex-row-reverse text-right lg:items-end" : "lg:items-start")}>
       <TeamLogo team={team} size={40} onLight={onLime} />
       <div className="min-w-0 max-w-full">
-        <p className="font-display text-2xl leading-6">{team.abbr}</p>
+        <p className="font-display text-xl leading-5 lg:text-2xl lg:leading-6">{team.abbr}</p>
         <p className={cx("truncate text-label", onLime ? "text-accent-ink" : "text-text-2")}>{team.name}</p>
         <p className={cx("text-label", onLime ? "text-accent-ink" : "text-subtle")}>{record}</p>
       </div>
@@ -71,23 +71,23 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
         className="absolute inset-0 z-0 rounded-card focus-visible:outline-offset-[-2px]"
       />
 
-      <div className={cx("grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 p-4", highlight ? "bg-accent text-accent-ink" : "text-text")}>
+      <div className={cx("grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 p-3 lg:gap-3 lg:p-4", highlight ? "bg-accent text-accent-ink" : "text-text")}>
         <TeamSide team={game.away} record={game.away_record} onLime={highlight} />
-        <span className={cx("font-display grid size-11 shrink-0 place-items-center rounded-full text-lg", highlight ? "bg-accent-ink text-accent" : "border border-border bg-elevated text-text")}>
+        <span className={cx("font-display grid size-9 shrink-0 place-items-center rounded-full text-base lg:size-11 lg:text-lg", highlight ? "bg-accent-ink text-accent" : "border border-border bg-elevated text-text")}>
           VS
         </span>
         <TeamSide team={game.home} record={game.home_record} right onLime={highlight} />
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 border-t border-border p-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-1 flex-col gap-2 border-t border-border p-3 lg:gap-3 lg:p-4">
+        <div className="flex flex-wrap items-end justify-between gap-2 lg:gap-3">
           <div className="min-w-0">
             <p className="text-label text-text-2">
               {shortDate(game.kickoff_utc)}
-              {highlight && <span className="text-accent-text">, next kickoff</span>}
+              {highlight && <span>, next kickoff</span>}
             </p>
             {started && away !== null && home !== null ? (
-              <p className="font-display flex items-baseline gap-1.5 text-[32px] leading-9 whitespace-nowrap">
+              <p className="font-display flex items-baseline gap-1.5 text-3xl leading-8 whitespace-nowrap lg:text-[32px] lg:leading-9">
                 <span className="sr-only">
                   {final ? "Final score" : "Score"} {game.away.abbr} {away}, {game.home.abbr} {home}
                 </span>
@@ -106,7 +106,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
             ) : game.status === "postponed" ? (
               <p className="py-1.5"><Chip tone="warn">Postponed</Chip></p>
             ) : (
-              <p className="font-display text-[32px] leading-9 text-text">{kickoffClock(game)}</p>
+              <p className="font-display text-3xl leading-8 text-text lg:text-[32px] lg:leading-9">{kickoffClock(game)}</p>
             )}
           </div>
           {p && pickTeam && prob !== null && (
@@ -115,7 +115,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
               <p className="flex items-center justify-end gap-1.5">
                 <TeamLogo team={pickTeam} size={20} />
                 <span className="text-sm font-semibold">{p.pick}</span>
-                <span className="font-display text-[32px] leading-9 text-text">{pct(prob)}</span>
+                <span className="font-display text-3xl leading-8 text-text lg:text-[32px] lg:leading-9">{pct(prob)}</span>
               </p>
             </div>
           )}
@@ -124,7 +124,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
         {p && prob !== null ? (
           <div>
             <ProbBar value={prob} fromRight={p.pick === game.home.abbr} label={`${p.pick} win probability`} />
-            <div className="mt-2">
+            <div className="mt-1.5 lg:mt-2">
               {game.sheet.label && game.sheet.label in labelWords && (
                 <p className="text-sm font-medium text-text">
                   <span data-testid="pick-label">{labelWords[game.sheet.label as keyof typeof labelWords][0]}</span>
@@ -133,24 +133,28 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
                   )}
                 </p>
               )}
-              <span className="mt-1 flex items-center gap-1.5 text-label text-subtle">
-                Uncertainty <UncertaintyChip prediction={p} />
-              </span>
             </div>
           </div>
         ) : (
           <p className="text-sm text-subtle">No prediction yet</p>
         )}
-        <p className="text-label text-text-2">
-          Market{" "}
-          {fav ? (
-            <>
-              <span className="font-semibold text-text">{fav.team}</span> {pct(fav.prob)}
-            </>
-          ) : (
-            <span className="text-subtle">no line yet</span>
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          {p && (
+            <span className="flex items-center gap-1.5 text-label text-subtle">
+              Uncertainty <UncertaintyChip prediction={p} />
+            </span>
           )}
-        </p>
+          <p className="text-label text-text-2">
+            Market{" "}
+            {fav ? (
+              <>
+                <span className="font-semibold text-text">{fav.team}</span> {pct(fav.prob)}
+              </>
+            ) : (
+              <span className="text-subtle">no line yet</span>
+            )}
+          </p>
+        </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
           {game.status === "in_progress" && <Chip>In progress</Chip>}
@@ -189,25 +193,28 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
           <p className="flex items-start gap-1.5 text-label text-text-2">
             <Refresh size={14} className="mt-px shrink-0" />
             <span>
-              <span className="font-medium text-text">What changed:</span> {p.change_note}
+              <span className="font-medium text-text">What changed:</span> {p.change_note.replace(/^Changed:\s*/i, "")}
             </span>
           </p>
         )}
 
-        <PointsControl game={game} count={pointsCount} />
-
-        <div className="mt-auto pt-1">
-          {game.sheet.pick_by === "app" && !locked && game.sheet.app_pick && (
-            <p className="mb-2 text-label text-text-2">Counts as {game.sheet.app_pick}, the model&apos;s pick, unless you tap a team.</p>
-          )}
-          {game.sheet.pick_by === "auto" && <p className="mb-2"><Chip>Model picked {game.sheet.my_pick} for you</Chip></p>}
-          <PickButtons game={game} />
-          {final && (
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5">
-              {game.my_pick ? <Mark correct={game.my_pick_correct} who={game.sheet.pick_by === "auto" ? "Picked for you" : "Me"} /> : <span className="text-label text-subtle">No pick made</span>}
-              <Mark correct={game.model_correct} who="Model" />
+        <div className="mt-auto border-t border-border pt-2 lg:contents">
+          <div className="flex flex-wrap items-end gap-2 lg:contents">
+            <PointsControl game={game} count={pointsCount} />
+            <div className="contents lg:relative lg:z-10 lg:mt-auto lg:block lg:pt-1">
+              {game.sheet.pick_by === "app" && !locked && game.sheet.app_pick && (
+                <p className="order-first w-full text-label text-text-2 lg:mb-2">Counts as {game.sheet.app_pick}, the model&apos;s pick, unless you tap a team.</p>
+              )}
+              {game.sheet.pick_by === "auto" && <p className="order-first w-full lg:mb-2"><Chip>Model picked {game.sheet.my_pick} for you</Chip></p>}
+              <PickButtons game={game} className="min-w-36 flex-1 lg:min-w-0" />
+              {final && (
+                <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-0.5 lg:mt-2">
+                  {game.my_pick ? <Mark correct={game.my_pick_correct} who={game.sheet.pick_by === "auto" ? "Picked for you" : "Me"} /> : <span className="text-label text-subtle">No pick made</span>}
+                  <Mark correct={game.model_correct} who="Model" />
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </li>

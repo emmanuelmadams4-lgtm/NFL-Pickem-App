@@ -5,7 +5,7 @@ import { ApiError, keys, type GameDetail, type Provider, type Week } from "@nflp
 import { useApi } from "@/lib/api";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { isNetworkError, queuePick } from "@/lib/sync";
+import { isNetworkError, isServerReachable, orderedPickSend, queuePick, queuedPick, unqueueIfCurrent } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
 
@@ -71,20 +71,26 @@ export function useSetPick(gameId: string) {
     // One game's taps reach the server in order, so a quick pick-then-clear can't land as pick.
     scope: { id: `pick:${gameId}` },
     // Offline: keep the optimistic choice, queue it, and report success. The queue flushes when we are back online.
-    mutationFn: async (v: PickVars): Promise<{ queued: boolean }> => {
+    mutationFn: (v: PickVars): Promise<{ queued: boolean }> => orderedPickSend(v.gameId, async () => {
+      if (queuedPick(v.gameId) !== v.team) return { queued: true };
+      if (!navigator.onLine || !isServerReachable()) {
+        return { queued: true };
+      }
       try {
         if (v.team) await api.setPick(v.gameId, v.team);
         else await api.clearPick(v.gameId);
+        unqueueIfCurrent(v.gameId, v.team);
         return { queued: false };
       } catch (e) {
         if (isNetworkError(e)) {
-          queuePick(v.gameId, v.team);
           return { queued: true };
         }
+        unqueueIfCurrent(v.gameId, v.team);
         throw e;
       }
-    },
+    }),
     onMutate: async (v) => {
+      const persisted = queuePick(v.gameId, v.team);
       const weekKey = keys.week(v.season, v.week);
       const gameKey = keys.game(v.gameId);
       await Promise.all([qc.cancelQueries({ queryKey: weekKey }), qc.cancelQueries({ queryKey: gameKey })]);
@@ -92,7 +98,7 @@ export function useSetPick(gameId: string) {
       const prevGame = qc.getQueryData<GameDetail>(gameKey);
       qc.setQueryData<Week>(weekKey, (w) => (w ? withPick(w, v.gameId, v.team) : w));
       qc.setQueryData<GameDetail>(gameKey, (g) => (g ? { ...g, my_pick: v.team } : g));
-      return { prevWeek, prevGame };
+      return { prevWeek, prevGame, persisted };
     },
     onError: (err, v, ctx) => {
       if (ctx?.prevWeek) qc.setQueryData(keys.week(v.season, v.week), ctx.prevWeek);
@@ -100,8 +106,13 @@ export function useSetPick(gameId: string) {
       if (err instanceof ApiError && err.status === 409) toast("Locked at kickoff.", "warn");
       else toast(`Pick not saved. ${errorMessage(err)}`, "bad");
     },
-    onSettled: (data, _err, v) => {
-      if (data?.queued) return; // do not refetch over a pick the server has not seen yet
+    onSettled: (data, _err, v, ctx) => {
+      if (data?.queued) {
+        if (ctx?.persisted === false && queuedPick(v.gameId) === v.team) {
+          toast("Could not save this pick on the phone. Keep the app open until it syncs.", "warn");
+        }
+        return; // do not refetch over a pick the server has not seen yet
+      }
       qc.invalidateQueries({ queryKey: keys.week(v.season, v.week) });
       qc.invalidateQueries({ queryKey: keys.game(v.gameId) });
       qc.invalidateQueries({ queryKey: ["performance"] });

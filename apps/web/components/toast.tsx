@@ -7,9 +7,10 @@ interface ToastItem {
   id: number;
   message: string;
   tone: Tone;
+  action?: { label: string; onClick: () => void };
 }
 
-const ToastContext = createContext<{ toast: (message: string, tone?: Tone) => void } | null>(null);
+const ToastContext = createContext<{ toast: (message: string, tone?: Tone, action?: ToastItem["action"]) => void } | null>(null);
 
 const toneClass: Record<Tone, string> = {
   info: "border-border",
@@ -24,10 +25,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const next = useRef(1);
 
-  const toast = useCallback((message: string, tone: Tone = "info") => {
+  const toast = useCallback((message: string, tone: Tone = "info", action?: ToastItem["action"]) => {
     const id = next.current++;
-    setItems((cur) => [...cur.slice(-3), { id, message, tone }]);
-    window.setTimeout(() => setItems((cur) => cur.filter((t) => t.id !== id)), 5000);
+    setItems((cur) => {
+      if (action && cur.some((item) => item.action && item.message === message)) return cur;
+      return [...cur.filter((item) => item.action), ...cur.filter((item) => !item.action).slice(-2), { id, message, tone, action }];
+    });
+    if (!action) window.setTimeout(() => setItems((cur) => cur.filter((t) => t.id !== id)), 5000);
   }, []);
 
   const value = useMemo(() => ({ toast }), [toast]);
@@ -47,6 +51,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           >
             <span className={`mr-2 text-xs font-semibold ${toneText[t.tone]}`}>{toneLabel[t.tone]}</span>
             <span className="text-text">{t.message}</span>
+            {t.action && (
+              <button
+                type="button"
+                className="ml-3 min-h-11 rounded-ctl px-3 font-semibold text-accent"
+                onClick={() => {
+                  setItems((cur) => cur.filter((item) => item.id !== t.id));
+                  t.action?.onClick();
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
           </div>
         ))}
       </div>

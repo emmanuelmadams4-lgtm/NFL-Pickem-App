@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, keys, type ScorecardWeek } from "@nflpi/shared";
 import { useApi } from "@/lib/api";
@@ -26,11 +26,13 @@ export function Scorecard({ season }: { season: number }) {
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const selectedWeek = week ?? meta?.current_week ?? 1;
+  const edited = useRef({ week: selectedWeek, rank: false, leader: false });
   useEffect(() => {
+    if (edited.current.week !== selectedWeek) edited.current = { week: selectedWeek, rank: false, leader: false };
     if (!q.data) return;
     const row = q.data.weeks.find((r) => r.week === selectedWeek);
-    setRank(row?.rank == null ? "" : String(row.rank));
-    setLeader(row?.leader_points == null ? "" : String(row.leader_points));
+    if (!edited.current.rank) setRank(row?.rank == null ? "" : String(row.rank));
+    if (!edited.current.leader) setLeader(row?.leader_points == null ? "" : String(row.leader_points));
   }, [q.data, selectedWeek]);
 
   async function save(e: FormEvent<HTMLFormElement>) {
@@ -40,6 +42,7 @@ export function Scorecard({ season }: { season: number }) {
     setBusy(true);
     try {
       await api.setRank(season, selectedWeek, { rank: Number(rank), leader_points: leader === "" ? null : Number(leader) });
+      await qc.cancelQueries({ queryKey: keys.scorecard(season) });
       await qc.invalidateQueries({ queryKey: keys.scorecard(season) });
       setSaved(true);
     } catch (err) {
@@ -95,15 +98,15 @@ export function Scorecard({ season }: { season: number }) {
           <p className="text-label text-text-2">From your Yahoo league&apos;s standings.</p>
           <div className="flex flex-wrap gap-3">
             <label className="block w-full max-w-40 text-label text-text-2">Week
-              <select className={inputClass} value={selectedWeek} onChange={(e) => { const w = Number(e.target.value); setWeek(w); const row = q.data?.weeks.find((r) => r.week === w); setRank(row?.rank == null ? "" : String(row.rank)); setLeader(row?.leader_points == null ? "" : String(row.leader_points)); }}>
+              <select className={inputClass} value={selectedWeek} onChange={(e) => { const w = Number(e.target.value); edited.current = { week: w, rank: false, leader: false }; setWeek(w); const row = q.data?.weeks.find((r) => r.week === w); setRank(row?.rank == null ? "" : String(row.rank)); setLeader(row?.leader_points == null ? "" : String(row.leader_points)); }}>
                 {Array.from({ length: 18 }, (_, i) => <option key={i + 1} value={i + 1}>Week {i + 1}</option>)}
               </select>
             </label>
             <label className="block w-full max-w-40 text-label text-text-2">Your rank
-              <input className={inputClass} type="number" min="1" required value={rank} onChange={(e) => setRank(e.target.value)} />
+              <input className={inputClass} type="number" min="1" required value={rank} onChange={(e) => { edited.current.rank = true; setRank(e.target.value); }} />
             </label>
             <label className="block w-full max-w-40 text-label text-text-2">Leader&apos;s points
-              <input className={inputClass} type="number" min="0" value={leader} onChange={(e) => setLeader(e.target.value)} />
+              <input className={inputClass} type="number" min="0" value={leader} onChange={(e) => { edited.current.leader = true; setLeader(e.target.value); }} />
             </label>
           </div>
           {error && <p role="alert" className="text-sm text-bad">{error}</p>}

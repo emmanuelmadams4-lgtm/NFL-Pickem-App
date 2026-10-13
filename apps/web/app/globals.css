@@ -145,10 +145,12 @@
     -webkit-text-size-adjust: 100%;
     /* Keyboard focus scrolls stop clear of the floating phone tab bar. */
     scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    scroll-padding-top: calc(var(--header-h) + 12px);
   }
   @media (min-width: 1024px) {
     html {
       scroll-padding-bottom: 0;
+      scroll-padding-top: 0;
     }
   }
   body {

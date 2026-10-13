@@ -24,7 +24,7 @@ export function useOnline(): boolean {
   );
 }
 
-/** Timestamp of the last API response that really came from the network (not the service worker cache). */
+/** Timestamp of the last successful API response. */
 const SYNC_KEY = "nflpi_last_sync";
 export function markNetworkSync() {
   safeSet(SYNC_KEY, String(Date.now()));
@@ -34,15 +34,49 @@ export function lastNetworkSync(): number | null {
   return Number.isFinite(v) && v > 0 ? v : null;
 }
 
-/** fetch wrapper: remembers when the app last heard from the server, ignoring responses the service worker replayed. */
+let serverReachable = true;
+const reachabilityListeners = new Set<() => void>();
+
+function setServerReachable(value: boolean) {
+  if (serverReachable === value) return;
+  serverReachable = value;
+  reachabilityListeners.forEach((listener) => listener());
+}
+
+export function isServerReachable(): boolean {
+  return serverReachable;
+}
+
+export function useServerReachable(): boolean {
+  return useSyncExternalStore(
+    (listener) => {
+      reachabilityListeners.add(listener);
+      return () => reachabilityListeners.delete(listener);
+    },
+    isServerReachable,
+    () => true,
+  );
+}
+
+/** Remember whether the server answered; HTTP errors still prove it is reachable. */
 export const trackedFetch: typeof fetch = async (input, init) => {
-  const res = await fetch(input, init);
-  if (res.ok && !res.headers.get("x-sw-cache")) markNetworkSync();
-  return res;
+  try {
+    const res = await fetch(input, init);
+    setServerReachable(true);
+    if (res.ok) markNetworkSync();
+    return res;
+  } catch (error) {
+    setServerReachable(false);
+    throw error;
+  }
 };
 
 export function isNetworkError(e: unknown): boolean {
-  return !(e instanceof ApiError) && (e instanceof TypeError || (e instanceof Error && /network|fetch|load failed/i.test(e.message)));
+  return !(e instanceof ApiError) && (
+    e instanceof TypeError ||
+    (e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError")) ||
+    (e instanceof Error && /network|fetch|load failed/i.test(e.message))
+  );
 }
 
 /* ---------- offline pick queue ---------- */
@@ -51,32 +85,84 @@ const QUEUE_KEY = "nflpi_pick_queue";
 type Queue = Record<string, string | null>;
 
 let snapshot: Queue | null = null;
+let volatileQueue: Queue | null = null;
 const listeners = new Set<() => void>();
+let listeningForStorage = false;
+
+function readStoredQueue(): Queue {
+  try {
+    const parsed: unknown = JSON.parse(safeGet(QUEUE_KEY) ?? "{}");
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(Object.entries(parsed).filter(([, team]) => typeof team === "string" || team === null)) as Queue;
+  } catch {
+    return {};
+  }
+}
+
+function currentQueue(): Queue {
+  return volatileQueue ?? readStoredQueue();
+}
+
+function listenForStorage() {
+  if (listeningForStorage || typeof window === "undefined") return;
+  listeningForStorage = true;
+  window.addEventListener("storage", (event) => {
+    if (event.key !== QUEUE_KEY) return;
+    snapshot = null;
+    listeners.forEach((listener) => listener());
+  });
+}
 
 function readQueue(): Queue {
-  if (snapshot) return snapshot;
-  try {
-    snapshot = JSON.parse(safeGet(QUEUE_KEY) ?? "{}") as Queue;
-  } catch {
-    snapshot = {};
-  }
+  listenForStorage();
+  if (!snapshot) snapshot = currentQueue();
   return snapshot;
 }
 
-function writeQueue(q: Queue) {
+function writeQueue(q: Queue): boolean {
+  listenForStorage();
+  const stored = safeSet(QUEUE_KEY, JSON.stringify(q));
   snapshot = q;
-  safeSet(QUEUE_KEY, JSON.stringify(q));
+  volatileQueue = stored ? null : q;
   listeners.forEach((l) => l());
+  return stored;
 }
 
-export function queuePick(gameId: string, team: string | null) {
-  writeQueue({ ...readQueue(), [gameId]: team });
+export function queuePick(gameId: string, team: string | null): boolean {
+  return writeQueue({ ...currentQueue(), [gameId]: team });
 }
 
-function unqueue(gameId: string) {
-  const next = { ...readQueue() };
+export function queuedPick(gameId: string): string | null | undefined {
+  return currentQueue()[gameId];
+}
+
+let warnedGameId: string | null = null;
+
+export function unqueue(gameId: string) {
+  const next = { ...currentQueue() };
   delete next[gameId];
   writeQueue(next);
+  if (warnedGameId === gameId) warnedGameId = null;
+}
+
+export function unqueueIfCurrent(gameId: string, team: string | null): boolean {
+  const queue = currentQueue();
+  if (queue[gameId] !== team) return false;
+  unqueue(gameId);
+  return true;
+}
+
+const pickSends = new Map<string, Promise<void>>();
+
+/** Keep direct saves and queued saves for one game in the order they start. */
+export function orderedPickSend<T>(gameId: string, send: () => Promise<T>): Promise<T> {
+  const current = (pickSends.get(gameId) ?? Promise.resolve()).then(send);
+  const settled = current.then(() => undefined, () => undefined);
+  pickSends.set(gameId, settled);
+  void settled.then(() => {
+    if (pickSends.get(gameId) === settled) pickSends.delete(gameId);
+  });
+  return current;
 }
 
 export function pendingCount(): number {
@@ -114,19 +200,24 @@ export async function flushPicks(api: Api, qc: QueryClient, notify: (message: st
   let locked = 0;
   try {
     for (const [gameId, team] of entries) {
+      if (readQueue()[gameId] !== team) continue;
       try {
-        if (team) await api.setPick(gameId, team);
-        else await api.clearPick(gameId);
-        unqueue(gameId);
-        synced++;
+        const saved = await orderedPickSend(gameId, async () => {
+          if (readQueue()[gameId] !== team) return false;
+          if (team) await api.setPick(gameId, team);
+          else await api.clearPick(gameId);
+          return unqueueIfCurrent(gameId, team);
+        });
+        if (saved) synced++;
       } catch (e) {
         if (e instanceof ApiError && (e.status === 409 || e.status === 422 || e.status === 404)) {
-          unqueue(gameId);
-          locked++;
+          if (unqueueIfCurrent(gameId, team)) locked++;
         } else if (isNetworkError(e)) {
           break;
         } else {
-          throw e;
+          if (warnedGameId !== gameId) notify("Pick not saved yet. Will retry.", "warn");
+          warnedGameId = gameId;
+          if (e instanceof ApiError && e.status === 401) break;
         }
       }
     }
@@ -137,7 +228,7 @@ export async function flushPicks(api: Api, qc: QueryClient, notify: (message: st
       qc.invalidateQueries({ queryKey: ["game"] });
       qc.invalidateQueries({ queryKey: ["performance"] });
     }
-    if (locked > 0) notify(`${locked} offline ${locked === 1 ? "pick was" : "picks were"} not saved: locked at kickoff.`, "warn");
-    else if (synced > 0) notify(`${synced} offline ${synced === 1 ? "pick" : "picks"} synced.`, "good");
+    if (locked > 0) notify(`${locked} waiting ${locked === 1 ? "pick was" : "picks were"} not saved: locked at kickoff.`, "warn");
+    else if (synced > 0) notify(`${synced} waiting ${synced === 1 ? "pick" : "picks"} saved.`, "good");
   }
 }

@@ -131,6 +131,23 @@ test("U2 copy sheet: every game in kickoff order with the winner and points, and
   await expect(page.getByRole("status")).toContainText(/copied/i);
 });
 
+test("U3b results: a rank typed before the scorecard has loaded is not wiped when it arrives", async ({ page }) => {
+  await page.route("**/api/scorecard/**", async (route) => {
+    await new Promise((r) => setTimeout(r, 1_500));
+    await route.continue().catch(() => undefined);
+  });
+  await signIn(page);
+  const scorecard = page.waitForResponse((r) => r.url().includes("/api/scorecard/"));
+  await page.goto("/performance/");
+  const form = page.getByRole("group", { name: "Your Yahoo rank" });
+  await form.getByLabel("Your rank").fill("9");
+  await form.getByLabel("Leader's points").fill("77");
+  await scorecard;
+  await page.waitForLoadState("networkidle");
+  await expect(form.getByLabel("Your rank")).toHaveValue("9");
+  await expect(form.getByLabel("Leader's points")).toHaveValue("77");
+});
+
 test("U3 results: he enters his Yahoo rank for a week and the scorecard shows it", async ({ page, request }) => {
   const { meta } = await board(request);
   await signIn(page);
@@ -152,6 +169,37 @@ test("U3 results: he enters his Yahoo rank for a week and the scorecard shows it
   const table = page.getByRole("table", { name: "Scorecard" });
   for (const head of ["Week", "You", "Model", "Rank"]) await expect(table.getByRole("columnheader", { name: head, exact: true })).toBeVisible();
   await expect(table.getByRole("row").filter({ hasText: `Week ${meta.current_week}` })).toContainText("4");
+});
+
+test("U3c results: a rank saved before the scorecard has loaded still shows in the scorecard", async ({ page, request }) => {
+  const { meta } = await board(request);
+  await signIn(page);
+  // The page's first scorecard answer is read from the server at once but handed over only after the save.
+  let release: () => void = () => undefined;
+  const afterSave = new Promise<void>((r) => (release = r));
+  let held = false;
+  await page.route("**/api/scorecard/**", async (route) => {
+    if (held) return route.continue();
+    held = true;
+    const response = await route.fetch();
+    await afterSave;
+    await route.fulfill({ response });
+  });
+  await page.goto("/performance/");
+  const form = page.getByRole("group", { name: "Your Yahoo rank" });
+  try {
+    await form.getByLabel("Week").selectOption(String(meta.current_week));
+    await form.getByLabel("Your rank").fill("6");
+    await form.getByLabel("Leader's points").fill("55");
+    const put = page.waitForResponse((r) => r.url().includes("/api/ranks/") && r.request().method() === "PUT");
+    await form.getByRole("button", { name: "Save rank" }).click();
+    expect((await put).ok()).toBeTruthy();
+  } finally {
+    release();
+  }
+  await expect(page.getByText("Rank saved")).toBeVisible();
+  const row = page.getByRole("table", { name: "Scorecard" }).getByRole("row").filter({ hasText: `Week ${meta.current_week}` });
+  await expect(row, "the scorecard shows what was just saved, not the answer from before the save").toContainText("Leader 55 points");
 });
 
 for (const scheme of ["dark", "light"] as const) {

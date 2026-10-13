@@ -26,7 +26,7 @@ const SCOPES: { value: Scope; label: string }[] = [
 /** A filter chip (design.md § 0): a pill, lime when selected (amber for the attention filter). */
 const chipClass = (on: boolean, onTone = "border-transparent bg-accent text-accent-ink") =>
   cx(
-    "h-10 shrink-0 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap transition-colors lg:h-9",
+    "h-11 shrink-0 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap transition-colors lg:h-9",
     on ? onTone : "border-border bg-elevated text-text-2 hover:border-border-strong hover:text-text",
   );
 
@@ -96,24 +96,26 @@ export function WeekBoard() {
   const stale = staleList(data?.freshness).filter(feedsModel);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-2 lg:space-y-5">
       <PageHead
         kicker="Picks"
         title={`Week ${week}`}
-        sub={`${season} season${data ? `, ${data.summary.games_total} games` : ""}`}
+        sub={
+          <>
+            <span className="lg:hidden">{season}{data ? ` · ${data.summary.games_total} games` : ""}</span>
+            <span className="hidden lg:inline">{season} season{data ? `, ${data.summary.games_total} games` : ""}</span>
+            {data && <span className="ml-2 text-xs text-subtle">Updated {ago(data.generated_at)}{q.isFetching && !q.isPending ? ", refreshing" : ""}</span>}
+          </>
+        }
         aside={
-          data && (
-            <p className="text-xs text-subtle">
-              Updated {ago(data.generated_at)}
-              {q.isFetching && !q.isPending ? ", refreshing" : ""}
-            </p>
-          )
+          <Link href={`/sheet/${qs}`} className="relative z-10 inline-flex min-h-11 items-center gap-1 rounded-full border border-border-strong bg-elevated px-3 text-sm font-medium text-text lg:min-h-9 lg:px-4">
+            Yahoo sheet <ChevronRight size={16} />
+          </Link>
         }
       />
 
       {/* Filter chips directly under the title, before any summary (design.md § 0); one scrolling row on the phone. */}
-      <div className="flex flex-wrap items-center gap-3">
-      <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex min-w-0 items-center gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
+      <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex min-w-0 items-center gap-2 overflow-x-auto pl-4 pr-12 max-lg:[mask-image:linear-gradient(to_right,black_85%,transparent)] lg:mx-0 lg:flex-wrap lg:px-0">
         <div role="group" aria-label="Games shown" className="flex shrink-0 gap-2">
           {SCOPES.map((o) => (
             <button key={o.value} type="button" aria-pressed={scope === o.value} onClick={() => setScope(o.value)} className={chipClass(scope === o.value)}>
@@ -144,12 +146,9 @@ export function WeekBoard() {
           ))}
         </SelectField>
       </div>
-      <Link href={`/sheet/${qs}`} className="relative z-10 inline-flex min-h-11 items-center gap-1 rounded-full border border-border-strong bg-elevated px-4 text-sm font-medium text-text lg:min-h-9">
-        Yahoo sheet <ChevronRight size={16} />
-      </Link>
-      </div>
 
       <WeekPicker className="lg:hidden" />
+
       <InstallHint />
 
       {q.isPending && <BoardSkeleton />}
