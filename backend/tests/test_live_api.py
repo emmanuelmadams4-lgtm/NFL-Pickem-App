@@ -69,11 +69,11 @@ def test_the_route_needs_the_token():
 
 
 def test_there_is_exactly_one_live_route_and_it_only_reads(client):
-    routes = [r for r in app.routes if getattr(r, "path", "") == "/api/live"]
-    assert len(routes) == 1 and routes[0].methods == {"GET"}
+    paths = app.openapi()["paths"]
+    assert set(paths["/api/live"]) == {"get"}
+    assert [p for p in paths if p.startswith("/api/live")] == ["/api/live"]
     for verb in ("post", "put", "patch", "delete"):
         assert getattr(client, verb)("/api/live").status_code == 405
-    assert not [r for r in app.routes if getattr(r, "path", "").startswith("/api/live/")]
 
 
 # ------------------------------------------------------------------------------------------- A3
@@ -226,7 +226,7 @@ def test_stale_means_the_last_good_espn_poll_is_missing_or_more_than_two_minutes
         assert datetime.fromisoformat(data["last_confirmed_at"]) == NOW - age
 
 
-def test_a_quiet_slate_is_an_empty_list_and_stale(client):
+def test_a_quiet_slate_is_an_empty_list_and_stale(session, client):
     data = body(client)
     assert data["games"] == [] and data["stale"] is True and data["last_confirmed_at"] is None
 
