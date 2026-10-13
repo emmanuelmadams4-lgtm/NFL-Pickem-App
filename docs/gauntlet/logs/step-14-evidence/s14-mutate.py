@@ -5,6 +5,7 @@ Run from backend/ with the lane's test database, holding the machine's gate lock
         ../docs/gauntlet/logs/step-14-evidence/s14-mutate.py
 Each change is made in the working tree, tested, and undone. Exit code 1 if any change survives.
 """
+# ruff: noqa: E501  (the strings below must match source lines exactly)
 
 import subprocess
 import sys
