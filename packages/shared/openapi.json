@@ -1169,6 +1169,52 @@
      }
     }
    }
+  },
+  "/api/live": {
+   "get": {
+    "summary": "Live",
+    "operationId": "live_api_live_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LiveOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -2235,6 +2281,156 @@
      "observed_at"
     ],
     "title": "InjuryOut"
+   },
+   "LiveGameOut": {
+    "properties": {
+     "game_id": {
+      "type": "string",
+      "title": "Game Id"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "in",
+       "post",
+       "lost"
+      ],
+      "title": "State"
+     },
+     "home_team": {
+      "type": "string",
+      "title": "Home Team"
+     },
+     "away_team": {
+      "type": "string",
+      "title": "Away Team"
+     },
+     "home_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Score"
+     },
+     "away_score": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Away Score"
+     },
+     "period": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Period"
+     },
+     "clock": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock"
+     },
+     "home_win_prob": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Win Prob",
+      "description": "ESPN's home win probability; null means none right now"
+     },
+     "kalshi_home_prob": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kalshi Home Prob",
+      "description": "Kalshi's fresh live home price; null when unavailable"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Updated At",
+      "description": "When this game's numbers last changed"
+     }
+    },
+    "type": "object",
+    "required": [
+     "game_id",
+     "state",
+     "home_team",
+     "away_team",
+     "home_score",
+     "away_score",
+     "period",
+     "clock",
+     "home_win_prob",
+     "kalshi_home_prob",
+     "updated_at"
+    ],
+    "title": "LiveGameOut"
+   },
+   "LiveOut": {
+    "properties": {
+     "games": {
+      "items": {
+       "$ref": "#/components/schemas/LiveGameOut"
+      },
+      "type": "array",
+      "title": "Games"
+     },
+     "stale": {
+      "type": "boolean",
+      "title": "Stale",
+      "description": "True when a game is in play or lost and the last good ESPN poll is missing or over 2 minutes old"
+     },
+     "last_confirmed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Confirmed At",
+      "description": "Time of the last good ESPN live poll, if any"
+     }
+    },
+    "type": "object",
+    "required": [
+     "games",
+     "stale",
+     "last_confirmed_at"
+    ],
+    "title": "LiveOut"
    },
    "MarketOut": {
     "properties": {
