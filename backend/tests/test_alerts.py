@@ -271,3 +271,109 @@ def test_n7_a_real_push_reaches_a_push_service_signed_and_encrypted(session, cli
     # Only the phone can read it.
     message = json.loads(http_ece.decrypt(got["body"], private_key=phone_key, auth_secret=auth, version="aes128gcm"))
     assert message == {"title": "Test alert", "body": "Alerts work on this device.", "url": "/settings/"}
+
+
+# Round 2: findings of the security review and the fresh critic --------------------------------------------------------
+
+def test_n2_no_second_reminder_once_the_days_first_game_is_over(session, client, pushes):  # noqa: F811
+    """Critic B2: the 13:00 game going final must not make the 20:20 game 'the day's first'."""
+    early = game_row("2026-10-18", "13:00")
+    late = game_row("2026-10-18", "20:20", "2026_07_NE_KC", away_team="NE", home_team="KC")
+    service.ingest_schedules(session, [early, late])
+    subscribe(session)
+    assert push.send_kickoff_reminders(session, datetime(2026, 10, 18, 16, 10, tzinfo=UTC)) == 1  # 12:10 ET
+    session.get(Game, early["game_id"]).status = "final"
+    session.commit()
+    assert push.send_kickoff_reminders(session, datetime(2026, 10, 18, 23, 50, tzinfo=UTC)) == 0  # 7:50 PM ET
+    assert [a["title"] for a in sent(pushes)] == ["Games today: first kickoff 1:00 PM ET"]
+
+
+def _earlier_snapshot(loaded, game, shift: float) -> float | None:
+    """Adds a snapshot `shift` away from the newest one, same pick and same label. None when no such value exists."""
+    from nflpi.analytics.metrics import pick_label
+
+    newest = select(Prediction).where(Prediction.game_id == game.game_id).order_by(Prediction.id.desc())
+    last = loaded.scalars(newest).first()
+    now = last.home_win_prob
+    for was in (now - shift, now + shift):
+        same_pick = (was >= 0.5) == (now >= 0.5)
+        if 0 < was < 1 and same_pick and pick_label(max(was, 1 - was)) == pick_label(max(now, 1 - now)):
+            earlier = {c.name: getattr(last, c.name) for c in Prediction.__table__.columns if c.name != "id"}
+            loaded.add(Prediction(**earlier | {"home_win_prob": was, "inputs_hash": "earlier-snapshot"}))
+            loaded.commit()
+            return was
+    return None
+
+
+def test_n1_an_exact_seven_point_move_is_alerted_as_a_big_move(loaded, pushes):  # noqa: F811
+    """Critic S4: 0.57 - 0.50 is 0.0699... in floating point; a 7 point move must still count."""
+    subscribe(loaded)
+    game = week4_game(loaded)
+    was = _earlier_snapshot(loaded, game, 0.07)
+    assert was is not None, "fixture: no 7 point neighbour with the same pick and label"
+    events = engine.refresh_predictions(loaded, game_ids=[game.game_id])
+    assert [e.game_id for e in events] == [game.game_id]
+    assert push.alert_prediction_changes(loaded, events) == 1
+    alert = sent(pushes)[0]
+    assert alert["title"] == f"Big move: {game.away_team} @ {game.home_team}"
+    assert f"{was:.0%}" in alert["body"] and "Pick stays" in alert["body"]
+
+
+def test_n1_a_six_and_a_half_point_move_is_not_alerted(loaded, pushes):  # noqa: F811
+    subscribe(loaded)
+    game = week4_game(loaded)
+    assert _earlier_snapshot(loaded, game, 0.065) is not None, "fixture: no 6.5 point neighbour"
+    assert engine.refresh_predictions(loaded, game_ids=[game.game_id]) == []
+
+
+KEYS = {"p256dh": "B" * 87, "auth": "a" * 22}
+
+
+@pytest.mark.parametrize("endpoint", [
+    "https://127.0.0.1:5432/x",
+    "https://169.254.169.254/x",
+    "https://100.64.0.1/x",
+    "https://example.com/x",
+    "https://fcm.googleapis.com.evil.example/x",
+    "https://evilpush.apple.com.example/x",
+    "https://notpush.apple.com/x",
+    "https://web.push.apple.com:8443/x",
+    "https://user@web.push.apple.com/x",
+    "https://web.push.apple.com@127.0.0.1/x",
+])
+def test_s1a_subscribe_refuses_an_address_that_is_not_a_push_service(session, client, endpoint):
+    """Security S1a: the server sends to the stored address, so only real push services may be stored."""
+    assert client.post("/api/push/subscribe", json={"endpoint": endpoint, "keys": KEYS}).status_code == 422
+    assert subscriptions(session) == 0
+
+
+@pytest.mark.parametrize("endpoint", [
+    "https://web.push.apple.com/abc",
+    "https://fcm.googleapis.com/fcm/send/abc",
+    "https://updates.push.services.mozilla.com/wpush/v2/abc",
+    "https://wns2-par02p.notify.windows.com/w/?token=abc",
+])
+def test_s1a_subscribe_accepts_the_real_push_services(session, client, endpoint):
+    assert client.post("/api/push/subscribe", json={"endpoint": endpoint, "keys": KEYS}).status_code == 204
+    assert subscriptions(session) == 1
+
+
+def test_s2_an_unexpected_send_failure_logs_its_kind_and_never_the_address(session, pushes, monkeypatch, caplog):  # noqa: F811
+    subscribe(session, "secret-device-path")
+
+    def boom(*args, **kwargs):
+        raise ValueError("bad key near https://push.example.test/secret-device-path")
+
+    monkeypatch.setattr(push, "webpush", boom)
+    with caplog.at_level("WARNING"):
+        assert push.send_test_alert(session)["delivered"] == 0
+    assert "ValueError" in caplog.text and "push.example.test" in caplog.text
+    assert "secret-device-path" not in caplog.text and "bad key" not in caplog.text
+
+
+def test_n6_a_device_the_push_service_forgot_is_told_what_to_do(session, client, pushes):  # noqa: F811
+    """Design critic 2, point 3, as ruled by the fresh critic: for 404 and 410 the remedy is always the same."""
+    subscribe(session)
+    pushes.fail = http_error(410)
+    error = client.post("/api/push/test").json()["results"][0]["error"]
+    assert error == "Push service no longer recognizes this device. Turn alerts off and on again."
