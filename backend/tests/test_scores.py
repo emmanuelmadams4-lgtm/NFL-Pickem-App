@@ -148,6 +148,17 @@ def test_s4_scoring_form_uses_only_the_last_n_games_and_n_is_16():
     assert (form["home_pf"][4], form["home_pa"][4]) == (10.5, 16.5)
 
 
+def test_s4_a_playoff_game_counts_in_the_form_history():
+    history = mini([
+        ("A", "B", 30, 10, "final"),
+        ("A", "C", None, None, "scheduled"),
+    ])
+    history["game_type"] = ["POST", "REG"]
+    history["season"] = [2021, 2022]
+    form = scores.scoring_form(history)
+    assert (form["home_pf"][1], form["home_pa"][1]) == (30, 10)
+
+
 def test_s4_default_scoring_window_is_16_for_form_and_score_features():
     earlier = [("A", f"T{i}", i, 0, "final") for i in range(1, 21)]
     history = mini([*earlier, ("A", "Z", None, None, "scheduled")])
@@ -406,6 +417,19 @@ def test_s11_a_small_total_points_loss_does_not_ship():
     assert stat["team_ci"] == pytest.approx([1.05, 1.05])
     assert stat["total_mae_gain"] == pytest.approx(-0.1)
     assert stat["wins"] is False
+
+
+def test_s11_a_negative_total_gain_does_not_ship_even_when_its_interval_reaches_above_zero():
+    actual = [(20, 20)] * 200
+    implied = [(22, 18)] * 110 + [(24, 18)] * 90
+    stats = [(21, 21)] * 110 + [(21, 19)] * 90
+    report = sb.summary(preds(actual, implied=implied, stats=stats, blend=implied))
+    comp = {c["candidate"]: c for c in report["comparisons"]}
+    assert comp["stats"]["team_ci"][0] > 0
+    assert comp["stats"]["total_mae_gain"] == pytest.approx(-0.2)
+    assert comp["stats"]["wins"] is False
+    assert comp["blend"]["wins"] is False
+    assert sb.pick_winner(report["comparisons"]) is None
 
 
 def test_s11_a_clear_team_score_win_with_equal_total_points_error_ships():
