@@ -74,7 +74,7 @@ User-facing
 
 Operational
 * **L10 failure is quiet and honest.** `/api/live` answering 401, 503 or not at all gives S6 when nothing was shown before, and S4 once the last good reply is over 120 seconds old; no error toast, no crash, and the next poll still happens.
-* **L11 no feed text in an attribute.** `clock` and club codes from the live reply are rendered as text only.
+* **L11 no feed text in an attribute.** The club codes on screen come from the game the card already has, not from the live reply; `clock` is the only free text taken from the live reply and it is rendered as text only.
 
 Not in this step: a weather or other delay cannot be told from period and clock (the server would have to pass ESPN's status text): carried to the integrator. Play-by-play, a chart, alerts, in-game grading (15f).
 
