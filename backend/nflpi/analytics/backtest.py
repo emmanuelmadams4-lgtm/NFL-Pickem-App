@@ -14,16 +14,18 @@ from nflpi.analytics.metrics import (
     bootstrap_ci,
     calibration,
     log_loss,
+    paired_gain,
     pick_label,
     summarize,
     uncertainty_grade,
     upset_watch,
 )
 from nflpi.predictions.elo import EloParams, run_elo
-from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features
+from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features, epa_diff
 from nflpi.predictions.model import LogitModel
 
 ELO_GRID = [EloParams(k=k, hfa=h) for k in (15.0, 20.0, 25.0) for h in (30.0, 48.0, 65.0)]
+EPA_HALF_LIVES = (4, 8, 16)
 MODELS = ["home", "elo", "logistic", "market", "blend"]
 ABLATE = ["home_qb_change", "away_qb_change"]
 LABELS = {
@@ -56,11 +58,19 @@ def tune_elo(frames: dict[EloParams, pd.DataFrame], seasons: list[int]) -> EloPa
     return min(ELO_GRID, key=loss)
 
 
-def predict_season(frames: dict[EloParams, pd.DataFrame], season: int, window: int) -> pd.DataFrame:
+def _train_rows(
+    frames: dict[EloParams, pd.DataFrame], season: int, window: int
+) -> tuple[EloParams, pd.DataFrame]:
     train_seasons = list(range(season - window, season))
     params = tune_elo(frames, train_seasons)
+    frame = frames[params]
+    train = frame[frame["season"].isin(train_seasons) & frame["home_win"].notna()]
+    return params, train
+
+
+def predict_season(frames: dict[EloParams, pd.DataFrame], season: int, window: int) -> pd.DataFrame:
+    params, train = _train_rows(frames, season, window)
     f = frames[params]
-    train = f[f["season"].isin(train_seasons) & f["home_win"].notna()]
     test = f[(f["season"] == season) & (f["game_type"] == "REG") & f["home_win"].notna()].copy()
 
     home_rate = train.loc[train["home_field"] == 1, "home_win"].mean()
@@ -77,6 +87,66 @@ def predict_season(frames: dict[EloParams, pd.DataFrame], season: int, window: i
         test[f"p_without_{feat}"] = LogitModel.fit(train, keep).predict(test)
     test["elo_k"], test["elo_hfa"] = params.k, params.hfa
     return test
+
+
+def inseason_blend(frames: dict[EloParams, pd.DataFrame], season: int, window: int) -> pd.Series:
+    """Refit the blend before each test week using games already played."""
+    params, train = _train_rows(frames, season, window)
+    f = frames[params]
+    test = f[(f["season"] == season) & (f["game_type"] == "REG") & f["home_win"].notna()].copy()
+    preds = pd.Series(np.nan, index=test.index, dtype=float)
+    for _, games in test.groupby("week", sort=False):
+        has_market = games["market_logit"].notna()
+        if not has_market.any():
+            continue
+        played = f[(f["season"] == season) & f["home_win"].notna()
+                   & (f["kickoff_utc"] < games["kickoff_utc"].min())]
+        model = LogitModel.fit(pd.concat([train, played]).dropna(subset=["market_logit"]), BLEND_FEATURES)
+        preds.loc[games.index[has_market]] = model.predict(games[has_market])
+    return preds
+
+
+def candidate_preds(
+    df: pd.DataFrame, seasons: list[int], window: int = 10, epa: pd.DataFrame | None = None
+) -> pd.DataFrame:
+    """Score market games with the in-season blend and EPA rating candidates."""
+    frames = _elo_frames(df)
+    if epa is not None:
+        differences = {h: epa_diff(df, epa, h) for h in EPA_HALF_LIVES}
+        frames = {params: frame.assign(**{f"epa_diff_{h}": diff for h, diff in differences.items()})
+                  for params, frame in frames.items()}
+    by_season = []
+    for season in seasons:
+        test = predict_season(frames, season, window)
+        test["p_inseason"] = inseason_blend(frames, season, window)
+        if epa is not None:
+            _, train = _train_rows(frames, season, window)
+            for h in EPA_HALF_LIVES:
+                feature = f"epa_diff_{h}"
+                model = LogitModel.fit(train.dropna(subset=["market_logit"]), [*BLEND_FEATURES, feature])
+                test[f"p_epa_{h}"] = pd.Series(model.predict(test), index=test.index).fillna(test["p_blend"])
+        by_season.append(test)
+    preds = pd.concat(by_season, ignore_index=True)
+    return preds[preds["p_market"].notna()]
+
+
+def evaluate(preds: pd.DataFrame, candidates: dict[str, list[str]], tune: list[int], confirm: list[int]) -> list[dict]:
+    """Choose variants on tune seasons and judge them on confirm seasons."""
+    tune_rows = preds[preds["season"].isin(tune)]
+    confirm_rows = preds[preds["season"].isin(confirm)]
+    out = []
+    for name, columns in candidates.items():
+        variants = [
+            {"variant": col, "tune": paired_gain(tune_rows[col].to_numpy(), tune_rows["p_blend"].to_numpy(),
+                                                   tune_rows["home_win"].to_numpy())}
+            for col in columns
+        ]
+        chosen = max(variants, key=lambda row: row["tune"]["log_loss_gain"])["variant"]
+        result = paired_gain(confirm_rows[chosen].to_numpy(), confirm_rows["p_blend"].to_numpy(),
+                             confirm_rows["home_win"].to_numpy())
+        out.append({"candidate": name, "variants": variants, "chosen": chosen, "confirm": result,
+                    "ships": result["ships"]})
+    return out
 
 
 def signal_report(preds: pd.DataFrame) -> dict:

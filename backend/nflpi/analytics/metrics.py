@@ -55,8 +55,13 @@ def brier(p: np.ndarray, y: np.ndarray) -> float:
 
 
 def log_loss(p: np.ndarray, y: np.ndarray) -> float:
+    return float(game_log_loss(p, y).mean())
+
+
+def game_log_loss(p: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Return one clipped log loss per game."""
     p = np.clip(p, EPS, 1 - EPS)
-    return float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
+    return -(y * np.log(p) + (1 - y) * np.log(1 - p))
 
 
 def calibration(p: np.ndarray, y: np.ndarray, bins: int = 10) -> list[dict]:
@@ -87,6 +92,26 @@ def bootstrap_ci(values: np.ndarray, reps: int = 2000, seed: int = 7) -> tuple[f
     idx = rng.integers(0, len(values), size=(reps, len(values)))
     means = values[idx].mean(axis=1)
     return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
+
+
+def paired_gain(p_new: np.ndarray, p_old: np.ndarray, y: np.ndarray) -> dict:
+    """Compare two predictions on the same games."""
+    if len(p_new) != len(p_old) or len(p_new) != len(y) or len(y) == 0:
+        raise ValueError("prediction arrays must have the same nonzero length")
+    if not all(np.isfinite(values).all() for values in (p_new, p_old, y)):
+        raise ValueError("prediction arrays must contain only finite values")
+    loss_diff = game_log_loss(p_old, y) - game_log_loss(p_new, y)
+    correct_diff = ((p_new > 0.5) == (y == 1)).astype(float) - ((p_old > 0.5) == (y == 1)).astype(float)
+    loss_ci = list(bootstrap_ci(loss_diff))
+    accuracy_diff = float(correct_diff.mean())
+    return {
+        "n": int(len(y)),
+        "log_loss_gain": float(loss_diff.mean()),
+        "log_loss_gain_ci": loss_ci,
+        "accuracy_diff": accuracy_diff,
+        "accuracy_diff_ci": list(bootstrap_ci(correct_diff)),
+        "ships": bool(loss_ci[0] > 0 and accuracy_diff >= 0),
+    }
 
 
 def wilson_ci(correct: int, n: int, z: float = 1.96) -> tuple[float | None, float | None]:
