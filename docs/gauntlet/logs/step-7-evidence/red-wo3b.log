@@ -1,0 +1,117 @@
+[2m[WebServer] [22mingestion open-meteo/weather failed
+[2m[WebServer] [22mTraceback (most recent call last):
+[2m[WebServer] [22m  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/nflpi/ingestion/service.py", line 31, in run_logged
+[2m[WebServer] [22m    run.rows = job()
+[2m[WebServer] [22m               ~~~^^
+[2m[WebServer] [22m  File "/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/backend/tests/e2e_seed.py", line 13, in _weather_outage
+[2m[WebServer] [22m    raise RuntimeError("Open-Meteo unreachable (e2e fixture)")
+[2m[WebServer] [22mRuntimeError: Open-Meteo unreachable (e2e fixture)
+[2m[WebServer] [22me2e seed ready: TBD game 2023_04_BUF_MIA
+[2m[WebServer] [22mINFO:     Started server process [56045]
+[2m[WebServer] [22mINFO:     Waiting for application startup.
+[2m[WebServer] [22mINFO:     Application startup complete.
+[2m[WebServer] [22mINFO:     Uvicorn running on http://127.0.0.1:8123 (Press CTRL+C to quit)
+[2m[WebServer] [22mINFO:     127.0.0.1:60965 - "GET /api/health HTTP/1.1" 200 OK
+
+[2mRunning [22m1[2m test using [22m1[2m worker[22m
+
+[2m[WebServer] [22mINFO:     127.0.0.1:60993 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60995 - "GET /_next/static/chunks/13ld664gc53yn.css HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /_next/static/chunks/0-o74znen4827.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60997 - "GET /_next/static/chunks/0rhf0k0tljxrt.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /_next/static/chunks/3srfjz42u14tx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "GET /_next/static/chunks/turbopack-3-ry682tkyiqk.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60999 - "GET /_next/static/chunks/0djsn5mf4c72x.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60995 - "GET /_next/static/chunks/3dmm3v_fq28gc.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /_next/static/chunks/3za_wx9u0cbkg.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /_next/static/chunks/1ovntrqqjil10.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "GET /_next/static/chunks/00dl25jx7tc6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "GET /sw.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /icons/favicon-32.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60995 - "GET /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /sheet/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /backtest/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60995 - "GET /game/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60995 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /icons/icon-512.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /icons/apple-touch-icon.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60995 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60995 - "GET /_next/static/media/GeistMono_Variable.p.3ms9vq719j3f8.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /_next/static/media/Geist_Variable-s.p.0mrjj4bg00-he.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "GET /api/meta HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "GET /_next/static/chunks/0hop5gq6bu7xx.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /_next/static/chunks/17dntm06ags63.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60995 - "GET /_next/static/chunks/0cz1d0mv5g_q7.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "GET /_next/static/chunks/2prtlr62gba9a.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60999 - "GET /icons/icon-192.png HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60997 - "GET /_next/static/chunks/0z2f65ea_eelz.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /_next/static/chunks/32hxqrjzduf3j.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /_next/static/chunks/3d8wuuak53r6z.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /_next/static/chunks/1bdnz29st_-m0.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /_next/static/chunks/3dv_9hm03e3pp.js HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60999 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60997 - "HEAD /?season=2023&week=4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "HEAD /performance/?season=2023 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "HEAD /settings/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /__next._tree.txt?season=2023&week=4&_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60997 - "GET /performance/__next._tree.txt?season=2023&_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "GET /_next/static/media/barlow-condensed-latin-700-normal.21s4tc4km7afu.woff2 HTTP/1.1" 304 Not Modified
+[2m[WebServer] [22mINFO:     127.0.0.1:60999 - "GET /settings/__next._tree.txt?_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "GET /api/health HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60996 - "GET /__next.__PAGE__.txt?season=2023&week=4&_rsc=cdk-OvPaaQdzy3F4 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "GET /settings/__next.settings.__PAGE__.txt?_rsc=STmVY4j0xRDbRMWT HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60999 - "GET /performance/__next.performance.__PAGE__.txt?season=2023&_rsc=5KNeiubrJ3RjeXz7 HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60999 - "HEAD /performance/ HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "HEAD / HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60998 - "GET /performance/__next._tree.txt?_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60999 - "GET /__next._tree.txt?_rsc=DQxjArDrgutTG17x HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60995 - "GET /api/freshness HTTP/1.1" 200 OK
+[2m[WebServer] [22mINFO:     127.0.0.1:60994 - "POST /api/push/subscribe HTTP/1.1" 204 No Content
+[2m[WebServer] [22mINFO:     127.0.0.1:60993 - "DELETE /api/push/subscribe?endpoint=https%3A%2F%2Ffcm.googleapis.com%2Ffcm%2Fsend%2Fe2e-a4 HTTP/1.1" 204 No Content
+  [31m✘[39m  [2m1 [22m[31me2e/alerts.spec.ts:178:5 › A4 Settings: Send test alert says what happened in words; the reminder reads as one per game day[39m[2m (2.2s)[22m
+
+
+[31m  1) e2e/alerts.spec.ts:178:5 › A4 Settings: Send test alert says what happened in words; the reminder reads as one per game day [39m
+
+    Error: the button is free again as soon as the result shows
+
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoBeEnabled[2m([22m[2m)[22m failed
+
+    Locator:  locator('#alerts').getByRole('button', { name: 'Send test alert' })
+    Expected: enabled
+    Received: disabled
+    Timeout:  1000ms
+
+    Call log:
+    [2m  - the button is free again as soon as the result shows with timeout 1000ms[22m
+    [2m  - waiting for locator('#alerts').getByRole('button', { name: 'Send test alert' })[22m
+    [2m    5 × locator resolved to <button disabled class="inline-flex items-center justify-center gap-2 rounded-full border font-medium whitespace-nowrap transition-[transform,background-color,border-color,filter,opacity] duration-(--duration-press) active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0 h-10 px-4 text-sm lg:h-9 bg-elevated text-text border-border hover:border-border-strong">…</button>[22m
+    [2m      - unexpected value "disabled"[22m
+
+
+    [0m [90m 209 |[39m     [36mconst[39m result [33m=[39m section[33m.[39mgetByRole([32m"status"[39m)[33m;[39m
+     [90m 210 |[39m     [36mawait[39m expect(result)[33m.[39mtoHaveText([32m"Delivered to 1 device."[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 211 |[39m     [36mawait[39m expect(send[33m,[39m [32m"the button is free again as soon as the result shows"[39m)[33m.[39mtoBeEnabled({ timeout[33m:[39m [35m1[39m_000 })[33m;[39m
+     [90m     |[39m                                                                                [31m[1m^[22m[39m
+     [90m 212 |[39m     [36mawait[39m expect(result[33m,[39m [32m"a full delivery is not shown as a problem"[39m)[33m.[39mnot[33m.[39mtoHaveClass([35m/text-bad/[39m)[33m;[39m
+     [90m 213 |[39m     expect(calls)[33m.[39mtoBe([35m1[39m)[33m;[39m
+     [90m 214 |[39m     [36mconst[39m count [33m=[39m section[33m.[39mgetByText([35m/subscribed on the server\.$/[39m)[33m;[39m[0m
+    [2m    at /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-alerts/apps/web/e2e/alerts.spec.ts:211:80[22m
+
+[2m    Error Context: test-results/alerts-A4-Settings-Send-te-962ec-r-reads-as-one-per-game-day/error-context.md[22m
+
+[2m    attachment #2: [1mtrace[2m (application/zip) [2m─────────────────────────────────────────────────────────[2m[22m
+[2m    test-results/alerts-A4-Settings-Send-te-962ec-r-reads-as-one-per-game-day/trace.zip[22m
+[2m    Usage:[22m
+
+[2m        npx playwright show-trace test-results/alerts-A4-Settings-Send-te-962ec-r-reads-as-one-per-game-day/trace.zip[22m
+
+[2m    [2m────────────────────────────────────────────────────────────────────────────────────────────────[2m[22m
+
+[31m  1 failed[39m
+[31m    e2e/alerts.spec.ts:178:5 › A4 Settings: Send test alert says what happened in words; the reminder reads as one per game day [39m

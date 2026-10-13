@@ -199,20 +199,33 @@ test("A4 Settings: Send test alert says what happened in words; the reminder rea
     await expect(section).not.toContainText("No pick yet");
     await expect(section.getByLabel("Remind me").locator("option")).toHaveText(["Off", "30 minutes before", "1 hour before", "3 hours before"]);
 
+    // The device count is re-read after a result; that slow re-read must not keep the button busy.
+    await page.route("**/api/meta", async (route) => {
+      await new Promise((r) => setTimeout(r, 3_000));
+      await route.continue().catch(() => undefined);
+    });
     const send = section.getByRole("button", { name: "Send test alert" });
     await send.click();
     const result = section.getByRole("status");
     await expect(result).toHaveText("Delivered to 1 device.");
+    await expect(send, "the button is free again as soon as the result shows").toBeEnabled({ timeout: 1_000 });
+    await expect(result, "a full delivery is not shown as a problem").not.toHaveClass(/text-bad/);
     expect(calls).toBe(1);
+    const count = section.getByText(/subscribed on the server\.$/);
+    const top = async (l: typeof result) => (await l.boundingBox())!.y;
+    expect(await top(result), "the result sits under the buttons, above the device count").toBeLessThan(await top(count));
+    expect(await top(result)).toBeGreaterThan(await top(send));
 
     Object.assign(reply, { delivered: 0, results: [{ host: "fcm.googleapis.com", ok: false, status: 403, error: "The push service refused the alert." }] });
     await send.click();
     await expect(result).toContainText("Not delivered.");
     await expect(result).toContainText("fcm.googleapis.com: The push service refused the alert. (403)");
+    await expect(result, "a refusal reads as a problem").toHaveClass(/text-bad/);
 
     Object.assign(reply, { devices: 0, delivered: 0, results: [] });
     await send.click();
     await expect(result).toHaveText("The server has no device to send to. Turn alerts off and on again.");
+    await expect(result).toHaveClass(/text-bad/);
 
     await page.unroute("**/api/push/test");
     await page.route("**/api/push/test", (route) => route.abort());
