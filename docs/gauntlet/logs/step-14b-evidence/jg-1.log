@@ -1,0 +1,572 @@
+Jevgrep: 21 relevant files.
+Symbols use name@start-end. Roles are estimates; locations-only files remain reading leads.
+AGENTS.md lookup (root and returned-file ancestors): "apps/web/AGENTS.md".
+- "backend/nflpi/models.py" — helper; source below
+- "backend/nflpi/ingestion/service.py" — implementation, caller, helper; source below
+- "backend/migrations/versions/0001_initial_schema.py" — relevant; role uncertain; locations only
+- "backend/nflpi/predictions/engine.py" — implementation, caller, helper; source below
+- "backend/nflpi/ingestion/nflverse.py" — implementation, helper; locations only
+- "docs/ARCHITECTURE.md" — helper; locations only
+- "backend/nflpi/predictions/features.py" — implementation, helper; locations only
+- "backend/nflpi/api/views.py" — implementation, helper; locations only
+- "backend/nflpi/predictions/sheet.py" — implementation, helper; locations only
+- "backend/tests/test_group.py" — test, fixture, helper; locations only
+- "backend/nflpi/analytics/backtest.py" — caller, helper; locations only
+- "backend/nflpi/api/schemas.py" — helper; locations only
+- "backend/nflpi/jobs.py" — caller, helper; locations only
+- "apps/web/components/game/market.tsx" — helper; locations only
+- "backend/nflpi/ai/research.py" — helper; locations only
+- "backend/tests/test_model.py" — test, fixture, helper; source below
+- "backend/tests/test_data.py" — test, fixture, helper; source below
+- "CLAUDE.md" — helper; locations only
+- "apps/web/components/freshness.tsx" — helper; locations only
+- "backend/tests/conftest.py" — test, fixture, helper; locations only
+- "apps/web/components/settings/alerts.tsx" — relevant; role uncertain; locations only
+End file list. Declaration locations follow source.
+
+Source block "backend/nflpi/models.py" lines 72-94:
+```
+    )
+
+
+class MarketSnapshot(Base):
+    __tablename__ = "market_snapshots"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    game_id: Mapped[str] = mapped_column(ForeignKey("games.game_id"))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    source: Mapped[str] = mapped_column(String(32))
+    kind: Mapped[str] = mapped_column(String(8))  # latest | closing
+    home_moneyline: Mapped[float | None] = mapped_column(Float)
+    away_moneyline: Mapped[float | None] = mapped_column(Float)
+    spread_line: Mapped[float | None] = mapped_column(Float)
+    total_line: Mapped[float | None] = mapped_column(Float)
+    home_prob_novig: Mapped[float | None] = mapped_column(Float)
+
+    __table_args__ = (
+        UniqueConstraint("game_id", "source", "observed_at", name="uq_market_obs"),
+        Index("ix_market_game", "game_id", "observed_at"),
+    )
+
+
+class InjuryReport(Base):
+```
+
+Source block "backend/nflpi/ingestion/service.py" lines 47-109:
+```
+    return run
+
+
+def upsert_games(session: Session, games: list[dict], observed_at: datetime) -> int:
+    """Upsert schedule rows and record a market snapshot when the line changed."""
+    if not games:
+        return 0
+    rows = [{k: v for k, v in g.items() if not k.startswith("_")} | {"updated_at": observed_at} for g in games]
+    for start in range(0, len(rows), 1000):
+        chunk = rows[start : start + 1000]
+        stmt = insert(Game).values(chunk)
+        update = {c: stmt.excluded[c] for c in chunk[0] if c != "game_id"}
+        update["status"] = case(
+            (
+                and_(
+                    Game.status == "postponed",
+                    stmt.excluded.status == "scheduled",
+                    Game.kickoff_utc == stmt.excluded.kickoff_utc,
+                ),
+                Game.status,
+            ),
+            else_=stmt.excluded.status,
+        )
+        session.execute(stmt.on_conflict_do_update(index_elements=["game_id"], set_=update))
+
+    latest = {
+        m.game_id: m
+        for m in session.scalars(
+            select(MarketSnapshot).where(
+                MarketSnapshot.id.in_(select(func.max(MarketSnapshot.id)).group_by(MarketSnapshot.game_id))
+            )
+        )
+    }
+    new_snaps = []
+    for g in games:
+        line = (g["_home_ml"], g["_away_ml"], g["_spread"], g["_total"])
+        if all(v is None for v in line):
+            continue
+        prev = latest.get(g["game_id"])
+        kind = "closing" if g["status"] == "final" else "latest"
+        if prev and (prev.home_moneyline, prev.away_moneyline, prev.spread_line, prev.total_line) == line:
+            if prev.kind != kind:
+                prev.kind = kind
+            continue
+        new_snaps.append(
+            MarketSnapshot(
+                game_id=g["game_id"],
+                observed_at=observed_at,
+                source=nflverse.SOURCE,
+                kind=kind,
+                home_moneyline=line[0],
+                away_moneyline=line[1],
+                spread_line=line[2],
+                total_line=line[3],
+                home_prob_novig=novig_home_prob(line[0], line[1]),
+            )
+        )
+    session.add_all(new_snaps)
+    session.commit()
+    return len(rows)
+
+
+def ingest_schedules(
+```
+
+Source block "backend/nflpi/predictions/engine.py" lines 209-329:
+```
+    return v
+
+
+def refresh_predictions(
+    session: Session, now: datetime | None = None, game_ids: list[str] | None = None, kind: str = "live"
+) -> list[ChangeEvent]:
+    """Predict the current and next week (or the given games). Returns alert-worthy changes."""
+    now = now or datetime.now(UTC)
+    settings = get_settings()
+    mv = active_model(session)
+    if mv is None:
+        raise RuntimeError("no active model; run `python -m nflpi.jobs train` first")
+    p = mv.params
+    base, blend = LogitModel.from_dict(p["base"]), LogitModel.from_dict(p["blend"])
+    f = add_features(load_frame(session), EloParams(**p["elo"]))
+
+    season, week = current_week(session)
+    if game_ids is not None:
+        targets = f[f["game_id"].isin(game_ids)]
+    else:
+        targets = f[(f["season"] == season) & f["week"].isin([week, week + 1]) & (f["status"] != "final")]
+        targets = targets[pd.to_datetime(targets["kickoff_utc"], utc=True) > now]
+
+    fresh = freshness(session, now)
+    stale = [d["dataset"] for d in fresh if d["stale"] and d["dataset"] in ("schedules", "injuries")]
+    if kind != "live":
+        stale = []
+    events: list[ChangeEvent] = []
+    for _, row in targets.iterrows():
+        base_p = base.predict_one(row)
+        has_market = not pd.isna(row["market_logit"])
+        model = blend if has_market else base
+        prob = model.predict_one(row)
+        home, away = row["home_team"], row["away_team"]
+        pick = home if prob >= 0.5 else away
+        market_p = None if not has_market else float(row["market_prob"])
+
+        gap = abs(base_p - market_p) if has_market else None
+        qb_teams = [team for side, team in (("home", home), ("away", away)) if row[f"{side}_qb_change"]]
+        uncertainty, reason_keys = uncertainty_grade(gap, bool(qb_teams), row["week"] <= EARLY_WEEK_END, bool(stale))
+        reason_text = {
+            "missing_market": "No betting line yet",
+            "early_season": f"Early season: week {row['week']}",
+            "disagreement": f"Stats model and market differ by {gap:.0%}" if gap is not None else "",
+            "qb_change": f"QB change for {', '.join(qb_teams)}",
+            "stale": f"{', '.join(stale)} data is stale",
+        }
+        reasons = [reason_text[key] for key in reason_keys]
+
+        upset = []
+        if upset_watch(base_p, market_p):
+            dog = away if market_p >= 0.5 else home
+            if market_p != 0.5 and (base_p >= 0.5) != (market_p >= 0.5):
+                upset.append(f"Stats model picks {dog}, the market underdog")
+            if gap >= UPSET_GAP:
+                upset.append(f"Stats {base_p:.0%} vs market {market_p:.0%} for {home}")
+
+        features = {
+            c: _clean(row[c])
+            for c in [*BLEND_FEATURES, "home_elo", "away_elo", "market_prob", "home_rest", "away_rest"]
+        }
+        features["stats_only_prob"] = round(base_p, 4)
+        features["used_market"] = has_market
+        features["market_kind"] = row["market_kind"]
+        features["upset_flags"] = upset
+        for col in ("home_qb", "away_qb", "home_prev_qb", "away_prev_qb"):
+            features[col] = row[col]
+        features = {k: _clean(v) for k, v in features.items()}
+        h = _hash({"mv": mv.id, "f": features, "u": reasons})
+
+        prev = session.scalars(
+            select(Prediction).where(Prediction.game_id == row["game_id"]).order_by(Prediction.id.desc()).limit(1)
+        ).first()
+        if prev and prev.inputs_hash == h:
+            continue
+        note = None
+        if prev:
+            changed = {CHANGE_WORDS.get(k, "") for k in features if prev.features.get(k) != features[k]} - {""}
+            what = ", ".join(sorted(changed)) or ("model version" if prev.model_version_id != mv.id else "risk flags")
+            note = f"Changed: {what}. {home} win chance {prev.home_win_prob:.0%} → {prob:.0%}."
+            moved = round(abs(prob - prev.home_win_prob), 4)
+            old_label = pick_label(max(prev.home_win_prob, 1 - prev.home_win_prob))
+            new_label = pick_label(max(prob, 1 - prob))
+            qb_team = qb_name = None
+            for col, team in (("home_qb", home), ("away_qb", away)):
+                old_starter = prev.features.get(col)
+                new_starter = features.get(col)
+                if old_starter and new_starter and new_starter != old_starter:
+                    qb_team = team
+                    qb_name = new_starter if isinstance(new_starter, str) else None
+                    break
+            if prev.pick != pick or moved >= settings.alert_move_threshold or old_label != new_label or qb_team:
+                events.append(ChangeEvent(
+                    row["game_id"], prev.home_win_prob, prob, prev.pick, pick, note,
+                    old_label, new_label, qb_team, qb_name,
+                ))
+        session.add(
+            Prediction(
+                game_id=row["game_id"],
+                model_version_id=mv.id,
+                created_at=now,
+                kind=kind,
+                home_win_prob=round(prob, 4),
+                pick=pick,
+                features=features,
+                factors=_factors(row, model, has_market),
+                uncertainty=uncertainty,
+                uncertainty_reasons=reasons,
+                market_home_prob=market_p,
+                inputs_hash=h,
+                data_freshness={
+                    d["dataset"]: d["last_success"].isoformat() if d["last_success"] else None for d in fresh
+                },
+                change_note=note,
+            )
+        )
+    session.commit()
+    return events
+
+
+def backfill_season(session: Session, season: int, now: datetime | None = None) -> int:
+```
+
+Source block "backend/tests/test_model.py" lines 126-128:
+```
+    assert any("QB change" in r for r in history[1].uncertainty_reasons)
+
+
+```
+
+Source block "backend/tests/test_model.py" lines 134-136:
+```
+
+
+# --- Step 14: candidates are judged against the current blend (docs/gauntlet/logs/step-14.md, section 2) ---
+```
+
+Source block "backend/tests/test_model.py" lines 481-483:
+```
+        mk.devig_home_prob(-110, -110, "basic")
+
+
+```
+
+Source block "backend/tests/test_model.py" lines 495-497:
+```
+
+
+def test_logit_fit_takes_row_weights():
+```
+
+Source block "backend/tests/test_model.py" lines 511-513:
+```
+            LogitModel.fit(train, BLEND_FEATURES, weights=pd.Series(bad, index=train.index))
+
+
+```
+
+Source block "backend/tests/test_model.py" lines 525-594:
+```
+
+
+def _idea_columns(preds: pd.DataFrame) -> list[str]:
+    return [col for col in preds if col.startswith(IDEA_PREFIXES)]
+
+
+def test_idea_preds_fit_every_variant_on_the_seasons_before_the_test_season(monkeypatch):
+    df = lines_frame()
+    no_line = df[(df["season"] == 2022) & (df["week"] == 2)].index[0]
+    df.loc[no_line, ["home_ml", "away_ml"]] = np.nan
+    base = candidate_preds(df, [2021, 2022], window=3)
+    seen = []
+    real_fit = LogitModel.fit.__func__
+
+    def spy(cls, train, features, weights=None):
+        seen.append((list(features), train, weights))
+        return real_fit(cls, train, features) if weights is None else real_fit(cls, train, features, weights=weights)
+
+    monkeypatch.setattr(LogitModel, "fit", classmethod(spy))
+    preds = bt.idea_preds(df, [2021, 2022], window=3)
+    # Same games and the same baseline as the step 14 bench: only games with a price.
+    assert list(preds["game_id"]) == list(base["game_id"]) and len(preds) == 29
+    assert np.allclose(preds["p_blend"], base["p_blend"])
+    # No fit ever sees the test season or a later one.
+    assert seen and all(set(train["season"]) <= {2018, 2019, 2020} or set(train["season"]) <= {2019, 2020, 2021}
+                        for _, train, _ in seen)
+    fitted = [features for features, _, _ in seen]
+    for method in ("additive", "shin", "power", "odds_ratio"):  # one fit per test season, in place of market_logit
+        assert fitted.count([f"market_logit_{method}", *BASE_FEATURES]) == 2
+    for extra in (["spread_pts"], ["total_pts"], ["spread_pts", "total_pts"], ["spread_per_total"]):
+        assert fitted.count([*BLEND_FEATURES, *extra]) == 2
+    # Recency: the blend's own inputs, each training row weighted by its age in seasons.
+    assert bt.RECENCY_HALF_LIVES == (2, 4, 8)
+    weighted = [(train, weights) for features, train, weights in seen if weights is not None]
+    assert len(weighted) == 6 and all(features == BLEND_FEATURES for features, _, w in seen if w is not None)
+    for season in (2021, 2022):
+        found = set()
+        for train, weights in weighted:
+            if train["season"].max() == season - 1:
+                age = season - 1 - train["season"]
+                found |= {h for h in (2, 4, 8) if np.allclose(weights.reindex(train.index), 0.5 ** (age / h))}
+        assert found == {2, 4, 8}
+    cols = _idea_columns(preds)
+    assert sorted(cols) == sorted([
+        "p_devig_additive", "p_devig_shin", "p_devig_power", "p_devig_odds_ratio",
+        "p_in_spread", "p_in_total", "p_in_both", "p_in_ratio",
+        "p_recency_2", "p_recency_4", "p_recency_8",
+    ])
+    assert all(preds[col].between(0, 1).all() and not np.allclose(preds[col], preds["p_blend"]) for col in cols)
+    assert np.allclose(preds["p_devig_shin"], preds["p_devig_additive"])
+    assert np.allclose(preds["spread_pts"], preds["spread_line"] / 7)
+    assert np.allclose(preds["total_pts"], (preds["total_line"] - 45) / 10)
+    assert np.allclose(preds["spread_per_total"], 10 * preds["spread_line"] / preds["total_line"])
+
+
+def test_line_input_variants_fall_back_to_the_blend_where_a_line_is_missing():
+    df = lines_frame()
+    week1 = df[(df["season"] == 2022) & (df["week"] == 1)].index
+    df.loc[week1[0], "spread_line"] = np.nan
+    df.loc[week1[1], "total_line"] = np.nan
+    preds = bt.idea_preds(df, [2022], window=3).set_index("game_id")
+    no_spread, no_total = preds.loc[df.loc[week1[0], "game_id"]], preds.loc[df.loc[week1[1], "game_id"]]
+    for col in ("p_in_spread", "p_in_both", "p_in_ratio"):  # never an invented line
+        assert no_spread[col] == no_spread["p_blend"]
+    assert no_spread["p_in_total"] != no_spread["p_blend"]
+    for col in ("p_in_total", "p_in_both", "p_in_ratio"):
+        assert no_total[col] == no_total["p_blend"]
+    assert no_total["p_in_spread"] != no_total["p_blend"]
+
+
+```
+
+Source block "backend/tests/test_model.py" lines 607-609:
+```
+
+
+def _overconfident_blend(per_season: int = 4000) -> pd.DataFrame:
+```
+
+Source block "backend/tests/test_data.py" lines 68-70:
+```
+    assert novig_home_prob(None, 130) is None
+
+
+```
+
+Source block "backend/tests/test_data.py" lines 84-86:
+```
+
+
+def test_failed_download_keeps_old_data_and_is_logged(session, monkeypatch):
+```
+
+Declaration locations:
+- "backend/nflpi/models.py"
+  Game@38-72
+  MarketSnapshot@75-91
+  InjuryReport@94-109
+  ModelVersion@146-155
+  Prediction@158-176
+  IngestionRun@234-245
+  AppSetting@278-281
+- "backend/nflpi/ingestion/service.py"
+  upsert_games@50-106
+  ingest_schedules@109-124
+  freshness@298-322
+- "backend/migrations/versions/0001_initial_schema.py"
+  upgrade@16-209
+  downgrade@213-236
+- "backend/nflpi/predictions/engine.py"
+  ChangeEvent@38-49
+  load_frame@52-92
+  active_model@95-96
+  train@99-132
+  current_week@138-170
+  _factors@173-197
+  _hash@200-201
+  _clean@204-209
+  refresh_predictions@212-326
+  backfill_season@329-347
+- "backend/nflpi/ingestion/nflverse.py"
+  franchise@53-54
+  fetch_csv@57-61
+  _num@119-120
+  _int@123-124
+  _no_clock_time@127-128
+  kickoff_utc@131-135
+  parse_games@138-181
+  parse_injuries@201-225
+- "docs/ARCHITECTURE.md"
+  source@1-55
+  source@56-81
+  source@82-129
+  source@130-163
+  source@164-198
+  source@199-239
+  source@240-273
+- "backend/nflpi/predictions/features.py"
+  games_frame@62-64
+  qb_changes@67-79
+  add_features@82-104
+- "backend/nflpi/api/views.py"
+  prediction_out@67-84
+  _latest_by_game@117-119
+  _week_injuries@122-133
+  summaries@152-217
+  week_view@220-258
+  _form@261-287
+  game_detail@290-358
+  performance@379-454
+- "backend/nflpi/predictions/sheet.py"
+  Ranked@26-28
+  Evidence@31-33
+  _number@36-43
+  _chance@46-47
+  _game_row@55-68
+  _jev_request@71-86
+  order@89-101
+  recommendations@104-110
+  _evidence@113-124
+  compute_week@127-167
+  finalize@170-211
+  refresh_tiebreaks@214-255
+- "backend/tests/test_group.py"
+  picks@44-45
+  stored_picks@53-55
+  stored_standings@58-60
+  refused@63-72
+  test_p1_picks_file_stores_one_row_per_member_and_game@78-87
+  test_p2_yahoo_codes_map_to_app_codes_any_case_and_lar_is_la@90-98
+  test_p3_a_row_with_no_pick_is_stored_as_missing@101-105
+  test_p4_a_matchup_that_is_not_one_game_of_that_week_is_refused@108-116
+  test_p4_two_games_with_the_same_teams_in_one_week_are_not_exactly_one_game@119-124
+  test_p4_games_of_another_season_never_match@127-131
+  test_p5_pick_side_and_confidence_must_agree@134-146
+  test_p6_numbers_outside_their_bounds_are_refused@149-165
+  test_p6_numbers_at_their_bounds_are_accepted@168-175
+  test_p7_leading_zeros_are_still_plain_digits_however_many@178-182
+  test_p7_a_whole_number_is_plain_digits_only@185-190
+  test_p8_one_row_per_member_and_game@193-198
+  test_p9_a_member_uses_each_confidence_number_once_a_week@201-208
+  test_p10_spread_favored_and_underdog_never_change_what_is_stored@211-227
+  test_n2_text_that_is_not_utf8_is_refused_and_a_byte_order_mark_is_fine@242-244
+  test_n3_only_the_two_exact_headers_are_accepted@247-266
+  test_n3_a_weekly_file_may_have_up_to_22_weeks@269-271
+  test_n4_a_row_with_the_wrong_number_of_cells_is_refused_with_its_line@274-276
+  test_n4_a_weekly_row_with_the_wrong_number_of_cells_is_refused_with_its_line@279-281
+  test_n4_a_file_with_no_rows_is_refused@284-287
+  test_n5_names_are_cleaned_before_they_are_stored@290-308
+  test_n7_a_bad_row_refuses_the_whole_file_and_keeps_what_was_stored@322-332
+  test_n9_importing_the_same_file_again_changes_nothing@358-364
+  test_n10_a_corrected_file_updates_the_row_in_place@367-380
+  test_n10_imported_at_is_the_time_of_the_last_import_that_wrote_the_row@383-399
+  test_w1_weekly_file_stores_points_per_member_and_week_and_the_rank_on_the_last_week_only@432-440
+  test_w2_weekly_rows_are_checked@443-456
+  test_w2_weekly_numbers_at_their_bounds_are_accepted@464-466
+  test_w3_a_later_file_keeps_the_rank_an_earlier_file_gave_a_week@469-481
+  test_w4_seasons_are_kept_apart@484-488
+  test_q1_game_shares_counts_each_side_and_averages_its_confidence@494-506
+  test_q2_a_side_nobody_picked_and_a_game_nobody_picked_show_missing_not_zero@509-525
+  test_q4_standings_for_a_week_give_points_running_total_and_rank@533-551
+  test_q4_running_total_counts_only_weeks_up_to_the_asked_week@554-562
+  test_q4_a_tie_with_no_rank_goes_by_name_ignoring_letter_case@565-569
+  test_n11_a_big_valid_file_under_the_cap_is_stored_whole@572-589
+  test_q4_on_a_tie_a_member_with_a_rank_comes_before_a_member_without_one@592-596
+  cells@599-601
+  test_the_first_problem_in_the_frozen_order_is_the_one_reported@605-625
+- "backend/nflpi/analytics/backtest.py"
+  _elo_frames@40-49
+  _train_rows@61-68
+  predict_season@71-89
+  inseason_blend@92-106
+  candidate_preds@109-130
+  evaluate@133-149
+  signal_report@152-199
+  label_report@202-212
+  run_backtest@215-290
+- "backend/nflpi/api/schemas.py"
+  PredictionOut@34-49
+  GameSummary@74-101
+  DatasetFreshness@104-109
+  WeekOut@129-135
+  MarketOut@148-156
+  TeamForm@159-172
+  GameDetail@215-226
+  BacktestModel@302-309
+  BacktestOut@312-322
+- "backend/nflpi/jobs.py"
+  ingest@36-44
+  train@47-49
+  predict@52-56
+  backtest@59-94
+  cycle@130-149
+  loop@152-180
+- "apps/web/components/game/market.tsx"
+  source@3-3
+  source@4-4
+  source@5-5
+  source@6-6
+  spreadText@9-14
+  KIND@16-16
+  MarketSection@27-104
+- "backend/nflpi/ai/research.py"
+  evidence_pack@69-134
+  generate_report@167-220
+  answer_question@223-246
+- "backend/tests/test_model.py"
+  frame@36-41
+  test_qb_change_flag_is_pregame_and_within_season@56-65
+  test_walk_forward_trains_only_on_past_seasons@68-84
+  test_predictions_are_valid_and_snapshots_are_insert_only@101-110
+  test_qb_change_creates_new_snapshot_and_keeps_old@113-126
+  test_backfill_labels_rows_and_needs_an_earlier_model@129-133
+  test_inseason_refit_skips_a_postponed_game_that_was_not_played_yet@221-232
+  test_inseason_refit_trains_on_the_window_and_the_test_season_only@235-249
+  test_candidate_preds_scores_market_games_of_the_asked_seasons@275-286
+  test_devig_methods_remove_the_margin_each_in_its_own_way@448-474
+  test_devig_keeps_a_missing_price_missing_and_refuses_an_unknown_method@477-481
+  test_market_logit_is_the_clipped_log_odds_of_the_chosen_method@484-494
+  test_logit_fit_takes_row_weights@497-511
+  lines_frame@514-524
+  _idea_columns@527-528
+  test_idea_preds_fit_every_variant_on_the_seasons_before_the_test_season@531-577
+  test_line_input_variants_fall_back_to_the_blend_where_a_line_is_missing@580-592
+  test_idea_preds_never_use_a_result_from_the_test_week_or_later@595-606
+- "backend/tests/test_data.py"
+  test_parse_games_handles_missing_values@24-28
+  test_novig_probabilities_sum_to_one@64-68
+  test_schedule_ingest_is_idempotent_and_tracks_line_moves@71-83
+  test_failed_download_keeps_old_data_and_is_logged@86-98
+- "CLAUDE.md"
+  source@1-49
+  source@50-81
+- "apps/web/components/freshness.tsx"
+  source@4-4
+  source@5-5
+  source@6-6
+  staleList@8-10
+  MODEL_INPUTS@13-13
+  feedsModel@15-17
+  FreshnessTable@24-41
+  FreshnessIndicator@44-104
+- "backend/tests/conftest.py"
+  _row@39-76
+  schedule_rows@79-95
+  session@123-129
+  loaded@132-142
+- "apps/web/components/settings/alerts.tsx"
+
+End context.

@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 from sqlalchemy import select
 
+from nflpi.analytics import backtest as bt
 from nflpi.analytics.backtest import _elo_frames, candidate_preds, evaluate, inseason_blend, predict_season
 from nflpi.analytics.metrics import (
     bootstrap_ci,
@@ -16,8 +17,19 @@ from nflpi.analytics.metrics import (
 from nflpi.ingestion import nflverse
 from nflpi.models import Prediction
 from nflpi.predictions import engine
+from nflpi.predictions import features as ft
+from nflpi.predictions import market as mk
 from nflpi.predictions.elo import EloParams, run_elo
-from nflpi.predictions.features import BLEND_FEATURES, add_features, epa_diff, games_frame, team_game_epa
+from nflpi.predictions.features import (
+    BASE_FEATURES,
+    BLEND_FEATURES,
+    add_features,
+    epa_diff,
+    games_frame,
+    team_game_epa,
+)
+from nflpi.predictions.market import novig_home_prob
+from nflpi.predictions.model import LogitModel
 from tests.conftest import CURRENT, schedule_rows
 
 
@@ -357,3 +369,285 @@ def test_epa_candidate_fits_on_past_seasons_and_falls_back_to_the_blend_when_mis
         assert not np.allclose(preds.loc[~lv, col], preds.loc[~lv, "p_blend"])
         fits = [seasons for features, seasons in seen if features == [*BLEND_FEATURES, f"epa_diff_{half_life}"]]
         assert fits and all(seasons == {2019, 2020, 2021} for seasons in fits)
+
+
+# ---- Step 14b: five ideas from the repo review (clauses B, D, V, R, C in docs/gauntlet/logs/step-14b.md) ----
+
+PLAIN_KEYS = {"n", "log_loss_gain", "log_loss_gain_ci", "accuracy_diff", "accuracy_diff_ci", "ships"}
+IDEA_PREFIXES = ("p_devig_", "p_in_", "p_recency_")
+
+
+def test_cluster_bootstrap_resamples_whole_clusters():
+    values = np.array([0.3, -0.1, 0.2, 0.5, -0.4, 0.1])
+    # One game per cluster is the plain bootstrap.
+    assert np.allclose(bootstrap_ci(values, clusters=np.arange(6)), bootstrap_ci(values))
+    # Games of one cluster move together: the interval is the one for the cluster means, and it is wider.
+    means = np.tile([0.3, -0.2, 0.25, -0.1, 0.4, -0.15, 0.1, 0.2, -0.3, 0.05], 2)
+    games, ids = np.repeat(means, 10), np.repeat(np.arange(20), 10)
+    got = bootstrap_ci(games, clusters=ids)
+    assert np.allclose(got, bootstrap_ci(means))
+    plain = bootstrap_ci(games)
+    assert got[1] - got[0] > 2 * (plain[1] - plain[0])
+    # Each game counts once: a big cluster weighs more than a small one (true mean 0.9, mean of cluster means 0.5).
+    sizes = np.tile([9, 1], 20)
+    weighted = bootstrap_ci(np.repeat(np.tile([1.0, 0.0], 20), sizes), clusters=np.repeat(np.arange(40), sizes))
+    assert 0.75 < weighted[0] < 0.9 < weighted[1] <= 1.0
+    with pytest.raises(ValueError):
+        bootstrap_ci(values, clusters=np.arange(5))
+
+
+def test_paired_gain_reports_cluster_intervals_beside_the_rule_without_changing_it():
+    y = np.ones(200)
+    old = np.full(200, 0.6)
+    weeks = np.repeat(np.arange(20), 10)
+    step = np.repeat(np.where(np.arange(20) % 5 < 3, 0.1, -0.1), 10)  # 12 weeks better, 8 weeks worse
+    new = old * np.exp(step)
+    plain = paired_gain(new, old, y)
+    assert set(plain) == PLAIN_KEYS  # no clusters asked: the step 14 output, nothing added
+    got = paired_gain(new, old, y, clusters=weeks)
+    assert set(got) == PLAIN_KEYS | {"log_loss_gain_ci_cluster", "accuracy_diff_ci_cluster", "ships_cluster"}
+    assert {key: got[key] for key in plain} == plain  # the rule's own numbers do not move
+    assert np.allclose(got["log_loss_gain_ci_cluster"], bootstrap_ci(np.log(new / old), clusters=weeks))
+    assert np.allclose(got["accuracy_diff_ci_cluster"], bootstrap_ci(np.zeros(200), clusters=weeks))
+    # Same games, same gain: sure game by game, not sure week by week.
+    assert plain["ships"] is True and got["ships_cluster"] is False
+    assert got["log_loss_gain_ci_cluster"][0] < 0 < plain["log_loss_gain_ci"][0]
+    # Every week better: sure both ways.
+    assert paired_gain(old * np.exp(0.1), old, y, clusters=weeks)["ships_cluster"] is True
+    # A sure gain with fewer right picks still does not pass.
+    drop = old * np.exp(0.2)
+    drop[:10] = 0.45
+    fewer_right = paired_gain(drop, old, y, clusters=weeks)
+    assert fewer_right["log_loss_gain_ci_cluster"][0] > 0 and fewer_right["accuracy_diff"] < 0
+    assert fewer_right["ships_cluster"] is False
+    with pytest.raises(ValueError):
+        paired_gain(new, old, y, clusters=weeks[:-1])
+
+
+def test_evaluate_can_cluster_by_week_and_refuses_overlapping_seasons():
+    rows = []
+    for season in (2020, 2021):
+        for i in range(40):
+            y = float(i % 2)
+            side = 1.0 if y == 1 else -1.0
+            rows.append({"season": season, "week": i // 10 + 1, "home_win": y, "p_blend": 0.5 + 0.1 * side,
+                         "p_a": 0.5 + (0.2 + 0.05 * (i // 10 % 2)) * side})
+    preds = pd.DataFrame(rows)
+    plain = evaluate(preds, {"x": ["p_a"]}, tune=[2020], confirm=[2021])[0]
+    got = evaluate(preds, {"x": ["p_a"]}, tune=[2020], confirm=[2021], cluster=["season", "week"])[0]
+    confirm = preds[preds["season"] == 2021]
+    want = paired_gain(confirm["p_a"].to_numpy(), confirm["p_blend"].to_numpy(), confirm["home_win"].to_numpy(),
+                       clusters=(confirm["season"] * 100 + confirm["week"]).to_numpy())
+    assert got["confirm"] == want and "ships_cluster" in got["variants"][0]["tune"]
+    assert got["ships"] is want["ships"] and got["ships"] is plain["ships"]  # the verdict stays the game-level rule
+    assert set(plain["confirm"]) == PLAIN_KEYS
+    with pytest.raises(ValueError):  # a season cannot be tuned on and confirmed on
+        evaluate(preds, {"x": ["p_a"]}, tune=[2020, 2021], confirm=[2021])
+
+
+def test_devig_methods_remove_the_margin_each_in_its_own_way():
+    assert mk.DEVIG_METHODS == ("multiplicative", "additive", "shin", "power", "odds_ratio")
+
+    def odds(q: float) -> float:
+        return q / (1 - q)
+
+    for home_ml, away_ml in ((-200, 170), (170, -200), (-500, 375), (-110, -105), (-110, -110), (120, -140)):
+        h, a = mk.implied_prob(home_ml), mk.implied_prob(away_ml)
+        p = {method: mk.devig_home_prob(home_ml, away_ml, method) for method in mk.DEVIG_METHODS}
+        for method, value in p.items():
+            assert 0 < value < 1
+            assert abs(value + mk.devig_home_prob(away_ml, home_ml, method) - 1) < 1e-9  # the two sides sum to 1
+        assert p["multiplicative"] == novig_home_prob(home_ml, away_ml)  # today's method, unchanged
+        assert abs(p["additive"] - (h - (h + a - 1) / 2)) < 1e-12  # the same amount off each side
+        # Power: both implied probabilities raised to one exponent.
+        assert abs(np.log(p["power"]) / np.log(h) - np.log(1 - p["power"]) / np.log(a)) < 1e-7
+        # Odds ratio: both sides' odds cut by one factor.
+        assert abs(odds(h) / odds(p["odds_ratio"]) - odds(a) / odds(1 - p["odds_ratio"])) < 1e-7
+        # Shin: one share of insider money z explains both prices.
+        z = [(q * q / (h + a) - v * v) / (v * (1 - v)) for q, v in ((h, p["shin"]), (a, 1 - p["shin"]))]
+        assert abs(z[0] - z[1]) < 1e-9 and 0 < z[0] < 1
+        assert abs(p["shin"] - p["additive"]) < 1e-9  # with two outcomes Shin and additive are the same number
+    for method in mk.DEVIG_METHODS:  # a price with no margin is left as it is
+        assert abs(mk.devig_home_prob(150, -150, method) - 0.4) < 1e-9
+    for home_ml, away_ml in ((-200, 170), (-500, 375)):  # the other methods take more margin off the underdog
+        base = mk.devig_home_prob(home_ml, away_ml, "multiplicative")
+        assert all(mk.devig_home_prob(home_ml, away_ml, m) > base + 1e-4 for m in ("additive", "power", "odds_ratio"))
+
+
+def test_devig_keeps_a_missing_price_missing_and_refuses_an_unknown_method():
+    for method in mk.DEVIG_METHODS:
+        assert mk.devig_home_prob(None, -110, method) is None and mk.devig_home_prob(-110, None, method) is None
+    with pytest.raises(ValueError):
+        mk.devig_home_prob(-110, -110, "basic")
+
+
+def test_market_logit_is_the_clipped_log_odds_of_the_chosen_method():
+    df = frame()
+    df.loc[0, "home_ml"] = np.nan
+    df.loc[1, ["home_ml", "away_ml"]] = [-100000.0, 5000.0]
+    feats = add_features(df, EloParams())
+    assert np.allclose(ft.market_logit(df, "multiplicative"), feats["market_logit"], equal_nan=True)
+    power = ft.market_logit(df, "power")
+    assert list(power.index) == list(df.index)
+    assert np.isnan(power[0]) and np.isclose(power[1], np.log(0.99 / 0.01))  # missing stays missing; clipped at 99%
+    p = mk.devig_home_prob(df.loc[2, "home_ml"], df.loc[2, "away_ml"], "power")
+    assert np.isclose(power[2], np.log(p / (1 - p)))
+
+
+def test_logit_fit_takes_row_weights():
+    feats = add_features(frame(), EloParams())
+    train = feats[feats["home_win"].notna()].copy()
+    train.loc[train.index[0], "market_logit"] = np.nan  # a row the fit must drop, with its weight
+    plain = LogitModel.fit(train, BLEND_FEATURES)
+    ones = LogitModel.fit(train, BLEND_FEATURES, weights=pd.Series(1.0, index=train.index))
+    assert np.allclose(ones.coef, plain.coef) and np.isclose(ones.intercept, plain.intercept)
+    recent = train["season"] >= 2021
+    doubled = LogitModel.fit(pd.concat([train, train[recent]]), BLEND_FEATURES)
+    weighted = LogitModel.fit(train, BLEND_FEATURES, weights=pd.Series(np.where(recent, 2.0, 1.0), index=train.index))
+    assert np.allclose(weighted.coef, doubled.coef, atol=1e-3)  # weight 2 is the same as having the row twice
+    assert not np.allclose(weighted.coef, plain.coef, atol=1e-2)
+    for bad in (-1.0, np.nan):
+        with pytest.raises(ValueError):
+            LogitModel.fit(train, BLEND_FEATURES, weights=pd.Series(bad, index=train.index))
+
+
+def lines_frame() -> pd.DataFrame:
+    """The fixture schedule with prices and lines that vary from game to game."""
+    df = frame()
+    home_favoured = df["home_ml"] < 0
+    step = df.index % 3
+    favourite, underdog = -150.0 - 50 * step, 130.0 + 40 * step
+    df["home_ml"] = np.where(home_favoured, favourite, underdog)
+    df["away_ml"] = np.where(home_favoured, underdog, favourite)
+    df["spread_line"] = np.where(home_favoured, 3.0, -3.0) + df.index % 5 - 2.0
+    df["total_line"] = 40.0 + df.index % 7 * 1.5
+    return df
+
+
+def _idea_columns(preds: pd.DataFrame) -> list[str]:
+    return [col for col in preds if col.startswith(IDEA_PREFIXES)]
+
+
+def test_idea_preds_fit_every_variant_on_the_seasons_before_the_test_season(monkeypatch):
+    df = lines_frame()
+    no_line = df[(df["season"] == 2022) & (df["week"] == 2)].index[0]
+    df.loc[no_line, ["home_ml", "away_ml"]] = np.nan
+    base = candidate_preds(df, [2021, 2022], window=3)
+    seen = []
+    real_fit = LogitModel.fit.__func__
+
+    def spy(cls, train, features, weights=None):
+        seen.append((list(features), train, weights))
+        return real_fit(cls, train, features) if weights is None else real_fit(cls, train, features, weights=weights)
+
+    monkeypatch.setattr(LogitModel, "fit", classmethod(spy))
+    preds = bt.idea_preds(df, [2021, 2022], window=3)
+    # Same games and the same baseline as the step 14 bench: only games with a price.
+    assert list(preds["game_id"]) == list(base["game_id"]) and len(preds) == 29
+    assert np.allclose(preds["p_blend"], base["p_blend"])
+    # No fit ever sees the test season or a later one.
+    assert seen and all(set(train["season"]) <= {2018, 2019, 2020} or set(train["season"]) <= {2019, 2020, 2021}
+                        for _, train, _ in seen)
+    fitted = [features for features, _, _ in seen]
+    for method in ("additive", "shin", "power", "odds_ratio"):  # one fit per test season, in place of market_logit
+        assert fitted.count([f"market_logit_{method}", *BASE_FEATURES]) == 2
+    for extra in (["spread_pts"], ["total_pts"], ["spread_pts", "total_pts"], ["spread_per_total"]):
+        assert fitted.count([*BLEND_FEATURES, *extra]) == 2
+    # Recency: the blend's own inputs, each training row weighted by its age in seasons.
+    assert bt.RECENCY_HALF_LIVES == (2, 4, 8)
+    weighted = [(train, weights) for features, train, weights in seen if weights is not None]
+    assert len(weighted) == 6 and all(features == BLEND_FEATURES for features, _, w in seen if w is not None)
+    for season in (2021, 2022):
+        found = set()
+        for train, weights in weighted:
+            if train["season"].max() == season - 1:
+                age = season - 1 - train["season"]
+                found |= {h for h in (2, 4, 8) if np.allclose(weights.reindex(train.index), 0.5 ** (age / h))}
+        assert found == {2, 4, 8}
+    cols = _idea_columns(preds)
+    assert sorted(cols) == sorted([
+        "p_devig_additive", "p_devig_shin", "p_devig_power", "p_devig_odds_ratio",
+        "p_in_spread", "p_in_total", "p_in_both", "p_in_ratio",
+        "p_recency_2", "p_recency_4", "p_recency_8",
+    ])
+    assert all(preds[col].between(0, 1).all() and not np.allclose(preds[col], preds["p_blend"]) for col in cols)
+    assert np.allclose(preds["p_devig_shin"], preds["p_devig_additive"])
+    assert np.allclose(preds["spread_pts"], preds["spread_line"] / 7)
+    assert np.allclose(preds["total_pts"], (preds["total_line"] - 45) / 10)
+    assert np.allclose(preds["spread_per_total"], 10 * preds["spread_line"] / preds["total_line"])
+
+
+def test_line_input_variants_fall_back_to_the_blend_where_a_line_is_missing():
+    df = lines_frame()
+    week1 = df[(df["season"] == 2022) & (df["week"] == 1)].index
+    df.loc[week1[0], "spread_line"] = np.nan
+    df.loc[week1[1], "total_line"] = np.nan
+    preds = bt.idea_preds(df, [2022], window=3).set_index("game_id")
+    no_spread, no_total = preds.loc[df.loc[week1[0], "game_id"]], preds.loc[df.loc[week1[1], "game_id"]]
+    for col in ("p_in_spread", "p_in_both", "p_in_ratio"):  # never an invented line
+        assert no_spread[col] == no_spread["p_blend"]
+    assert no_spread["p_in_total"] != no_spread["p_blend"]
+    for col in ("p_in_total", "p_in_both", "p_in_ratio"):
+        assert no_total[col] == no_total["p_blend"]
+    assert no_total["p_in_spread"] != no_total["p_blend"]
+
+
+def test_idea_preds_never_use_a_result_from_the_test_week_or_later():
+    df = lines_frame()
+    got = bt.idea_preds(df, [2022], window=3)
+    cols = _idea_columns(got)
+    week5 = df.loc[(df["season"] == 2022) & (df["week"] == 5), "kickoff_utc"].min()
+    after = bt.idea_preds(_flip_scores(df, df["kickoff_utc"] >= week5), [2022], window=3)
+    early = (got["week"] < 5).to_numpy()
+    assert early.any() and list(after["game_id"]) == list(got["game_id"])
+    assert all(np.allclose(got.loc[early, col], after.loc[early, col]) for col in cols)
+    # Results of an earlier season do move every variant: that is what it learns from.
+    earlier = bt.idea_preds(_flip_scores(df, df["season"] == 2021), [2022], window=3)
+    assert all(not np.allclose(got[col], earlier[col]) for col in cols)
+
+
+def _overconfident_blend(per_season: int = 4000) -> pd.DataFrame:
+    """Walk-forward style rows whose blend is too sure of itself: true log-odds are half the blend's, less 0.15."""
+    rng = np.random.default_rng(3)
+    rows = []
+    for season in (2019, 2020, 2021, 2022):
+        truth = rng.uniform(0.15, 0.85, per_season)
+        z = np.log(truth / (1 - truth))
+        rows.append(pd.DataFrame({"season": season, "p_true": truth, "p_blend": 1 / (1 + np.exp(-(2 * z + 0.3))),
+                                  "home_win": (rng.uniform(size=per_season) < truth).astype(float)}))
+    return pd.concat(rows, ignore_index=True)
+
+
+def test_calibration_is_fitted_on_earlier_seasons_only():
+    preds = _overconfident_blend()
+    season = preds["season"]
+    late = season >= 2021
+    flipped = preds.assign(home_win=np.where(late, 1 - preds["home_win"], preds["home_win"]))
+    for method in ("platt", "isotonic"):
+        got = bt.calibrated(preds, method)
+        assert list(got.index) == list(preds.index)
+        # The first season has nothing earlier to learn from: missing, not invented.
+        assert got[season == 2019].isna().all() and got[season > 2019].between(0.01, 0.99).all()
+        after = bt.calibrated(flipped, method)
+        assert np.allclose(got[season == 2021], after[season == 2021])  # its own and later results: no effect
+        assert not np.allclose(got[season == 2022], after[season == 2022])  # 2021 results do teach 2022
+    with pytest.raises(ValueError):
+        bt.calibrated(preds, "beta")
+
+
+def test_calibration_pulls_an_overconfident_blend_back_to_the_truth():
+    preds = _overconfident_blend()
+    last = preds["season"] == 2022
+    y = preds.loc[last, "home_win"].to_numpy()
+    raw = log_loss(preds.loc[last, "p_blend"].to_numpy(), y)
+    for method, tolerance in (("platt", 0.012), ("isotonic", 0.035)):  # Platt on raw probability misses by 0.025
+        got = bt.calibrated(preds, method)[last]
+        assert (got - preds.loc[last, "p_true"]).abs().mean() < tolerance
+        assert log_loss(got.to_numpy(), y) < raw - 0.05
+    # Isotonic never reorders the picks, and never says 0% or 100%.
+    one_season = bt.calibrated(preds[preds["season"] <= 2020], "isotonic")[preds["season"] == 2020]
+    order = np.argsort(preds.loc[preds["season"] == 2020, "p_blend"].to_numpy())
+    assert (np.diff(one_season.to_numpy()[order]) >= 0).all()
+    extreme = preds[preds["season"] <= 2020].assign(home_win=lambda d: (d["p_blend"] > 0.5).astype(float))
+    sure = bt.calibrated(extreme, "isotonic")[extreme["season"] == 2020]
+    assert sure.min() == 0.01 and sure.max() == 0.99
