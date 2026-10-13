@@ -1,0 +1,6 @@
+    [0m[94mfrom[39;49;00m[90m [39;49;00m[04m[96mnflpi[39;49;00m[04m[96m.[39;49;00m[04m[96manalytics[39;49;00m[04m[96m.[39;49;00m[04m[96mbacktest[39;49;00m[90m [39;49;00m[94mimport[39;49;00m _elo_frames, candidate_preds, evaluate, inseason_blend, predict_season[90m[39;49;00m
+[1m[31mE   ImportError: cannot import name 'candidate_preds' from 'nflpi.analytics.backtest' (/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-model/backend/nflpi/analytics/backtest.py)[0m
+=========================== short test summary info ============================
+ERROR tests/test_model.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 24.73s
