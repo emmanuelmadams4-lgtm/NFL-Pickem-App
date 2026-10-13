@@ -62,3 +62,12 @@ Gate (each run, twice on the final commit): `cd backend && DATABASE_URL=<scratch
 
 ## 3. Build record
 (filled in as the build proceeds)
+
+### Build record
+
+* Codex probe (once, default model): `ERROR: {"type":"error","status":400,"error":{"type":"invalid_request_error","message":"The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account."}}`. CLIMBS: none possible; IMPLEMENTATION_PROVIDER: CLAUDE (limit hit: Codex refuses on this account), BUILD_RUNG: sonnet subagent builders (try 1 of 2). Builders never write tests and never certify.
+* Red: `tests/test_sim.py` fails at collection, `ModuleNotFoundError: No module named 'nflpi.sim.game'` (module absent = intended reason). Commit `e2efcf9`.
+* `tests/test_sim_backtest.py` written (B1 to B9) and committed before the bench is built.
+* IMPLEMENTATION WO1 (sonnet builder, try 1 of 2): `backend/nflpi/sim/` (5 files, 288 lines). First run 50 of 51 tests; the one failure was a bug in my own test (`assert_allclose` on a string field), fixed by me, 51 passed, ruff clean. Commit `e9786c1`.
+* WO2 (sonnet builder, try 1 of 2): `analytics/sim_backtest.py` (331 lines). 65 passed (both files, 14.7 s, run by me), ruff clean. Commit `99422cb`. Builder notes: `build_table` skips a season whose training fit fails; `confirm` deletes its result file only if the run itself raises before finishing (so one failed run does not block a rerun; a completed run can never be overwritten).
+* Database note: the lane test DB password is `test` (container env), not the one in the work order; still the lane DB on 15446, never the default URL.

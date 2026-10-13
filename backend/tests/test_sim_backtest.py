@@ -2,13 +2,14 @@
 
 import json
 from datetime import date, timedelta
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from nflpi.analytics import sim_backtest as bench
-from nflpi.sim import DISTRIBUTIONS, SimParams
+from nflpi.sim import DEFAULT_DISTRIBUTION, DISTRIBUTIONS, SimParams
 
 TEAMS = [f"T{i:02d}" for i in range(32)]
 
@@ -230,3 +231,10 @@ def test_confirm_reports_every_variant_with_every_requested_metric(table, tmp_pa
         assert {"log_loss", "accuracy", "blend_log_loss", "market_log_loss", "log_loss_gain_vs_blend",
                 "log_loss_gain_ci"} <= set(w) and len(w["log_loss_gain_ci"]) == 2
     assert report["sources_note"].lower().count("by construction") >= 1
+
+
+def test_default_distribution_is_the_one_recorded_by_the_tune_run():
+    path = Path(__file__).resolve().parents[2] / "docs/gauntlet/logs/step-18c-evidence/tune-result.json"
+    recorded = json.loads(path.read_text())
+    assert recorded["seasons"] == bench.TUNE_SEASONS and max(recorded["seasons"]) < bench.CONFIRM_SEASONS[0]
+    assert recorded["default"] == DEFAULT_DISTRIBUTION
