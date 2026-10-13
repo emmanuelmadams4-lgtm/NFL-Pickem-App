@@ -103,7 +103,7 @@ def main() -> int:
         path.write_text(mutated)
         try:
             run = subprocess.run(
-                ["uv", "run", "pytest", "-q", "-x", "tests/test_passkey.py", "-p", "no:cacheprovider", "-k", only],
+                ["uv", "run", "pytest", "-q", "-x", "tests/test_passkey.py", "-p", "no:cacheprovider", "--color=no", "-rfE", "-k", only],
                 cwd=backend, capture_output=True, text=True, timeout=300,
             )  # fmt: skip
         finally:
