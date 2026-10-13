@@ -9,6 +9,7 @@ import io
 import math
 import time
 from datetime import datetime
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -23,7 +24,9 @@ UTC = ZoneInfo("UTC")
 FRANCHISE = {"OAK": "LV", "SD": "LAC", "STL": "LA", "LAR": "LA"}
 ESPN_TEAMS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams"
 ESPN_COACHES_URL = "https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{season}/teams/{team_id}/coaches?lang=en"
+ESPN_COACHES_HOST = urlparse(ESPN_COACHES_URL).hostname
 ESPN_FRANCHISE = {"WSH": "WAS"}
+MAX_COACH_NAME_LENGTH = 64
 
 
 def franchise(abbr: str) -> str:
@@ -66,9 +69,12 @@ def fetch_head_coaches(season: int, get=None) -> dict[str, str]:
         items = get(ESPN_COACHES_URL.format(season=season, team_id=team["id"])).get("items", [])
         if len(items) != 1:
             continue
-        coach = get(items[0]["$ref"].replace("http://", "https://"))
+        url = items[0]["$ref"].replace("http://", "https://")
+        if urlparse(url).hostname != ESPN_COACHES_HOST:
+            continue
+        coach = get(url)
         name = f"{coach['firstName']} {coach['lastName']}".strip()
-        if name:
+        if name and len(name) <= MAX_COACH_NAME_LENGTH:
             coaches[abbr] = name
     if not coaches:
         raise RuntimeError("no head coaches found")
