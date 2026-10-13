@@ -1549,6 +1549,273 @@
      }
     }
    }
+  },
+  "/api/passkey/register/begin": {
+   "post": {
+    "summary": "Register Begin",
+    "operationId": "register_begin_api_passkey_register_begin_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Register Begin Api Passkey Register Begin Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/passkey/register/finish": {
+   "post": {
+    "summary": "Register Finish",
+    "operationId": "register_finish_api_passkey_register_finish_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RegisteredOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/passkey/signin/begin": {
+   "post": {
+    "summary": "Signin Begin",
+    "operationId": "signin_begin_api_passkey_signin_begin_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Signin Begin Api Passkey Signin Begin Post"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/passkey/signin/finish": {
+   "post": {
+    "summary": "Signin Finish",
+    "operationId": "signin_finish_api_passkey_signin_finish_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SessionOut"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/passkey": {
+   "get": {
+    "summary": "List Passkeys",
+    "operationId": "list_passkeys_api_passkey_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PasskeyListOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/passkey/{passkey_id}": {
+   "delete": {
+    "summary": "Remove Passkey",
+    "operationId": "remove_passkey_api_passkey__passkey_id__delete",
+    "parameters": [
+     {
+      "name": "passkey_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 2147483647,
+       "minimum": 1,
+       "title": "Passkey Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/passkey/signout": {
+   "post": {
+    "summary": "Signout",
+    "operationId": "signout_api_passkey_signout_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -3485,6 +3752,66 @@
     ],
     "title": "NewsOut"
    },
+   "PasskeyListOut": {
+    "properties": {
+     "passkeys": {
+      "items": {
+       "$ref": "#/components/schemas/PasskeyOut"
+      },
+      "type": "array",
+      "title": "Passkeys"
+     }
+    },
+    "type": "object",
+    "required": [
+     "passkeys"
+    ],
+    "title": "PasskeyListOut"
+   },
+   "PasskeyOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "last_used_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Used At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "label",
+     "created_at",
+     "last_used_at"
+    ],
+    "title": "PasskeyOut"
+   },
    "PerformanceOut": {
     "properties": {
      "season": {
@@ -3902,6 +4229,37 @@
     ],
     "title": "RankIn"
    },
+   "RegisteredOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "label",
+     "created_at"
+    ],
+    "title": "RegisteredOut"
+   },
    "ScorecardOut": {
     "properties": {
      "season": {
@@ -4022,6 +4380,25 @@
      "leader_points"
     ],
     "title": "ScorecardWeek"
+   },
+   "SessionOut": {
+    "properties": {
+     "session": {
+      "type": "string",
+      "title": "Session"
+     },
+     "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Expires At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "session",
+     "expires_at"
+    ],
+    "title": "SessionOut"
    },
    "SettingsIn": {
     "properties": {
