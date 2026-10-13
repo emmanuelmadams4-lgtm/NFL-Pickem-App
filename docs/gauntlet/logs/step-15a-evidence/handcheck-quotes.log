@@ -1,0 +1,8 @@
+kalshi: RefreshResult(source='kalshi', status='ok', inserted=4, skipped=24, detail='')
+odds: RefreshResult(source='oddsapi', status='ok', inserted=27, skipped=10, detail='')
+quotes: 31 ['kalshi', 'oddsapi:betmgm', 'oddsapi:betonlineag', 'oddsapi:betrivers'] ...
+ SEA@DEN kalshi pregame 0.405 None 0.4 0.41
+ SEA@DEN oddsapi:draftkings pregame 0.417 130.0 None None
+ SEA@DEN oddsapi:betus pregame 0.4128 134.0 None None
+status: {'kalshi': (0, datetime.datetime(2026, 10, 13, 7, 2, 25, 864751, tzinfo=zoneinfo.ZoneInfo(key='Etc/UTC')), None), 'oddsapi': (0, datetime.datetime(2026, 10, 13, 13, 1, 26, 82005, tzinfo=zoneinfo.ZoneInfo(key='Etc/UTC')), 498)}
+KEY IN LOGS/ROWS: False | log lines: 24

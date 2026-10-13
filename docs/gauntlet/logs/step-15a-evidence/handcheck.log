@@ -1,0 +1,5 @@
+refresh: RefreshResult(source='espn_live', status='ok', inserted=3, skipped=12, detail='')
+BUF @ LA: ESPN page final 37-34, last home win prob 0.0, play 4018729944992 | stored (37, 34, 0.0, '4018729944992') -> MATCH
+TB @ DAL: ESPN page final 24-16, last home win prob 0.0, play 4018729804255 | stored (24, 16, 0.0, '4018729804255') -> MATCH
+NYG @ WAS: ESPN page final 27-27, last home win prob 0.5, play 4018729885158 | stored (27, 27, 0.5, '4018729885158') -> MATCH
+HAND CHECK PASS
