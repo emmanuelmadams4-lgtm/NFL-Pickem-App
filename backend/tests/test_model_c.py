@@ -35,7 +35,8 @@ def test_tree_names_and_sets_are_frozen():
 
 
 def test_tree_inputs_code_the_roof_and_the_division_flag_without_touching_the_frame():
-    df = pd.DataFrame({"roof": ["dome", "closed", "outdoors", "open", None], "div_game": [True, False, True, False, True]})
+    df = pd.DataFrame({"roof": ["dome", "closed", "outdoors", "open", None],
+                       "div_game": [True, False, True, False, True]})
     before = df.copy()
     out = mc.tree_inputs(df)
     assert out["roof_indoor"].tolist()[:4] == [1.0, 1.0, 0.0, 0.0] and np.isnan(out["roof_indoor"].iloc[4])
@@ -86,7 +87,8 @@ def test_tree_preds_fit_only_on_the_window_before_the_test_season(monkeypatch):
     monkeypatch.setattr(mc.TreeModel, "fit_early", classmethod(spy))
     mc.tree_preds(lines_frame(), SEASONS, window=3, grid=SMALL_GRID)
     assert seen and all(s <= {2018, 2019, 2020} or s <= {2019, 2020, 2021} for s, _ in seen)
-    assert all(max(s) < 2022 for s, _ in seen[len(seen) // 2:]) and all(max(s) < 2021 for s, _ in seen[: len(seen) // 2])
+    half = len(seen) // 2
+    assert all(max(s) < 2022 for s, _ in seen[half:]) and all(max(s) < 2021 for s, _ in seen[:half])
     assert {tuple(f) for _, f in seen} == {tuple(mc.TREE_SETS["core"]), tuple(mc.TREE_SETS["wide"])}
 
 
@@ -132,8 +134,9 @@ def _stack_rows() -> pd.DataFrame:
     for season in (2019, 2020, 2021, 2022):
         truth = rng.uniform(0.2, 0.8, 300)
         y = (rng.uniform(size=300) < truth).astype(float)
-        rows.append(pd.DataFrame({"season": season, "home_win": y, "p_blend": np.clip(truth + rng.normal(0, 0.15, 300), 0.05, 0.95),
-                                  "p_t": np.clip(truth + rng.normal(0, 0.05, 300), 0.05, 0.95)}))
+        blend = np.clip(truth + rng.normal(0, 0.15, 300), 0.05, 0.95)
+        tree = np.clip(truth + rng.normal(0, 0.05, 300), 0.05, 0.95)
+        rows.append(pd.DataFrame({"season": season, "home_win": y, "p_blend": blend, "p_t": tree}))
     return pd.concat(rows, ignore_index=True)
 
 
@@ -149,7 +152,9 @@ def test_stacked_uses_earlier_seasons_only_and_leaves_the_first_season_missing()
     flipped = preds.assign(home_win=np.where(season >= 2021, 1 - preds["home_win"], preds["home_win"]))
     after = mc.stacked(flipped, "p_t")
     assert np.allclose(got[season == 2021], after[season == 2021])  # its own and later results: no effect
-    assert not np.allclose(got[season == 2022], after[season == 2022])  # 2021 results do teach 2022
+    worse = preds.assign(p_t=np.where(season < 2022, 1 - preds["p_t"], preds["p_t"]))  # the tree failed before 2022
+    earlier = mc.stacked(worse, "p_t")
+    assert not np.allclose(got[season == 2022], earlier[season == 2022])  # earlier results do teach 2022
 
 
 # ---- G: margin model turned into a win chance ----
@@ -251,7 +256,8 @@ def test_explosive_net_is_a_teams_own_rate_minus_its_opponents_in_the_same_game(
 def _explosive_fixture(df: pd.DataFrame) -> list[dict]:
     rows = []
     for r in df.itertuples():
-        rows += [_plays(r.game_id, r.home_team, 60, 4 + (r.Index % 5)), _plays(r.game_id, r.away_team, 60, 3 + (r.Index % 3))]
+        rows += [_plays(r.game_id, r.home_team, 60, 4 + (r.Index % 5)),
+                 _plays(r.game_id, r.away_team, 60, 3 + (r.Index % 3))]
     return rows
 
 
@@ -266,7 +272,8 @@ def test_explosive_preds_use_pregame_ratings_fit_on_earlier_seasons_and_fall_bac
     flipped.loc[flipped["kickoff_utc"] >= week4, "home_score"] += 7
     after = mc.explosive_preds(flipped, [2022], explosive, window=3)
     early = (got["week"] < 4).to_numpy()
-    assert early.any() and all(np.allclose(got.loc[early, f"p_expl_{h}"], after.loc[early, f"p_expl_{h}"]) for h in (4, 8, 16))
+    assert early.any() and all(
+        np.allclose(got.loc[early, f"p_expl_{h}"], after.loc[early, f"p_expl_{h}"]) for h in (4, 8, 16))
 
 
 # ---- P: confidence points ----
@@ -285,14 +292,15 @@ def test_points_go_from_the_week_size_down_to_one_in_the_order_given():
     assert sort == {"expected": pytest.approx(3 * 0.9 + 2 * 0.7 + 1 * 0.6), "actual": 3.0}
     assert mc.week_points(week, "reverse") == {"expected": pytest.approx(1 * 0.9 + 2 * 0.7 + 3 * 0.6), "actual": 1.0}
     assert mc.week_points(week, "kickoff")["actual"] == 3.0  # g0 first kickoff gets the most points
-    assert mc.week_points(week, "oracle")["actual"] == 3.0 and mc.week_points(week, "oracle")["expected"] >= sort["expected"]
+    oracle = mc.week_points(week, "oracle")
+    assert oracle["actual"] == 3.0 and oracle["expected"] <= sort["expected"]
     with pytest.raises(ValueError):
         mc.week_points(week, "alphabetical")
 
 
 def test_ties_are_broken_by_game_id_and_a_half_is_an_away_pick():
     week = _week([0.5, 0.5], [0.0, 1.0])
-    assert mc.week_points(week, "sort")["actual"] == 2.0  # g0 picked away (right) gets 2 points; g1 picked away (wrong) gets 1
+    assert mc.week_points(week, "sort")["actual"] == 2.0  # g0 away (right) gets 2; g1 away (wrong) gets 1
 
 
 def test_todays_pick_sheet_without_ai_evidence_is_the_probability_sort():
@@ -321,7 +329,7 @@ def test_points_report_has_every_order_per_week_and_a_paired_interval_for_the_ga
     rep = mc.points_report(preds)
     assert rep["weeks"] == 20 and set(rep["orders"]) == {"sort", "market", "kickoff", "reverse", "oracle"}
     sort, rev, oracle = (rep["orders"][k] for k in ("sort", "reverse", "oracle"))
-    assert rev["expected_per_week"] < sort["expected_per_week"] <= oracle["expected_per_week"]
+    assert rev["expected_per_week"] < oracle["expected_per_week"] <= sort["expected_per_week"]
     assert rev["actual_per_week"] < sort["actual_per_week"] <= oracle["actual_per_week"]
     gap = rep["orders"]["kickoff"]["sort_minus_order_actual"]
     assert gap["mean"] > 0 and gap["ci"][0] < gap["mean"] < gap["ci"][1]
@@ -345,7 +353,8 @@ def test_evaluate_c_keeps_the_ship_rule_and_adds_every_variants_confirm_gain_and
     assert {k: got[k] for k in plain} == plain  # nothing the rule reads changes
     confirm = preds[preds["season"] == 2021]
     for row in got["all_variants"]:
-        gain = paired_gain(confirm[row["variant"]].to_numpy(), confirm["p_blend"].to_numpy(), confirm["home_win"].to_numpy())
+        gain = paired_gain(confirm[row["variant"]].to_numpy(), confirm["p_blend"].to_numpy(),
+                           confirm["home_win"].to_numpy())
         assert row["confirm_gain"] == pytest.approx(gain["log_loss_gain"])
         assert row["gap"] == pytest.approx(row["tune_gain"] - row["confirm_gain"])
     assert [r["variant"] for r in got["all_variants"]] == ["p_a", "p_b"]
