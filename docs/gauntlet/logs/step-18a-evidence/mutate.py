@@ -9,6 +9,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
+
 TEST_CMD = ["uv", "run", "pytest", "-q", "tests/test_model_audit.py", "-p", "no:cacheprovider", "--color=no"]
 
 MUTATIONS = {
@@ -47,6 +50,11 @@ MUTATIONS = {
         'kind = "closing" if g["status"] == "final" else "latest"',
         'kind = "closing"',
     ),
+    "M9 the live fit window reaches into the season it predicts": (
+        "nflpi/predictions/engine.py",
+        "seasons = list(range(through_season - settings.train_window_seasons + 1, through_season + 1))",
+        "seasons = list(range(through_season - settings.train_window_seasons + 2, through_season + 2))",
+    ),
     "M6 live features differ from the bench": (
         "nflpi/predictions/engine.py",
         '    f = add_features(load_frame(session), EloParams(**p["elo"]))',
@@ -57,7 +65,7 @@ MUTATIONS = {
 
 def run_tests() -> tuple[int, list[str]]:
     done = subprocess.run(TEST_CMD, capture_output=True, text=True, env=os.environ.copy())
-    failed = [line.split()[1] for line in done.stdout.splitlines() if line.startswith("FAILED")]
+    failed = [line.split()[1] for line in done.stdout.splitlines() if line.startswith(("FAILED", "ERROR"))]
     return done.returncode, failed
 
 
@@ -76,9 +84,16 @@ def mutate(path: str, old: str, new: str) -> dict:
 
 
 def main() -> int:
-    url = os.environ.get("DATABASE_URL", "")
-    if not url or ":5432" in url:
-        print("refusing to run: DATABASE_URL must be set to the test database (never port 5432)", file=sys.stderr)
+    try:
+        url = make_url(os.environ.get("DATABASE_URL", ""))
+    except ArgumentError:
+        url = None
+    if url is None or not (url.database or "").endswith("_test") or url.port in (None, 5432):
+        print("refusing to run: DATABASE_URL must name a database ending in _test on an explicit port other "
+              "than 5432", file=sys.stderr)
+        return 2
+    if subprocess.run(["git", "diff", "--quiet", "--", "nflpi"]).returncode != 0:
+        print("refusing to run: git diff -- nflpi is not clean; commit or revert those edits first", file=sys.stderr)
         return 2
     code, failed = run_tests()
     if code != 0:

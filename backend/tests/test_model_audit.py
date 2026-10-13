@@ -155,8 +155,10 @@ def test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_clos
     assert by_kind["live"] and by_kind["backfill"]
     assert all(p.features["market_kind"] == "latest" and p.created_at < kickoff[p.game_id] for p in by_kind["live"])
     assert all(p.features["market_kind"] == "closing" for p in by_kind["backfill"])
-    # The live model's own weights were fitted on finished games, so on closing lines only.
     frame = engine.load_frame(loaded)
+    seen_at = dict(zip(frame["game_id"], frame["market_observed_at"], strict=True))
+    assert all(seen_at[p.game_id] < kickoff[p.game_id] for p in by_kind["live"])
+    # The live model's own weights were fitted on finished games, so on closing lines only.
     fitted_on = frame[frame["season"].isin(engine.active_model(loaded).params["train_seasons"])]
     assert set(fitted_on["market_kind"]) == {"closing"}
 

@@ -26,6 +26,10 @@ def num(value: float | None) -> float | None:
     return None if value is None or not np.isfinite(value) else float(value)
 
 
+def week_clusters(rows: pd.DataFrame) -> np.ndarray:
+    return rows.groupby(["season", "week"], sort=True).ngroup().to_numpy()
+
+
 def reliability(rows: pd.DataFrame, model: str) -> dict:
     p = rows[f"p_{model}"]
     y = rows["home_win"]
@@ -89,13 +93,22 @@ preds = all_preds[all_preds["p_market"].notna()]
 by_period = {name: preds[preds["season"].isin(seasons)] for name, seasons in PERIODS.items()}
 
 reg = frame[frame["season"].between(2012, 2025) & (frame["game_type"] == "REG") & (frame["status"] == "final")]
+ties_excluded = int((reg["home_score"] == reg["away_score"]).sum())
+no_moneyline_excluded = int(
+    ((reg["home_score"] != reg["away_score"]) & (reg["home_ml"].isna() | reg["away_ml"].isna())).sum()
+)
+if len(preds) != len(reg) - ties_excluded - no_moneyline_excluded:
+    raise SystemExit(
+        f"sample identity failed: {len(preds)} != {len(reg)} - {ties_excluded} - {no_moneyline_excluded}"
+    )
+qb_present = {side: preds[f"{side}_qb"].notna() & ~preds[f"{side}_qb"].isin(NO_VALUE) for side in ("home", "away")}
 sample = {
     "preds_games": len(preds),
     "regular_season_finals": len(reg),
-    "ties_excluded": int((reg["home_score"] == reg["away_score"]).sum()),
-    "no_moneyline_excluded": int(((reg["home_score"] != reg["away_score"]) & reg["home_ml"].isna()).sum()),
+    "ties_excluded": ties_excluded,
+    "no_moneyline_excluded": no_moneyline_excluded,
     "games_per_season": {str(s): int(n) for s, n in preds["season"].value_counts().sort_index().items()},
-    "share_with_both_qbs": float((preds["home_qb"].notna() & preds["away_qb"].notna()).mean()),
+    "share_with_both_qbs": float((qb_present["home"] & qb_present["away"]).mean()),
     "home_qb_change_rate": float(preds["home_qb_change"].mean()),
     "away_qb_change_rate": float(preds["away_qb_change"].mean()),
 }
@@ -104,7 +117,7 @@ result = {
     "baselines": {name: {m: summarize(rows[f"p_{m}"].to_numpy(), rows["home_win"].to_numpy()) for m in MODELS}
                   for name, rows in by_period.items()},
     "paired": {name: {f"{new}_vs_{old}": paired_gain(rows[f"p_{new}"].to_numpy(), rows[f"p_{old}"].to_numpy(),
-                                                     rows["home_win"].to_numpy())
+                                                     rows["home_win"].to_numpy(), week_clusters(rows))
                       for new, old in PAIRS} for name, rows in by_period.items()},
     "reliability": {name: {m: reliability(rows, m) for m in CALIBRATED} for name, rows in by_period.items()},
     "sample": sample,

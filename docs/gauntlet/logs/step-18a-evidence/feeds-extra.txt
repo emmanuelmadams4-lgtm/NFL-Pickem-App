@@ -29,3 +29,11 @@ pushes on the spread 2012-2025 (result == spread_line): 90 ; on the total: 33
 sign check: games with spread_line > 0: 2284 home won 1536 ; home moneyline negative in 2283
 ## injuries_2026.csv rows 1413 weeks [1, 2, 3, 4, 5] latest date_modified 
 ## stats_team_week_2026.csv rows 158 weeks [1, 2, 3, 4, 5]
+
+# run 2026-10-13T19:11:16.110192+00:00 (how a missing value is written in games.csv)
+2026 unplayed home_score {'EMPTY': 193}
+2026 unplayed home_qb_name {'value': 14, 'EMPTY': 179}
+2026 unplayed away_qb_name {'value': 14, 'EMPTY': 179}
+2026 unplayed home_moneyline {'value': 28, 'EMPTY': 165}
+2026 unplayed spread_line {'value': 28, 'EMPTY': 165}
+2002-2025 games 6499 home_qb_name literal NA: 0 empty: 0 ; away_qb_name literal NA: 0 empty: 0
