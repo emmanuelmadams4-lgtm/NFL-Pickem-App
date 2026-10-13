@@ -54,7 +54,10 @@ def test_american_positive_uses_one_plus_a_over_100_and_negative_one_plus_100_ov
     assert american_to_decimal(-175) == pytest.approx(1 + 100 / 175)
 
 
-@pytest.mark.parametrize("bad", [0, 0.0, -0.0, float("nan"), float("inf"), float("-inf"), True, False, None, "150", 50, -50, 99.5, -99.9])
+@pytest.mark.parametrize(
+    "bad",
+    [0, 0.0, -0.0, float("nan"), float("inf"), float("-inf"), True, False, None, "150", 50, -50, 99.5, -99.9],
+)
 def test_american_to_decimal_rejects_invalid_prices(bad):
     with pytest.raises(BettingError):
         american_to_decimal(bad)
@@ -141,7 +144,9 @@ def test_no_vig_even_market_is_unchanged():
     assert no_vig([0.5, 0.5]) == pytest.approx([0.5, 0.5])
 
 
-@pytest.mark.parametrize("bad", [[], [0.5], [0.5, 0.0], [0.5, -0.1], [0.5, float("nan")], [0.5, float("inf")], [0.5, True]])
+@pytest.mark.parametrize(
+    "bad", [[], [0.5], [0.5, 0.0], [0.5, -0.1], [0.5, float("nan")], [0.5, float("inf")], [0.5, True]]
+)
 def test_no_vig_rejects_incomplete_or_invalid_sets(bad):
     with pytest.raises(BettingError):
         no_vig(bad)
@@ -155,7 +160,7 @@ def test_no_vig_generated_sets_sum_to_one_and_keep_order():
         got = no_vig(q)
         assert sum(got) == pytest.approx(1.0, abs=1e-12)
         assert all(0 < p < 1 for p in got)
-        assert [a < b for a, b in zip(q, q[1:])] == [a < b for a, b in zip(got, got[1:])]
+        assert [a < b for a, b in zip(q, q[1:], strict=False)] == [a < b for a, b in zip(got, got[1:], strict=False)]
 
 
 def test_conversion_round_trips():
@@ -316,7 +321,8 @@ def test_spread_pair_with_the_same_home_line():
 
 
 def test_total_pair_over_under():
-    got = no_vig_probabilities([snap("over", -115, market="total", line=47.5), snap("under", -105, market="total", line=47.5)])
+    pair = [snap("over", -115, market="total", line=47.5), snap("under", -105, market="total", line=47.5)]
+    got = no_vig_probabilities(pair)
     q_o, q_u = 115 / 215, 105 / 205
     assert got["over"] == pytest.approx(q_o / (q_o + q_u), abs=1e-12)
     assert got["under"] == pytest.approx(q_u / (q_o + q_u), abs=1e-12)

@@ -171,7 +171,8 @@ def test_whole_number_float_scores_are_accepted():
 
 
 def make(market, selection, line=None):
-    return MarketSnapshot("g1", "bookA", T0, market, selection, line, "american", -110 if market != "moneyline" else 150)
+    price = 150 if market == "moneyline" else -110
+    return MarketSnapshot("g1", "bookA", T0, market, selection, line, "american", price)
 
 
 def test_settle_dispatches_on_market_type():
