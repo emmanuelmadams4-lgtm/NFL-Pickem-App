@@ -1,0 +1,21 @@
+Week,Team,Game,Favored,Spread,Underdog,Pick,Side,Confidence,Week_Total_Pts
+1,Ann A,1,Buf,3.5,Mia,Buf,Favorite,3,5
+1,Ann A,2,NE,1.5,NYJ,NYJ,Underdog,1,5
+1,Ann A,3,KC,7.0,LV,KC,Favorite,2,5
+1,Bo's Picks,1,Buf,3.5,Mia,Buf,Favorite,2,6
+1,Bo's Picks,2,NE,1.5,NYJ,NE,Favorite,3,6
+1,Bo's Picks,3,KC,7.0,LV,KC,Favorite,1,6
+1,Cy!!,1,Buf,3.5,Mia,Mia,Underdog,1,4
+1,Cy!!,2,NE,1.5,NYJ,NE,Favorite,3,4
+1,Cy!!,3,KC,7.0,LV,KC,Favorite,2,4
+1,Dee ’Q’,1,Buf,3.5,Mia,,none,,5
+1,Dee ’Q’,2,NE,1.5,NYJ,NE,Favorite,2,5
+1,Dee ’Q’,3,KC,7.0,LV,KC,Favorite,3,5
+2,Ann A,1,LAR,2.5,KC,LAR,Favorite,2,3
+2,Ann A,2,Buf,10.0,NE,Buf,Favorite,1,3
+2,Bo's Picks,1,LAR,2.5,KC,KC,Underdog,1,3
+2,Bo's Picks,2,Buf,10.0,NE,Buf,Favorite,2,3
+2,Cy!!,1,LAR,2.5,KC,,none,,2
+2,Cy!!,2,Buf,10.0,NE,Buf,Favorite,2,2
+2,Dee ’Q’,1,LAR,2.5,KC,LAR,Favorite,1,3
+2,Dee ’Q’,2,Buf,10.0,NE,Buf,Favorite,2,3
