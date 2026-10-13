@@ -88,7 +88,7 @@ def _send(
             if status in (404, 410):
                 session.delete(sub)
             error = (
-                "Push service no longer recognizes this device."
+                "Push service no longer recognizes this device. Turn alerts off and on again."
                 if status in (404, 410) else "Push service rejected the alert."
             )
             log.warning("web push failed for %s (%s)", host, status)
@@ -96,8 +96,8 @@ def _send(
         except RequestException:
             log.warning("web push network error for %s", host)
             ok, status, error = False, None, "Could not reach the push service."
-        except Exception:  # noqa: BLE001 - one bad subscription must not stop delivery to others
-            log.warning("web push failed for %s", host)
+        except Exception as exc:  # noqa: BLE001 - one bad subscription must not stop delivery to others
+            log.warning("web push failed for %s (%s)", host, type(exc).__name__)
             ok, status, error = False, None, "Could not send this alert."
         if results is not None:
             results.append({"host": host, "ok": ok, "status": status, "error": error})
@@ -156,8 +156,11 @@ def alert_prediction_changes(session: Session, events: list[ChangeEvent], now: d
         change = [kind, e.old_prob, e.new_prob, e.old_pick, e.new_pick, e.old_label, e.new_label, e.qb_team, e.qb_name]
         digest = hashlib.sha256(json.dumps(change).encode()).hexdigest()[:20]
         key = f"pred:{e.game_id}:{kind}:{digest}"
-        if _record(session, "prediction", e.game_id, key, {"title": title, "body": body}):
-            sent += _send(session, title, body, game_url(e.game_id))
+        if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
+            continue
+        delivered = _send(session, title, body, game_url(e.game_id))
+        if delivered and _record(session, "prediction", e.game_id, key, {"title": title, "body": body}):
+            sent += delivered
     session.commit()
     return sent
 
@@ -179,8 +182,11 @@ def alert_injuries(session: Session, changed: list[InjuryReport], season: int, w
         title = f"QB injury: {r.player} ({r.team}) {r.report_status}"
         body = f"Week {r.week}. Practice: {r.practice_status or 'n/a'}. Check the pick."
         key = f"inj:{r.season}:{r.week}:{r.player_id or r.player}:{r.report_status}"
-        if _record(session, "injury", gid, key, {"title": title, "body": body}):
-            sent += _send(session, title, body, game_url(gid))
+        if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
+            continue
+        delivered = _send(session, title, body, game_url(gid))
+        if delivered and _record(session, "injury", gid, key, {"title": title, "body": body}):
+            sent += delivered
     session.commit()
     return sent
 
@@ -194,8 +200,8 @@ def send_kickoff_reminders(session: Session, now: datetime) -> int:
         return 0
     games = session.scalars(
         select(Game).where(
-            Game.status == "scheduled",
             Game.time_tbd.is_(False),
+            Game.status != "postponed",
         ).order_by(Game.kickoff_utc, Game.game_id)
     ).all()
     days: dict[str, list[Game]] = {}

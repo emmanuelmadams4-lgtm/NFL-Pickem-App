@@ -20,3 +20,11 @@ PROOF (the coordinator reruns all of it; you cannot reach the test database, so 
 CONSTRAINTS: smallest diff that does each item (Ponytail); no new dependency; no test edits; never log or return a full endpoint or a key; do not commit.
 
 RETURN (reply to Jim, `jim-mv5mje0k`): per item the changed lines; the proof commands with exit codes; any blocker.
+
+## Try 2 (addendum)
+
+Try 1 made 13 of the 14 red tests green and is kept in the worktree, uncommitted. Two things remain (`red-wo7-try2.log`: 2 failed, 201 passed). Same allowed files, same constraints.
+
+A. **My item 1 was wrong: "whatever their status" let a postponed game be the day's first.** `test_postponed_game_keeps_its_status_and_gets_no_reminder_or_pick_lock` (`test_hardening.py`) is red. The day's first kickoff is the earliest of that day's games with a clock time that are not `postponed` (`scheduled` and `final` both count; `models.py` has only those three statuses). A postponed game is also not in the game count.
+
+B. **An alert that reached no device is not recorded as sent (integrator ruling; security S3, critic S1).** `alert_prediction_changes` and `alert_injuries` store the dedupe row first and then send, ignoring the result: with the push service down the alert is used up. Do it the way `send_kickoff_reminders` already does: skip when the key is already stored, send, and store the row only when at least one device got it. One small helper shared by the three callers is welcome if it makes the three read the same; no other change to them. Red test: `test_n3_an_alert_that_reached_no_device_is_not_recorded_as_sent`.

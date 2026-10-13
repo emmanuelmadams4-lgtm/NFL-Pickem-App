@@ -286,7 +286,7 @@ def refresh_predictions(
             changed = {CHANGE_WORDS.get(k, "") for k in features if prev.features.get(k) != features[k]} - {""}
             what = ", ".join(sorted(changed)) or ("model version" if prev.model_version_id != mv.id else "risk flags")
             note = f"Changed: {what}. {home} win chance {prev.home_win_prob:.0%} → {prob:.0%}."
-            moved = abs(prob - prev.home_win_prob)
+            moved = round(abs(prob - prev.home_win_prob), 4)
             old_label = pick_label(max(prev.home_win_prob, 1 - prev.home_win_prob))
             new_label = pick_label(max(prob, 1 - prob))
             qb_team = qb_name = None

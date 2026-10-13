@@ -377,3 +377,20 @@ def test_n6_a_device_the_push_service_forgot_is_told_what_to_do(session, client,
     pushes.fail = http_error(410)
     error = client.post("/api/push/test").json()["results"][0]["error"]
     assert error == "Push service no longer recognizes this device. Turn alerts off and on again."
+
+
+def test_n3_an_alert_that_reached_no_device_is_not_recorded_as_sent(loaded, pushes, monkeypatch):  # noqa: F811
+    """Security S3, critic S1, integrator ruling: a failed send must not use up the alert."""
+    monkeypatch.setattr(get_settings(), "alert_move_threshold", 0.99)
+    subscribe(loaded)
+    game = week4_game(loaded)
+    game.home_qb = "Backup One"
+    loaded.commit()
+    events = engine.refresh_predictions(loaded, game_ids=[game.game_id])
+    pushes.fail = http_error(503)
+    assert push.alert_prediction_changes(loaded, events) == 0
+    assert loaded.scalar(select(Notification.id).where(Notification.kind == "prediction")) is None
+    pushes.fail = None
+    assert push.alert_prediction_changes(loaded, events) == 1
+    assert push.alert_prediction_changes(loaded, events) == 0  # delivered once: not sent again
+    assert len(pushes.calls) == 2  # the failed try and the delivered one

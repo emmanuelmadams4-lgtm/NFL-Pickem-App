@@ -2,8 +2,9 @@
 
 from datetime import datetime
 from typing import Literal
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Uncertainty = Literal["low", "moderate", "high"]
 GameStatus = Literal["scheduled", "postponed", "in_progress", "final"]
@@ -360,11 +361,35 @@ class PushKeys(BaseModel):
     auth: str = Field(min_length=8, max_length=255)
 
 
+PUSH_SERVICE_HOSTS = ("push.apple.com", "fcm.googleapis.com", "push.services.mozilla.com", "notify.windows.com")
+
+
 class PushSubscriptionIn(BaseModel):
     """Exactly what the browser's PushSubscription.toJSON() returns."""
 
     endpoint: str = Field(min_length=10, max_length=2048, pattern=r"^https://")
     keys: PushKeys
+
+    @field_validator("endpoint")
+    @classmethod
+    def valid_push_service(cls, endpoint: str) -> str:
+        try:
+            address = urlsplit(endpoint)
+            host = address.hostname
+            valid = (
+                address.scheme == "https"
+                and address.username is None
+                and address.password is None
+                and address.port is None
+                and ":" not in address.netloc
+                and host is not None
+                and any(host == service or host.endswith(f".{service}") for service in PUSH_SERVICE_HOSTS)
+            )
+        except ValueError:
+            valid = False
+        if not valid:
+            raise ValueError("Endpoint must belong to a supported push service")
+        return endpoint
 
 
 class PushTestResult(BaseModel):
