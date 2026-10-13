@@ -109,6 +109,25 @@ class InjuryReport(Base):
     __table_args__ = (Index("ix_injury_week_team", "season", "week", "team"),)
 
 
+class TeamStar(Base):
+    """The five stars of a club for one week, ranked from that season's earlier weeks only."""
+
+    __tablename__ = "team_stars"
+    season: Mapped[int] = mapped_column(Integer, primary_key=True)
+    week: Mapped[int] = mapped_column(Integer, primary_key=True)
+    team: Mapped[str] = mapped_column(String(4), primary_key=True)
+    slot: Mapped[str] = mapped_column(String(4), primary_key=True)
+    rank: Mapped[int] = mapped_column(Integer, primary_key=True)
+    player_id: Mapped[str | None] = mapped_column(String(16))
+    player: Mapped[str] = mapped_column(String(64))
+    position: Mapped[str | None] = mapped_column(String(8))
+    snaps: Mapped[int] = mapped_column(Integer)
+    production: Mapped[float] = mapped_column(Float)
+    score: Mapped[float] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(32))
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class WeatherForecast(Base):
     __tablename__ = "weather_forecasts"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

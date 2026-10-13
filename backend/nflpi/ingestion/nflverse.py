@@ -6,6 +6,7 @@ Docs: https://github.com/nflverse/nflverse-data (mostly CC-BY 4.0).
 
 import csv
 import io
+import math
 import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -149,3 +150,70 @@ def parse_injuries(rows: list[dict[str, str]], observed_at: datetime) -> list[di
             }
         )
     return out
+
+
+STAR_STATS = (
+    "attempts", "rushing_yards", "rushing_tds", "receptions", "receiving_yards", "receiving_tds",
+    "def_tackles_solo", "def_tackles_with_assist", "def_tackle_assists", "def_tackles_for_loss",
+    "def_fumbles_forced", "def_sacks", "def_qb_hits", "def_interceptions", "def_pass_defended",
+    "def_tds", "def_safeties",
+)
+
+
+def _star_number(value: str) -> float:
+    number = 0.0 if value in ("", "NA") else float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"invalid star statistic: {value}")
+    return number
+
+
+def _star_id(value: str) -> str | None:
+    value = value.strip()
+    if len(value) > 16:
+        raise ValueError("league id is longer than 16 characters")
+    return value or None
+
+
+def parse_star_snaps(rows: list[dict[str, str]], season: int) -> list[dict]:
+    out = []
+    for row in rows:
+        if int(row["season"]) != season:
+            continue
+        off, de = int(row["offense_snaps"]), int(row["defense_snaps"])
+        if off < 0 or de < 0:
+            raise ValueError("negative snap count")
+        out.append({
+            "week": int(row["week"]), "team": franchise(row["team"]),
+            "pfr_id": row["pfr_player_id"].strip(), "player": row["player"].strip()[:64],
+            "position": row["position"].strip()[:8] or None,
+            "offense_snaps": off, "defense_snaps": de,
+        })
+    return out
+
+
+def parse_star_stats(rows: list[dict[str, str]], season: int) -> list[dict]:
+    out = []
+    for row in rows:
+        if int(row["season"]) != season:
+            continue
+        player_id = _star_id(row["player_id"])
+        if not player_id:
+            continue
+        record = {
+            "week": int(row["week"]), "team": franchise(row["team"]), "player_id": player_id,
+            "player": row["player_display_name"].strip()[:64],
+            "position": row["position"].strip()[:8] or None,
+        }
+        record.update({name: _star_number(row[name]) for name in STAR_STATS})
+        out.append(record)
+    return out
+
+
+def parse_star_players(rows: list[dict[str, str]]) -> dict[str, str]:
+    ids = {}
+    for row in rows:
+        pfr = row["pfr_id"].strip()
+        gsis = _star_id(row["gsis_id"])
+        if pfr and gsis:
+            ids[pfr] = gsis
+    return ids

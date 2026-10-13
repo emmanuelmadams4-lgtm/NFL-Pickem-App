@@ -4,13 +4,14 @@ import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, case, delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from nflpi.analytics.stars import rank_stars
 from nflpi.config import get_settings
 from nflpi.ingestion import nflverse, weather
-from nflpi.models import Game, IngestionRun, InjuryReport, MarketSnapshot, Team, WeatherForecast
+from nflpi.models import Game, IngestionRun, InjuryReport, MarketSnapshot, Team, TeamStar, WeatherForecast
 from nflpi.predictions.market import novig_home_prob
 
 log = logging.getLogger(__name__)
@@ -153,6 +154,28 @@ def ingest_injuries(
         return len(changed)
 
     return run_logged(session, nflverse.SOURCE, "injuries", job), changed
+
+
+def ingest_stars(
+    session: Session, season: int, snaps: list[dict[str, str]] | None = None,
+    stats: list[dict[str, str]] | None = None, players: list[dict[str, str]] | None = None,
+) -> IngestionRun:
+    def job() -> int:
+        snap_rows = snaps if snaps is not None else nflverse.fetch_csv(f"snap_counts/snap_counts_{season}.csv")
+        stat_rows = stats if stats is not None else nflverse.fetch_csv(f"stats_player/stats_player_week_{season}.csv")
+        player_rows = players if players is not None else nflverse.fetch_csv("players/players.csv")
+        parsed_snaps = nflverse.parse_star_snaps(snap_rows, season)
+        parsed_stats = nflverse.parse_star_stats(stat_rows, season)
+        ids = nflverse.parse_star_players(player_rows)
+        ranked = rank_stars(season, parsed_snaps, parsed_stats, ids, datetime.now(UTC))
+        if not ranked:
+            raise RuntimeError("no stars ranked; keeping existing season")
+        session.execute(delete(TeamStar).where(TeamStar.season == season))
+        session.add_all(TeamStar(**row) for row in ranked)
+        session.commit()
+        return len(ranked)
+
+    return run_logged(session, nflverse.SOURCE, "stars", job)
 
 
 def ingest_weather(session: Session, now: datetime | None = None) -> IngestionRun:
