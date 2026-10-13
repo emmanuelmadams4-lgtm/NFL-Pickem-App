@@ -55,6 +55,12 @@ MUTATIONS = {
         "seasons = list(range(through_season - settings.train_window_seasons + 1, through_season + 1))",
         "seasons = list(range(through_season - settings.train_window_seasons + 2, through_season + 2))",
     ),
+    "M10 the game's total points leak into a feature on both paths": (
+        "nflpi/predictions/features.py",
+        'out["home_field"] = (~out["neutral_site"].astype(bool)).astype(float)',
+        'out["home_field"] = (~out["neutral_site"].astype(bool)).astype(float)'
+        ' + (out["home_score"].fillna(0) + out["away_score"].fillna(0)) / 1000',
+    ),
     "M6 live features differ from the bench": (
         "nflpi/predictions/engine.py",
         '    f = add_features(load_frame(session), EloParams(**p["elo"]))',

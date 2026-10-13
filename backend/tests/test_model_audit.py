@@ -35,9 +35,13 @@ def frame() -> pd.DataFrame:
     return games_frame(games)
 
 
+SHIFT = 3  # added to both scores, so the total changes as well as the winner
+
+
 def _flip_scores(df: pd.DataFrame, mask: pd.Series) -> pd.DataFrame:
+    """Swap the two scores and raise both: a new winner, a new margin and a new total."""
     out = df.copy()
-    out.loc[mask, ["home_score", "away_score"]] = out.loc[mask, ["away_score", "home_score"]].to_numpy()
+    out.loc[mask, ["home_score", "away_score"]] = out.loc[mask, ["away_score", "home_score"]].to_numpy() + SHIFT
     return out
 
 
@@ -56,7 +60,7 @@ def _spy_fits(monkeypatch) -> list[tuple[set[int], dict]]:
 
 
 def _swap(game: Game) -> None:
-    game.home_score, game.away_score = game.away_score, game.home_score
+    game.home_score, game.away_score = game.away_score + SHIFT, game.home_score + SHIFT
 
 
 def _history(session, game_id: str) -> list[Prediction]:

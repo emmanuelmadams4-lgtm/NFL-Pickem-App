@@ -6,6 +6,7 @@ KILLED M5 the job trains through the current season: tests/test_model_audit.py::
 KILLED M7 own score leaks into the bench's own copy of the feature: tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores, tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability
 KILLED M8 every line is labelled closing: tests/test_model_audit.py::test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_closing_line
 KILLED M9 the live fit window reaches into the season it predicts: tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability, tests/test_model_audit.py::test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_closing_line, tests/test_model_audit.py::test_live_model_is_fitted_only_on_seasons_before_the_one_it_predicts
+KILLED M10 the game's total points leak into a feature on both paths: tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores, tests/test_model_audit.py::test_live_features_and_probability_ignore_the_games_own_and_later_scores
 KILLED M6 live features differ from the bench: tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability
 {
  "results": {
@@ -78,6 +79,15 @@ KILLED M6 live features differ from the bench: tests/test_model_audit.py::test_b
     "tests/test_model_audit.py::test_bench_and_live_path_agree_on_features_and_probability",
     "tests/test_model_audit.py::test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_closing_line",
     "tests/test_model_audit.py::test_live_model_is_fitted_only_on_seasons_before_the_one_it_predicts"
+   ]
+  },
+  "M10 the game's total points leak into a feature on both paths": {
+   "file": "nflpi/predictions/features.py",
+   "status": "KILLED",
+   "exit_code": 1,
+   "failed_tests": [
+    "tests/test_model_audit.py::test_bench_features_and_probability_ignore_the_games_own_and_later_scores",
+    "tests/test_model_audit.py::test_live_features_and_probability_ignore_the_games_own_and_later_scores"
    ]
   },
   "M6 live features differ from the bench": {

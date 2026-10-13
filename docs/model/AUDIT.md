@@ -5,17 +5,17 @@ Step 18a, lane `audit`, 2026-10-13. Code audited: main at `11cc401` (the audit b
 ## The answer in five lines
 
 1. **The model is, in practice, the betting market's closing number.** Its pick differs from the market favourite in 72 of 3,649 games (2.0%), and it got 34 of those 72 right (A10).
-2. **It is not broken.** No result leaks into a feature, the bench and the live path compute the same numbers, and every fit uses earlier seasons only. Nine planted defects were each caught by the new tests (A2, A3, A5, A6).
+2. **It is not broken.** No result leaks into a feature, the bench and the live path compute the same numbers, and every fit uses earlier seasons only. Ten planted defects were each caught by the new tests (A2, A3, A5, A6).
 3. **It is well calibrated** (A4), and it clearly beats "always the home team" and "ratings only". It does **not** beat the market alone: 66.46% against 66.57%, a difference inside the noise (A9).
-4. **Two things make the bench kinder than real life, and neither can be sized from history:** the bench is scored on the closing line while a live pick is made from an earlier line (A6), and the bench knows each game's quarterback while a live pick has a projection, for the coming week only (A8).
+4. **The bench and real life differ in two inputs, and that may make the bench kinder; whether it does, and by how much, is not shown and cannot be sized from history.** Shown: the bench is scored on the closing line while a live pick is made from an earlier line (A6), and the bench has a quarterback name for every game while a live pick has one for the coming week only (A8). Not shown (two hypotheses, each with the test that would settle it): that either difference costs accuracy.
 5. **The 2022 to 2025 check seasons have been scored nine times.** The only untouched games are the 2026 games not yet played (A11).
 
-So the honest reason the model "is not good enough" is not a defect. It has no information the closing line lacks. Nothing measured so far shows a way past the market; `docs/model/PLAN.md` says what will be tested next and how it will be judged.
+So the measured reason the model "is not good enough" is not a defect: its stats inputs add nothing measurable to the closing line (A9, A10). Nothing measured so far shows a way past the market; `docs/model/PLAN.md` says what will be tested next and how it will be judged.
 
 ## How to read this
 
 * **VERIFIED** = the claim cites the code (file and line) **and** a test or a command with its output. **HYPOTHESIS** = not shown; the entry names the test that would settle it. No reason for weak performance is given without evidence.
-* Tests: `backend/tests/test_model_audit.py` (six tests, written for this audit). Planted-defect check: `docs/gauntlet/logs/step-18a-evidence/mutation.log` (script `mutate.py`; M1 to M9 are its defects, nine of nine caught).
+* Tests: `backend/tests/test_model_audit.py` (six tests, written for this audit). Planted-defect check: `docs/gauntlet/logs/step-18a-evidence/mutation.log` (script `mutate.py`; M1 to M10 are its defects, ten of ten caught).
 * Numbers: `docs/gauntlet/logs/step-18a-evidence/audit-numbers.json`, printed by `audit_numbers.py` on 2026-10-13 from the public nflverse schedule file. Walk-forward, 10-season window, 3,649 regular-season games with a closing line, 2012 to 2025. Its baseline equals the stored step 14 numbers (market log loss 0.6094, blend 0.6107).
 * Other lookups: `blend-vs-market.txt` (script `blend_vs_market.py`) and `feeds-extra.txt`, same folder.
 * Paths below are under `backend/nflpi/` unless they start with `tests/` or `docs/`.
@@ -45,7 +45,7 @@ Words. **Bench:** the walk-forward backtest (`analytics/backtest.py`): each seas
 
 **A3. VERIFIED. Results do not leak. Changing a game's own final score, and every later score, changes neither its features nor its probability, on either path.**
 * Elo records the rating before it applies the result (`predictions/elo.py:43-53`); the quarterback flag compares with the previous game (`features.py:100-112`).
-* Tests: `::test_bench_features_and_probability_ignore_the_games_own_and_later_scores` and `::test_live_features_and_probability_ignore_the_games_own_and_later_scores`. The live test also checks the opposite: changing an **earlier** result of one of the two teams does write a new prediction row, so the test is not blind. Planted defects M1 and M7 (the game's own score added to a feature) are caught.
+* Tests: `::test_bench_features_and_probability_ignore_the_games_own_and_later_scores` and `::test_live_features_and_probability_ignore_the_games_own_and_later_scores`. The live test also checks the opposite: changing an **earlier** result of one of the two teams does write a new prediction row, so the test is not blind. The rewrite swaps the two scores and adds 3 to each, so the winner, the margin and the total all change. Planted defects M1 and M7 (the game's own score added to a feature) and M10 (the game's total points added to a feature) are caught.
 
 **A6. VERIFIED that the gap exists; HYPOTHESIS how much it costs. The bench uses the closing line; a live pick uses whatever line was last seen before it was made.**
 * Bench: "The market line is the closing line" (`backtest.py:5-6`), read from the nflverse schedule file (`jobs.py:67-75`).
@@ -53,7 +53,7 @@ Words. **Bench:** the walk-forward backtest (`analytics/backtest.py`): each seas
 * The live model's own weights are fitted on finished games, so on closing lines (`engine.py:103-109`), then applied to that earlier line.
 * Test: `::test_live_pick_uses_the_line_seen_before_kickoff_and_a_rebuilt_pick_the_closing_line` (planted defect M8 is caught).
 * What the live path has on 2026-10-13 (`feeds-extra.txt`): the file carries a line for the 28 games of weeks 6 and 7 and for no later week.
-* HYPOTHESIS: live accuracy is below the bench's 66.5% because of this. **Settled by:** at the end of the 2026 season, score the last live row before kickoff against the rebuilt closing-line row (`Prediction.kind` `live` against `backfill`) on the same games; the step 13a report gives each line's age. It cannot be settled from history: no file says what the line was days before a past game.
+* HYPOTHESIS: live accuracy is below the bench's 66.5% for this reason. **Settled by:** at the end of the 2026 season, score the last live row before kickoff against the rebuilt closing-line row (`Prediction.kind` `live` against `backfill`) on the same games; the step 13a report gives each line's age. It cannot be settled from history: no file says what the line was days before a past game.
 * HYPOTHESIS: some stored lines marked `closing` were last seen long before kickoff, because the mark follows the game's status, not the clock (`service.py:88-91`). **Settled by:** counting `market_snapshots` rows with `kind = 'closing'` and `observed_at` more than a day before kickoff in the live database, which this lane may not open.
 * Not checked: where nflverse takes its line from and at what time.
 
@@ -62,11 +62,11 @@ Words. **Bench:** the walk-forward backtest (`analytics/backtest.py`): each seas
 * This is safe for a pick made now, because only unplayed games are predicted (`engine.py:229-230`) and results cannot leak (A3). The cost is that a past pick cannot be rebuilt as of an earlier moment: a rebuilt row always gets the closing line and is labelled `backfill` (`engine.py:329-347`).
 * Tests: the A6 test above (rebuilt rows carry `closing`); `tests/test_model.py::test_backfill_labels_rows_and_needs_an_earlier_model`.
 
-**A8. VERIFIED that history holds one quarterback name per game with no time attached; HYPOTHESIS that this flatters the bench.**
+**A8. VERIFIED that history holds one quarterback name per game with no time attached; HYPOTHESIS that this makes the bench look better than a live pick could be.**
 * The flags come from nflverse's `home_qb_name` and `away_qb_name` (`ingestion/nflverse.py:167-168`, `features.py:100-112`).
 * Command output: in the bench both names are present in 100% of the 3,649 games (`audit-numbers.json`, `sample.share_with_both_qbs` = 1.0). In the 2026 file, names are present for 79 of 79 finished games and for 14 of 193 unplayed games, week 6 only (`feeds-extra.txt`). The file has no column for who was expected before a finished game.
 * HYPOTHESIS: for a finished game the name is the man who actually started, so the bench sees late changes that a live pick could not. **Settled by:** the `qb_observations` log (`models.py:378`, collecting since 2026-10-13): for each 2026 game compare the last name seen before kickoff with the name after the game, and count the differences. `docs/gauntlet/PLAN.md` row 13 already names this "hindsight-QB caveat".
-* How much it could matter: little. The whole stats model is only 0.0028 log loss ahead of Elo alone (A9), and the flags are part of that.
+* A bound on the size, not a measurement of it: the whole stats model is 0.0028 log loss ahead of Elo alone (A9, VERIFIED), and the flags are only part of that. How much of the 0.0028 would survive with pre-game projections is the HYPOTHESIS above.
 
 **A12. VERIFIED. Injuries, weather, star players and news are not model inputs, so they cannot leak; there is no scaler or imputer to fit.**
 * The full input list is `features.py:11-13`. Command: `grep -n "FEATURES = " backend/nflpi/predictions/features.py` prints exactly `BASE_FEATURES` (four names) and `BLEND_FEATURES` (the line plus those four).
@@ -103,7 +103,7 @@ Blend, 2012 to 2025, 3,649 games, sorted by the home team's stated chance (`audi
 * Bench: `backtest.py:72-79` (training rows), `:97` (home-win rate from training rows), `:63-69` (Elo settings). Live: `engine.py:103-109`, and the scheduled job asks for the season before the current one (`jobs.py:56`).
 * Tests: `::test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later` (records every fit's seasons, and shows that rewriting every result from the test season on changes no fitted weight) and `::test_live_model_is_fitted_only_on_seasons_before_the_one_it_predicts`. Planted defects M3, M4, M5 and M9 are caught.
 
-**Realistic cutoffs: only in part.** Results: yes (A3). The line: no, the bench has the close (A6). The quarterback: not known (A8). The bench's 66.5% is therefore an upper estimate of what a mid-week pick earns, by an amount that history cannot give.
+**Realistic cutoffs: only in part.** Results: yes (A3, VERIFIED). The line: no, the bench has the close (A6, VERIFIED). The quarterback: not known (A8). Whether the bench's 66.5% overstates what a mid-week pick earns is the HYPOTHESIS of A6 and A8, not a measured fact; history cannot settle it, and the 2026 live log can.
 
 **A11. VERIFIED from the step logs. The 2022 to 2025 check seasons have been scored nine times for the win model; they are no longer an untouched period.**
 
@@ -151,7 +151,7 @@ Paired, same games, log-loss gain of the first over the second (positive = first
 **A10. VERIFIED. The blend is the market with small changes.**
 * Command `blend_vs_market.py`, output `blend-vs-market.txt`: the blend's pick differs from the market's in 72 of 3,649 games (1.97%); in those 72 it was right 34 times. The two probabilities differ by 1.6 points on average and correlate at 0.993.
 * The weights a fit on 2016 to 2025 gives: 1.03 on the line's log-odds, 0.016 on the Elo difference (same file).
-* This is the evidence behind line 1 of the summary. It also bounds what any add-on can do while the line stays in the model: the idea has to know something the closing line does not.
+* This is the evidence behind line 1 of the summary. What follows for the plan is a reading of these numbers, not a new measurement: while the line stays in the model with a weight near 1, an added input changes a pick only where it disagrees with the closing line strongly enough to cross 50%.
 
 ## One trap for the next lanes
 
