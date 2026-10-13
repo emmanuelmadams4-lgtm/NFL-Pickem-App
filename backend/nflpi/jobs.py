@@ -25,7 +25,7 @@ from nflpi.analytics.metrics import EARLY_WEEK_END, UNCERTAINTY_GAP, UPSET_GAP
 from nflpi.db import acquire_refresh_lock, release_refresh_lock, session_factory
 from nflpi.ingestion import nflverse, service
 from nflpi.models import AppSetting, Game, ModelVersion
-from nflpi.notify import push
+from nflpi.notify import push, star_alerts
 from nflpi.predictions import engine, sheet
 
 log = logging.getLogger("nflpi.jobs")
@@ -131,6 +131,11 @@ def tick(session: Session, now: datetime) -> None:
         log.info("kickoff reminders sent: %s", push.send_kickoff_reminders(session, now))
     except Exception:  # noqa: BLE001 - reminder failure must not hide a live worker
         log.exception("kickoff reminders failed")
+        session.rollback()
+    try:
+        star_alerts.run(session, now)
+    except Exception as exc:  # noqa: BLE001 - star alert failure must not hide a live worker
+        log.warning("star alerts failed: %s", type(exc).__name__)
         session.rollback()
 
 

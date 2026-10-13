@@ -20,10 +20,15 @@ SEASON, WEEK = 2026, 7
 SATURDAY_8_ET = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)  # 08:00 EDT, 29 hours before KICKOFF
 MORNING = SATURDAY_8_ET + timedelta(minutes=30)
 STARS = {  # club -> (slot, rank, player_id, name, position)
-    "BUF": [("qb", 1, "A1", "Josh Allen", "QB"), ("off", 1, "C1", "James Cook", "RB"), ("off", 2, "K1", "Khalil Shakir", "WR"),
-            ("def", 1, "M1", "Matt Milano", "LB"), ("def", 2, "R1", "Ed Oliver", "DT")],
-    "MIA": [("qb", 1, "T1", "Tua Tagovailoa", "QB"), ("off", 1, "W1", "Jaylen Waddle", "WR"), ("off", 2, "H1", "De'Von Achane", "RB"),
-            ("def", 1, "P1", "Jalen Ramsey", "CB"), ("def", 2, "C2", "Zach Sieler", "DT")],
+    "BUF": [
+        ("qb", 1, "A1", "Josh Allen", "QB"), ("off", 1, "C1", "James Cook", "RB"),
+        ("off", 2, "K1", "Khalil Shakir", "WR"), ("def", 1, "M1", "Matt Milano", "LB"), ("def", 2, "R1", "Ed Oliver", "DT"),
+    ],
+    "MIA": [
+        ("qb", 1, "T1", "Tua Tagovailoa", "QB"), ("off", 1, "W1", "Jaylen Waddle", "WR"),
+        ("off", 2, "H1", "De'Von Achane", "RB"), ("def", 1, "P1", "Jalen Ramsey", "CB"),
+        ("def", 2, "C2", "Zach Sieler", "DT"),
+    ],
 }
 
 
@@ -36,8 +41,10 @@ def add_stars(session) -> None:
     session.commit()
 
 
-def report(session, pid: str, name: str, club: str, status: str | None, observed: datetime | None = None, *,
-           practice: str = "Limited", injury: str | None = "Knee", position: str = "WR", week: int = WEEK) -> InjuryReport:
+def report(
+    session, pid: str, name: str, club: str, status: str | None, observed: datetime | None = None, *,
+    practice: str = "Limited", injury: str | None = "Knee", position: str = "WR", week: int = WEEK,
+) -> InjuryReport:
     row = InjuryReport(season=SEASON, week=week, team=club, player_id=pid, player=name, position=position,
                        report_status=status, practice_status=practice, injury=injury, source="nflverse",
                        observed_at=observed or KICKOFF - timedelta(hours=3))
@@ -260,7 +267,7 @@ def test_a7_no_pending_change_means_no_summary_and_no_record(world, pushes):  # 
 
 
 def test_a8_the_summary_lists_four_stars_then_a_count_and_stays_short_and_plain(world, pushes):  # noqa: F811
-    hostile = "Ev\nil\x00 " + "N" * 100
+    hostile = "Ev\nil\x07 " + "N" * 56  # the column holds 64 characters
     names = [("W1", "Jaylen Waddle", "MIA"), ("P1", "Jalen Ramsey", "MIA"), ("H1", "De'Von Achane", "MIA"),
              ("C2", "Zach Sieler", "MIA"), ("C1", "James Cook", "BUF"), ("K1", hostile, "BUF")]
     for index, (pid, name, club) in enumerate(names):
@@ -279,9 +286,9 @@ def test_a8_the_summary_lists_four_stars_then_a_count_and_stays_short_and_plain(
 
 
 def test_a8_the_immediate_alert_cleans_the_name_and_injury_text_too(world, pushes):  # noqa: F811
-    world.get(TeamStar, (SEASON, WEEK, "MIA", "off", 1)).player = "Jay\nlen\x07 " + "W" * 80
+    world.get(TeamStar, (SEASON, WEEK, "MIA", "off", 1)).player = "Jay\nlen\x07 " + "W" * 50
     world.commit()
-    report(world, "W1", "x", "MIA", "Out", injury="Knee\r\n<b>" + "k" * 90)
+    report(world, "W1", "x", "MIA", "Out", injury="Knee\r\n<b>" + "k" * 50)
     star_alerts.run(world, KICKOFF - timedelta(minutes=30))
     (message,) = sent(pushes)
     for text in (message["title"], message["body"]):
@@ -289,10 +296,10 @@ def test_a8_the_immediate_alert_cleans_the_name_and_injury_text_too(world, pushe
     assert len(message["title"]) < 80 and len(message["body"]) < 160
 
 
-def test_a8_format_characters_are_removed_and_a_huge_injury_text_cannot_make_the_payload_too_big(world, pushes):  # noqa: F811
+def test_a8_format_characters_are_removed_and_a_full_width_injury_text_stays_short(world, pushes):  # noqa: F811
     world.get(TeamStar, (SEASON, WEEK, "MIA", "off", 1)).player = "Jay\u202elen\u200b Wad\u2066dle"
     world.commit()
-    report(world, "W1", "x", "MIA", "Out", injury="K" * 10_000)
+    report(world, "W1", "x", "MIA", "Out", injury="K" * 64)  # the column holds 64; the cut at 60 is a second guard
     star_alerts.run(world, KICKOFF - timedelta(minutes=30))
     (message,) = sent(pushes)
     assert message["title"] == "Star out: Jaylen Waddle (MIA)"
