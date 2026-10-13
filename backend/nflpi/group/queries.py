@@ -38,4 +38,4 @@ def standings(session: Session, season: int, week: int) -> list[dict]:
             entry["rank"] = row.rank
     current = [entry for entry in by_member.values() if entry["points"] is not None]
     return sorted(current, key=lambda entry: (-entry["total"], entry["rank"] if entry["rank"] is not None
-                                              else float("inf"), entry["member"]))
+                                              else float("inf"), entry["member"].casefold(), entry["member"]))

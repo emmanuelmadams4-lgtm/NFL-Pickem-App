@@ -39,18 +39,19 @@ class ImportResult(NamedTuple):
 
 def _number(cell: str, label: str, minimum: int, maximum: int, line: int) -> int:
     if not re.fullmatch(r"[0-9]+", cell):
-        raise GroupImportError(f"line {line}: {label} {cell[:40]!r}")
+        raise GroupImportError(f"line {line}: {label} is invalid")
     digits = cell.lstrip("0") or "0"
     if len(digits) > len(str(maximum)):
-        raise GroupImportError(f"line {line}: {label} {cell[:40]!r}")
+        raise GroupImportError(f"line {line}: {label} is invalid")
     value = int(digits)
     if not minimum <= value <= maximum:
-        raise GroupImportError(f"line {line}: {label} {cell[:40]!r}")
+        raise GroupImportError(f"line {line}: {label} is invalid")
     return value
 
 
 def _name(cell: str, line: int) -> str:
-    cleaned = " ".join("".join(ch for ch in cell if not unicodedata.category(ch).startswith("C")).split())
+    normalized = unicodedata.normalize("NFC", cell)
+    cleaned = " ".join("".join(ch for ch in normalized if not unicodedata.category(ch).startswith("C")).split())
     if not cleaned or len(cleaned) > MAX_NAME_LENGTH:
         raise GroupImportError(f"line {line}: name is empty or too long")
     return cleaned
@@ -103,7 +104,7 @@ def _pick_row(
     _number(cells[2], "game", 1, MAX_GAMES, line)
     favored = franchise(cells[3].upper())
     if not re.fullmatch(SPREAD_PATTERN, cells[4]):
-        raise GroupImportError(f"line {line}: spread {cells[4][:40]!r}")
+        raise GroupImportError(f"line {line}: spread is invalid")
     underdog = franchise(cells[5].upper())
     confidence = _number(cells[8], "confidence", 1, MAX_CONFIDENCE, line) if cells[8] else None
     _number(cells[9], "total", 0, MAX_POINTS, line)
@@ -122,7 +123,7 @@ def _pick_row(
     else:
         picked_team = franchise(cells[6].upper()) if cells[6] else None
         if picked_team != (favored if side == "Favorite" else underdog):
-            raise GroupImportError(f"line {line}: pick disagrees with side")
+            raise GroupImportError(f"line {line}: pick is invalid")
         if confidence is None:
             raise GroupImportError(f"line {line}: confidence is missing")
     value = {"game_id": games[0], "member": member, "picked_team": picked_team, "confidence": confidence}
@@ -142,7 +143,7 @@ def _pick_rows(
         value, week, confidence = _pick_row(cells, line, matches)
         game_key = (value["game_id"], value["member"])
         if game_key in seen_games:
-            raise GroupImportError(f"line {line}: this game appears twice")
+            raise GroupImportError(f"line {line}: entry appears twice")
         seen_games.add(game_key)
         if confidence is not None:
             confidence_key = (value["member"], week, confidence)
@@ -166,7 +167,7 @@ def _standing_rows(rows: Iterator[list[str]], weeks: int, season: int) -> list[d
         points = [_number(cell, "points", 0, MAX_POINTS, line) for cell in cells[2:-1]]
         total = _number(cells[-1], "total", 0, MAX_TOTAL_POINTS, line)
         if total != sum(points):
-            raise GroupImportError(f"line {line}: total disagrees with points")
+            raise GroupImportError(f"line {line}: total does not match the weeks")
         if member in seen_members:
             raise GroupImportError(f"line {line}: member appears twice")
         seen_members.add(member)
@@ -178,20 +179,22 @@ def _standing_rows(rows: Iterator[list[str]], weeks: int, season: int) -> list[d
 
 
 def _write_picks(session: Session, rows: list[dict]) -> None:
-    statement = insert(GroupPick).values(rows)
+    statement = insert(GroupPick)
     session.execute(statement.on_conflict_do_update(
         index_elements=[GroupPick.game_id, GroupPick.member],
-        set_={"picked_team": statement.excluded.picked_team, "confidence": statement.excluded.confidence},
-    ))
+        set_={"picked_team": statement.excluded.picked_team, "confidence": statement.excluded.confidence,
+              "imported_at": statement.excluded.imported_at},
+    ), rows)
 
 
 def _write_standings(session: Session, rows: list[dict]) -> None:
-    statement = insert(GroupStanding).values(rows)
+    statement = insert(GroupStanding)
     session.execute(statement.on_conflict_do_update(
         index_elements=[GroupStanding.season, GroupStanding.week, GroupStanding.member],
         set_={"points": statement.excluded.points,
-              "rank": func.coalesce(statement.excluded.rank, GroupStanding.rank)},
-    ))
+              "rank": func.coalesce(statement.excluded.rank, GroupStanding.rank),
+              "imported_at": statement.excluded.imported_at},
+    ), rows)
 
 
 def import_group_csv(session: Session, season: int, data: bytes) -> ImportResult:
@@ -211,7 +214,10 @@ def import_group_csv(session: Session, season: int, data: bytes) -> ImportResult
             values = _standing_rows(rows, weeks, season)
             _write_standings(session, values)
         session.commit()
+    except GroupImportError:
+        session.rollback()
+        raise
     except SQLAlchemyError as exc:
         session.rollback()
-        raise GroupImportError("database import failed") from exc
+        raise RuntimeError(f"group import: database error ({type(exc).__name__})") from None
     return ImportResult(kind, len(values))
