@@ -230,3 +230,34 @@ Explicit scope-locked refactor pass on the touched code (`/refactor` rules: beha
 * **No change needed:** `metrics.py`, `market.py`, `model.py` and `features.market_logit` are already minimal.
 * **Proof after the edit:** `tests/test_model.py` 34 passed (`green-3.log`); ruff clean; all six stages rerun on the final code (`final-<stage>.json`) and compared with the first runs key by key: identical in every number.
 * **Remaining findings, classified:** all advisory, listed under "Carried" above.
+
+## 5. VERIFICATION
+
+Production code last changed in `7aec8c6` (cleanup). Tests last changed in `1dcfc7a`. Commits after that add only evidence and this log. The gate ran on `1dcfc7a`; the critic ran on `fa19dd6` (same code and tests, plus the gate logs).
+
+| Check | Result | Evidence |
+|---|---|---|
+| Mutation sweep, first run (`s14b-mutate.py`, under `res:gate`) | 53 of 55 caught. One survivor was a real gap: no test proved that `evaluate`'s verdict stays the game-level rule when the two intervals disagree. I added that case (`f676f8e`). The other could not be seen from outside (scikit-learn refuses a NaN weight with the same error) and was removed from the sweep with a note in the script. | `mutate-1.log` |
+| Mutation sweep, final run on `1dcfc7a` | **54 of 54** changes that break a frozen clause were caught by a failing test. Tree clean afterwards. | `mutate.log` |
+| Gate, run 1 on `1dcfc7a` | 386 passed (58 s), 0 skipped; ruff clean; alembic "No new upgrade operations"; gen:api no drift | `final1.out`, `final1-*.log` |
+| Gate, run 2 on `1dcfc7a` | 386 passed (60 s); same clean results | `final2.out`, `final2-*.log` |
+| Fresh critic (`ecc:mle-reviewer`, no build transcript) | **PASS**, no failing finding. Its own gate run on `fa19dd6`: 386 passed (87 s), ruff, alembic, gen:api clean. No future data in any feature or fit (two hand-made leaks both failed tests). The confirm seasons chose nothing (`chosen` is the largest tune gain in all 7 stored candidates). All six verdict rows and all 19 variant rows equal the stored files; a fresh `devig` run equals `final-devig.json`. Four mutants of its own (B1, V2, C1, E3) caught. Only the lane's six code files changed. | `critic-*.log`, `~/.claude/plans/nfl-pickem-lanes-reviews/s14b-critic-1.md` |
+| Security (Dwight) | Not asked: no auth, user input, database query, file write or new network path. The runner reads public nflverse files from the same host through the app's existing download function. Named here so the integrator can overrule. | |
+| `lane-guard check` (lane modelb, base `eed7c61`) | `OK` | `lane-guard.log` |
+| Jev Job 4 (`decide.sh`, topic `review:modelb:step-14b`) | noul **0.82**: at or above Job 4's bar of 0.8, so the pass stands. `decide.sh` printed route `advisor` because its own bar for a noul is 0.9; the gates and the critic are green. | `~/.claude/plans/nfl-pickem-lanes/decisions.jsonl` |
+
+Critic advisories (not failures), with my answer:
+
+* The frozen "signal" gate used confirm gains to decide whether idea 5 ran. True and disclosed in the addendum; idea 5 lost, so nothing depended on it. For a later step: gate a follow-up idea on tune results only.
+* "Every bucket within 3 points" was wrong by one bucket (3.8 points on 25 games); the sentence is fixed. The idea 5 success-rate row wording is made exact.
+* X1 has no mutant of its own; the 19 earlier tests cover it.
+* Dropped training rows and clip counts are not printed (carried).
+
+## 6. LANDING
+
+* Result: **no model change.** The branch lands the test code for five ideas (cluster bootstrap beside the rule, four more margin methods, line inputs, recency weights, calibration, offence and defence split), 15 new tests, the runner script and the evidence. None of the ideas beats the current model by the paired-bootstrap rule.
+* No seam is needed: nothing has to change in `predictions/engine.py`.
+* Not pushed, no PR, no merge: the integrator (god) lands it.
+* The lane's test database container `nflpi-lane-modelb-db` (127.0.0.1:15448, no volume) is left running for the integrator's checks; removing it is the owner's call.
+* Carried, advisory: a count of training rows dropped for a missing input; counts of clipped values; a guard for a moneyline of 0 in `implied_prob`; an explicit rule for a probability of exactly 0.5; step 14's EPA rating input was never rescaled; a follow-up gate should use tune results only.
+* What this leaves for the roadmap: the closing line already carries what these five ideas know. The ideas the review could not test here need data the app does not have yet: opening lines and line movement (our own snapshots start in 2026, so not testable before 2027).
