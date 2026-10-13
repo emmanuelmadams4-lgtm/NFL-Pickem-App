@@ -8,6 +8,7 @@ mid-week input; the "blend" model inherits that advantage and is labeled so.
 
 import numpy as np
 import pandas as pd
+from sklearn.isotonic import IsotonicRegression
 
 from nflpi.analytics.metrics import (
     EARLY_WEEK_END,
@@ -21,11 +22,21 @@ from nflpi.analytics.metrics import (
     upset_watch,
 )
 from nflpi.predictions.elo import EloParams, run_elo
-from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features, epa_diff
+from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features, epa_diff, market_logit
+from nflpi.predictions.market import DEVIG_METHODS
 from nflpi.predictions.model import LogitModel
 
 ELO_GRID = [EloParams(k=k, hfa=h) for k in (15.0, 20.0, 25.0) for h in (30.0, 48.0, 65.0)]
 EPA_HALF_LIVES = (4, 8, 16)
+SPLIT_HALF_LIVES = (4, 8, 16)
+SPLIT_EPA_SCALE = 10
+SPLIT_SR_SCALE = 20
+RECENCY_HALF_LIVES = (2, 4, 8)
+SPREAD_SCALE = 7
+TOTAL_CENTER = 45
+TOTAL_SCALE = 10
+CALIBRATION_MIN = 0.01
+CALIBRATION_MAX = 0.99
 MODELS = ["home", "elo", "logistic", "market", "blend"]
 ABLATE = ["home_qb_change", "away_qb_change"]
 LABELS = {
@@ -66,6 +77,16 @@ def _train_rows(
     frame = frames[params]
     train = frame[frame["season"].isin(train_seasons) & frame["home_win"].notna()]
     return params, train
+
+
+def _predict_or_blend(model: LogitModel, test: pd.DataFrame) -> pd.Series:
+    """A game missing an input keeps the blend's number."""
+    return pd.Series(model.predict(test), index=test.index).fillna(test["p_blend"])
+
+
+def _market_games(by_season: list[pd.DataFrame]) -> pd.DataFrame:
+    preds = pd.concat(by_season, ignore_index=True)
+    return preds[preds["p_market"].notna()]
 
 
 def predict_season(frames: dict[EloParams, pd.DataFrame], season: int, window: int) -> pd.DataFrame:
@@ -124,26 +145,112 @@ def candidate_preds(
             for h in EPA_HALF_LIVES:
                 feature = f"epa_diff_{h}"
                 model = LogitModel.fit(train.dropna(subset=["market_logit"]), [*BLEND_FEATURES, feature])
-                test[f"p_epa_{h}"] = pd.Series(model.predict(test), index=test.index).fillna(test["p_blend"])
+                test[f"p_epa_{h}"] = _predict_or_blend(model, test)
         by_season.append(test)
-    preds = pd.concat(by_season, ignore_index=True)
-    return preds[preds["p_market"].notna()]
+    return _market_games(by_season)
 
 
-def evaluate(preds: pd.DataFrame, candidates: dict[str, list[str]], tune: list[int], confirm: list[int]) -> list[dict]:
+def split_preds(df: pd.DataFrame, seasons: list[int], split: pd.DataFrame, window: int = 10) -> pd.DataFrame:
+    """Score held-out seasons with offence, defence, and success-rate candidates."""
+    differences = {
+        f"{column}_diff_{h}": scale * epa_diff(
+            df, split[["game_id", "team", column]].rename(columns={column: "net_epa"}), h
+        )
+        for h in SPLIT_HALF_LIVES
+        for column, scale in (("off_epa", SPLIT_EPA_SCALE), ("def_epa", SPLIT_EPA_SCALE),
+                              ("off_sr", SPLIT_SR_SCALE), ("def_sr", SPLIT_SR_SCALE))
+    }
+    frames = {params: frame.assign(**differences) for params, frame in _elo_frames(df).items()}
+    by_season = []
+    for season in seasons:
+        test = predict_season(frames, season, window)
+        _, train = _train_rows(frames, season, window)
+        train = train.dropna(subset=["market_logit"])
+        for h in SPLIT_HALF_LIVES:
+            epa_features = [f"off_epa_diff_{h}", f"def_epa_diff_{h}"]
+            sr_features = [f"off_sr_diff_{h}", f"def_sr_diff_{h}"]
+            for name, features in ((f"p_split_{h}", [*BLEND_FEATURES, *epa_features]),
+                                   (f"p_split_sr_{h}", [*BLEND_FEATURES, *epa_features, *sr_features])):
+                model = LogitModel.fit(train, features)
+                test[name] = _predict_or_blend(model, test)
+        by_season.append(test)
+    return _market_games(by_season)
+
+
+def idea_preds(df: pd.DataFrame, seasons: list[int], window: int = 10) -> pd.DataFrame:
+    """Score eleven pregame model variants on held-out seasons."""
+    columns = {f"market_logit_{method}": market_logit(df, method) for method in DEVIG_METHODS[1:]}
+    columns.update({
+        "spread_pts": df["spread_line"] / SPREAD_SCALE,
+        "total_pts": (df["total_line"] - TOTAL_CENTER) / TOTAL_SCALE,
+        "spread_per_total": (TOTAL_SCALE * df["spread_line"] / df["total_line"]).where(df["total_line"] > 0),
+    })
+    frames = {params: frame.assign(**columns) for params, frame in _elo_frames(df).items()}
+    by_season = []
+    for season in seasons:
+        test = predict_season(frames, season, window)
+        _, train = _train_rows(frames, season, window)
+        train = train.dropna(subset=["market_logit"])
+        for method in DEVIG_METHODS[1:]:
+            model = LogitModel.fit(train, [f"market_logit_{method}", *BASE_FEATURES])
+            test[f"p_devig_{method}"] = _predict_or_blend(model, test)
+        for name, extra in (("spread", ["spread_pts"]), ("total", ["total_pts"]),
+                            ("both", ["spread_pts", "total_pts"]), ("ratio", ["spread_per_total"])):
+            model = LogitModel.fit(train, [*BLEND_FEATURES, *extra])
+            test[f"p_in_{name}"] = _predict_or_blend(model, test)
+        for h in RECENCY_HALF_LIVES:
+            weights = 0.5 ** ((season - 1 - train["season"]) / h)
+            model = LogitModel.fit(train, BLEND_FEATURES, weights=weights)
+            test[f"p_recency_{h}"] = _predict_or_blend(model, test)
+        by_season.append(test)
+    return _market_games(by_season)
+
+
+def calibrated(preds: pd.DataFrame, method: str) -> pd.Series:
+    """Calibrate each season using earlier seasons, clipping values to 1% to 99%."""
+    if method not in ("platt", "isotonic"):
+        raise ValueError(f"unknown calibration method: {method}")
+    result = pd.Series(np.nan, index=preds.index, dtype=float)
+    for season in sorted(preds["season"].unique()):
+        earlier = preds[preds["season"] < season]
+        current = preds[preds["season"] == season]
+        if earlier.empty:
+            continue
+        if method == "platt":
+            fit_prob = earlier["p_blend"].clip(CALIBRATION_MIN, CALIBRATION_MAX)
+            test_prob = current["p_blend"].clip(CALIBRATION_MIN, CALIBRATION_MAX)
+            fit = earlier.assign(blend_logit=np.log(fit_prob / (1 - fit_prob)))
+            test = current.assign(blend_logit=np.log(test_prob / (1 - test_prob)))
+            values = LogitModel.fit(fit, ["blend_logit"]).predict(test)
+        else:
+            model = IsotonicRegression(y_min=0.0, y_max=1.0, out_of_bounds="clip")
+            model.fit(earlier["p_blend"], earlier["home_win"])
+            values = model.predict(current["p_blend"])
+        result.loc[current.index] = np.clip(values, CALIBRATION_MIN, CALIBRATION_MAX)
+    return result
+
+
+def evaluate(
+    preds: pd.DataFrame, candidates: dict[str, list[str]], tune: list[int], confirm: list[int],
+    cluster: list[str] | None = None
+) -> list[dict]:
     """Choose variants on tune seasons and judge them on confirm seasons."""
+    if set(tune) & set(confirm):
+        raise ValueError("tune and confirm seasons must not overlap")
     tune_rows = preds[preds["season"].isin(tune)]
     confirm_rows = preds[preds["season"].isin(confirm)]
+    tune_clusters = tune_rows.groupby(cluster, sort=True).ngroup().to_numpy() if cluster is not None else None
+    confirm_clusters = confirm_rows.groupby(cluster, sort=True).ngroup().to_numpy() if cluster is not None else None
     out = []
     for name, columns in candidates.items():
         variants = [
             {"variant": col, "tune": paired_gain(tune_rows[col].to_numpy(), tune_rows["p_blend"].to_numpy(),
-                                                   tune_rows["home_win"].to_numpy())}
+                                                   tune_rows["home_win"].to_numpy(), clusters=tune_clusters)}
             for col in columns
         ]
         chosen = max(variants, key=lambda row: row["tune"]["log_loss_gain"])["variant"]
         result = paired_gain(confirm_rows[chosen].to_numpy(), confirm_rows["p_blend"].to_numpy(),
-                             confirm_rows["home_win"].to_numpy())
+                             confirm_rows["home_win"].to_numpy(), clusters=confirm_clusters)
         out.append({"candidate": name, "variants": variants, "chosen": chosen, "confirm": result,
                     "ships": result["ships"]})
     return out

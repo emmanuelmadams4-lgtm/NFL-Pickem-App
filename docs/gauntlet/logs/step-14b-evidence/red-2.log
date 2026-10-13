@@ -1,0 +1,60 @@
+...............................FFF                                       [100%]
+=================================== FAILURES ===================================
+_____ test_offence_defence_gives_each_team_its_own_rates_and_its_opponents _____
+
+    def test_offence_defence_gives_each_team_its_own_rates_and_its_opponents():
+>       got = ft.offence_defence([
+              ^^^^^^^^^^^^^^^^^^
+            _split_row("g1", "KC", 50, 10.0, 25),  # 0.2 EPA per play, half the plays succeed
+            _split_row("g1", "BUF", 40, -4.0, 16),  # -0.1 EPA per play, 40% succeed
+            _split_row("g2", "KC", 60, 6.0, 30),
+            _split_row("g2", "LV", 0, 0.0, 0),  # no plays on one side: the game is left out for both teams
+            _split_row("g3", "MIA", 55, 5.5, 22),  # only one side in the file: left out
+        ])
+E       AttributeError: module 'nflpi.predictions.features' has no attribute 'offence_defence'
+
+tests/test_model.py:664: AttributeError
+_ test_split_preds_fit_on_past_seasons_and_fall_back_to_the_blend_without_a_rating _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1158f2250>
+
+    def test_split_preds_fit_on_past_seasons_and_fall_back_to_the_blend_without_a_rating(monkeypatch):
+        df = lines_frame()
+>       split = _fixture_split(df)
+                ^^^^^^^^^^^^^^^^^^
+
+tests/test_model.py:689: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+df =             game_id  season  week  ... away_ml spread_line  total_line
+0    2018_01_NYJ_LV    2018     1  ...   130.0 ...        -2.0        46.0
+89   2023_05_BUF_LV    2023     5  ...  -250.0        -1.0        47.5
+
+[90 rows x 31 columns]
+
+    def _fixture_split(df: pd.DataFrame) -> pd.DataFrame:
+        rows = []
+        for g in df[df["status"] == "final"].itertuples():
+            if "LV" in (g.home_team, g.away_team):
+                continue  # LV never gets a rating
+            rows += [_split_row(g.game_id, g.home_team, 60, g.home_score / 4 - 5, 20 + g.home_score / 2),
+                     _split_row(g.game_id, g.away_team, 60, g.away_score / 4 - 5, 20 + g.away_score / 2)]
+>       return ft.offence_defence(rows)
+               ^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.features' has no attribute 'offence_defence'
+
+tests/test_model.py:684: AttributeError
+_______ test_split_preds_never_use_a_result_from_the_test_week_or_later ________
+
+    def test_split_preds_never_use_a_result_from_the_test_week_or_later():
+        df = lines_frame()
+>       got = bt.split_preds(df, [2022], _fixture_split(df), window=3)
+              ^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.analytics.backtest' has no attribute 'split_preds'
+
+tests/test_model.py:723: AttributeError
+=========================== short test summary info ============================
+FAILED tests/test_model.py::test_offence_defence_gives_each_team_its_own_rates_and_its_opponents - AttributeError: module 'nflpi.predictions.features' has no attribute 'offen...
+FAILED tests/test_model.py::test_split_preds_fit_on_past_seasons_and_fall_back_to_the_blend_without_a_rating - AttributeError: module 'nflpi.predictions.features' has no attribute 'offen...
+FAILED tests/test_model.py::test_split_preds_never_use_a_result_from_the_test_week_or_later - AttributeError: module 'nflpi.analytics.backtest' has no attribute 'split_p...
+3 failed, 31 passed in 3.72s

@@ -6,11 +6,20 @@ import numpy as np
 import pandas as pd
 
 from nflpi.predictions.elo import EloParams, run_elo
-from nflpi.predictions.market import novig_home_prob
+from nflpi.predictions.market import devig_home_prob, novig_home_prob
 
 BASE_FEATURES = ["elo_diff", "home_field", "home_qb_change", "away_qb_change"]
 # Tested and dropped: rest_diff (no log-loss gain in the 2012-2025 walk-forward backtest).
 BLEND_FEATURES = ["market_logit", *BASE_FEATURES]
+
+
+def market_logit(df: pd.DataFrame, method: str) -> pd.Series:
+    """Return clipped home market log-odds for the chosen margin method."""
+    probs = pd.Series([
+        devig_home_prob(h, a, method) if not (pd.isna(h) or pd.isna(a)) else np.nan
+        for h, a in zip(df["home_ml"], df["away_ml"], strict=True)
+    ], index=df.index, dtype=float).clip(0.01, 0.99)
+    return np.log(probs / (1 - probs))
 
 
 def team_game_epa(rows: list[dict]) -> pd.DataFrame:
@@ -38,6 +47,30 @@ def team_game_epa(rows: list[dict]) -> pd.DataFrame:
     result.sort(key=lambda row: row[0])
     return pd.DataFrame([(game_id, team, net) for _, game_id, team, net in result],
                         columns=["game_id", "team", "net_epa"])
+
+
+def offence_defence(rows: list[dict]) -> pd.DataFrame:
+    """Return each team's offence rates and its opponent's offence rates."""
+    games: dict[str, list[tuple[int, str, float, float, float]]] = {}
+    for i, row in enumerate(rows):
+        games.setdefault(row["game_id"], []).append((i, row["team"], row["plays"], row["epa"], row["success"]))
+
+    result = []
+    for game_id, sides in games.items():
+        if len(sides) != 2 or sides[0][1] == sides[1][1]:
+            continue
+        parsed = [(index, team, *map(float, values)) for index, team, *values in sides]
+        if any(plays <= 0 or not all(map(math.isfinite, (plays, epa, success)))
+               for _, _, plays, epa, success in parsed):
+            continue
+        for side, opponent in (parsed, parsed[::-1]):
+            index, team, plays, epa, success = side
+            _, _, opp_plays, opp_epa, opp_success = opponent
+            result.append((index, game_id, team, epa / plays, opp_epa / opp_plays,
+                           success / plays, opp_success / opp_plays))
+    result.sort(key=lambda row: row[0])
+    return pd.DataFrame([row[1:] for row in result],
+                        columns=["game_id", "team", "off_epa", "def_epa", "off_sr", "def_sr"])
 
 
 def epa_diff(df: pd.DataFrame, epa: pd.DataFrame, half_life: float) -> pd.Series:

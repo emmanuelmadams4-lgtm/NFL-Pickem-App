@@ -1,0 +1,230 @@
+{
+ "stage": "cluster",
+ "games": 3649,
+ "confirm_games": 1084,
+ "confirm_clusters": 72,
+ "baseline": {
+  "market": {
+   "n": 3649,
+   "accuracy": 0.6656618251575774,
+   "accuracy_ci": [
+    0.6508632502055358,
+    0.6807344477939161
+   ],
+   "brier": 0.21101053281928192,
+   "log_loss": 0.6094274267769724
+  },
+  "blend": {
+   "n": 3649,
+   "accuracy": 0.6645656344203892,
+   "accuracy_ci": [
+    0.6492189640997533,
+    0.6793642093724308
+   ],
+   "brier": 0.2115343303375747,
+   "log_loss": 0.6106975489610106
+  }
+ },
+ "baseline_confirm": {
+  "market": {
+   "n": 1084,
+   "accuracy": 0.6780442804428044,
+   "accuracy_ci": [
+    0.6494464944649446,
+    0.7075645756457565
+   ],
+   "brier": 0.21045524447924308,
+   "log_loss": 0.6081896562059822
+  },
+  "blend": {
+   "n": 1084,
+   "accuracy": 0.6752767527675276,
+   "accuracy_ci": [
+    0.6476014760147601,
+    0.7038745387453874
+   ],
+   "brier": 0.21111446829834304,
+   "log_loss": 0.6095256237556241
+  }
+ },
+ "candidates": [
+  {
+   "candidate": "inseason_refit",
+   "variants": [
+    {
+     "variant": "p_inseason",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.00014802197888054468,
+      "log_loss_gain_ci": [
+       -0.0005790414343291719,
+       0.0002795564794864714
+      ],
+      "accuracy_diff": -0.0003898635477582846,
+      "accuracy_diff_ci": [
+       -0.0027290448343079924,
+       0.001949317738791423
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0005853071564274797,
+       0.00031035523160707695
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.0030828813491338394,
+       0.0019631517101140073
+      ],
+      "ships_cluster": false
+     }
+    }
+   ],
+   "chosen": "p_inseason",
+   "confirm": {
+    "n": 1084,
+    "log_loss_gain": 0.000347546949635508,
+    "log_loss_gain_ci": [
+     -0.0002870499245431996,
+     0.001000232269962734
+    ],
+    "accuracy_diff": 0.0,
+    "accuracy_diff_ci": [
+     -0.0036900369003690036,
+     0.0036900369003690036
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.00020683796466833648,
+     0.0009453047870965409
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.003714020427112349,
+     0.0036968576709796672
+    ],
+    "ships_cluster": false
+   },
+   "ships": false,
+   "signal": false,
+   "verdict_flips_with_clusters": false,
+   "confirm_half_width": {
+    "game": 0.0006436410972529668,
+    "cluster": 0.0005760713758824387
+   }
+  },
+  {
+   "candidate": "epa_rating",
+   "variants": [
+    {
+     "variant": "p_epa_4",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": 0.00018963486099528957,
+      "log_loss_gain_ci": [
+       -6.95464380451431e-05,
+       0.0004287406411307853
+      ],
+      "accuracy_diff": -0.0015594541910331384,
+      "accuracy_diff_ci": [
+       -0.0031189083820662767,
+       -0.0003898635477582846
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -3.135289667323841e-05,
+       0.0003998603075210977
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.003115386297694898,
+       -0.0003869969040247678
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_epa_8",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": 0.00011666708059143969,
+      "log_loss_gain_ci": [
+       -0.00022266986597999352,
+       0.000439459822597625
+      ],
+      "accuracy_diff": -0.0023391812865497076,
+      "accuracy_diff_ci": [
+       -0.0042884990253411305,
+       -0.0007797270955165692
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.000174516671446508,
+       0.0004215938039229961
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.004258655248387163,
+       -0.0007782025495386283
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_epa_16",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.00014713715958003268,
+      "log_loss_gain_ci": [
+       -0.0003442782523172427,
+       5.469198944658577e-05
+      ],
+      "accuracy_diff": 0.0,
+      "accuracy_diff_ci": [
+       -0.001949317738791423,
+       0.001949317738791423
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.00036909824885244987,
+       8.283825910405297e-05
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.0019485770588244231,
+       0.0019417853059591952
+      ],
+      "ships_cluster": false
+     }
+    }
+   ],
+   "chosen": "p_epa_4",
+   "confirm": {
+    "n": 1084,
+    "log_loss_gain": -0.00041437260868481456,
+    "log_loss_gain_ci": [
+     -0.0017136448882745104,
+     0.0008599600692189924
+    ],
+    "accuracy_diff": 0.0036900369003690036,
+    "accuracy_diff_ci": [
+     -0.0027675276752767526,
+     0.01014760147601476
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.0018485439752999673,
+     0.0010967323923233882
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.002752356761948088,
+     0.01013848266362848
+    ],
+    "ships_cluster": false
+   },
+   "ships": false,
+   "signal": false,
+   "verdict_flips_with_clusters": false,
+   "confirm_half_width": {
+    "game": 0.0012868024787467515,
+    "cluster": 0.0014726381838116778
+   }
+  }
+ ],
+ "matches_step14_stored_numbers": true,
+ "seconds": 17.5
+}

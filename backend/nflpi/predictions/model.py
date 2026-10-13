@@ -14,10 +14,14 @@ class LogitModel:
     intercept: float
 
     @classmethod
-    def fit(cls, df: pd.DataFrame, features: list[str]) -> "LogitModel":
+    def fit(cls, df: pd.DataFrame, features: list[str], weights: pd.Series | None = None) -> "LogitModel":
+        """Fit a logistic model, optionally weighting each training row."""
+        if weights is not None and (not np.isfinite(weights).all() or (weights < 0).any()):
+            raise ValueError("weights must be finite and nonnegative")
         train = df.dropna(subset=[*features, "home_win"])
         lr = LogisticRegression(C=1.0, max_iter=1000)
-        lr.fit(train[features].to_numpy(), train["home_win"].to_numpy())
+        lr.fit(train[features].to_numpy(), train["home_win"].to_numpy(),
+               sample_weight=weights.loc[train.index] if weights is not None else None)
         return cls(features, [float(c) for c in lr.coef_[0]], float(lr.intercept_[0]))
 
     def logit(self, x: pd.DataFrame) -> np.ndarray:

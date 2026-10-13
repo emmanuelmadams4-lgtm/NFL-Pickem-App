@@ -1,0 +1,8 @@
+Using CPython [36m3.13.5[39m[36m[39m
+Creating virtual environment at: [36m.venv[39m
+   [36m[1mBuilding[0m[39m nflpi[2m @ file:///Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-modelb/backend[0m
+      [32m[1mBuilt[0m[39m nflpi[2m @ file:///Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-modelb/backend[0m
+[2mInstalled [1m70 packages[0m [2min 336ms[0m[0m
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m                                                      [100%][0m
+[32m[32m[1m19 passed[0m[32m in 36.62s[0m[0m
+uv run pytest -q tests/test_model.py  5.38s user 1.31s system 16% cpu 41.247 total
