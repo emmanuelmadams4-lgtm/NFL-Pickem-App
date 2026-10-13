@@ -68,8 +68,13 @@ for (const size of [
       await expect(line).not.toContainText("Dee Deep");
       await expect(line).not.toContainText("Nick Nickel");
       const box = await line.evaluate((e) => e.getBoundingClientRect().toJSON());
-      // Whatever the name's length, these are never cut: his status, how many more, the age, and the club with no list.
-      for (const text of ["Out", "+3 more", "3h ago", "MIA: no star list"]) {
+      // The club with no list is said on its own line under the stars line, so the name keeps its room.
+      await expect(line).not.toContainText("no star list");
+      await expect(card(page, g).getByText("No star list yet for MIA", { exact: true })).toBeVisible();
+      const name = line.getByText("BUF Maximilian Featherstonehaugh-Smythe III", { exact: true });
+      expect(await name.evaluate((e) => e.clientWidth), "the name has room for an ordinary name (about 16 letters) on a phone").toBeGreaterThanOrEqual(100);
+      // Whatever the name's length, these are never cut: his status, how many more and the age.
+      for (const text of ["Out", "+3 more", "3h ago"]) {
         const part = line.getByText(text, { exact: true });
         await expect(part, text).toBeVisible();
         const r = await part.evaluate((e) => e.getBoundingClientRect().toJSON());
