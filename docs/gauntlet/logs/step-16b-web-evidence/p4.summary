@@ -1,0 +1,7 @@
+pytest exit=0 1339 passed in 258.40s (0:04:18)
+ruff exit=0
+alembic exit=0
+gen:api no-drift exit=0
+typecheck exit=0
+e2e exit=0   2 skipped   147 passed (5.6m) 
+HEAD 59e0e30 dirty=       0
