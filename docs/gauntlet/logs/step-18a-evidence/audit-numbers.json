@@ -171,7 +171,16 @@
      -0.005480953685941353,
      0.00356261989586188
     ],
-    "ships": false
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.002877040491874058,
+     0.00037864596622713003
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.006257484673885252,
+     0.0038306320709928132
+    ],
+    "ships_cluster": false
    },
    "blend_vs_logistic": {
     "n": 3649,
@@ -185,7 +194,16 @@
      0.007399287476020828,
      0.03261167443135105
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.013209381897029564,
+     0.023981958700965433
+    ],
+    "accuracy_diff_ci_cluster": [
+     0.008539453043582368,
+     0.03070851235150703
+    ],
+    "ships_cluster": true
    },
    "logistic_vs_elo": {
     "n": 3649,
@@ -199,7 +217,16 @@
      -0.002466429158673609,
      0.011235955056179775
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.00014925328388250167,
+     0.005664970503545419
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.002465804132501474,
+     0.011139036173519756
+    ],
+    "ships_cluster": true
    },
    "elo_vs_home": {
     "n": 3649,
@@ -213,7 +240,16 @@
      0.06905316525075363,
      0.10633735269936966
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.0446279959599923,
+     0.06530461541491472
+    ],
+    "accuracy_diff_ci_cluster": [
+     0.06838733610939297,
+     0.10519088162592695
+    ],
+    "ships_cluster": true
    },
    "market_vs_logistic": {
     "n": 3649,
@@ -227,7 +263,16 @@
      0.007947382844614962,
      0.033981912852836395
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.013880148891110732,
+     0.02587017720738546
+    ],
+    "accuracy_diff_ci_cluster": [
+     0.008427542604313236,
+     0.0333887537391065
+    ],
+    "ships_cluster": true
    }
   },
   "tune": {
@@ -243,7 +288,16 @@
      -0.005847953216374269,
      0.0050682261208577
     ],
-    "ships": false
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.0032621864278495638,
+     0.0008712499965050467
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.006601941747572815,
+     0.005449591280653951
+    ],
+    "ships_cluster": false
    },
    "blend_vs_logistic": {
     "n": 2565,
@@ -257,7 +311,16 @@
      -0.0027290448343079924,
      0.025730994152046785
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.009268327540247498,
+     0.023498546056074425
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.0019753928920619806,
+     0.02464691934370569
+    ],
+    "ships_cluster": true
    },
    "logistic_vs_elo": {
     "n": 2565,
@@ -271,7 +334,16 @@
      -0.001949317738791423,
      0.014814814814814815
     ],
-    "ships": false
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.0007033344654839382,
+     0.00553835522755421
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.0019425964589452327,
+     0.015099307864512754
+    ],
+    "ships_cluster": false
    },
    "elo_vs_home": {
     "n": 2565,
@@ -285,7 +357,16 @@
      0.0635477582846004,
      0.10682261208576999
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.044247675943916334,
+     0.07007018660480967
+    ],
+    "accuracy_diff_ci_cluster": [
+     0.06407098165234412,
+     0.10542806494301685
+    ],
+    "ships_cluster": true
    },
    "market_vs_logistic": {
     "n": 2565,
@@ -299,7 +380,16 @@
      -0.0031189083820662767,
      0.026510721247563353
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.009416648065229237,
+     0.025470028859055024
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.0031033013189723816,
+     0.027019328246313715
+    ],
+    "ships_cluster": true
    }
   },
   "confirm": {
@@ -315,7 +405,16 @@
      -0.01107011070110701,
      0.005558118081180685
     ],
-    "ships": false
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.003755088529286461,
+     0.0011713433677658543
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.012005365267736118,
+     0.005524989179417979
+    ],
+    "ships_cluster": false
    },
    "blend_vs_logistic": {
     "n": 1084,
@@ -329,7 +428,16 @@
      0.015682656826568265,
      0.061808118081180814
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.01419763852116321,
+     0.033459589068025423
+    ],
+    "accuracy_diff_ci_cluster": [
+     0.01778984612312252,
+     0.058987535497474784
+    ],
+    "ships_cluster": true
    },
    "logistic_vs_elo": {
     "n": 1084,
@@ -343,7 +451,16 @@
      -0.012915129151291513,
      0.01107011070110701
     ],
-    "ships": false
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.0015903915309575761,
+     0.009872926007803632
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.01290352339007261,
+     0.011029665431029817
+    ],
+    "ships_cluster": false
    },
    "elo_vs_home": {
     "n": 1084,
@@ -357,7 +474,16 @@
      0.05627306273062731,
      0.13009686346863455
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.033553226755238356,
+     0.0718437643428617
+    ],
+    "accuracy_diff_ci_cluster": [
+     0.054945054945054944,
+     0.13143382352941177
+    ],
+    "ships_cluster": true
    },
    "market_vs_logistic": {
     "n": 1084,
@@ -371,7 +497,16 @@
      0.01750461254612546,
      0.06734317343173432
     ],
-    "ships": true
+    "ships": true,
+    "log_loss_gain_ci_cluster": [
+     0.014573822095231248,
+     0.03566078240760452
+    ],
+    "accuracy_diff_ci_cluster": [
+     0.019625252824661737,
+     0.06307999573738073
+    ],
+    "ships_cluster": true
    }
   }
  },
@@ -1847,7 +1982,7 @@
   }
  },
  "run": {
-  "utc": "2026-10-13T18:50:48.471132+00:00",
-  "git_head": "d407ad5d95fa63373ccd477fd2e0a42cb802ee88"
+  "utc": "2026-10-13T19:15:45.848417+00:00",
+  "git_head": "7b7927306e93df74d1de959e4f87724d5d5a28ab"
  }
 }

@@ -1,11 +1,11 @@
 # Audit of the current model (owner brief, section 1)
 
-Step 18a, lane `audit`, 2026-10-13. Code audited: main at `c55827f`. No model code was changed. Brief: `docs/model/OWNER_BRIEF_2026-10-13.md` section 1, read under owner decision D68.
+Step 18a, lane `audit`, 2026-10-13. Code audited: main at `11cc401` (the audit began at `c55827f`; the model, bench and ingestion files are identical in both). No model code was changed. Brief: `docs/model/OWNER_BRIEF_2026-10-13.md` section 1, read under owner decision D68.
 
 ## The answer in five lines
 
 1. **The model is, in practice, the betting market's closing number.** Its pick differs from the market favourite in 72 of 3,649 games (2.0%), and it got 34 of those 72 right (A10).
-2. **It is not broken.** No result leaks into a feature, the bench and the live path compute the same numbers, and every fit uses earlier seasons only. Eight planted defects were each caught by the new tests (A2, A3, A5).
+2. **It is not broken.** No result leaks into a feature, the bench and the live path compute the same numbers, and every fit uses earlier seasons only. Nine planted defects were each caught by the new tests (A2, A3, A5, A6).
 3. **It is well calibrated** (A4), and it clearly beats "always the home team" and "ratings only". It does **not** beat the market alone: 66.46% against 66.57%, a difference inside the noise (A9).
 4. **Two things make the bench kinder than real life, and neither can be sized from history:** the bench is scored on the closing line while a live pick is made from an earlier line (A6), and the bench knows each game's quarterback while a live pick has a projection, for the coming week only (A8).
 5. **The 2022 to 2025 check seasons have been scored nine times.** The only untouched games are the 2026 games not yet played (A11).
@@ -15,7 +15,7 @@ So the honest reason the model "is not good enough" is not a defect. It has no i
 ## How to read this
 
 * **VERIFIED** = the claim cites the code (file and line) **and** a test or a command with its output. **HYPOTHESIS** = not shown; the entry names the test that would settle it. No reason for weak performance is given without evidence.
-* Tests: `backend/tests/test_model_audit.py` (six tests, written for this audit). Planted-defect check: `docs/gauntlet/logs/step-18a-evidence/mutation.log` (script `mutate.py`; M1 to M8 are its defects).
+* Tests: `backend/tests/test_model_audit.py` (six tests, written for this audit). Planted-defect check: `docs/gauntlet/logs/step-18a-evidence/mutation.log` (script `mutate.py`; M1 to M9 are its defects, nine of nine caught).
 * Numbers: `docs/gauntlet/logs/step-18a-evidence/audit-numbers.json`, printed by `audit_numbers.py` on 2026-10-13 from the public nflverse schedule file. Walk-forward, 10-season window, 3,649 regular-season games with a closing line, 2012 to 2025. Its baseline equals the stored step 14 numbers (market log loss 0.6094, blend 0.6107).
 * Other lookups: `blend-vs-market.txt` (script `blend_vs_market.py`) and `feeds-extra.txt`, same folder.
 * Paths below are under `backend/nflpi/` unless they start with `tests/` or `docs/`.
@@ -92,7 +92,7 @@ Blend, 2012 to 2025, 3,649 games, sorted by the home team's stated chance (`audi
 | 9 | 365 | 75.5% | 76.4% | +0.9 | 71.8 to 80.5 |
 | 10 | 365 | 83.9% | 86.8% | +2.9 | 83.0 to 89.9 |
 
-* Average gap, weighted by games: 1.5 points. Calibration slope 1.02, intercept +0.01 (a slope of 1 is perfect; below 1 means overconfident).
+* Average gap, weighted by games: 1.5 points. Calibration slope 1.02, intercept +0.01 (a slope of 1 is perfect; below 1 means overconfident). The slope is fitted with the app's own lightly regularized logistic fit (`predictions/model.py:22`), which pulls it toward zero by well under 0.01 at this sample size.
 * On 2022 to 2025 alone (1,084 games, about 108 per group): slope 1.02, average gap 3.1 points, every group still inside its interval. The larger gap is what groups of 108 games give by chance; it is not evidence of drift.
 * For comparison, same games: market slope 1.07 (slightly cautious), stats model 0.97 (slightly overconfident).
 * Code: reliability in the app itself is `analytics/metrics.py:67-84` (five buckets by the picked side). Step 14b tested recalibrating the blend (Platt and isotonic); it did not ship, which fits: there is little to correct.
@@ -101,7 +101,7 @@ Blend, 2012 to 2025, 3,649 games, sorted by the home team's stated chance (`audi
 
 **A5. VERIFIED. Chronological, yes. The fit for season S uses seasons S-10 to S-1 and nothing later, on the bench and live.**
 * Bench: `backtest.py:72-79` (training rows), `:97` (home-win rate from training rows), `:63-69` (Elo settings). Live: `engine.py:103-109`, and the scheduled job asks for the season before the current one (`jobs.py:56`).
-* Tests: `::test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later` (records every fit's seasons, and shows that rewriting every result from the test season on changes no fitted weight) and `::test_live_model_is_fitted_only_on_seasons_before_the_one_it_predicts`. Planted defects M3, M4 and M5 are caught.
+* Tests: `::test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later` (records every fit's seasons, and shows that rewriting every result from the test season on changes no fitted weight) and `::test_live_model_is_fitted_only_on_seasons_before_the_one_it_predicts`. Planted defects M3, M4, M5 and M9 are caught.
 
 **Realistic cutoffs: only in part.** Results: yes (A3). The line: no, the bench has the close (A6). The quarterback: not known (A8). The bench's 66.5% is therefore an upper estimate of what a mid-week pick earns, by an amount that history cannot give.
 
@@ -144,6 +144,7 @@ Paired, same games, log-loss gain of the first over the second (positive = first
 | Market over stats model | +0.0199 | +0.0132 to +0.0269 | +2.06 |
 
 * On 2022 to 2025 alone (1,084 games): market 67.80% and 0.6082, blend 67.53% and 0.6095; blend over market -0.0013 (interval -0.0043 to +0.0016).
+* Resampling whole weeks instead of single games (games in one week are not independent) gives nearly the same intervals: blend over market -0.0029 to +0.0004 on all seasons and -0.0038 to +0.0012 on 2022 to 2025 (`paired.*.blend_vs_market.log_loss_gain_ci_cluster`).
 * In words: home field and the quarterback flags add almost nothing to Elo; the line adds a lot to the stats model; the stats inputs add nothing measurable to the line.
 * Code: `analytics/backtest.py:92-110` and `:322-332`; `analytics/metrics.py:109-136`.
 
