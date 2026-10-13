@@ -18,6 +18,7 @@ KEEP_DAYS = 30
 MAX_URL = 2048
 TITLE_MAX = 200
 EXTRACT_MAX = 300
+RAW_TEXT_MULTIPLIER = 10
 FUTURE_SLACK = timedelta(days=1)
 
 _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
@@ -57,8 +58,11 @@ class _Text(HTMLParser):
 
 def clean_text(raw: str, limit: int) -> str:
     parser = _Text()
-    parser.feed(raw)
-    parser.close()
+    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
+    parser.feed(bounded)
+    # Closing a truncated tag emits its markup as text.
+    if len(bounded) == len(raw):
+        parser.close()
     text = " ".join("".join(parser.parts).split())
     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
     return " ".join(text.split())[:limit].strip()

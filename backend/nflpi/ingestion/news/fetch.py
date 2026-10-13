@@ -6,7 +6,9 @@ import ssl
 import time
 import unicodedata
 from collections.abc import Callable
+from concurrent.futures import Future
 from dataclasses import dataclass
+from threading import Thread
 from urllib.parse import urljoin, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
 
@@ -16,6 +18,7 @@ from nflpi.config import get_settings
 from nflpi.ingestion.news.sources import Source
 
 TIMEOUT_S = 10
+RESOLVE_TIMEOUT_S = 5
 DEADLINE_S = 20
 MAX_FEED_BYTES = 2_000_000
 MAX_ROBOTS_BYTES = 512_000
@@ -66,12 +69,21 @@ def user_agent() -> str:
 
 
 def default_resolver(host: str) -> list[str]:
-    addresses: list[str] = []
-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
-        address = result[4][0]
-        if address not in addresses:
-            addresses.append(address)
-    return addresses
+    lookup: Future[list[str]] = Future()
+
+    def resolve() -> None:
+        try:
+            addresses: list[str] = []
+            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+                address = result[4][0]
+                if address not in addresses:
+                    addresses.append(address)
+            lookup.set_result(addresses)
+        except BaseException as exc:
+            lookup.set_exception(exc)
+
+    Thread(target=resolve, daemon=True).start()
+    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
 
 
 def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
@@ -174,6 +186,9 @@ def _handle_response(
     if status in (304, 404, 410):
         body = b""
     elif 200 <= status < 300:
+        encoding = response.headers.get("content-encoding", "").strip().lower()
+        if encoding and encoding != "identity":
+            raise FetchError("encoding")
         body = _read_body(response, max_bytes, clock, deadline)
     else:
         raise FetchError(f"status {status}")

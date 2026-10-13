@@ -5,10 +5,10 @@ recorded real feeds and their robots.txt files (tests/fixtures/news) were fetche
 """
 
 import gzip
-import time
 import hashlib
 import socket
 import ssl
+import time
 import unicodedata
 from datetime import UTC, datetime, timedelta
 from pathlib import Path

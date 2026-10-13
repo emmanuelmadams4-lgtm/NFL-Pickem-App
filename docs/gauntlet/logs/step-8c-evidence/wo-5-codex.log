@@ -1,0 +1,3176 @@
+OpenAI Codex v0.156.1
+--------
+[1mworkdir:[0m /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[1mmodel:[0m gpt-6-sol
+[1mprovider:[0m openai
+[1mapproval:[0m never
+[1msandbox:[0m workspace-write [workdir, /tmp, $TMPDIR]
+[1mreasoning effort:[0m high
+[1mreasoning summaries:[0m none
+[1msession id:[0m 01a1342b-6591-7730-a90a-20dbfa36cc0f
+--------
+[36muser[0m
+CODEX WORK ORDER 5 (Dwight's three code-review fixes, lane news; the six red tests added in commit 611a69b of backend/tests/test_news.py are the spec, read them)
+
+GOAL: turn the six red tests green without breaking the rest of backend/tests/test_news.py.
+BASELINE: branch lane/news HEAD 611a69b. Red: test_a_hung_dns_lookup_is_cut_off_after_the_resolve_timeout; test_a_reply_that_is_compressed_anyway_is_refused_before_it_is_decoded (4 params); test_a_hostile_summary_of_unclosed_tags_is_cut_before_the_slow_parser_sees_it. Everything else passed and must keep passing.
+ALLOWED SCOPE: backend/nflpi/ingestion/news/fetch.py and parse.py. Nothing else. No new dependency. Do not commit. Do not edit tests.
+
+REQUIREMENTS
+N1 (denial of service, parse.py): clean_text feeds untrusted text to html.parser.HTMLParser, which is quadratic on input like "<a " * 30000 (90 KB took 46 s). Cut the raw input to a bounded length BEFORE it reaches the parser (a named module constant, sized from the caller's limit, e.g. a small multiple of `limit`; tags make the raw text longer than the kept text, so the cut must be generous enough that ordinary summaries with markup still keep their 300 characters; check the existing tests). The test also pushes the hostile text through feedparser as an entity-encoded summary and wants the whole parse under 2 s: if feedparser itself is slow on it, find the smallest fix inside parse.py (e.g. cap the summary before feedparser sanitises it is NOT possible, so look at feedparser options such as disabling its own HTML sanitising for the fields we re-clean ourselves anyway, only if that is safe because clean_text strips every tag afterwards). Report what you found.
+N2 (fetch.py): default_resolver calls socket.getaddrinfo with no timeout. Add a module constant RESOLVE_TIMEOUT_S (the test monkeypatches fetch.RESOLVE_TIMEOUT_S, so read it at call time from the module global) and run the lookup so it gives up after that many seconds, raising an OSError subclass (TimeoutError is one). The caller must not wait for the hung lookup (do not use a `with ThreadPoolExecutor` block that joins on exit; use a daemon thread or executor.shutdown(wait=False)). Keep default_resolver's current result for a normal lookup (port 443, each address once, in order), and any exception from getaddrinfo still propagates.
+L1 (fetch.py): requests already send Accept-Encoding: identity. If a reply carries a Content-Encoding other than none/"identity" (case-insensitive, whitespace trimmed; "gzip, identity" counts as compressed) raise FetchError("encoding") BEFORE the body is read, so a server that compresses anyway is never decoded. Do it in _handle_response for statuses where a body would be read. 304/404/410 carry no body and are unaffected. If an existing test relies on a compressed reply being decoded (the old gzip-bomb test), do not edit it: stop and report which test and why.
+
+PROOF (you cannot reach the database): `bash docs/gauntlet/logs/step-8c-evidence/pure.sh` must end PURE OK; also `cd backend && .venv/bin/python -m pytest --noconftest -q -p no:cacheprovider tests/test_news.py -k "dns or compressed or hostile"` must pass; `cd backend && uvx ruff check nflpi tests`. The coordinator runs the database tests.
+CONSTRAINTS (Ponytail): smallest correct diff, no new abstraction, no refactor, ruff line 120, typed, comments only where the reason is not obvious.
+DO NOT: commit, push, install, use the network, edit tests, touch other files.
+RETURN: changed files, a 5-line summary, the proof results, and what you found about feedparser.
+
+[2m2026-10-13T07:30:22.128692Z[0m [31mERROR[0m [2mrmcp::transport::worker[0m[2m:[0m worker quit with fatal: Transport channel closed, when AuthRequired(AuthRequiredError { www_authenticate_header: "Bearer error=\"invalid_request\", error_description=\"No access token was provided in this request\", resource_metadata=\"https://api.githubcopilot.com/.well-known/oauth-protected-resource/mcp/\"" })
+[2m2026-10-13T07:30:22.455234Z[0m [31mERROR[0m [2mrmcp::transport::worker[0m[2m:[0m worker quit with fatal: Transport channel closed, when AuthRequired(AuthRequiredError { www_authenticate_header: "Bearer error=\"invalid_request\", error_description=\"No access token was provided in this request\", resource_metadata=\"https://api.githubcopilot.com/.well-known/oauth-protected-resource/mcp/\"" })
+[35m[3mcodex[0m[0m
+I’ll read the six tests and the current fetch and parse code, then make the smallest changes in those two files and run the requested checks.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'cat /Users/emmanueladams/.agents/skills/stop-slop/SKILL.md'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+---
+name: stop-slop
+description: Remove AI writing patterns from prose. Use when drafting, editing, or reviewing text to eliminate predictable AI tells.
+metadata:
+  trigger: Writing prose, editing drafts, reviewing content for AI patterns
+  author: Hardik Pandya (https://hvpandya.com)
+---
+
+# Stop Slop
+
+Eliminate predictable AI writing patterns from prose.
+
+## Core Rules
+
+1. **Cut filler phrases.** Remove throat-clearing openers, emphasis crutches, and all adverbs. See [references/phrases.md](references/phrases.md).
+
+2. **Break formulaic structures.** Avoid binary contrasts, negative listings, dramatic fragmentation, rhetorical setups, false agency. See [references/structures.md](references/structures.md).
+
+3. **Use active voice.** Every sentence needs a human subject doing something. No passive constructions. No inanimate objects performing human actions ("the complaint becomes a fix").
+
+4. **Be specific.** No vague declaratives ("The reasons are structural"). Name the specific thing. No lazy extremes ("every," "always," "never") doing vague work.
+
+5. **Put the reader in the room.** No narrator-from-a-distance voice. "You" beats "People." Specifics beat abstractions.
+
+6. **Vary rhythm.** Mix sentence lengths. Two items beat three. End paragraphs differently. No em dashes.
+
+7. **Trust readers.** State facts directly. Skip softening, justification, hand-holding.
+
+8. **Cut quotables.** If it sounds like a pull-quote, rewrite it.
+
+## Quick Checks
+
+Before delivering prose:
+
+- Any adverbs? Kill them.
+- Any passive voice? Find the actor, make them the subject.
+- Inanimate thing doing a human verb ("the decision emerges")? Name the person.
+- Sentence starts with a Wh- word? Restructure it.
+- Any "here's what/this/that" throat-clearing? Cut to the point.
+- Any "not X, it's Y" contrasts? State Y directly.
+- Three consecutive sentences match length? Break one.
+- Paragraph ends with punchy one-liner? Vary it.
+- Em-dash anywhere? Remove it.
+- Vague declarative ("The implications are significant")? Name the specific implication.
+- Narrator-from-a-distance ("Nobody designed this")? Put the reader in the scene.
+- Meta-joiners ("The rest of this essay...")? Delete. Let the essay move.
+
+## Scoring
+
+Rate 1-10 on each dimension:
+
+| Dimension | Question |
+|-----------|----------|
+| Directness | Statements or announcements? |
+| Rhythm | Varied or metronomic? |
+| Trust | Respects reader intelligence? |
+| Authenticity | Sounds human? |
+| Density | Anything cuttable? |
+
+Below 35/50: revise.
+
+## Examples
+
+See [references/examples.md](references/examples.md) for before/after transformations.
+
+## License
+
+MIT
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "rg --files -g 'AGENTS.md' -g 'fetch.py' -g 'parse.py' -g 'test_news.py' -g 'SKILL.md' | head -80"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+apps/web/AGENTS.md
+backend/tests/test_news.py
+backend/nflpi/ingestion/news/parse.py
+backend/nflpi/ingestion/news/fetch.py
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'git status --short && git rev-parse --short HEAD && rg -n "hung_dns|compressed_anyway|hostile_summary|gzip|clean_text|default_resolver|_handle_response" backend/tests/test_news.py backend/nflpi/ingestion/news/{fetch,parse}.py'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+?? docs/gauntlet/logs/step-8c-evidence/wo-5-codex.log
+e8eb916
+backend/nflpi/ingestion/news/parse.py:58:def clean_text(raw: str, limit: int) -> str:
+backend/nflpi/ingestion/news/parse.py:116:        title = clean_text(entry.get("title") or "", TITLE_MAX)
+backend/nflpi/ingestion/news/parse.py:124:        items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", EXTRACT_MAX)))
+backend/nflpi/ingestion/news/fetch.py:68:def default_resolver(host: str) -> list[str]:
+backend/nflpi/ingestion/news/fetch.py:145:def _handle_response(
+backend/nflpi/ingestion/news/fetch.py:193:    resolver: Callable[[str], list[str]] = default_resolver,
+backend/nflpi/ingestion/news/fetch.py:220:                    result, redirect_url = _handle_response(
+backend/nflpi/ingestion/news/fetch.py:242:    resolver: Callable[[str], list[str]] = default_resolver,
+backend/nflpi/ingestion/news/fetch.py:274:    resolver: Callable[[str], list[str]] = default_resolver,
+backend/tests/test_news.py:7:import gzip
+backend/tests/test_news.py:241:    bomb = gzip.compress(b"0" * 20_000_000)
+backend/tests/test_news.py:244:        {("www.espn.com", "/feed"): httpx.Response(200, headers=XML | {"content-encoding": "gzip"}, content=bomb)}
+backend/tests/test_news.py:309:def test_a_hung_dns_lookup_is_cut_off_after_the_resolve_timeout(monkeypatch):
+backend/tests/test_news.py:318:        fetch.default_resolver("www.espn.com")
+backend/tests/test_news.py:322:@pytest.mark.parametrize("encoding", ["gzip", "br", "deflate", "gzip, identity"])
+backend/tests/test_news.py:323:def test_a_reply_that_is_compressed_anyway_is_refused_before_it_is_decoded(encoding):
+backend/tests/test_news.py:338:def test_default_resolver_asks_for_port_443_and_returns_each_address_once(monkeypatch):
+backend/tests/test_news.py:347:    assert fetch.default_resolver("www.espn.com") == ["93.184.216.34", "93.184.216.35"]
+backend/tests/test_news.py:603:def test_a_hostile_summary_of_unclosed_tags_is_cut_before_the_slow_parser_sees_it():
+backend/tests/test_news.py:606:    assert parse.clean_text(hostile + "tail", 300) == ""
+backend/tests/test_news.py:614:def test_clean_text_is_the_one_cleaner():
+backend/tests/test_news.py:615:    assert parse.clean_text("a‮b\x00c", 10) == "abc"
+backend/tests/test_news.py:616:    assert len(parse.clean_text("é" * 50, 10)) == 10
+
+[35m[3mcodex[0m[0m
+The checkout is at `e8eb916`, not the stated `611a69b` baseline. The six target tests are present. I’ll check the commits between those points and the older gzip test before editing. I’ll also apply the stop-slop writing check to the final report.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '1,220p' backend/nflpi/ingestion/news/parse.py"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+"""Turn bounded feed bytes into clean, allowlisted news items."""
+
+import io
+import unicodedata
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from html.parser import HTMLParser
+from typing import Any
+from urllib.parse import quote, unquote_plus, urlsplit, urlunsplit
+
+import feedparser
+
+from nflpi.ingestion.news.sources import Source
+
+MAX_ENTRIES = 100
+KEEP_DAYS = 30
+MAX_URL = 2048
+TITLE_MAX = 200
+EXTRACT_MAX = 300
+FUTURE_SLACK = timedelta(days=1)
+
+_URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+_TRACKERS = {"fbclid", "gclid", "ocid"}
+
+
+class FeedError(Exception):
+    """The response is not a usable feed."""
+
+
+@dataclass(frozen=True)
+class Item:
+    title: str
+    url: str
+    published_at: datetime | None
+    extract: str
+
+
+class _Text(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.hidden = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("script", "style"):
+            self.hidden += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("script", "style") and self.hidden:
+            self.hidden -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self.hidden:
+            self.parts.append(data)
+
+
+def clean_text(raw: str, limit: int) -> str:
+    parser = _Text()
+    parser.feed(raw)
+    parser.close()
+    text = " ".join("".join(parser.parts).split())
+    text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+    return " ".join(text.split())[:limit].strip()
+
+
+def canonical_url(link: str | None, suffixes: tuple[str, ...]) -> str | None:
+    if not link or any(char.isspace() or unicodedata.category(char).startswith("C") for char in link) or "\\" in link:
+        return None
+    try:
+        parts = urlsplit(link)
+        host = parts.hostname
+        if host is None:
+            return None
+        host.encode("ascii")
+        if (
+            parts.scheme.lower() != "https"
+            or parts.username is not None
+            or parts.password is not None
+            or parts.netloc.lower() != host
+            or host.endswith(".")
+            or not any(host == suffix or host.endswith("." + suffix) for suffix in suffixes)
+        ):
+            return None
+    except (ValueError, UnicodeError):
+        return None
+    query_parts = []
+    for segment in parts.query.split("&"):
+        key = unquote_plus(segment.split("=", 1)[0]).lower()
+        if not key.startswith("utm_") and key not in _TRACKERS:
+            query_parts.append(segment)
+    path = quote(parts.path or "/", safe=_URL_SAFE)
+    query = quote("&".join(query_parts), safe=_URL_SAFE)
+    result = urlunsplit(("https", host, path, query, ""))
+    return result if len(result) <= MAX_URL else None
+
+
+def _published(entry: Mapping[str, Any], now: datetime) -> datetime | None:
+    stamp = entry.get("published_parsed") or entry.get("updated_parsed")
+    if not stamp:
+        return None
+    try:
+        published = datetime(*stamp[:6], tzinfo=UTC)
+    except (TypeError, ValueError):
+        return None
+    return None if published > now + FUTURE_SLACK else published
+
+
+def parse_feed(body: bytes, source: Source, now: datetime) -> list[Item]:
+    parsed = feedparser.parse(io.BytesIO(body))
+    if not parsed.entries and (parsed.bozo or not parsed.get("version")):
+        raise FeedError("not a feed")
+    items: list[Item] = []
+    usable = False
+    for entry in parsed.entries[:MAX_ENTRIES]:
+        title = clean_text(entry.get("title") or "", TITLE_MAX)
+        url = canonical_url(entry.get("link"), source.link_suffixes)
+        if not title or not url:
+            continue
+        usable = True
+        published_at = _published(entry, now)
+        if published_at is not None and published_at < now - timedelta(days=KEEP_DAYS):
+            continue
+        items.append(Item(title, url, published_at, clean_text(entry.get("summary") or "", EXTRACT_MAX)))
+    if parsed.entries and not usable:
+        raise FeedError("no usable items")
+    return items
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '1,330p' backend/nflpi/ingestion/news/fetch.py"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+"""Fetch allowlisted feeds with pinned DNS, bounded bodies, and robots checks."""
+
+import ipaddress
+import socket
+import ssl
+import time
+import unicodedata
+from collections.abc import Callable
+from dataclasses import dataclass
+from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.robotparser import RobotFileParser
+
+import httpx
+
+from nflpi.config import get_settings
+from nflpi.ingestion.news.sources import Source
+
+TIMEOUT_S = 10
+DEADLINE_S = 20
+MAX_FEED_BYTES = 2_000_000
+MAX_ROBOTS_BYTES = 512_000
+MAX_REDIRECTS = 3
+MAX_VALIDATOR_LEN = 256
+_NAT64 = (
+    ipaddress.ip_network("64:ff9b::/96"),
+    ipaddress.ip_network("64:ff9b:1::/48"),
+    ipaddress.ip_network("::/96"),
+    ipaddress.ip_network("2002::/16"),
+    ipaddress.ip_network("2001::/32"),
+)
+_REDIRECTS = {301, 302, 303, 307, 308}
+
+
+class FetchError(Exception):
+    """A feed could not be fetched safely."""
+
+
+class Blocked(FetchError):
+    """A security or source access rule forbids this fetch."""
+
+
+@dataclass(frozen=True)
+class FetchResult:
+    status: int
+    body: bytes
+    etag: str | None
+    last_modified: str | None
+
+
+def _has_control(value: str) -> bool:
+    return any(unicodedata.category(char).startswith("C") for char in value)
+
+
+def _validator(value: str | None) -> str | None:
+    return (
+        value
+        if isinstance(value, str) and len(value) <= MAX_VALIDATOR_LEN and value.isascii() and value.isprintable()
+        else None
+    )
+
+
+def user_agent() -> str:
+    base = "NFLPickemIntel/1.0 (private single-user app"
+    contact = get_settings().news_contact
+    return f"{base}; contact: {contact})" if contact and not _has_control(contact) else f"{base})"
+
+
+def default_resolver(host: str) -> list[str]:
+    addresses: list[str] = []
+    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+        address = result[4][0]
+        if address not in addresses:
+            addresses.append(address)
+    return addresses
+
+
+def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+    return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+
+
+def is_public(address: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        elif any(ip in network for network in _NAT64):
+            return False
+    return ip.is_global and not ip.is_multicast
+
+
+def _checked_url(url: str, host: str) -> tuple[str, str]:
+    try:
+        parts = urlsplit(url)
+        hostname = parts.hostname
+        valid = (
+            parts.scheme.lower() == "https"
+            and hostname is not None
+            and hostname.lower() == host.lower()
+            and parts.username is None
+            and parts.password is None
+            and parts.port in (None, 443)
+            and not _has_control(url)
+            and "\\" not in url
+        )
+    except (ValueError, UnicodeError):
+        valid = False
+        hostname = None
+    if not valid or hostname is None:
+        raise Blocked("url blocked")
+    return hostname, urlunsplit(("https", hostname, parts.path or "/", parts.query, ""))
+
+
+def _pin(url: str, host: str, resolver: Callable[[str], list[str]]) -> tuple[str, str]:
+    hostname, hostname_url = _checked_url(url, host)
+    try:
+        addresses = resolver(hostname)
+    except (OSError, UnicodeError) as exc:
+        raise FetchError("dns error") from exc
+    if not addresses:
+        raise FetchError("dns empty")
+    if any(not is_public(address) for address in addresses):
+        raise Blocked("address blocked")
+    address = addresses[0]
+    ip_host = f"[{address}]" if ":" in address else address
+    parts = urlsplit(hostname_url)
+    return hostname, urlunsplit(("https", ip_host, parts.path, parts.query, ""))
+
+
+def _read_body(response: httpx.Response, max_bytes: int, clock: Callable[[], float], deadline: float) -> bytes:
+    chunks: list[bytes] = []
+    size = 0
+    for chunk in response.iter_bytes():
+        if clock() > deadline:
+            raise FetchError("deadline exceeded")
+        size += len(chunk)
+        if size > max_bytes:
+            raise FetchError("too large")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _handle_response(
+    response: httpx.Response,
+    hostname_url: str,
+    redirects: int,
+    max_redirects: int,
+    content_types: tuple[str, ...],
+    max_bytes: int,
+    clock: Callable[[], float],
+    deadline: float,
+) -> tuple[FetchResult | None, str | None]:
+    status = response.status_code
+    if status in _REDIRECTS and "location" in response.headers:
+        if redirects >= max_redirects:
+            raise FetchError("too many redirects")
+        location = response.headers["location"]
+        if _has_control(location) or "\\" in location:
+            raise Blocked("url blocked")
+        try:
+            return None, urljoin(hostname_url, location)
+        except (ValueError, UnicodeError) as exc:
+            raise Blocked("url blocked") from exc
+    if status in (401, 403, 429):
+        raise Blocked(f"status {status}")
+    if status >= 400 and status not in (404, 410):
+        raise FetchError(f"status {status}")
+    if status == 200:
+        media_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
+        if not any(kind in media_type for kind in content_types):
+            raise FetchError("content type")
+    if status in (304, 404, 410):
+        body = b""
+    elif 200 <= status < 300:
+        body = _read_body(response, max_bytes, clock, deadline)
+    else:
+        raise FetchError(f"status {status}")
+    result = FetchResult(
+        status,
+        body,
+        _validator(response.headers.get("etag")),
+        _validator(response.headers.get("last-modified")),
+    )
+    return result, None
+
+
+def fetch_guarded(
+    url: str,
+    *,
+    host: str,
+    resolver: Callable[[str], list[str]] = default_resolver,
+    transport: httpx.BaseTransport | None = None,
+    headers: dict[str, str] | None = None,
+    max_bytes: int = MAX_FEED_BYTES,
+    content_types: tuple[str, ...] = ("xml",),
+    max_redirects: int = MAX_REDIRECTS,
+    clock: Callable[[], float] = time.monotonic,
+) -> FetchResult:
+    start = clock()
+    redirects = 0
+    with build_client(transport) as client:
+        while True:
+            if clock() > start + DEADLINE_S:
+                raise FetchError("deadline exceeded")
+            hostname, ip_url = _pin(url, host, resolver)
+            if clock() > start + DEADLINE_S:
+                raise FetchError("deadline exceeded")
+            pinned_parts = urlsplit(ip_url)
+            hostname_url = urlunsplit(("https", hostname, pinned_parts.path, pinned_parts.query, ""))
+            request_headers = httpx.Headers(headers or {})
+            request_headers["User-Agent"] = user_agent()
+            request_headers["Host"] = hostname
+            request_headers["Accept-Encoding"] = "identity"
+            try:
+                with client.stream(
+                    "GET", ip_url, headers=request_headers, extensions={"sni_hostname": hostname}
+                ) as response:
+                    result, redirect_url = _handle_response(
+                        response,
+                        hostname_url,
+                        redirects,
+                        max_redirects,
+                        content_types,
+                        max_bytes,
+                        clock,
+                        start + DEADLINE_S,
+                    )
+                if redirect_url is not None:
+                    url = redirect_url
+                    redirects += 1
+                    continue
+                return result
+            except (httpx.HTTPError, ssl.SSLError, OSError) as exc:
+                raise FetchError(type(exc).__name__) from exc
+
+
+def check_robots(
+    source: Source,
+    *,
+    resolver: Callable[[str], list[str]] = default_resolver,
+    transport: httpx.BaseTransport | None = None,
+    clock: Callable[[], float] = time.monotonic,
+) -> None:
+    try:
+        result = fetch_guarded(
+            f"https://{source.host}/robots.txt",
+            host=source.host,
+            resolver=resolver,
+            transport=transport,
+            clock=clock,
+            content_types=("text/plain",),
+            max_bytes=MAX_ROBOTS_BYTES,
+            max_redirects=0,
+        )
+    except Blocked:
+        raise
+    except FetchError as exc:
+        raise FetchError("robots unavailable") from exc
+    if result.status in (404, 410):
+        return
+    if result.status != 200:
+        raise FetchError("robots unavailable")
+    parser = RobotFileParser()
+    parser.parse(result.body.decode("utf-8", "replace").splitlines())
+    if not parser.can_fetch("NFLPickemIntel", source.url):
+        raise Blocked("robots disallow")
+
+
+def fetch_feed(
+    source: Source,
+    *,
+    resolver: Callable[[str], list[str]] = default_resolver,
+    transport: httpx.BaseTransport | None = None,
+    validators: dict[str, str] | None = None,
+    clock: Callable[[], float] = time.monotonic,
+) -> FetchResult:
+    check_robots(source, resolver=resolver, transport=transport, clock=clock)
+    conditional: dict[str, str] = {}
+    if validators:
+        etag = _validator(validators.get("etag"))
+        last_modified = _validator(validators.get("last_modified"))
+        if etag is not None:
+            conditional["If-None-Match"] = etag
+        if last_modified is not None:
+            conditional["If-Modified-Since"] = last_modified
+    result = fetch_guarded(
+        source.url,
+        host=source.host,
+        resolver=resolver,
+        transport=transport,
+        clock=clock,
+        headers=conditional,
+        content_types=("xml",),
+    )
+    if result.status not in (200, 304):
+        raise FetchError(f"status {result.status}")
+    return result
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '215,365p' backend/tests/test_news.py && sed -n '560,640p' backend/tests/test_news.py"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+    ],
+)
+def test_a_redirect_off_the_host_or_to_http_is_refused_and_never_followed(location):
+    web = Web({("www.espn.com", "/feed"): httpx.Response(301, headers={"location": location})})
+    with pytest.raises(fetch.Blocked):
+        guarded("https://www.espn.com/feed", web)
+    assert web.paths() == ["www.espn.com/feed"]
+
+
+def test_every_hop_is_resolved_and_checked_again():
+    calls = []
+
+    def dns(host):
+        calls.append(host)
+        return [PUBLIC_IP] if len(calls) == 1 else ["127.0.0.1"]
+
+    web = Web({("www.espn.com", "/feed"): httpx.Response(302, headers={"location": "/next"})})
+    with pytest.raises(fetch.Blocked):
+        guarded("https://www.espn.com/feed", web, resolver=dns)
+    assert len(calls) == 2 and web.paths() == ["www.espn.com/feed"]
+
+
+def test_a_body_over_the_cap_is_refused_even_when_it_is_compressed():
+    big = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=b"x" * 3_000_000)})
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", big)
+    bomb = gzip.compress(b"0" * 20_000_000)
+    assert len(bomb) < fetch.MAX_FEED_BYTES  # small on the wire, huge once decoded
+    web = Web(
+        {("www.espn.com", "/feed"): httpx.Response(200, headers=XML | {"content-encoding": "gzip"}, content=bomb)}
+    )
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", web)
+
+
+def test_a_body_at_the_cap_is_accepted():
+    body = b"x" * fetch.MAX_FEED_BYTES
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=body)})
+    assert guarded("https://www.espn.com/feed", web).body == body
+
+
+def test_a_slow_response_hits_the_wall_clock_deadline():
+    now = [0.0]
+
+    def slow():
+        def chunks():
+            for _ in range(5):
+                now[0] += 10  # each chunk takes ten fake seconds
+                yield b"<rss>"
+
+        return httpx.Response(200, headers=XML, content=chunks())
+
+    web = Web({("www.espn.com", "/feed"): lambda r: slow()})
+    with pytest.raises(fetch.FetchError, match="deadline"):
+        guarded("https://www.espn.com/feed", web, clock=lambda: now[0])
+
+
+@pytest.mark.parametrize("exc", [httpx.ReadTimeout("slow"), httpx.ConnectError("down"), httpx.RemoteProtocolError("x")])
+def test_network_errors_are_fetch_errors(exc):
+    def boom(request):
+        raise exc
+
+    with pytest.raises(fetch.FetchError):
+        fetch.fetch_guarded(
+            "https://www.espn.com/feed",
+            host="www.espn.com",
+            resolver=public_dns,
+            transport=httpx.MockTransport(boom),
+            content_types=("xml",),
+        )
+
+
+def test_the_timeout_is_ten_seconds_and_the_whole_fetch_twenty():
+    assert fetch.TIMEOUT_S == 10 and fetch.DEADLINE_S == 20
+    assert fetch.MAX_FEED_BYTES == 2_000_000 and fetch.MAX_REDIRECTS == 3
+    client = fetch.build_client(None)
+    assert client.timeout == httpx.Timeout(10)
+    client.close()
+
+
+def test_a_redirect_with_no_location_is_a_fetch_error():
+    web = Web({("www.espn.com", "/feed"): httpx.Response(301)})
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", web)
+
+
+def test_a_public_ipv6_answer_is_pinned_and_compressed_bodies_are_not_requested():
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=XML, content=feed_xml())})
+    guarded("https://www.espn.com/feed", web, resolver=lambda h: ["2606:4700:4700::1111"])
+    (req,) = web.requests
+    assert req.url.host == "2606:4700:4700::1111" and req.headers["host"] == "www.espn.com"
+    assert req.headers["accept-encoding"] == "identity"
+
+
+def test_a_hung_dns_lookup_is_cut_off_after_the_resolve_timeout(monkeypatch):
+    def hang(host, port, **kw):
+        time.sleep(2)
+        return []
+
+    monkeypatch.setattr(socket, "getaddrinfo", hang)
+    monkeypatch.setattr(fetch, "RESOLVE_TIMEOUT_S", 0.2)
+    started = time.perf_counter()
+    with pytest.raises(OSError):
+        fetch.default_resolver("www.espn.com")
+    assert time.perf_counter() - started < 1.5
+
+
+@pytest.mark.parametrize("encoding", ["gzip", "br", "deflate", "gzip, identity"])
+def test_a_reply_that_is_compressed_anyway_is_refused_before_it_is_decoded(encoding):
+    web = Web(
+        {("www.espn.com", "/feed"): httpx.Response(200, headers=XML | {"content-encoding": encoding}, content=b"x")}
+    )
+    with pytest.raises(fetch.FetchError, match="encoding"):
+        guarded("https://www.espn.com/feed", web)
+
+
+@pytest.mark.parametrize("encoding", ["", "identity", "Identity"])
+def test_an_uncompressed_reply_is_fine(encoding):
+    headers = XML | ({"content-encoding": encoding} if encoding else {})
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=headers, content=feed_xml())})
+    assert guarded("https://www.espn.com/feed", web).status == 200
+
+
+def test_default_resolver_asks_for_port_443_and_returns_each_address_once(monkeypatch):
+    asked = []
+
+    def fake(host, port, **kw):
+        asked.append((host, port))
+        rows = ["93.184.216.34", "93.184.216.34", "93.184.216.35"]
+        return [(2, 1, 6, "", (address, 443)) for address in rows]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    assert fetch.default_resolver("www.espn.com") == ["93.184.216.34", "93.184.216.35"]
+    assert asked == [("www.espn.com", 443)]
+
+
+@pytest.mark.parametrize("ctype", ["text/html", "application/json", "image/png", ""])
+def test_a_feed_with_the_wrong_content_type_is_a_fetch_error(ctype):
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers={"content-type": ctype}, content=b"<rss/>")})
+    with pytest.raises(fetch.FetchError):
+        guarded("https://www.espn.com/feed", web)
+
+
+@pytest.mark.parametrize(
+    "ctype", ["application/rss+xml", "application/atom+xml; charset=utf-8", "application/xml", "text/xml"]
+)
+def test_feed_content_types_are_accepted(ctype):
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers={"content-type": ctype}, content=b"<rss/>")})
+    assert guarded("https://www.espn.com/feed", web).status == 200
+
+
+
+
+def test_tags_scripts_and_entities_become_plain_text():
+    desc = "&lt;p&gt;Hello &lt;b&gt;Buffalo&lt;/b&gt;&lt;script&gt;alert(1)&lt;/script&gt; &amp;amp; co&lt;/p&gt;"
+    (got,) = one(feed_xml(item(desc=desc)))
+    assert got.extract == "Hello Buffalo & co" and "alert" not in got.extract and "<" not in got.extract
+
+
+def test_control_bidi_zero_width_and_private_use_characters_are_removed_everywhere():
+    nasty = "Bills‮​ win\x07\x1b[31m big⁦"
+    (got,) = one(feed_xml(item(title=nasty, desc=f"Josh​ Allen {nasty}")))
+    for text in (got.title, got.extract):
+        assert not any(unicodedata.category(c).startswith("C") for c in text), text
+    assert got.title.startswith("Bills win") and "Josh Allen" in got.extract
+
+
+def test_whitespace_is_collapsed_and_lengths_are_capped():
+    (got,) = one(feed_xml(item(title="A\n\n  B\t C" + "x" * 500, desc="word " * 200)))
+    assert got.title.startswith("A B C") and len(got.title) <= 200
+    (glued,) = one(feed_xml(item(title="Bills&#10;win&#9;big")))
+    assert glued.title == "Bills win big"
+    assert len(got.extract) <= 300 and "  " not in got.extract
+
+
+def test_style_blocks_are_dropped_like_scripts():
+    (got,) = one(feed_xml(item(desc="&lt;style&gt;body{x:1}&lt;/style&gt;Kept text")))
+    assert got.extract == "Kept text"
+
+
+def test_tracker_keys_are_dropped_whatever_their_case():
+    link = "https://www.espn.com/a?UTM_Source=x&FBCLID=1&Keep=2".replace("&", "&amp;")
+    assert one(feed_xml(item(link=link)))[0].url == "https://www.espn.com/a?Keep=2"
+
+
+def test_a_feed_whose_every_entry_is_unusable_is_an_error_not_a_quiet_zero():
+    foreign = [item(title=f"t{n}", link=f"https://evil.example/{n}") for n in range(3)]
+    with pytest.raises(parse.FeedError):
+        one(feed_xml(*foreign))
+    old = (RECORDED_AT - timedelta(days=60)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    assert one(feed_xml(item(date=old))) == []  # a quiet feed with only old news is fine
+    assert [i.title for i in one(feed_xml(*foreign, item(title="ok")))] == ["ok"]
+
+
+def test_a_hostile_summary_of_unclosed_tags_is_cut_before_the_slow_parser_sees_it():
+    hostile = "<a " * 30_000  # the standard HTML parser is quadratic on this; 90 KB took 46 s uncut
+    started = time.perf_counter()
+    assert parse.clean_text(hostile + "tail", 300) == ""
+    assert time.perf_counter() - started < 1
+    feed = feed_xml(item(desc=("&lt;a " * 30_000)))
+    started = time.perf_counter()
+    (got,) = one(feed)
+    assert time.perf_counter() - started < 2 and len(got.extract) <= 300
+
+
+def test_clean_text_is_the_one_cleaner():
+    assert parse.clean_text("a‮b\x00c", 10) == "abc"
+    assert len(parse.clean_text("é" * 50, 10)) == 10
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "javascript:alert(1)",
+        "data:text/html,hi",
+        "http://www.espn.com/nfl/story/1",
+        "https://evil.example/nfl",
+        "https://notespn.com/nfl",
+        "https://evilespn.com/nfl",
+        "https://www.espn.com./nfl",
+        "https://www.espn.com:8443/nfl",
+        "https://www.espn.com:443/nfl",
+        "https://www.espn.com\\@evil.example/nfl",
+        "https://www.espn.com/a b",
+        "https://www.espn.com/a\\b",
+        "https://www.\u0435spn.com/nfl",
+        "https://www.espn.com.evil.example/nfl",
+        "https://user:pw@www.espn.com/nfl",
+        "https://www.espn.com/" + "a" * 2100,
+        "",
+        None,
+    ],
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'git log --oneline -6 && git diff 611a69b..HEAD -- backend/nflpi/ingestion/news/fetch.py backend/nflpi/ingestion/news/parse.py backend/tests/test_news.py'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+e8eb916 docs: step 8c work order 5
+611a69b test: step 8c Dwight fixes N1 N2 L1: slow tag parsing, DNS timeout, compressed replies (red)
+93ae8de docs: step 8c log: gate twice green, lane guard, carried items
+1848f0f docs: step 8c log, review fan-out, hand checks, lane guard
+91b195e refactor: step 8c cleanup: split the fetcher and the poller, name the limits, type the callables
+2cb2f77 fix: step 8c work order 3: review fixes (robots trouble retries, ascii validators, address ranges, identity encoding, unusable-feed error, stale validators)
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'rg -n "sanitize_html|resolve_relative_uris|_sanitize_html|summary" backend/.venv/lib/python*/site-packages/feedparser/{api.py,mixin.py} | head -100'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '1,110p' backend/tests/test_news.py && rg -n \"clean_text\\(|summary|extract|<a |markup|<b>|<p>\" backend/tests/test_news.py | head -100"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:152:def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, referrer=None, handlers=None, request_headers=None, response_headers=None, resolve_relative_uris=None, sanitize_html=None):
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:187:    :param bool resolve_relative_uris:
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:191:    :param bool sanitize_html:
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:199:    if not agent or sanitize_html is None or resolve_relative_uris is None:
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:203:    if sanitize_html is None:
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:204:        sanitize_html = feedparser.SANITIZE_HTML
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:205:    if resolve_relative_uris is None:
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:206:        resolve_relative_uris = feedparser.RESOLVE_RELATIVE_URIS
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:249:        feedparser.resolve_relative_uris = resolve_relative_uris
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:250:        feedparser.sanitize_html = sanitize_html
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:270:        feedparser.resolve_relative_uris = resolve_relative_uris
+backend/.venv/lib/python3.13/site-packages/feedparser/api.py:271:        feedparser.sanitize_html = sanitize_html
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:37:from .sanitizer import _sanitize_html, _HTMLSanitizer
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:39:from .urls import _urljoin, make_safe_absolute_uri, resolve_relative_uris
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:143:        'summary',
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:155:        'summary',
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:188:        self._summaryKey = None
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:541:        if is_htmlish and self.resolve_relative_uris:
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:543:                output = resolve_relative_uris(output, self.baseuri, self.encoding, self.contentparams.get('type', 'text/html'))
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:546:        if is_htmlish and self.sanitize_html:
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:548:                output = _sanitize_html(output, self.encoding, self.contentparams.get('type', 'text/html'))
+backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py:592:                    element = 'summary'
+
+[32m succeeded in 0ms:[0m
+"""Step 8c-8f,8h: news from allowlisted public feeds.
+
+No test touches the network. Requests go to an httpx MockTransport and DNS is an injected function. The two
+recorded real feeds and their robots.txt files (tests/fixtures/news) were fetched by hand on 2026-10-13.
+"""
+
+import gzip
+import time
+import hashlib
+import socket
+import ssl
+import unicodedata
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+import httpx
+import pytest
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from nflpi.ingestion.news import fetch, match, parse, run, sources, store
+from nflpi.models import AppSetting, IngestionRun, NewsItem, Team, TeamStar
+
+FIXTURES = Path(__file__).parent / "fixtures" / "news"
+RECORDED_AT = datetime(2026, 10, 13, 4, 0, tzinfo=UTC)  # just after the newest item in the recorded feeds
+PUBLIC_IP = "93.184.216.34"
+XML = {"content-type": "text/xml; charset=UTF-8"}
+TEXT = {"content-type": "text/plain"}
+ESPN, CBS = sources.SOURCES[0], sources.SOURCES[1]
+
+
+def public_dns(host: str) -> list[str]:
+    return [PUBLIC_IP]
+
+
+class Web:
+    """A fake internet: routes[(host, path)] is a Response or a callable(request) -> Response."""
+
+    def __init__(self, routes: dict):
+        self.routes = routes
+        self.requests: list[httpx.Request] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        route = self.routes.get((request.headers["host"], request.url.path))
+        if route is None:
+            return httpx.Response(404, headers=TEXT, content=b"")
+        return route(request) if callable(route) else route
+
+    @property
+    def transport(self) -> httpx.MockTransport:
+        return httpx.MockTransport(self)
+
+    def paths(self) -> list[str]:
+        return [f"{r.headers['host']}{r.url.path}" for r in self.requests]
+
+
+def feed_xml(*items: str) -> bytes:
+    body = "".join(items)
+    return f'<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>{body}</channel></rss>'.encode()
+
+
+def item(title="Bills win", link="https://www.espn.com/nfl/story/_/id/1", desc="Short.", date=None) -> str:
+    date = date or RECORDED_AT.strftime("%a, %d %b %Y %H:%M:%S GMT")
+    link_tag = f"<link>{link}</link>" if link is not None else ""
+    return f"<item><title>{title}</title>{link_tag}<description>{desc}</description><pubDate>{date}</pubDate></item>"
+
+
+def web_for(
+    source, feed: bytes, robots: bytes = b"User-agent: *\nDisallow: /private/\n", extra: dict | None = None
+) -> Web:
+    url = httpx.URL(source.url)
+    routes = {
+        (source.host, "/robots.txt"): httpx.Response(200, headers=TEXT, content=robots),
+        (source.host, url.path): httpx.Response(200, headers=XML, content=feed),
+    }
+    routes.update(extra or {})
+    return Web(routes)
+
+
+def both_webs(feed_a: bytes, feed_b: bytes) -> Web:
+    a, b = web_for(ESPN, feed_a), web_for(CBS, feed_b)
+    return Web({**a.routes, **b.routes})
+
+
+def guarded(url: str, web: Web, **kw) -> fetch.FetchResult:
+    return fetch.fetch_guarded(
+        url,
+        host=kw.pop("host", "www.espn.com"),
+        resolver=kw.pop("resolver", public_dns),
+        transport=web.transport,
+        content_types=("xml",),
+        **kw,
+    )
+
+
+# ---------------------------------------------------------------- allowlist (8c)
+
+
+def test_the_allowlist_is_https_feeds_on_exact_hosts():
+    assert {s.id for s in sources.SOURCES} == {"espn", "cbs"}
+    for s in sources.SOURCES:
+        url = httpx.URL(s.url)
+        assert url.scheme == "https" and url.host == s.host and url.port is None
+        assert s.link_suffixes and all(s.host.endswith(x) for x in s.link_suffixes)
+
+
+# ---------------------------------------------------------------- guards (8c)
+
+
+555:# ---------------------------------------------------------------- extract (8d)
+565:    assert got.extract == "Hello Buffalo & co" and "alert" not in got.extract and "<" not in got.extract
+571:    for text in (got.title, got.extract):
+573:    assert got.title.startswith("Bills win") and "Josh Allen" in got.extract
+581:    assert len(got.extract) <= 300 and "  " not in got.extract
+586:    assert got.extract == "Kept text"
+603:def test_a_hostile_summary_of_unclosed_tags_is_cut_before_the_slow_parser_sees_it():
+604:    hostile = "<a " * 30_000  # the standard HTML parser is quadratic on this; 90 KB took 46 s uncut
+606:    assert parse.clean_text(hostile + "tail", 300) == ""
+611:    assert time.perf_counter() - started < 2 and len(got.extract) <= 300
+615:    assert parse.clean_text("a‮b\x00c", 10) == "abc"
+616:    assert len(parse.clean_text("é" * 50, 10)) == 10
+708:        assert len(it.title) <= 200 and len(it.extract) <= 300 and "<" not in it.title + it.extract
+709:        assert not any(unicodedata.category(c).startswith("C") for c in it.title + it.extract)
+748:def tie(session_names, title, extract=""):
+749:    return match.tie(title, extract, session_names)
+807:def test_player_match_runs_over_title_and_extract(session):
+860:            extract="e",
+876:    assert first.fetched_at == RECORDED_AT and first.extract == "e" and first.tags == []
+891:    moved = [parse.Item(title="Same headline", url="https://www.espn.com/moved", published_at=None, extract="")]
+893:    other = [parse.Item(title="Same headline", url="https://www.cbssports.com/x", published_at=None, extract="")]
+906:            extract="",
+920:            extract="",
+1219:            extract="",
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "rg -n \"def parse\\(|sanitize_html|resolve_relative_uris\" backend/.venv/lib/python*/site-packages/feedparser | head -100"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '515,555p' backend/.venv/lib/python3.13/site-packages/feedparser/mixin.py && sed -n '170,210p' backend/.venv/lib/python3.13/site-packages/feedparser/api.py"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+            # do not resolve guid elements with isPermalink="false"
+            if not element == 'id' or self.guidislink:
+                output = self.resolve_uri(output)
+
+        # decode entities within embedded markup
+        if not self.contentparams.get('base64', 0):
+            output = self.decode_entities(element, output)
+
+        # some feed formats require consumers to guess
+        # whether the content is html or plain text
+        if not self.version.startswith('atom') and self.contentparams.get('type') == 'text/plain':
+            if self.looks_like_html(output):
+                self.contentparams['type'] = 'text/html'
+
+        # remove temporary cruft from contentparams
+        try:
+            del self.contentparams['mode']
+        except KeyError:
+            pass
+        try:
+            del self.contentparams['base64']
+        except KeyError:
+            pass
+
+        is_htmlish = self.map_content_type(self.contentparams.get('type', 'text/html')) in self.html_types
+        # resolve relative URIs within embedded markup
+        if is_htmlish and self.resolve_relative_uris:
+            if element in self.can_contain_relative_uris:
+                output = resolve_relative_uris(output, self.baseuri, self.encoding, self.contentparams.get('type', 'text/html'))
+
+        # sanitize embedded markup
+        if is_htmlish and self.sanitize_html:
+            if element in self.can_contain_dangerous_markup:
+                output = _sanitize_html(output, self.encoding, self.contentparams.get('type', 'text/html'))
+
+        if self.encoding and isinstance(output, bytes):
+            output = output.decode(self.encoding, 'ignore')
+
+        # address common error where people take data that is already
+        # utf-8, presume that it is iso-8859-1, and re-encode it.
+        if self.encoding in ('utf-8', 'utf-8_INVALID_PYTHON_3') and not isinstance(output, bytes):
+    :param modified: HTTP ``Last-Modified`` request header.
+    :type modified: :class:`str`, :class:`time.struct_time` 9-tuple, or
+        :class:`datetime.datetime`
+    :param str agent: HTTP ``User-Agent`` request header, which defaults to
+        the value of :data:`feedparser.USER_AGENT`.
+    :param referrer: HTTP ``Referer`` [sic] request header.
+    :param request_headers:
+        A mapping of HTTP header name to HTTP header value to add to the
+        request, overriding internally generated values.
+    :type request_headers: :class:`dict` mapping :class:`str` to :class:`str`
+    :param response_headers:
+        A mapping of HTTP header name to HTTP header value. Multiple values may
+        be joined with a comma. If a HTTP request was made, these headers
+        override any matching headers in the response. Otherwise this specifies
+        the entirety of the response headers.
+    :type response_headers: :class:`dict` mapping :class:`str` to :class:`str`
+
+    :param bool resolve_relative_uris:
+        Should feedparser attempt to resolve relative URIs absolute ones within
+        HTML content?  Defaults to the value of
+        :data:`feedparser.RESOLVE_RELATIVE_URIS`, which is ``True``.
+    :param bool sanitize_html:
+        Should feedparser skip HTML sanitization? Only disable this if you know
+        what you are doing!  Defaults to the value of
+        :data:`feedparser.SANITIZE_HTML`, which is ``True``.
+
+    :return: A :class:`FeedParserDict`.
+    """
+
+    if not agent or sanitize_html is None or resolve_relative_uris is None:
+        import feedparser
+    if not agent:
+        agent = feedparser.USER_AGENT
+    if sanitize_html is None:
+        sanitize_html = feedparser.SANITIZE_HTML
+    if resolve_relative_uris is None:
+        resolve_relative_uris = feedparser.RESOLVE_RELATIVE_URIS
+
+    result = FeedParserDict(
+        bozo=False,
+        entries=[],
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'rg -n "def _sanitize_html|def resolve_relative_uris|class .*Sanitizer|def _feedparser" backend/.venv/lib/python3.13/site-packages/feedparser/{sanitizer.py,urls.py,mixin.py} | head -45'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+backend/.venv/lib/python3.13/site-packages/feedparser/sanitizer.py:34:class _HTMLSanitizer(_BaseHTMLProcessor):
+backend/.venv/lib/python3.13/site-packages/feedparser/sanitizer.py:880:def _sanitize_html(html_source, encoding, _type):
+backend/.venv/lib/python3.13/site-packages/feedparser/urls.py:152:def resolve_relative_uris(html_source, base_uri, encoding, type_):
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "backend/.venv/bin/python - <<'PY'
+import feedparser, io, signal, time
+body = ('<?xml version=\"1.0\"?><rss version=\"2.0\"><channel><title>t</title><item><title>Bills win</title><link>https://www.espn.com/nfl/1</link><description>' + '&lt;a ' * 30000 + '</description></item></channel></rss>').encode()
+for opts in ({}, {'sanitize_html': False}, {'sanitize_html': False, 'resolve_relative_uris': False}):
+    def alarm(_signum, _frame):
+        raise TimeoutError('3s')
+    signal.signal(signal.SIGALRM, alarm)
+    signal.alarm(3)
+    start = time.perf_counter()
+    try:
+        parsed = feedparser.parse(io.BytesIO(body), **opts)
+        print(opts, round(time.perf_counter()-start, 3), len(parsed.entries[0].summary), flush=True)
+    except TimeoutError:
+        print(opts, '>3s', flush=True)
+    finally:
+        signal.alarm(0)
+PY"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 169ms:[0m
+{} 0.133 89999
+{'sanitize_html': False} 0.077 89999
+{'sanitize_html': False, 'resolve_relative_uris': False} 0.02 89999
+
+[35m[3mcodex[0m[0m
+The old gzip-bomb test only expects a `FetchError`, so rejecting the encoding at the header will still satisfy it. On the hostile sample, feedparser finished in about 0.13 seconds with its default settings; `clean_text` is the slow part. I’ll leave feedparser’s safety settings on and bound the text before it reaches `HTMLParser`.
+[1mapply patch[0m
+[1mpatch:[0m completed
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/fetch.py[0m
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/parse.py[0m
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..c584cba3b898dbbf79ca7819213599a8fd8b53a3
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,7 +58,7 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
++    parser.feed(raw[: limit * RAW_TEXT_MULTIPLIER])
+     parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..c584cba3b898dbbf79ca7819213599a8fd8b53a3
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,7 +58,7 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
++    parser.feed(raw[: limit * RAW_TEXT_MULTIPLIER])
+     parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '.venv/bin/python -m pytest --noconftest -q -p no:cacheprovider tests/test_news.py -k "dns or compressed or hostile"'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[31m exited 1 in 1097ms:[0m
+..........FE                                                             [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of test_a_bad_dns_answer_for_one_source_does_not_stop_the_other _
+file /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/tests/test_news.py, line 1238
+  def test_a_bad_dns_answer_for_one_source_does_not_stop_the_other(session):
+E       fixture 'session' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/tests/test_news.py:1238
+=================================== FAILURES ===================================
+_ test_a_hostile_summary_of_unclosed_tags_is_cut_before_the_slow_parser_sees_it _
+
+    def test_a_hostile_summary_of_unclosed_tags_is_cut_before_the_slow_parser_sees_it():
+        hostile = "<a " * 30_000  # the standard HTML parser is quadratic on this; 90 KB took 46 s uncut
+        started = time.perf_counter()
+>       assert parse.clean_text(hostile + "tail", 300) == ""
+E       AssertionError: assert '<a <a <a <a ...a <a <a <a <a' == ''
+E         
+E         + <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a <a
+
+tests/test_news.py:606: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_news.py::test_a_hostile_summary_of_unclosed_tags_is_cut_before_the_slow_parser_sees_it
+ERROR tests/test_news.py::test_a_bad_dns_answer_for_one_source_does_not_stop_the_other
+1 failed, 10 passed, 186 deselected, 1 error in 0.83s
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..c584cba3b898dbbf79ca7819213599a8fd8b53a3
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,7 +58,7 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
++    parser.feed(raw[: limit * RAW_TEXT_MULTIPLIER])
+     parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+from nflpi.ingestion.news.parse import _Text
+for raw in ('<a '*1000, '<p>Hello <b>world</b></p>', 'a&am', 'plain text'):
+    p = _Text(); p.feed(raw); print(repr(raw[:16]), 'before close',repr(''.join(p.parts)[:40])); p.close(); print('after close',repr(''.join(p.parts)[:40]))
+PY"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[32m succeeded in 78ms:[0m
+'<a <a <a <a <a <' before close ''
+after close '<a <a <a <a <a <a <a <a <a <a <a <a <a <'
+'<p>Hello <b>worl' before close 'Hello world'
+after close 'Hello world'
+'a&am' before close ''
+after close 'a&am'
+'plain text' before close 'plain text'
+after close 'plain text'
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..c584cba3b898dbbf79ca7819213599a8fd8b53a3
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,7 +58,7 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
++    parser.feed(raw[: limit * RAW_TEXT_MULTIPLIER])
+     parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import feedparser, io
+body=('<?xml version=\"1.0\"?><rss version=\"2.0\"><channel><item><title>x</title><description>'+'&lt;a '*30000+'</description></item></channel></rss>').encode()
+s=feedparser.parse(io.BytesIO(body)).entries[0].summary
+print(repr(s[:70]),repr(s[-70:]))
+PY"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[32m succeeded in 98ms:[0m
+'<a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><' 'a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a><a'
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..c584cba3b898dbbf79ca7819213599a8fd8b53a3
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,7 +58,7 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
++    parser.feed(raw[: limit * RAW_TEXT_MULTIPLIER])
+     parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+
+[35m[3mcodex[0m[0m
+The first test run found a parser detail: `HTMLParser.close()` turns an unfinished `<a ...` tag into visible text. I’ll skip that flush when the input was cut. The requested `-k` command also selects a database test named `bad_dns_answer`; with `--noconftest`, pytest cannot find its `session` fixture. I’ll report that command’s result and run the selected code tests separately.
+[1mapply patch[0m
+[1mpatch:[0m completed
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/parse.py[0m
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..0c03fb48a40d8b6cf378d9255e19eb3cb19e8218
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..0c03fb48a40d8b6cf378d9255e19eb3cb19e8218
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '.venv/bin/python -m pytest --noconftest -q -p no:cacheprovider tests/test_news.py -k "(dns or compressed or hostile) and not bad_dns_answer"'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[32m succeeded in 1042ms:[0m
+...........                                                              [100%]
+11 passed, 187 deselected in 0.73s
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..0c03fb48a40d8b6cf378d9255e19eb3cb19e8218
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'bash docs/gauntlet/logs/step-8c-evidence/pure.sh'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 1423ms:[0m
+ERROR tests/test_news.py::test_pruning_runs_after_a_good_poll_only
+ERROR tests/test_news.py::test_with_every_source_down_the_poll_returns_failed_runs_and_never_raises
+ERROR tests/test_news.py::test_a_bad_dns_answer_for_one_source_does_not_stop_the_other
+143 passed, 55 errors in 1.13s
+PURE OK
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..0c03fb48a40d8b6cf378d9255e19eb3cb19e8218
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..0c03fb48a40d8b6cf378d9255e19eb3cb19e8218
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mcodex[0m[0m
+The 11 selected code tests pass, and the pure script ends with `PURE OK`. Ruff did not start because `uvx` cannot write to its cache under `/Users/emmanueladams/.cache/uv`. I’ll check for an existing local Ruff binary and run it without installing anything.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'command -v ruff; command -v uvx; ls -l .venv/bin/ruff'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[31m exited 1 in 0ms:[0m
+/Users/emmanueladams/.local/bin/uvx
+ls: .venv/bin/ruff: No such file or directory
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '1,220p' docs/gauntlet/logs/step-8c-evidence/pure.sh && git diff --check && git status --short && git diff --stat && git diff -- backend/nflpi/ingestion/news/fetch.py backend/nflpi/ingestion/news/parse.py"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+#!/usr/bin/env bash
+# The tests that need no database: conftest is skipped, so every test that asks for the `session` fixture errors with
+# "fixture 'session' not found" (those are run later by the coordinator, who can reach the lane database).
+# PASS = no failure, no collection error, and every error is exactly that one.
+set -uo pipefail
+cd "$(dirname "$0")/../../../../backend"
+out=$(COLUMNS=300 .venv/bin/python -m pytest --noconftest -q --color=no -p no:cacheprovider tests/test_news.py 2>&1)
+echo "$out" | tail -n 4
+if echo "$out" | grep -qE "ImportError|ModuleNotFoundError|errors? during collection"; then echo "FAIL: collection error"; exit 1; fi
+if echo "$out" | grep -qE "[0-9]+ failed"; then echo "FAIL: tests failed"; echo "$out" | grep -E "^FAILED" | head -20; exit 1; fi
+errs=$(echo "$out" | grep -c '^ERROR ')
+nofix=$(echo "$out" | grep -c "fixture 'session' not found")
+[ "$errs" = "$nofix" ] || { echo "FAIL: $errs errors but only $nofix are the missing session fixture"; exit 1; }
+echo "PURE OK"
+ M backend/nflpi/ingestion/news/fetch.py
+ M backend/nflpi/ingestion/news/parse.py
+?? docs/gauntlet/logs/step-8c-evidence/wo-5-codex.log
+ backend/nflpi/ingestion/news/fetch.py | 27 +++++++++++++++++++++------
+ backend/nflpi/ingestion/news/parse.py |  7 +++++--
+ 2 files changed, 26 insertions(+), 8 deletions(-)
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf9..44709ae 100644
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@ import ssl
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@ from nflpi.config import get_settings
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,12 +69,21 @@ def user_agent() -> str:
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
++
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
++
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
+ 
+ 
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+@@ -174,6 +186,9 @@ def _handle_response(
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e..0c03fb4 100644
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@ KEEP_DAYS = 30
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@ class _Text(HTMLParser):
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..0c03fb48a40d8b6cf378d9255e19eb3cb19e8218
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "rg --files /Users/emmanueladams/.cache/uv | rg '/ruff"'$|ruff-[''^/]+/bin/ruff$'"' | head -20"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[32m succeeded in 222ms:[0m
+/Users/emmanueladams/.cache/uv/archive-v0/85yRcI-Gne4k-nba/ruff-0.17.0.data/scripts/ruff
+/Users/emmanueladams/.cache/uv/archive-v0/IQK1q02LPSgwNktG/ruff-0.15.21.data/scripts/ruff
+/Users/emmanueladams/.cache/uv/archive-v0/STpjkiyZNdRUSqSM/bin/ruff
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..0c03fb48a40d8b6cf378d9255e19eb3cb19e8218
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '/Users/emmanueladams/.cache/uv/archive-v0/STpjkiyZNdRUSqSM/bin/ruff check nflpi tests'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[31m exited 1 in 0ms:[0m
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/test_news.py:7:1
+   |
+ 5 |   """
+ 6 |
+ 7 | / import gzip
+ 8 | | import time
+ 9 | | import hashlib
+10 | | import socket
+11 | | import ssl
+12 | | import unicodedata
+13 | | from datetime import UTC, datetime, timedelta
+14 | | from pathlib import Path
+15 | |
+16 | | import httpx
+17 | | import pytest
+18 | | from sqlalchemy import select
+19 | | from sqlalchemy.exc import IntegrityError
+20 | |
+21 | | from nflpi.ingestion.news import fetch, match, parse, run, sources, store
+22 | | from nflpi.models import AppSetting, IngestionRun, NewsItem, Team, TeamStar
+   | |___________________________________________________________________________^
+23 |
+24 |   FIXTURES = Path(__file__).parent / "fixtures" / "news"
+   |
+help: Organize imports
+   |
+7  | import gzip
+   - import time
+8  | import hashlib
+9  | import socket
+10 | import ssl
+11 + import time
+12 | import unicodedata
+   |
+
+Found 1 error.
+[*] 1 fixable with `--fix`.
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..0c03fb48a40d8b6cf378d9255e19eb3cb19e8218
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '/Users/emmanueladams/.cache/uv/archive-v0/STpjkiyZNdRUSqSM/bin/ruff check nflpi/ingestion/news/fetch.py nflpi/ingestion/news/parse.py'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[32m succeeded in 0ms:[0m
+All checks passed!
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..0c03fb48a40d8b6cf378d9255e19eb3cb19e8218
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,10 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mcodex[0m[0m
+Ruff passes on both changed files. Across `nflpi tests`, it reports one import order issue in the unchanged `tests/test_news.py`. I’ll leave that file alone as requested. I’m adding a short comment for the parser flush behavior, then I’ll rerun the checks on the final diff.
+[1mapply patch[0m
+[1mpatch:[0m completed
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/parse.py[0m
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..e11cf9d7d1e1e86d0da02c13856ee5eec2f49dd0
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,11 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    # Closing a truncated tag emits its markup as text.
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..e11cf9d7d1e1e86d0da02c13856ee5eec2f49dd0
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,11 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    # Closing a truncated tag emits its markup as text.
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '.venv/bin/python -m pytest --noconftest -q -p no:cacheprovider tests/test_news.py -k "dns or compressed or hostile"'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[31m exited 1 in 829ms:[0m
+...........E                                                             [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of test_a_bad_dns_answer_for_one_source_does_not_stop_the_other _
+file /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/tests/test_news.py, line 1238
+  def test_a_bad_dns_answer_for_one_source_does_not_stop_the_other(session):
+E       fixture 'session' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/tests/test_news.py:1238
+=========================== short test summary info ============================
+ERROR tests/test_news.py::test_a_bad_dns_answer_for_one_source_does_not_stop_the_other
+11 passed, 186 deselected, 1 error in 0.67s
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..e11cf9d7d1e1e86d0da02c13856ee5eec2f49dd0
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,11 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    # Closing a truncated tag emits its markup as text.
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'bash docs/gauntlet/logs/step-8c-evidence/pure.sh'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 966ms:[0m
+ERROR tests/test_news.py::test_pruning_runs_after_a_good_poll_only
+ERROR tests/test_news.py::test_with_every_source_down_the_poll_returns_failed_runs_and_never_raises
+ERROR tests/test_news.py::test_a_bad_dns_answer_for_one_source_does_not_stop_the_other
+143 passed, 55 errors in 0.79s
+PURE OK
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..e11cf9d7d1e1e86d0da02c13856ee5eec2f49dd0
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,11 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    # Closing a truncated tag emits its markup as text.
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '/Users/emmanueladams/.cache/uv/archive-v0/STpjkiyZNdRUSqSM/bin/ruff check nflpi/ingestion/news/fetch.py nflpi/ingestion/news/parse.py'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend
+[32m succeeded in 0ms:[0m
+All checks passed!
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'git diff --check && git status --short && git diff --stat'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+ M backend/nflpi/ingestion/news/fetch.py
+ M backend/nflpi/ingestion/news/parse.py
+?? docs/gauntlet/logs/step-8c-evidence/wo-5-codex.log
+ backend/nflpi/ingestion/news/fetch.py | 27 +++++++++++++++++++++------
+ backend/nflpi/ingestion/news/parse.py |  8 ++++++--
+ 2 files changed, 27 insertions(+), 8 deletions(-)
+
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..e11cf9d7d1e1e86d0da02c13856ee5eec2f49dd0
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,11 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    # Closing a truncated tag emits its markup as text.
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[35m[3mcodex[0m[0m
+Changed files: [fetch.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/fetch.py) and [parse.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/parse.py). I did not edit tests or commit.
+
+**Five-line summary**
+
+- DNS lookup now times out after `RESOLVE_TIMEOUT_S` without waiting for a hung lookup.
+- Fetch rejects compressed replies before reading the body.
+- Text cleaning cuts raw input at 10 times the output limit before parsing.
+- Text cleaning avoids flushing an unfinished tag into the result after a cut.
+- Feedparser handled the hostile sample in about 0.13 seconds, so I kept its HTML sanitizing on.
+
+**Proof:** `pure.sh` ended `PURE OK`. The 11 selected code tests passed. The exact `-k "dns or compressed or hostile"` command also selected one database test; `--noconftest` left it without its `session` fixture. Ruff passed on both changed files. The requested `uvx` command could not start because its cache was blocked; the local Ruff binary found one existing import-order error in the unchanged test file.
+diff --git a/backend/nflpi/ingestion/news/fetch.py b/backend/nflpi/ingestion/news/fetch.py
+index 0afaaf97a60c857e8e1605a4f43db29e9c2fa6da..44709ae6b280cf3221f26ff132c03d3629506223
+--- a/backend/nflpi/ingestion/news/fetch.py
++++ b/backend/nflpi/ingestion/news/fetch.py
+@@ -6,7 +6,9 @@
+ import time
+ import unicodedata
+ from collections.abc import Callable
++from concurrent.futures import Future
+ from dataclasses import dataclass
++from threading import Thread
+ from urllib.parse import urljoin, urlsplit, urlunsplit
+ from urllib.robotparser import RobotFileParser
+ 
+@@ -16,6 +18,7 @@
+ from nflpi.ingestion.news.sources import Source
+ 
+ TIMEOUT_S = 10
++RESOLVE_TIMEOUT_S = 5
+ DEADLINE_S = 20
+ MAX_FEED_BYTES = 2_000_000
+ MAX_ROBOTS_BYTES = 512_000
+@@ -66,14 +69,23 @@
+ 
+ 
+ def default_resolver(host: str) -> list[str]:
+-    addresses: list[str] = []
+-    for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
+-        address = result[4][0]
+-        if address not in addresses:
+-            addresses.append(address)
+-    return addresses
++    lookup: Future[list[str]] = Future()
+ 
++    def resolve() -> None:
++        try:
++            addresses: list[str] = []
++            for result in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM):
++                address = result[4][0]
++                if address not in addresses:
++                    addresses.append(address)
++            lookup.set_result(addresses)
++        except BaseException as exc:
++            lookup.set_exception(exc)
+ 
++    Thread(target=resolve, daemon=True).start()
++    return lookup.result(timeout=RESOLVE_TIMEOUT_S)
++
++
+ def build_client(transport: httpx.BaseTransport | None) -> httpx.Client:
+     return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)
+ 
+@@ -174,6 +186,9 @@
+     if status in (304, 404, 410):
+         body = b""
+     elif 200 <= status < 300:
++        encoding = response.headers.get("content-encoding", "").strip().lower()
++        if encoding and encoding != "identity":
++            raise FetchError("encoding")
+         body = _read_body(response, max_bytes, clock, deadline)
+     else:
+         raise FetchError(f"status {status}")
+diff --git a/backend/nflpi/ingestion/news/parse.py b/backend/nflpi/ingestion/news/parse.py
+index e14610e525c5ce5aee1fa27b142101c406368aac..e11cf9d7d1e1e86d0da02c13856ee5eec2f49dd0
+--- a/backend/nflpi/ingestion/news/parse.py
++++ b/backend/nflpi/ingestion/news/parse.py
+@@ -18,6 +18,7 @@
+ MAX_URL = 2048
+ TITLE_MAX = 200
+ EXTRACT_MAX = 300
++RAW_TEXT_MULTIPLIER = 10
+ FUTURE_SLACK = timedelta(days=1)
+ 
+ _URL_SAFE = "/%:@!$&'()*+,;=-._~?"
+@@ -57,8 +58,11 @@
+ 
+ def clean_text(raw: str, limit: int) -> str:
+     parser = _Text()
+-    parser.feed(raw)
+-    parser.close()
++    bounded = raw[: limit * RAW_TEXT_MULTIPLIER]
++    parser.feed(bounded)
++    # Closing a truncated tag emits its markup as text.
++    if len(bounded) == len(raw):
++        parser.close()
+     text = " ".join("".join(parser.parts).split())
+     text = "".join(char for char in text if not unicodedata.category(char).startswith("C"))
+     return " ".join(text.split())[:limit].strip()
+
+[2mtokens used[0m
+53,965
+Changed files: [fetch.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/fetch.py) and [parse.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/parse.py). I did not edit tests or commit.
+
+**Five-line summary**
+
+- DNS lookup now times out after `RESOLVE_TIMEOUT_S` without waiting for a hung lookup.
+- Fetch rejects compressed replies before reading the body.
+- Text cleaning cuts raw input at 10 times the output limit before parsing.
+- Text cleaning avoids flushing an unfinished tag into the result after a cut.
+- Feedparser handled the hostile sample in about 0.13 seconds, so I kept its HTML sanitizing on.
+
+**Proof:** `pure.sh` ended `PURE OK`. The 11 selected code tests passed. The exact `-k "dns or compressed or hostile"` command also selected one database test; `--noconftest` left it without its `session` fixture. Ruff passed on both changed files. The requested `uvx` command could not start because its cache was blocked; the local Ruff binary found one existing import-order error in the unchanged test file.
