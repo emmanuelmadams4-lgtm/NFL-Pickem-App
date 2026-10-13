@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from nflpi.ingestion import nflverse, service, weather
 from nflpi.models import Game, IngestionRun, MarketSnapshot
 from nflpi.predictions.market import implied_prob, novig_home_prob
-from tests.conftest import schedule_rows, team_rows
+from tests.conftest import CURRENT, schedule_rows, team_rows
 
 
 def test_franchise_codes_are_normalized():
@@ -119,3 +119,67 @@ def test_weather_picks_the_kickoff_hour():
     assert wx == {"temp_f": 52, "wind_mph": 14, "gust_mph": 25, "precip_prob": 40, "precip_in": 0.1}
     assert weather.pick_kickoff_hour(payload, datetime(2026, 10, 20, 18, 0, tzinfo=UTC)) is None
     assert not weather.needs_forecast("dome", "DET00") and weather.needs_forecast("closed", "DAL00")
+
+
+# --- Head coaches: nflverse games.csv carries last season's coach for some clubs (BUF still McDermott in 2026). ---
+# The current season's names come from ESPN's season coach list instead (defect, owner 2026-10-13).
+
+ESPN_TEAMS = {"2": "BUF", "13": "LV", "14": "LAR", "28": "WSH", "22": "ARI"}
+
+
+def espn_get(coaches: dict[str, list[str]]):
+    """Fake of the ESPN calls: team list, a team's coach list, one coach. Keyed by ESPN abbreviation."""
+    ids = {abbr: tid for tid, abbr in ESPN_TEAMS.items()}
+
+    def get(url: str) -> dict:
+        if url.endswith("/teams"):
+            return {"sports": [{"leagues": [{"teams": [{"team": {"id": t, "abbreviation": a}} for t, a in ESPN_TEAMS.items()]}]}]}
+        if url.endswith("/coaches?lang=en"):
+            tid = url.split("/teams/")[1].split("/")[0]
+            abbr = next(a for a, i in ids.items() if i == tid)
+            return {"items": [{"$ref": f"http://espn.test/coaches/{abbr}/{n}?lang=en"} for n in range(len(coaches[abbr]))]}
+        abbr, n = url.split("/coaches/")[1].split("?")[0].split("/")
+        first, last = coaches[abbr][int(n)].split(" ", 1)
+        return {"firstName": first, "lastName": last}
+
+    return get
+
+
+def test_head_coaches_come_back_under_our_club_codes_and_skip_clubs_with_two_listed():
+    coaches = {"BUF": ["Joe Brady"], "LV": ["Klint Kubiak"], "LAR": ["Sean McVay"], "WSH": ["Dan Quinn"], "ARI": ["A One", "B Two"]}
+    got = nflverse.fetch_head_coaches(2026, get=espn_get(coaches))
+    assert got == {"BUF": "Joe Brady", "LV": "Klint Kubiak", "LA": "Sean McVay", "WAS": "Dan Quinn"}  # ARI: interim, unclear
+
+
+def test_current_season_coaches_are_replaced_and_other_seasons_are_left_alone(session):
+    rows = schedule_rows()
+    assert service.ingest_schedules(session, rows, head_coaches={"BUF": "Joe Brady"}).status == "ok"
+    current = session.scalars(select(Game).where(Game.season == CURRENT)).all()
+    old = session.scalars(select(Game).where(Game.season < CURRENT)).all()
+    assert any(g.home_team == "BUF" for g in current) and any(g.away_team == "BUF" for g in current)
+    for g in current:  # finished and future games alike
+        assert (g.home_coach == "Joe Brady") == (g.home_team == "BUF")
+        assert (g.away_coach == "Joe Brady") == (g.away_team == "BUF")
+        if g.home_team != "BUF":
+            assert g.home_coach == f"{g.home_team} Coach"
+    assert all(g.home_coach == f"{g.home_team} Coach" and g.away_coach == f"{g.away_team} Coach" for g in old)
+    run = session.scalars(select(IngestionRun).where(IngestionRun.dataset == "head_coaches")).one()
+    assert run.status == "ok" and run.source == "espn" and run.rows > 0
+
+
+def test_a_second_schedule_load_does_not_bring_the_stale_name_back(session):
+    rows = schedule_rows()
+    service.ingest_schedules(session, rows, head_coaches={"BUF": "Joe Brady"})
+    service.ingest_schedules(session, rows, head_coaches={"BUF": "Joe Brady"})
+    names = {g.home_coach for g in session.scalars(select(Game).where(Game.season == CURRENT, Game.home_team == "BUF"))}
+    assert names == {"Joe Brady"}
+
+
+def test_a_failed_coach_feed_keeps_the_feed_names_and_is_logged(session, monkeypatch):
+    def down(url):
+        raise RuntimeError("espn down")
+
+    monkeypatch.setattr(nflverse, "fetch_json", down)
+    run = service.ingest_head_coaches(session)
+    assert run.status == "failed" and "espn down" in run.error
+    assert service.ingest_schedules(session, schedule_rows()).status == "ok"  # offline schedule load still works
