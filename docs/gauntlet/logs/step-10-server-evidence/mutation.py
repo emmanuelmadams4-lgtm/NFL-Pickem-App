@@ -4,6 +4,7 @@
 Usage: python mutation.py <copy-of-backend-dir> [--dry]
 Run it on a throwaway copy (git archive), never on the worktree. --dry only checks every mutation still applies.
 Each mutant: (name, clause, file, [(old, new), ...]). A replacement replaces every occurrence of `old`.
+A mutant is run against the tests of its own clause only (-k), so 'caught' means that clause's test caught it.
 """
 
 import pathlib
@@ -76,6 +77,9 @@ MUTANTS = [
 ]
 
 
+OWN_TESTS = {"C1": "r2_", "C3": "p1_", "C9": "p1_"}  # clauses added by review live in these tests
+
+
 def main() -> int:
     backend = pathlib.Path(sys.argv[1])
     dry = "--dry" in sys.argv
@@ -91,10 +95,12 @@ def main() -> int:
             mutated = mutated.replace(old, new)
         if dry or mutated == original:
             continue
+        # Only the tests named for the mutant's own clause run: the clause's own test must be the one that bites.
+        only = " or ".join(OWN_TESTS.get(c, c.lower() + "_") for c in clause.split("/"))
         path.write_text(mutated)
         try:
             run = subprocess.run(
-                ["uv", "run", "pytest", "-q", "-x", "tests/test_passkey.py", "-p", "no:cacheprovider"],
+                ["uv", "run", "pytest", "-q", "-x", "tests/test_passkey.py", "-p", "no:cacheprovider", "-k", only],
                 cwd=backend, capture_output=True, text=True, timeout=300,
             )  # fmt: skip
         finally:
@@ -102,9 +108,9 @@ def main() -> int:
         caught = [line.split("::")[1].split(" ")[0] for line in run.stdout.splitlines() if line.startswith(("FAILED", "ERROR"))]
         if run.returncode == 0:
             survived += 1
-            print(f"SURVIVED     {clause:7} {name}")
+            print(f"SURVIVED     {clause:7} {name}", flush=True)
         else:
-            print(f"caught       {clause:7} {name}  <- {caught[0] if caught else 'exit ' + str(run.returncode)}")
+            print(f"caught       {clause:7} {name}  <- {caught[0] if caught else 'exit ' + str(run.returncode)}", flush=True)
     print(f"MUTATION: {len(MUTANTS)} mutants, {survived} survived, {unapplied} not applied")
     return 1 if survived or unapplied else 0
 

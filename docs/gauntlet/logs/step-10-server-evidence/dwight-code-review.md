@@ -29,3 +29,26 @@ CHECKED AND FINE: require_token order (503 with no app token, then token compare
 NOT VERIFIED: lock-file hashes against PyPI and the release facts (no network); the webauthn library's own internals; how the web client stores the session (not in this commit); proxy and TLS in the deploy; the fixture authenticator beyond a secret scan.
 
 If CLEANUP or the mutation pass changes code, send the delta commit on this thread; a small agreed delta gets my own read.
+
+
+# Dwight: delta review at 098e0b0 (2026-10-13 17:50 UTC)
+
+VERDICT: PASS at 098e0b0. Nothing CRITICAL, HIGH or MEDIUM is open from my side. Own read of the delta d4bf199..098e0b0 under backend/nflpi (api/passkey.py, auth/passkeys.py, auth/sessions.py); the two ecc agents were not rerun for a delta this size. Nothing was executed. I did not read the test file or the docs in the delta.
+
+FIXES CONFIRMED
+- C1 fixed. api/passkey.py _alert: the notifications row is stored whatever push._send returns, and 'passkey added|removed, nobody was alerted, id=N' is warned when it returned 0.
+- C3 fixed. auth/sessions.py accepts(): a well-formed session refused because config() is None logs a fixed line, no value, no database call.
+- C4 fixed. Sign-count update carries 'and sign_count <= :n'. If it matches no row because a higher count was stored first, the sign-in still succeeds; that is right, the library already verified against the count it read.
+- C5 fixed. IntegrityError around the update and sessions.issue rolls back and becomes the uniform 401.
+- C9 fixed. auth/passkeys.py config(): an rp_id with '*' or with no dot (unless localhost) is not configured.
+- R1-R5 still hold; no line they rest on changed.
+
+THE P1 CHANGE (list, remove, sign-out no longer need the passkey settings): fine. All three still go through require_token. While passkeys are off, accepts() refuses every session before any database call, so only the app token reaches them. Sign-out with a session while off is a 401, which is consistent.
+
+NEW, both LOW, advice only
+- N1. While passkeys are off, every request carrying a pks_ value of the right length writes one warning line, and the caller needs no sign-in. The line is fixed and short, so this is log noise, not a leak.
+- N2. If push._send itself raises (not a refused push, which it handles and counts as 0), _alert logs 'passkey alert failed' and stores no notifications row. The change is still logged at info. Moving the _record call ahead of _send would close it.
+
+CARRIED, agreed: C2 (decision 8), C6, C7, C8 (decision 12), C10 (decision 5).
+
+NOT VERIFIED: the new tests (not read, not run), the gate and the mutation sweep (yours), lock-file hashes against the package index.

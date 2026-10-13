@@ -85,3 +85,89 @@ Mode: Gauntlet Loop ONE_SHOT, one session. Tier **T3** (the app's sign-in). Land
   authenticator and the owner's iPhone. operational: log events, push alert on add/remove, 503 texts.
 * **Starting rung:** `BUILD_RUNG: sonnet (try 1 of 2)`. Reason: Codex refused (above); the spec, the tests and the
   library calls are settled, so the build is wiring.
+
+**Amended after review (before the critic), each with its test:** P1 now says the four ceremony routes answer 503
+when unset; list, remove and sign-out keep working with the app token (`p1_the_owner_can_remove_a_passkey_while_
+passkeys_are_off`). Added clauses from Dwight's code review: C1 a silent add or remove is still recorded and warned
+(`r2_with_no_device_*`, `r2_a_failed_alert_*`), C3 a session refused for unset settings is logged
+(`p1_clearing_the_settings_*`), C9 a wildcard or dotless relying party is not configured (`p1_half_set_*`). Added on
+the test reviewer's advice: `p16_the_rate_window_slides`, `p5_a_failed_registration_finish_*`,
+`p5_finishes_racing_on_one_challenge_*`. The file now has 47 tests, 67 cases.
+
+## 3. IMPLEMENTATION
+
+Provider: **Claude, Sonnet subagent** (Codex refused the model, section 1). The coordinator wrote the spec, the tests
+and the software authenticator, and wrote no production code. Every proof below was rerun by the coordinator.
+
+| Work order | What | Commit | Coordinator's own proof |
+|---|---|---|---|
+| 1 (`step-10-server-evidence/wo-1.md`), try 1 | `nflpi/auth/{throttle,sessions,passkeys}.py`, `api/passkey.py`, migration 0008, three models, two settings, 4 changed lines in `require_token` | `d4bf199` | 60 of 60 cases passed, ruff clean |
+| 1, try 2 (narrow correction after the coordinator's read of the diff) | a body nested too deep (RecursionError became a 500), credential id shape, id range on DELETE, alert commit | `d4bf199` | red first: `red-2.log` 2 failed; then 60 passed |
+| 2 (review fix + cleanup, section 4) | list, remove, sign-out without the settings; type hints | `098e0b0` | red first: `red-3.log` 2 failed; then 64 passed |
+| 3 (Dwight's C1, C3, C4, C5, C9) | record and warn a silent add; log a refusal for unset settings; two race guards; relying-party shape | `098e0b0` | 67 passed (`green-2.log`), ruff clean |
+
+Diff check after each return: `git status`, the full diff read by the coordinator, scope = the files the work order
+allowed, no test edited by the builder, no untracked stray file.
+
+**Review fan-out at `d4bf199`** (read-only, tier large): `step-10-server-evidence/reviews.md`.
+`ecc:python-reviewer`: no CRITICAL, no HIGH. `ecc:pr-test-analyzer`: no vacuous test, three weak spots, all closed
+with new tests. **Dwight (security, with `ecc:security-reviewer` and `ecc:silent-failure-hunter`): PASS on security
+at `d4bf199`, C1 to fix; fixed in `098e0b0`** (`dwight-code-review.md`; how each finding was handled: design.md
+section 15).
+
+AGENTS: Sonnet general-purpose subagent (builder); `ecc:python-reviewer`, `ecc:pr-test-analyzer` (fan-out);
+`ecc:security-reviewer` and `ecc:silent-failure-hunter` run by Dwight, not run twice; `ecc:code-reviewer` is the
+fresh critic (section 6); `ecc:planner`/`ecc:architect`/`ecc:code-explorer` not used (the dispatch fixed the plan and
+named the five files to read); `ecc:build-error-resolver` not needed (no build break).
+
+## 4. CLEANUP
+
+Scope-locked `/refactor` pass on the code this step added (work order 2, part B; behaviour unchanged, proof rerun:
+64 passed before work order 3):
+* `_begin`'s `make_options` typed as `Callable[[Session, PasskeyConfig], dict[str, Any]]`.
+* Bare `dict` annotations in `api/passkey.py` and `auth/passkeys.py` became `dict[str, Any]`.
+* A comment on the check-then-insert passkey count (owner-only route).
+* The unused `cfg` dependency left three routes (this one is also the P1 fix).
+* No dead code, unused import or duplicated block found in the new files: no further change needed.
+
+Left as is, with the reason: `sessions.accepts` raises `HTTPException` (keeps `require_token` inside its 10-line
+grant); the lazy import of `require_token` in `api/passkey.py` (same pattern as `api/group.py`; the grant is one import
+line in `main.py`); raw SQL for writes (every time comes from the database clock in the statement that uses it).
+
+## Seam asks for the integrator (no edit made by this lane)
+
+* `nflpi/notify/push.py` has no public "send one alert" function; `api/passkey.py` calls `push._send` and
+  `push._record`. A public wrapper there would be cleaner.
+* `api/group.py` carries its own `_token` wrapper; it delegates to `require_token`, so it accepts a passkey session
+  with no change. `live.py` and `news.py` carry no check of their own (mounted with the dependency in `main.py`).
+* `config._HIDDEN_REPR_FIELDS`: nothing to add; the two passkey settings are not secret.
+* Operator notes (docs/DEPLOY.md is not this lane's): set `PASSKEY_RP_ID` and `PASSKEY_ORIGINS` to the tailnet host
+  name; after changing the app token or restoring a backup, open the passkey list and remove any you do not know.
+
+## ROUTE CONTRACT (for lane web)
+
+All under `/api/passkey`. JSON in, JSON out. Errors are `{"detail": "<text>"}`. Types are in
+`packages/shared/src/api-types.ts` (replies only; the two finish bodies are untyped on purpose).
+
+**Holding and sending the session.** Sign-in finish returns `{"session": "pks_...", "expires_at": "<UTC ISO>"}`. Keep
+`session` exactly where the app token is kept today and send it the same way: `Authorization: Bearer <session>` on
+every `/api` call. It lasts 30 days from sign-in and is not extended by use; `expires_at` tells you when to ask for
+Face ID again. Never put it in a URL or a cookie. A 401 `Missing or wrong access token` means it is gone (expired,
+signed out, passkey removed, or passkeys switched off): drop it and show sign-in. A 503 `Sign-in is temporarily
+unavailable` means the server could not check it: KEEP it and retry.
+
+| Route | Who may call | Body | Success | Errors |
+|---|---|---|---|---|
+| `POST /register/begin` | app token only | none | 200: creation options, pass to `PublicKeyCredential.parseCreationOptionsFromJSON` | 401 no sign-in; 403 `Adding a passkey needs the app token` (signed in with a passkey session: ask for the token, do NOT sign out); 429; 503 `Passkey sign-in is not configured` |
+| `POST /register/finish` | app token only | `{"credential": <credential.toJSON()>, "label": "<1-64 printable characters, optional>"}` | 201 `{id, label, created_at}` | 400 `Passkey registration failed` (start again from begin); 401; 403; 409 `Passkey limit reached (10). Remove one first.`; 413; 422 `Label must be 1 to 64 printable characters`; 503 |
+| `POST /signin/begin` | anyone | none | 200: request options (no `allowCredentials`), pass to `parseRequestOptionsFromJSON` | 429 `Too many attempts, try again in a minute`; 503 not configured (hide the passkey button) |
+| `POST /signin/finish` | anyone | `<credential.toJSON()>` itself | 200 `{session, expires_at}`, `Cache-Control: no-store` | 401 `Passkey sign-in failed` (every failure, same text; start again from begin); 413; 429; 503 |
+| `GET /api/passkey` | token or session | none | 200 `{"passkeys": [{id, label, created_at, last_used_at}]}`, oldest first | 401 |
+| `DELETE /{id}` | token or session | none | 204; that passkey's sessions end at once | 401; 404 `Passkey not found`; 422 bad id |
+| `POST /signout` | token or session | none | 204; the presented session is revoked (with the app token: nothing to revoke) | 401 |
+
+Rules for the screen: a challenge works once and for 5 minutes, so call begin right before the browser prompt and
+never retry a finish; ask for a platform passkey (the options already require Face ID / Touch ID and a discoverable
+passkey); render `label` as plain text; list, remove and sign-out work even when passkeys are not configured; the
+server refuses the 11th passkey. Only the mock proves nothing here: lane web's browser test with a virtual
+authenticator is the first end-to-end proof, the owner's iPhone the second.
