@@ -69,7 +69,7 @@ Decisions (each two-way):
 * **Not added to the freshness list** in `service.STALE_HOURS`: nothing runs this job until step 8a2 wires the worker, so it would show "stale" in the app for no reason. Carried to 8a2.
 * `JEV: model:stars:wo-1 -> sol (0.97), effort medium (0.91)`. BUILD_RUNG: gpt-6-sol medium (try 1 of 2). Reason: one table, one migration, three parsers, a ranking with a join across two id systems, one query; nineteen hand-counted cases check it.
 
-Red: `s8a-red.log`, `ModuleNotFoundError: No module named 'nflpi.analytics.stars'` at collection. Right reason: the module does not exist. The cases were written together by the coordinator (the builder never writes its own bar), not one per build slice.
+Red: `s8a-red.log`, `ModuleNotFoundError: No module named 'nflpi.analytics.stars'` at collection. Right reason: the module does not exist. One collection error, so none of the 19 cases could run; they were not shown failing one by one. The cases were written together by the coordinator (the builder never writes its own bar), not one per build slice.
 
 ### Spec amendments after the freeze
 * **Seam line (integrator's grant, 2026-10-13, option a):** `backend/tests/test_hardening.py` pinned the migration list to `0001, 0002`. The integrator granted one line in lane stars so the list reads `0001, 0002, 0003` (commit `808cfac`, recorded in `lanes.md`). Nothing else in that file changed.
@@ -113,6 +113,36 @@ Review fan-out (standard tier; full reports in `~/.claude/plans/nfl-pickem-lanes
 5. Format the new code the way the rest of the repository is formatted.
 `models.py` and the migration: no change needed (one table, one create and drop).
 
-WO-3 (`gpt-6-luna` medium, try 1; `JEV: model:stars:wo-3-cleanup -> luna 0.49, medium 0.71 (unsure; the lowest rung taken)`): tests green and in scope, but the coordinator's read found a nine-parameter helper and `stars_out` over 50 lines. WO-3b (`gpt-6-luna` high, try 2, one narrow correction, effort one level up): `_rank_club` returns one club's rows and `rank_stars` adds the shared fields; `stars_out` split into `_star_report` and `_listed_star`. Both tries on rung 1 used, no climb needed. Checked against the base: no line from before this step changed in the three files; no added function is over 50 lines.
+WO-3 (`gpt-6-luna` medium, try 1; `JEV: model:stars:wo-3-cleanup -> luna 0.49, medium 0.71 (unsure; the lowest rung taken)`): tests green and in scope, but the coordinator's read found a nine-parameter helper and `stars_out` over 50 lines. WO-3b (`gpt-6-luna` high, try 2, one narrow correction, effort one level up): `_rank_club` returns one club's rows and `rank_stars` adds the shared fields; `stars_out` split into `_star_report` and `_listed_star`. Both tries on rung 1 used, no climb needed. Checked against the base: the only earlier lines changed in the three files are two import lines in `service.py` (`delete` and `TeamStar` added); no added function is over 50 lines.
 
 Proof on the cleanup tree (`gate.sh cleanup`): `PASS pytest exit=0` 146 passed; `PASS ruff`; `PASS alembic`; `PASS genapi` no drift. Real-data check again: MATCH 40 of 40, 40 of 40, 9 of 9 (`s8a-realcheck-cleanup.log`). `ruff format --check` on the three files: already formatted. Commit `231bd82`.
+
+## 5. VERIFICATION
+**Critic 1 (new `ecc:code-reviewer` subagent, no build transcript) on `4f754de`: FAIL.** Its own gate, twice (`critic1-*.log`, `critic2-*.log`): pytest 146 passed both runs, ruff, alembic, genapi all PASS. 22 of 23 criteria PASS. **S19 FAIL**: five of its eight input checks had no test (snap count over 300, over-long club code, blank snap-file player id, duplicate stat row, the 40-character cut); it proved this by changing the code on a scratch copy and seeing the tests stay green (38 changes, 14 survived). LOW: no test for the quarterback attempts tiebreak, a tie going to offence, a non-quarterback with no playing time, the safety and defensive-touchdown weights, age rounding, a stat that is not a number or is infinite. It also caught two wrong sentences in this log (both corrected above, in place). Lane guard and S18: clean. Report: `~/.claude/plans/nfl-pickem-lanes-reviews/s8a-critic-1.md`.
+
+**Dwight on the delta `1ccdfaf..231bd82`: PASS on security**, no CRITICAL or HIGH; his F1 to F6 confirmed fixed. Two new MEDIUM, "none blocks landing, fix before 8a2 wires the worker": N1 a file with the same last week but rows missing inside it was still accepted (and CLEANUP had removed the row-count guard that caught it); N2 a stats column that is all "NA" was ranked as zeros. Report: `s8a-r2-dwight-delta.md`.
+
+**Mapped FAIL routed back to tests, then the build.** The coordinator wrote the missing cases first (`s8a-red-3.log`: 37 failed, 5 passed; most fail because the hand-made club-total row now has a blank club, Dwight's N4), taking N1, N2, N4 and N6 in the same round:
+
+| # | Criterion | Layer |
+|---|---|---|
+| S24 | Every (week, club) pair in the snap rows is in the stat rows and the other way round, or the run fails naming the missing pair. On the real 2025 and 2026 files the two sets are equal (570 and 156 pairs). Replaces "the two files end in different weeks" in S20 | operational |
+| S25 | A stat column that is blank or "NA" in every row of the season fails the run | operational |
+| S26 | A stats row with no player id is skipped before anything else in it is read; a short CSV row still gives an error that names the file | operational |
+
+WO-4 (`gpt-6-sol` medium, try 1; `JEV: model:stars:wo-4 -> sol 0.37 (unsure; the lean taken)`): 42 of 42 star cases, in scope (2 files, about 25 lines), commit `9e1b51c`. New cases also pin every S19 clause and the rule edges the critic listed (`test_tiebreaks_and_the_rarer_weights`, ten more bad-file cases, age rounding). `gate.sh wo4`: `PASS pytest exit=0` 157 passed; ruff, alembic, genapi PASS. Real-data check again: MATCH 40 of 40, 40 of 40, 9 of 9 (`s8a-realcheck-wo4.log`).
+CLEANUP after WO-4 (`/refactor`, scope-locked to its two hunks): no change needed. The diff is one moved line, one set and a short loop in `parse_star_stats`, a 9-line helper `_check_star_file_pairs` and two exception types; formatted, no function over 50 lines, nothing duplicated.
+
+**S16, names a fan expects (full real files, app equal to the independent count on all 80 rows):**
+
+| Club, 2025 whole season | Quarterback | Offence | Defence |
+|---|---|---|---|
+| Philadelphia | Jalen Hurts | Saquon Barkley, A.J. Brown | Zack Baun, Jalyx Hunt |
+| Pittsburgh | Aaron Rodgers | Jaylen Warren, Kenneth Gainwell | T.J. Watt, Alex Highsmith |
+| Detroit | Jared Goff | Jahmyr Gibbs, Amon-Ra St. Brown | Aidan Hutchinson, Jack Campbell |
+| Kansas City | Patrick Mahomes | Travis Kelce, Kareem Hunt | Nick Bolton, Chamarri Conner |
+| Cleveland | Shedeur Sanders | Harold Fannin, Quinshon Judkins | Myles Garrett, Carson Schwesinger |
+
+2026 after five weeks (the list the app would use this week): Kansas City: Patrick Mahomes; Kenneth Walker III, Travis Kelce; George Karlaftis III, Nick Bolton. Buffalo: Josh Allen; James Cook, Dalton Kincaid; Gregory Rousseau, Deone Walker. Detroit: Jared Goff; Jahmyr Gibbs, Amon-Ra St. Brown; Aidan Hutchinson, Derrick Barnes.
+Coordinator's read: the quarterbacks and offence are the names a fan would say first. Defence finds the pass rushers (Watt, Garrett, Hutchinson, Crosby, Bonitto, Hunter and Anderson in the wider log) but misses some big names with few countable plays: Chris Jones was fourth for Kansas City in 2025, D.K. Metcalf third on Pittsburgh's offence. Two things an owner may trip on, both the cost of "season totals" (section 2): Cleveland's 2025 quarterback is Shedeur Sanders (most snaps over the season), and Washington's 2026 quarterback star is Marcus Mariota, because he has played more snaps so far than the usual starter. D21's revisit trigger covers it.
+**Who's out, 2026 week 5, all 15 games (app equal to a direct read of the injury file, 9 of 9):** Lamar Jackson, Baker Mayfield and Marcus Mariota (quarterbacks), Stefon Diggs, DeVonta Smith, Breece Hall, Kyle Monangai (offence), Mason Graham, Amani Hooker (defence).
