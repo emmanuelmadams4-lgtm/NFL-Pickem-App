@@ -192,3 +192,20 @@ def test_a_failed_coach_feed_keeps_the_feed_names_and_is_logged(session, monkeyp
     run = service.ingest_head_coaches(session)
     assert run.status == "failed" and "espn down" in run.error
     assert session.scalar(select(Game.home_coach).where(Game.season == CURRENT, Game.home_team == "BUF")) == "BUF Coach"
+
+
+def test_a_coach_link_to_another_host_is_never_fetched_and_a_name_too_long_for_the_column_is_skipped():
+    calls = []
+    inner = espn_get({"BUF": ["Joe Brady"], "LV": ["Klint Kubiak"], "LAR": ["x" * 65]})
+
+    def get(url: str) -> dict:
+        calls.append(url)
+        if "/coaches/BUF/" in url:
+            return inner(url)
+        if url.endswith("/teams/2/coaches?lang=en"):
+            return {"items": [{"$ref": "https://evil.test/coaches/BUF/0?lang=en"}]}
+        return inner(url)
+
+    got = nflverse.fetch_head_coaches(2026, get=get)
+    assert got == {"LV": "Klint Kubiak"}  # BUF: foreign link skipped; LA: 65 characters skipped
+    assert not any("evil.test" in u for u in calls)
