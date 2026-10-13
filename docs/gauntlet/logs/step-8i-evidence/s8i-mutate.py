@@ -59,6 +59,11 @@ M = [  # (label, file, old, new, expected count of old)
     ("A13 status not lower-cased", SA, "report.report_status.lower()", "report.report_status", 1),
     ("A13 injury sentence dropped", SA, '        body += f" {injury}."', "        pass", 1),
     ("A13 link wrong", SA, "push.game_url(game.game_id)", '"/"', 1),
+    ("W2 superseded check off", SA, "or _superseded(session, report):", ":", 1),
+    ("W2 cleared status not superseding", SA, "differs = status.is_(None) | (status != report.report_status)", "differs = status != report.report_status", 1),
+    ("W2 same status supersedes", SA, "differs = status.is_(None) | (status != report.report_status)", "differs = status.is_(None) | (status == report.report_status)", 1),
+    ("W2 inj key always honoured", SA, "if _first_with_status(session, report) and _seen(session, injury_key):", "if _seen(session, injury_key):", 1),
+    ("W2 ttl floor dropped", SA, "ttl=max(1, int((kickoff - now).total_seconds()))", "ttl=int((kickoff - now).total_seconds())", 1),
 ]
 ONLY = os.environ.get("S8I_ONLY")
 if ONLY:

@@ -1,0 +1,7 @@
+control: no mutation (control): 48 passed in 12.07s
+KILLED: W2 superseded check off: 1 failed, 2 passed in 5.90s
+KILLED: W2 cleared status not superseding: 1 failed, 3 passed in 8.21s
+KILLED: W2 same status supersedes: 1 failed in 3.55s
+KILLED: W2 inj key always honoured: 1 failed, 46 passed in 12.08s
+KILLED: W2 ttl floor dropped: 1 failed, 47 passed in 26.10s
+5 mutations, 0 survived
