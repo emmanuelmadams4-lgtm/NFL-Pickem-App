@@ -251,7 +251,7 @@ S1a closed: 271,232 crafted addresses, none accepted that would send to a host o
 | `r2-a` | 5.83 | 211 passed | clean | none | 0 | 102 passed, 2 skipped |
 | `r2-b` | 6.91 | 211 passed | clean | none | 0 | **5 failed**, 97 passed, 2 skipped |
 
-**r2-b, the cause.** P20 hung on its first click and its cleanup never ran, so P22, P23, P23b and P23c failed after it. The saved trace of P20 shows the server answering `GET /api/weeks/2023/4` at 04:39:57Z with `my_pick: "LV"` for `2023_04_MIA_LV`, while this run's server log has no write of that pick after the last delete (line 2697). So another process wrote to the shared test database during my run. My coordination lease had expired while I waited on the background run (the coord log notes it at 04:40), which released `res:gate` and `res:e2e`; session s35 held `res:gate` right after. I did not see the other writer directly: this is the most likely cause, not a proven one. No timeout was changed. Fix on my side: the gate script now renews the lease every 45 seconds and re-checks both locks after each run (`gate-r3.sh` in the session scratchpad).
+**r2-b, the cause (corrected; my first reading was wrong).** I first wrote here that another process had written to the shared test database after my coordination lease lapsed. That was wrong: the same five tests failed in CI on the pull request (run 38357621487, attempt 1), where nothing shares the database. The cause is a race in test P19, see "After the first CI run" below. What stays true: my lease did lapse during that run, and the gate script now renews it every 45 seconds. No timeout was changed.
 
 Main then moved to `53b1c89` (coach fix). The lane was moved onto it with no conflict; lane-guard against `53b1c89`: OK. Gate round 3 (`r3-a`, `r3-b`) runs on that HEAD.
 
@@ -281,3 +281,16 @@ Report: `step-7-evidence/reviews/critic-round2.md`; gate logs `critic6-{a,b,c}-*
 NEEDS the integrator: `lane/alerts` at the HEAD named in my done message is landing-ready (gate green five times on this code, security PASS, fresh critic PASS, lane-guard OK against `53b1c89`). I do not send the branch anywhere; the integrator does that, opens the request and merges it.
 
 PENDING, the owner's go-live steps, never run here: VAPID keys on the live app; a real alert on his iPhone (also checks critic lows 7 and 8 and the key-change case); delete any stored subscription whose address fails the new check, or turn alerts off and on once. Nothing was deployed.
+
+### After the first CI run on the pull request: a race in test P19 (integrator's ruling: test-only fix, no new critic)
+
+CI on `044e173`: browser tests green on two runs and red on one (P20, P22, P23, P23b, P23c), the same five as my local `r2-b`.
+
+**Cause: test P19 (step 6, commit `ccede75`, already on main), not the app.** P19 makes a pick offline while storage refuses the queue, so the pick lives in the page's memory. Its cleanup only went back online. Back online the page sends the kept pick, as it should; that send raced the end of the test. When the send won, the server kept `2023_04_MIA_LV` = LV, and P20 waited 90 s for a "Pick LV Team" button that the page showed as already picked. P20's cleanup then never ran, so P22, P23, P23b and P23c waited 30 s each on the same button. Evidence: the trace of P20 in `r2-b` (the server answered `my_pick: "LV"` before P20 clicked anything) and the CI log (P19 passes, P20 fails, no write of the pick logged between them: the browser had closed before the server's answer).
+
+| Proof | Log | Load before | Result |
+|---|---|---|---|
+| Red: the old P19 cleanup plus a 3 s pause after going online, then P20 | `red-p19.log` | 4.79 | P19 passes, the server logs `PUT /api/picks/2023_04_MIA_LV`, P20 fails after 1.5 min waiting for "Pick LV Team" |
+| Green: the whole file with the fixed P19, twice | `p19-fix.log` | 6.32 | 31 passed, twice; P19 shows its PUT and then its DELETE |
+
+**Fix, test only** (`apps/web/e2e/pwa.spec.ts`, P19's cleanup): wait until the server has the pick (the same 25 s bound P20 uses for the same send), then delete it. No production code, no timeout widened. P19 now also proves that a pick kept in memory is sent once he is back online. Typecheck 0. Lane-guard OK.

@@ -391,6 +391,11 @@ test("P19 the phone cannot store a waiting pick (storage full): he is told to ke
     await expect(page.getByText("Waiting to sync")).toBeVisible();
   } finally {
     await context.setOffline(false);
+    // Back online the open page sends the pick it kept in memory. Wait for it and remove it: without this
+    // the send races the end of the test, and when it wins the next test starts with this game already picked.
+    const serverPick = async () => (await board(page.request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+    await expect.poll(serverPick, { message: "the pick kept in memory is sent once he is back online", timeout: 25_000 }).toBe(g.home.abbr);
+    expect((await page.request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
   }
 });
 
