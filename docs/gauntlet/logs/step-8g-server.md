@@ -16,7 +16,12 @@ Session: owner's Mac, 2026-10-13, lane `newswire` (worktree `.claude/worktrees/l
   * *The AI pack, `<news_item>` wrapping, render rules:* NOT this step (lane sdk, lane web).
   * *Short nicknames such as "Jags" as aliases:* CARRIED to the owner (a miss, never a wrong tie).
 * **Skills:** `/jevgrep` N/A: the seams were answered by reading `run.py`, `live_worker.py`, `api/live.py`, `jobs.py` (named symbols). Design Gauntlet N/A (no UI). Parallel lanes: `lane-guard check` at VERIFICATION.
-* **Security design review first (required):** this section and section 2 go to Dwight before any code.
+* **Security design review first (required):** Dwight (hive `dwight-mv5mkpow`), design review sent 12:0x Z, replied **PASS to build, no CRITICAL, no HIGH, four MEDIUM** (M1 to M4) and six LOW (L1 to L6). Every one is folded into section 2 and a test below, nothing carried but L4 (a feed can date its own items up to a day ahead; accepted: two allowlisted sources) and L6 (a note to the screen, in the ROUTE CONTRACT).
+  * **M1** `team_ids` is JSON, not JSONB: the filter casts to JSONB with a bound value, never string formatting (R3).
+  * **M2** `clean_text` decodes one layer of entities, so the order is clean_text FIRST, strip `<` and `>` LAST, nothing decodes after (R6; tests for `&lt;script&gt;` and `&#60;img ...&#62;` stored rows).
+  * **M3** FastAPI's own 422 echoes the rejected value, so `game_id` is a plain optional string checked by hand with `re.fullmatch` and answered with a fixed 422 message (R5).
+  * **M4** the polling thread opens and closes its own session; the run deadline is 180 s (2 sources x (robots 20 s + feed 20 s + DNS 5 s) is 90 s, plus parse CPU and a redirect); a skipped wake logs a warning; the stale-run sweep runs on every wake (W7, W9).
+  * **L1** every row-dropping filter and the order sit in the SQL before `LIMIT 5`. **L2** the wake is 600 s. **L3** the link is `canonical_url`'s output. **L5** `game_id` is echoed from the games row.
 
 ## 2. SPECIFICATION (frozen before production code)
 Files: `backend/tests/test_news_worker.py`, `backend/tests/test_news_api.py` (red first). Public seams: `news_worker.news_step`, `news_worker.run_with_deadline`, `news_worker.run_forever`, `news_worker.start`, `news_worker.sweep_stale_runs`; router `news_api.router` (`GET /api/news`).
@@ -28,9 +33,9 @@ Files: `backend/tests/test_news_worker.py`, `backend/tests/test_news_api.py` (re
 * **W4 (every source blocked).** `news_step` returns without raising; every run is `failed` with `blocked:`; old rows are still pruned.
 * **W5 (prune every wake).** A row fetched 31 days ago is gone after a step, a row fetched 29 days ago stays; true when the step polls nothing (not due) and when everything is blocked.
 * **W6 (teams first).** With an empty `teams` table a step makes no request and writes no `ingestion_runs` row.
-* **W7 (a deadline).** `run_with_deadline(fn, seconds)` returns by the deadline when `fn` hangs, reports it did not finish, and the caller is not blocked. While the abandoned run is alive no second run starts (one run in flight at most).
+* **W7 (a deadline).** `run_with_deadline(fn, seconds)` returns by the deadline when `fn` hangs, reports it did not finish, and the caller is not blocked. While the abandoned run is alive no second run starts (one run in flight at most); each skipped wake logs a warning. The step runs on a session the thread opens itself. The run deadline is 180 s and the wake 600 s.
 * **W8 (the loop survives).** A step that raises (any exception) is logged by exception class name only (never the message) and the loop wakes again; `stop` ends the loop.
-* **W9 (stale `running` rows).** At start-up `running` rows of dataset `news:*` older than 10 minutes become `failed` / `interrupted`; younger ones and every other dataset are untouched.
+* **W9 (stale `running` rows).** At start-up and on every wake `running` rows of dataset `news:*` older than 10 minutes become `failed` / `interrupted`; younger ones and every other dataset are untouched.
 * **W10 (wiring).** `jobs.loop` starts the news thread exactly once, after the live thread; `jobs.py` calls into `news_worker.py` and holds none of the logic.
 
 ### 2b. Route clauses (R) — `GET /api/news?game_id=<id>`
@@ -40,10 +45,10 @@ Files: `backend/tests/test_news_worker.py`, `backend/tests/test_news_api.py` (re
   200 {"game_id": str, "items": [ {"title": str(<=200), "source": str, "published_at": datetime|null, "url": str|null, "tags": [str]} ]}
   ```
   Exactly these keys, nothing more (no ids, no extract, no player ids). `source` is the display name (`ESPN`, `CBS Sports`), not the id. `published_at` is null when the feed gave none (never invented). `tags` are only from `injury|trade|coach|playcaller`, sorted, each stored tag outside that set dropped.
-* **R3 (which items).** Items whose `team_ids` contain the game's home team or away team; items tied to neither, or to other teams only, are not returned. Items from a source id that is not in `sources.SOURCES` are not returned.
-* **R4 (at most 5, newest first).** Order: `published_at` newest first, items with no date after all dated ones, then `fetched_at` newest, then `id` highest. 0 items is `{"game_id": ..., "items": []}` with 200.
-* **R5 (unknown or malformed game).** An unknown `game_id`: 404 with a fixed message. A missing, empty, longer than 32, or non `[A-Za-z0-9_-]` `game_id`: 422. No stack trace, no echo of the value.
-* **R6 (plain strings only).** No returned string holds `<` or `>`; a stored title like `<b>Hi</b><script>x</script>` comes back with no markup characters. Titles are cut at 200, control characters and bidi marks are gone, whitespace is collapsed.
+* **R3 (which items).** Items whose `team_ids` (JSON column, cast to JSONB with bound values) contain the game's home team or away team; items tied to neither, or to other teams only, are not returned. Items from a source id that is not in `sources.SOURCES` are not returned.
+* **R4 (at most 5, newest first).** Order: `published_at` newest first, items with no date after all dated ones, then `fetched_at` newest, then `id` highest. All filtering and the order are in the SQL before `LIMIT 5` (other teams' items never use up a place). 0 items is `{"game_id": ..., "items": []}` with 200.
+* **R5 (unknown or malformed game).** An unknown `game_id`: 404 with a fixed message. A missing, empty, longer than 32, or non `[A-Za-z0-9_-]` `game_id` (checked by hand with `re.fullmatch`, a trailing newline fails): 422 `{"detail": "game_id must be 1 to 32 letters, digits, - or _"}`, the same text for every case. No stack trace, no echo of the value.
+* **R6 (plain strings only).** Order: `clean_text` first, then `<` and `>` removed last. No returned string holds `<` or `>` (also for stored `&lt;script&gt;`, `&#60;img&#62;` and `&#x3c;`); a stored title like `<b>Hi</b><script>x</script>` comes back with no markup characters. Titles are cut at 200, control characters and bidi marks are gone, whitespace is collapsed.
 * **R7 (a link is returned only if safe).** `url` is the stored link only when it is `https`, has no user info, no port, no backslash or control character, and its host is the item's own source host or a subdomain of it (a host of the allowlist in `sources.py`, dot boundary: `espn.com.evil.com` and `evilespn.com` fail), else `null`. The item itself is still returned. Never a `javascript:`, `data:` or `http:` link. Max 2048 characters.
 * **R8 (read only).** The route writes nothing and makes no network call.
 * **R9 (contract).** `npm run gen:api` shows no drift after the router is included; the route is in `openapi.json` with response model `NewsOut`.

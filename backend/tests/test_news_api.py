@@ -142,6 +142,14 @@ def test_r4_at_most_five_newest_first(session, game, client):
     assert [i["title"] for i in items(client)] == [f"item {k}" for k in range(5)]
 
 
+def test_r4_items_of_other_teams_never_use_up_the_five_places(session, game, client):
+    for k in range(6):
+        news(session, f"other {k}", ("NYJ",), published=NOW - timedelta(minutes=k))
+    for k in range(5):
+        news(session, f"ours {k}", ("MIA",), published=NOW - timedelta(days=1 + k))
+    assert [i["title"] for i in items(client)] == [f"ours {k}" for k in range(5)]
+
+
 def test_r4_undated_items_come_after_every_dated_one_then_by_our_fetch_time(session, game, client):
     news(session, "undated old", published=None, fetched=NOW - timedelta(hours=5))
     news(session, "undated new", published=None, fetched=NOW - timedelta(hours=1))
@@ -171,15 +179,25 @@ def test_r5_an_unknown_game_is_404_with_a_fixed_message(session, client):
     assert response.status_code == 404 and response.json() == {"detail": "Game not found"}
 
 
-@pytest.mark.parametrize("bad", ["", "x" * 33, "a b", "a;b", "../x", "é", "a'b", "<b>", "a\nb"])
+@pytest.mark.parametrize("bad", ["", "x" * 33, "a b", "a;b", "../x", "é", "a'b", "<b>", "a\nb", "2026_05_BUF_MIA\n"])
 def test_r5_a_malformed_game_id_is_422_and_is_not_echoed(session, client, bad):
     response = get(client, bad)
     assert response.status_code == 422
     assert bad.strip() == "" or bad not in response.text
 
 
-def test_r5_a_missing_game_id_is_422(client):
-    assert client.get("/api/news").status_code == 422
+def test_r5_the_422_is_a_fixed_message_without_the_value(session, client):
+    for bad in ("<script>alert(1)</script>", "x" * 40, "ok\n"):
+        response = get(client, bad)
+        assert response.status_code == 422
+        assert response.json() == {"detail": "game_id must be 1 to 32 letters, digits, - or _"}
+
+
+def test_r5_a_missing_game_id_is_the_same_fixed_422(client):
+    response = client.get("/api/news")
+    assert response.status_code == 422 and response.json() == {
+        "detail": "game_id must be 1 to 32 letters, digits, - or _"
+    }
 
 
 def test_r5_a_game_id_of_exactly_thirty_two_characters_is_accepted(session, client):
@@ -196,6 +214,9 @@ def test_r5_a_game_id_of_exactly_thirty_two_characters_is_accepted(session, clie
         "<b>Hi</b> there <script>alert(1)</script>",
         "Bears > Lions & <3 <img src=x onerror=alert(1)>",
         "double &lt;script&gt; encoded",
+        "&lt;script&gt;x&lt;/script&gt;",
+        "&#60;img src=x onerror=1&#62; and &amp;lt;b&amp;gt;",
+        "&#x3c;script&#x3e;x",
         "tag<​script>x</script>",
         "ok‮evil\x1b\x07 text",
     ],

@@ -128,7 +128,7 @@ def test_w2_the_schedule_never_asks_a_source_more_often_than_every_thirty_minute
 
 def test_w2_the_real_wake_is_slow_and_the_frozen_numbers():
     assert news_worker.WAKE_SECONDS == 600
-    assert news_worker.RUN_DEADLINE == 90
+    assert news_worker.RUN_DEADLINE == 180
     assert news_worker.STALE_RUNNING == timedelta(minutes=10)
 
 
@@ -243,6 +243,43 @@ def test_w7_a_hung_step_does_not_stop_the_loop_from_waking(monkeypatch):
         assert time.monotonic() - begun < 3 and len(waits) == 3
     finally:
         release.set()
+
+
+def test_w7_the_loop_runs_the_step_on_a_session_it_opens_inside_the_worker_thread(monkeypatch):
+    seen: list[tuple[str, int]] = []
+
+    def spy(session, now, **k):
+        seen.append((threading.current_thread().name, id(session)))
+
+    monkeypatch.setattr(news_worker, "news_step", spy)
+    waits: list[float] = []
+    main = threading.current_thread().name
+    news_worker.run_forever(threading.Event(), wait=lambda s: waits.append(s) or len(waits) >= 2)
+    assert len(seen) == 2 and all(name != main for name, _ in seen)
+
+
+def test_w7_each_wake_skipped_because_a_run_is_still_alive_is_warned_about(monkeypatch, caplog):
+    release = threading.Event()
+    monkeypatch.setattr(news_worker, "news_step", lambda *a, **k: release.wait(5))
+    monkeypatch.setattr(news_worker, "RUN_DEADLINE", 0.05)
+    waits: list[float] = []
+    try:
+        with caplog.at_level(logging.WARNING, logger="nflpi.news_worker"):
+            news_worker.run_forever(threading.Event(), wait=lambda s: waits.append(s) or len(waits) >= 4)
+    finally:
+        release.set()
+    assert sum("still running" in r.getMessage() for r in caplog.records) >= 3
+
+
+def test_w9_the_sweep_also_runs_on_every_wake_not_only_at_start_up(session, monkeypatch):
+    session.add(IngestionRun(source="espn", dataset="news:espn", started_at=T0 - timedelta(minutes=30), status="running"))
+    session.commit()
+    monkeypatch.setattr(news_worker, "news_step", lambda *a, **k: None)
+    monkeypatch.setattr(news_worker, "sweep_stale_runs", lambda s, n: calls.append(1) or 0)
+    calls: list[int] = []
+    waits: list[float] = []
+    news_worker.run_forever(threading.Event(), wait=lambda s: waits.append(s) or len(waits) >= 3)
+    assert len(calls) >= 4  # once at start, once per wake
 
 
 # ---------------------------------------------------------------- W8
