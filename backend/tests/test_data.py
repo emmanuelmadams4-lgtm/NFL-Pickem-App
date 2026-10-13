@@ -133,7 +133,7 @@ def espn_get(coaches: dict[str, list[str]]):
 
     def get(url: str) -> dict:
         if url.endswith("/teams"):
-            teams = [{"team": {"id": t, "abbreviation": a}} for t, a in ESPN_TEAMS.items()]
+            teams = [{"team": {"id": t, "abbreviation": a}} for t, a in ESPN_TEAMS.items() if a in coaches]
             return {"sports": [{"leagues": [{"teams": teams}]}]}
         if url.endswith("/coaches?lang=en"):
             tid = url.split("/teams/")[1].split("/")[0]
@@ -196,7 +196,7 @@ def test_a_failed_coach_feed_keeps_the_feed_names_and_is_logged(session, monkeyp
 
 def test_a_coach_link_to_another_host_is_never_fetched_and_a_name_too_long_for_the_column_is_skipped():
     calls = []
-    inner = espn_get({"BUF": ["Joe Brady"], "LV": ["Klint Kubiak"], "LAR": ["x" * 65]})
+    inner = espn_get({"BUF": ["Joe Brady"], "LV": ["Klint Kubiak"], "LAR": ["Too " + "L" * 65]})
 
     def get(url: str) -> dict:
         calls.append(url)
