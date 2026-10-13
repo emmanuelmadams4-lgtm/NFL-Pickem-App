@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
@@ -74,7 +75,11 @@ class SharesOut(BaseModel):
 
 def _import_file(season: int, data: bytearray) -> ImportResult:
     with session_factory()() as session:
-        if session.scalar(select(Game.game_id).where(Game.season == season).limit(1)) is None:
+        try:
+            has_games = session.scalar(select(Game.game_id).where(Game.season == season).limit(1)) is not None
+        except SQLAlchemyError as exc:
+            raise GroupDatabaseError(f"group import: database error ({type(exc).__name__})") from None
+        if not has_games:
             raise GroupImportError("no games for this season")
         return import_group_csv(session, season, data)
 

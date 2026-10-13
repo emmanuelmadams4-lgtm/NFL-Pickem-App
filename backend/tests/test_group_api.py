@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import event, select
+from sqlalchemy.exc import OperationalError
 
 from nflpi.api import group as group_api
 from nflpi.db import get_engine
@@ -247,6 +248,24 @@ def test_u8_only_the_importers_own_database_error_is_called_a_database_error(cli
     monkeypatch.setattr(group_api, "import_group_csv", broken)
     with pytest.raises(RecursionError):  # not dressed up as "database error"
         upload(client)
+
+
+def test_u8_a_database_failure_in_the_season_guard_is_500(client, games, monkeypatch):
+    class Broken:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def scalar(self, *args, **kwargs):
+            raise OperationalError("select", {}, Exception("connection lost"))
+
+    monkeypatch.setattr(group_api, "session_factory", lambda: Broken)
+    monkeypatch.setattr(group_api, "import_group_csv", lambda *a: pytest.fail("importer called"))
+    reply = upload(client)
+    assert reply.status_code == 500
+    assert reply.json() == {"detail": "group import failed: database error"}
 
 
 def test_u10_a_weekly_file_for_a_season_with_no_games_is_refused(client, games):
