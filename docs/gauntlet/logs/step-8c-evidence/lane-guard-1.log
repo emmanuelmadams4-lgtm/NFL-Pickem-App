@@ -1,0 +1,6 @@
+OUT OF LANE: backend/nflpi/config.py: owned by lane alerts
+OUT OF LANE: backend/nflpi/models.py: a seam (ask the integrator)
+OUT OF LANE: backend/pyproject.toml: a seam (ask the integrator)
+OUT OF LANE: backend/tests/test_hardening.py: owned by lane alerts
+OUT OF LANE: backend/uv.lock: a seam (ask the integrator)
+5 problem(s)
