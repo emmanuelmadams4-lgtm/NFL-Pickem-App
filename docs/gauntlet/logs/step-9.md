@@ -54,3 +54,53 @@ Decisions (each two-way):
 
 Red: `s9-red.log`, `ImportError: cannot import name 'score_backtest' from 'nflpi.analytics'` at collection. Right reason: the modules do not exist. The tests were written together by the coordinator (the builder never writes its own bar), every expected number worked out by hand in the test comments.
 BUILD_RUNG: gpt-6-sol medium (try 1 of 2). Reason: two small pure modules, but a leak or an off-by-one in the form or the walk-forward split would silently corrupt the ship decision.
+
+### Spec amendments after the freeze
+All came from the review of WO-1 (section 3). Red for each was written by the coordinator before the fix: `s9-red-2.log` (12 failed, 38 passed).
+* **S2, S3, S9 (pair rounding).** New `entry_pair(home, away)`: each side is an `entry`, except when both numbers end in exactly .5: then the home side rounds up and the road side rounds down, so a whole-number line total is kept (line 44 with spread 3 is typed as 24-20, not 24-21). `tiebreak_score` and every backtest entry use it. Why: the first rule added a point to the total on those lines, and total points is Yahoo's first tiebreak. **This changes the benchmark after the 2022 to 2025 result was seen**, so the choice was made on other data: on 5,136 regular-season games of 2002 to 2021 the pair rule cut the line's total-points miss from 10.6377 to 10.6275, and "home up" was the best of three ways to split (`s9-rounding-pre2022.log`). It can only make the benchmark harder to beat. Both results are kept: before `s9-backtest-before-pair-rule.log`, after `s9-backtest.log`. The verdict is the same in both.
+* **S11 (minimum sample).** `MIN_SHIP_GAMES = 200`: no candidate wins on fewer than 200 games (under one season). Why: on one game the interval has zero width and anything "wins".
+* **S10.** `summary` raises `ValueError` when a prediction or a score is missing, instead of returning NaN.
+* **S13.** `run_score_backtest` puts the games in kickoff order itself (the form and Elo read row order as time order), raises `ValueError` for an empty or repeated season list, and returns one more key, `excluded`: tested games left out under S14.
+* Two coordinator tests added after WO-1 pin clauses that had no killing test: default Elo, the ten-season default window, and the decision on all games (`test_s8_s11_the_run_uses_default_elo...`).
+
+## 3. IMPLEMENTATION
+Provider: Codex, every production line. The coordinator wrote the tests, the evidence scripts and this log, inspected each diff (`git status`, `git diff`, untracked files) and reran every proof itself.
+
+| Work order | Rung | Decision | Result (coordinator's own rerun) | Commit |
+|---|---|---|---|---|
+| WO-1 the two modules (`wo-1.md`) | `gpt-6-sol` medium, try 1 | `JEV: model:scores:wo-1 -> sol 0.79, medium 0.76`; `ADVISOR: sonnet -> sol medium` | 42 of 42 (`s9-wo1-proof.log`), ruff clean, 2 files in scope | `bf3613e` |
+| WO-2 review fixes + pair rounding (`wo-2.md`) | `gpt-6-luna` medium, try 1 | `JEV: model:scores:wo-2 -> luna 0.97, medium 0.84` (follow) | 50 of 50 (`s9-wo2-proof.log`), ruff clean, 2 files in scope | `1c5e104` |
+
+CLIMBS: none. STRIKES: none. Codex could not run `uvx ruff` in its sandbox on WO-3 and reported a lint error in the test file on WO-2 (the coordinator's own long line, fixed by the coordinator); the coordinator ran ruff itself each time.
+
+**Review fan-out on `bf3613e`** (read-only, reports in `~/.claude/plans/nfl-pickem-lanes-reviews/`):
+* `ecc:code-reviewer` (`s9-wo1-code-reviewer.md`): APPROVE, 0 CRITICAL, 0 HIGH, 1 MEDIUM, 4 LOW. It could not reach the test database, so it read the code only. MEDIUM: rounding both halves up adds a point to the total (fixed, pair rule). LOW: caller must sort (fixed), empty seasons crash (fixed), redundant copy (removed in cleanup), naive timestamp and the `BLEND_FEATURES` name clash (carried).
+* `ecc:silent-failure-hunter` (`s9-wo1-silent-failure-hunter.md`): 3 HIGH, 8 MEDIUM, 3 LOW, all by reading. Fixed in WO-2: F1 ship on a tiny sample, F2 uncounted exclusions, F3 unsorted frame, F4 duplicate seasons, F8 NaN in `summary`. Rejected: F11 (old franchise codes are already mapped in `nflverse.parse_games`). Carried: section 6.
+* `ecc:security-reviewer` and Dwight: not run. Reason: the dispatch asks for a security review only when file or network access is added; the modules are pure maths on a frame (S15 tests it).
+
+**Real-data result (S16), 2022 to 2025, 1,087 regular-season games, 0 excluded** (`s9-backtest.log`, full numbers `s9-report.json`; schedule file sha256 `4a493272693cdb79`):
+
+| Method | Team-score miss | Total-points miss | Against the line: team gain (95%) | Total gain (95%) | Wins |
+|---|---|---|---|---|---|
+| Betting line (closing spread and total) | 7.140 | 10.180 | | | |
+| Stats model, no line | 7.344 | 10.435 | -0.204 (-0.299 to -0.107) | -0.255 (-0.431 to -0.074) | no |
+| Stats model + line | 7.151 | 10.235 | -0.011 (-0.051 to +0.027) | -0.054 (-0.140 to +0.029) | no |
+
+A positive gain would mean the candidate was closer than the line. **Nothing ships. The line-implied score stays the answer** (`tiebreak_score`).
+* The stats model is clearly worse than the line on both measures (both intervals wholly below zero).
+* The blend is not different from the line: both intervals include zero, and it is a little worse on both.
+* Sunday night and Monday games only (152 games, reported, not the gate): line 7.099 / 10.289, stats 7.099 / 10.368, blend 7.062 / 10.401; no interval excludes zero.
+* By season the order never flips in a way that matters: the blend is ahead on team score in 2022 and 2024 and behind in 2023 and 2025.
+* Limits, said plainly: two candidates were tried against one benchmark with no correction; the line is the closing line, which the owner does not have mid-week; the average miss is about 7 points per team and 10 on the total for every method, so a typed score is a best guess, never a "lock".
+* **Hand check:** `s9-handcheck.py` (csv and math only, no project code) recounts the line's numbers: 18 of 18 MATCH (games, both misses, per season, and the two-slot subset), and shows three games worked through (`s9-handcheck.log`).
+
+## 4. CLEANUP
+`/refactor` pass by the coordinator, scope-locked to the two modules (its `guide.md` was not re-read; the catalog names below are from the skill's table). Analysis: no long function (largest is `summary`, about 30 lines), no deep nesting, two duplications, one dead call.
+
+| Smell | Transformation | Done by | Proof |
+|---|---|---|---|
+| The six `pred_*` column names were built twice | Extract constant `PRED_COLS` | Codex `gpt-6-luna` low, WO-3 (`wo-3.md`) | 50 of 50 (`s9-wo3-proof.log`) |
+| `predict_season` turned a pair of number lists into two entry columns twice | Extract function `_entry_columns` | same | same |
+| `.copy()` after `add_features`, which already returns a new frame | Remove dead code | same | S5 and S6 tests still green |
+
+`JEV: model:scores:wo-3 -> luna 0.86 (sure), effort medium 0.37 (unsure)`; the coordinator took `low` from the skill's effort table for cleanup, because the full test file, the mutation pass and the gate all check it. Commit `c8def6e`. After the cleanup the real-data report is byte-identical to the one before it (`cmp` on `s9-report.json`). No change needed, with reasons: `summary` stays one function (splitting the method loop from the comparison loop would add a second pass over the same arrays); `BLEND_FEATURES` keeps its frozen name (carried). Left as findings: section 6.
