@@ -22,7 +22,8 @@ MORNING = SATURDAY_8_ET + timedelta(minutes=30)
 STARS = {  # club -> (slot, rank, player_id, name, position)
     "BUF": [
         ("qb", 1, "A1", "Josh Allen", "QB"), ("off", 1, "C1", "James Cook", "RB"),
-        ("off", 2, "K1", "Khalil Shakir", "WR"), ("def", 1, "M1", "Matt Milano", "LB"), ("def", 2, "R1", "Ed Oliver", "DT"),
+        ("off", 2, "K1", "Khalil Shakir", "WR"), ("def", 1, "M1", "Matt Milano", "LB"),
+        ("def", 2, "R1", "Ed Oliver", "DT"),
     ],
     "MIA": [
         ("qb", 1, "T1", "Tua Tagovailoa", "QB"), ("off", 1, "W1", "Jaylen Waddle", "WR"),
@@ -79,6 +80,7 @@ def test_a1_only_a_new_alert_status_on_a_star_of_an_upcoming_game_is_a_change(wo
     report(world, "W1", "Jaylen Waddle", "MIA", "Out")
     report(world, "W1", "Jaylen Waddle", "MIA", "Out", practice="Did Not Participate")  # same status, practice moved
     report(world, "P1", "Jalen Ramsey", "MIA", None, position="CB")  # no status
+    report(world, "H1", "De'Von Achane", "MIA", "Probable")  # not an alert status
     report(world, "Z9", "Not A Star", "MIA", "Out")  # not on the list
     report(world, "X1", "Other Club Star", "NYJ", "Out")  # no game for that club this week
     assert star_alerts.run(world, now) == {"immediate": 1, "summary": 0}
@@ -282,7 +284,7 @@ def test_a8_the_summary_lists_four_stars_then_a_count_and_stays_short_and_plain(
     assert len(lines) == 5 and lines[-1] == "+2 more"
     assert len(message["body"]) < 300 and len(message["title"]) < 60
     assert all(ch.isprintable() or ch == "\n" for ch in message["body"])
-    assert all(len(line) <= 70 for line in lines)
+    assert all(len(line) <= 50 for line in lines)  # name cut at 40 + ' (BUF) Out'
 
 
 def test_a8_the_immediate_alert_cleans_the_name_and_injury_text_too(world, pushes):  # noqa: F811
@@ -294,6 +296,7 @@ def test_a8_the_immediate_alert_cleans_the_name_and_injury_text_too(world, pushe
     for text in (message["title"], message["body"]):
         assert all(ch.isprintable() for ch in text)
     assert len(message["title"]) < 80 and len(message["body"]) < 160
+    assert message["body"].endswith("Knee <b>" + "k" * 50 + ".")  # the injury text is cut at 60 characters
 
 
 def test_a8_format_characters_are_removed_and_a_full_width_injury_text_stays_short(world, pushes):  # noqa: F811
@@ -303,6 +306,7 @@ def test_a8_format_characters_are_removed_and_a_full_width_injury_text_stays_sho
     star_alerts.run(world, KICKOFF - timedelta(minutes=30))
     (message,) = sent(pushes)
     assert message["title"] == "Star out: Jaylen Waddle (MIA)"
+    assert message["body"] == "MIA @ BUF, 1:00 PM ET. " + "K" * 60 + "."
     assert len(json.dumps(message)) < 500
 
 
@@ -315,6 +319,15 @@ def test_a6_a_change_seen_just_after_a_summary_is_in_the_next_one(world, pushes)
     world.commit()
     assert star_alerts.run(world, day_two)["summary"] == 1
     assert [m["body"] for m in sent(pushes)] == ["Jalen Ramsey (MIA) Out", "Jaylen Waddle (MIA) Out"]
+
+
+def test_a6_a_change_to_a_game_already_in_its_last_ninety_minutes_is_not_repeated_in_the_summary(world, pushes):  # noqa: F811
+    early = datetime(2026, 10, 17, 14, 0, tzinfo=UTC)  # a 10:00 ET game on summary day
+    world.get(Game, "2026_07_MIA_BUF").kickoff_utc = early
+    world.commit()
+    report(world, "W1", "Jaylen Waddle", "MIA", "Out", observed=early - timedelta(hours=1))
+    assert star_alerts.run(world, early - timedelta(minutes=80)) == {"immediate": 1, "summary": 0}  # 08:40 ET
+    assert len(pushes.calls) == 1
 
 
 def test_m2_a_game_with_no_confirmed_time_never_gets_its_own_alert_but_is_in_the_summary(world, pushes):  # noqa: F811

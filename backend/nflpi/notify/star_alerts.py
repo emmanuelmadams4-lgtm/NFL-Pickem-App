@@ -35,8 +35,9 @@ class Change(NamedTuple):
 
 def _plain(text: str, limit: int) -> str:
     """One plain line: every Unicode category C character is dropped, whitespace runs become one space."""
-    spaced = "".join(" " if ch.isspace() else ch for ch in text if not unicodedata.category(ch).startswith("C"))
-    return " ".join(spaced.split())[:limit].strip()
+    spaced = "".join(" " if ch.isspace() else ch for ch in text)
+    kept = "".join(ch for ch in spaced if not unicodedata.category(ch).startswith("C"))
+    return " ".join(kept.split())[:limit].strip()
 
 
 def _seen(session: Session, *keys: str) -> bool:
