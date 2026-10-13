@@ -173,3 +173,23 @@ Scope-locked refactor pass on the code this step touched, as work order 5 (`wo-5
 Looked at and left, with the reason: `send_kickoff_reminders` (one loop, reads top to bottom); `alert_prediction_changes` (four plain branches, one per kind of alert); `keepPushSubscription` (linear, early returns); `scripts/smoke.sh` (longer than it could be, but each check is one visible block and the proof pins every line); the test files (long by nature; no helper is duplicated between `alerts.spec.ts` and `pwa.spec.ts` beyond `workerControls`, three lines, not worth a shared module).
 
 `gate.sh wo5` on the cleanup: pytest **126 passed** · ruff clean · no API drift · typecheck 0 · browser tests **99 passed, 1 failed on purpose** (A1c, work order 6), 2 skipped.
+
+### After the cleanup: work order 6, one old test made steady, design critic 2
+
+* **Work order 6** (`wo-6.md`; gpt-6-sol, medium, try 1). `keepPushSubscription` now answers whether it sent the subscription, and `PushKeepAlive` re-reads the meta answer when it did. 9 changed lines in `pwa.tsx`, 10 in `lib/push.ts`. Commit `7ff58fa`. It runs once per open (a `ran` flag), so the re-read cannot start the re-send again; checked in the code. Cleanup look at this diff after the fact: no change needed, it is the smallest form.
+* **`gate.sh wo6`**: pytest 126, ruff, no API drift, typecheck green; browser tests 99 passed, **1 failed: E4**, a step 2 test of the kickoff lock, not touched by this step. Cause: it fast-forwarded the page's clock past kickoff and lost a race against the page's own load on a busy machine. **An existing test changed** (`apps/web/e2e/step2.spec.ts`, commit `72df0b5`): it now stops the clock one second before kickoff (`page.clock.pauseAt`) and steps over it. Same thing checked (the pick locks at kickoff), no timing guess. 15 of 15 runs after.
+* **Design critic 2** (new fresh Sonnet subagent; `reviews/design-critic-2.md`, screenshots `shots/after-alerts-*.png`): its verdict was FAIL. I accepted none of its findings as a defect of this step and wrote the reason for each in that file, so the final critic and the review check can overrule me. Its Critical ("Alerts off" beside "1 device is subscribed") came from my screenshot script deleting the server's row behind the app's back; the count on screen was the app's saved answer (meta stays fresh for 5 minutes; read in the code, not rerun in a browser). The line itself is from before this step and counts every device, not this one. **Follow-up noted, not built:** say "other device" or hide the count when this device is off. Critic 1's three accepted findings are fixed and pinned by test A4.
+
+## 5. VERIFICATION
+
+Final gate on `e3b049d` (the last commit that changes code, tests or screenshots; later commits are this log and review files only).
+
+| Run | pytest | ruff | API drift | typecheck | Browser tests | Result |
+|---|---|---|---|---|---|---|
+| `final-a` | 126 passed | clean | none | 0 | 99 passed, **1 failed (E11 light)**, 2 skipped, 18.7 min | **RED: the Mac went to sleep** |
+| `final-b` | 126 passed | clean | none | 0 | **100 passed**, 2 skipped, 3.4 min | green |
+| `final-c` | 126 passed | clean | none | 0 | **100 passed**, 2 skipped, 6.2 min | green |
+
+`final-a` is not a product failure and not a flaky test: the Mac went into low-power sleep at 21:43:05 and woke at 21:57:49 local time (`pmset -g log`: "Entering Sleep state due to 'Low Power Sleep' ... Charge:1%"), 14.7 minutes, in the middle of E11 light, which then took 14.9 minutes and lost its page. `caffeinate -i` stops idle sleep, not a sleep forced by an empty battery. The machine was on mains power for `final-b` and `final-c`. Logs: `step-7-evidence/final-{a,b,c}-*.log`.
+
+Lane guard on `e3b049d`: `python3 ~/.claude/bin/lane-guard.py check ~/.claude/plans/nfl-pickem-lanes/lanes.md alerts 696c64f --repo .` printed `OK`.
