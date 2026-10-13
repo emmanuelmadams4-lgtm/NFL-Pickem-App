@@ -1,0 +1,27 @@
+CAUGHT   G1 per-point instead of by time
+CAUGHT   G1 log loss unweighted
+CAUGHT   G1 no clip at window start
+CAUGHT   G1 no clip at window end
+CAUGHT   G2 window ends at last row not first post
+CAUGHT   G2 lost treated as in_progress
+SURVIVED G2 later rows kept
+CAUGHT   G3 prediction after kickoff allowed
+CAUGHT   G3 first not last prediction
+CAUGHT   G3 backfill beats real snapshot
+CAUGHT   G3 backfill ignored
+CAUGHT   G3 kind label dropped
+CAUGHT   G4 outside 0..1 accepted
+SURVIVED G4 nonfinite accepted
+CAUGHT   G4 null espn row filled
+CAUGHT   G5 min points off
+CAUGHT   G5 coverage off
+CAUGHT   G6 tie graded
+CAUGHT   G7 no live data
+CAUGHT   G8 period > 4 dropped
+CAUGHT   G9 no clamp
+CAUGHT   G10 not-final graded
+CAUGHT   G11 averages weight by nothing: skip filter
+CAUGHT   G11 games_graded counts ties
+CAUGHT   kalshi pregame kind used
+CAUGHT   kalshi any source
+survivors: 2

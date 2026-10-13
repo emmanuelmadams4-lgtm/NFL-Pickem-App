@@ -353,6 +353,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/live/grades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Live Grades
+         * @description Reads a whole season per call: open it on the Results page, do not poll it.
+         */
+        get: operations["live_grades_api_live_grades_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/news": {
         parameters: {
             query?: never;
@@ -572,6 +592,29 @@ export interface components {
              */
             weight: number;
         };
+        /** ForecastGradeOut */
+        ForecastGradeOut: {
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scored" | "not_enough_data";
+            /** Points */
+            points: number;
+            /** Coverage */
+            coverage: number;
+            /** Brier */
+            brier: number | null;
+            /** Log Loss */
+            log_loss: number | null;
+            /**
+             * Kind
+             * @description For pregame_model: the chosen prediction's kind ('live' or 'backfill'); null otherwise
+             */
+            kind: string | null;
+        };
         /** GameDetail */
         GameDetail: {
             /** Game Id */
@@ -654,6 +697,31 @@ export interface components {
             surface: string | null;
             /** Weekday */
             weekday: string;
+        };
+        /** GameGradeOut */
+        GameGradeOut: {
+            /** Game Id */
+            game_id: string;
+            /** Week */
+            week: number;
+            /** Home Team */
+            home_team: string;
+            /** Away Team */
+            away_team: string;
+            /** Home Score */
+            home_score: number | null;
+            /** Away Score */
+            away_score: number | null;
+            /**
+             * Status
+             * @description graded|tie|no_live_data|in_progress|incomplete; incomplete is final with no closing post row
+             * @enum {string}
+             */
+            status: "graded" | "tie" | "no_live_data" | "in_progress" | "incomplete";
+            /** Window Seconds */
+            window_seconds: number | null;
+            /** Forecasters */
+            forecasters: components["schemas"]["ForecastGradeOut"][];
         };
         /** GameShareOut */
         GameShareOut: {
@@ -834,6 +902,19 @@ export interface components {
              * @description When this game's numbers last changed
              */
             updated_at: string;
+        };
+        /** LiveGradesOut */
+        LiveGradesOut: {
+            /** Season */
+            season: number;
+            /** Week */
+            week: number;
+            /** Games */
+            games: components["schemas"]["GameGradeOut"][];
+            /** @description Means are over each forecaster's own scored games and are not comparable across forecasters; compare only on the same games. */
+            week_summary: components["schemas"]["SummaryOut"];
+            /** @description Means are over each forecaster's own scored games and are not comparable across forecasters; compare only on the same games. */
+            season_summary: components["schemas"]["SummaryOut"];
         };
         /** LiveOut */
         LiveOut: {
@@ -1299,6 +1380,30 @@ export interface components {
             reports_seen: number;
             /** Checked At */
             checked_at: string | null;
+        };
+        /** SummaryForecasterOut */
+        SummaryForecasterOut: {
+            /** Name */
+            name: string;
+            /** Games */
+            games: number;
+            /**
+             * Brier
+             * @description Means are over each forecaster's own scored games and are not comparable across forecasters; compare only on the same games.
+             */
+            brier: number | null;
+            /**
+             * Log Loss
+             * @description Means are over each forecaster's own scored games and are not comparable across forecasters; compare only on the same games.
+             */
+            log_loss: number | null;
+        };
+        /** SummaryOut */
+        SummaryOut: {
+            /** Games Graded */
+            games_graded: number;
+            /** Forecasters */
+            forecasters: components["schemas"]["SummaryForecasterOut"][];
         };
         /** Tally */
         Tally: {
@@ -2231,6 +2336,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LiveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    live_grades_api_live_grades_get: {
+        parameters: {
+            query?: {
+                season?: string | null;
+                week?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveGradesOut"];
                 };
             };
             /** @description Validation Error */

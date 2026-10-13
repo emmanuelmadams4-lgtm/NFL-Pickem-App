@@ -1,0 +1,8 @@
+pytest exit 0
+[32m[32m[1m1268 passed[0m[32m in 164.35s (0:02:44)[0m[0m
+[1;32mAll checks passed![0m
+ruff exit 0
+FAILED: Target database is not up to date.
+alembic check exit 255
+genapi exit 0
+drift check done

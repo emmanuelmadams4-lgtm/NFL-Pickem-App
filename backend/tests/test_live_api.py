@@ -101,7 +101,7 @@ def test_the_route_needs_the_token():
 def test_there_is_exactly_one_live_route_and_it_only_reads(client):
     paths = app.openapi()["paths"]
     assert set(paths["/api/live"]) == {"get"}
-    assert [p for p in paths if p.startswith("/api/live")] == ["/api/live"]
+    assert [p for p in paths if p.startswith("/api/live")] == ["/api/live", "/api/live/grades"]  # grades: step 15f
     for verb in ("post", "put", "patch", "delete"):
         assert getattr(client, verb)("/api/live").status_code == 405
 

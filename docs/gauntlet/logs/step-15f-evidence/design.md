@@ -1,0 +1,16 @@
+# Step 15f design (frozen before code). Server only. Tests: backend/tests/test_live_grade.py
+
+Forecasters (fixed order): `pregame_model`, `espn_live`, `kalshi_live`. Outcome y = 1 if home won, 0 if away won.
+
+* G1 WEIGHTING = BY TIME. Each stored point holds its value until the next stored row of the same source for the game (or the window end) and counts for the seconds it held. Why: ESPN stores a row only on change and Kalshi when polled, so a busy stretch of play would get many rows and a quiet one (halftime) one; per-point voting would grade the density of the data, not the forecast. The flat pregame baseline is weighted the same way (whole window).
+* G2 WINDOW. Start = fetched_at of the game's first `in` live_states row. End = fetched_at of the game's LAST live_states row, which must be state `post` or `lost`. Last row `in` = no end seen = `in_progress`, never graded. A `lost`/`post`/`pre` row is never a point; it ends the hold before it.
+* G3 PREGAME. The last prediction with created_at < kickoff, or kind `backfill` (same rule as the Results page, views.py), ordered by (created_at, id); its home_win_prob is held flat over the window. None -> not_enough_data.
+* G4 MISSING. A value that is null, not finite, or outside 0..1 is missing: it gets no weight, ends the previous hold, and is never filled, guessed or clamped.
+* G5 ENOUGH DATA. espn_live and kalshi_live are scored only with >= 3 held segments (MIN_POINTS) and covered time >= 50% of the window (MIN_COVERAGE). Pregame needs 1 point. Otherwise status `not_enough_data` with brier/log_loss null (points and coverage still shown).
+* G6 TIE. Final scores equal -> status `tie`, no forecasters, not in any average.
+* G7 NO LIVE DATA. Final game, rows exist but none is `in` -> `no_live_data`, no forecasters. A final game with no rows at all is left out of the list.
+* G8 OVERTIME. No special case: rows with period > 4 are ordinary points; the window runs to the last row.
+* G9 CLAMP. Log loss uses metrics.game_log_loss (clip at metrics.EPS); Brier is not clamped.
+* G10 IN PROGRESS. games.status != 'final' (or a missing score) with any live row -> `in_progress`, never scored, never in an average. Not final and no live row -> left out.
+* G11 AVERAGES. Per forecaster: mean of per-game Brier and log loss over the games where it was `scored`, equal weight per game; `games` = how many; null when none. Week and season (season = every week). `games_graded` = games with status graded.
+* G12 ROUTE. GET /api/live/grades?season=&week= (token, read only). season 2000..2100, week 1..22, sent as plain digits; anything else -> 422 {"detail": "season must be a year 2000 to 2100 and week a number 1 to 22"}, no value echoed (params are taken as text and checked by hand because FastAPI's own 422 echoes the input). Reply: {season, week, games[], week_summary, season_summary}. games[]: game_id, week, home_team, away_team, home_score, away_score, status (graded|tie|no_live_data|in_progress), window_seconds (null unless graded), forecasters[] (name, status scored|not_enough_data, points, coverage 0..1, brier, log_loss; empty unless graded). summary: games_graded, forecasters[] (name, games, brier, log_loss). Work per request is a fixed number of queries (games, live_states, quotes, predictions) over one season.
