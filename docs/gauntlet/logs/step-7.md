@@ -143,3 +143,33 @@ Screenshots at 393px, dark and light, of each state (alerts on, delivered, refus
 * Accepted, red test first (`red-wo3b.log`), work order 3b: a refusal looked the same as a success (now the `text-bad` token); the result sat under the device count (now directly under the buttons); the button stayed busy while the device count was re-read (now free when the result shows).
 * Rejected, with the reason in the report: dropping the push service's host and status from a refusal. The roadmap row asks for the push service's status on screen.
 * Deferred: for a moment after opening, Settings can show "0 devices are subscribed" beside "Alerts on", until the count is re-read.
+
+### Work order 3b and two flaky tests of mine
+
+Work order 3b (`wo-3b.md`; gpt-6-sol, medium, try 1; Jev sol 0.9, effort by a Sonnet advisor: medium 0.68) made the three accepted design fixes in `alerts.tsx`. Commit `070bf84`.
+
+`gate.sh wo3b`: pytest 126, ruff, no API drift, typecheck green; **browser tests 98 passed, 1 failed: A3**. Not the builder's change. I reproduced it (2 of 6 runs of the alerts file) and found two races in my own test file:
+
+* **A3.** The browser's debug channel drops a delivered push now and then, with no error and no worker event at all (seen with passive logging: registration and "activated, running" reported, push sent, then nothing). Waiting for "activated, running" did not cure it (1 of 10 still red). The test now sends the push again while nothing has been shown; the last check is exact, so a push that arrived twice would fail it. This is a limit of the test channel, not of the app: the worker's handler is never reached in a dropped run.
+* **A1.** The test deleted the server's row while the app's re-send was still in flight, so the row came back before the check. It now waits for the server's answer to the re-send.
+* Also seen: the stand-in tap (a made-up `notificationclick`) makes the worker log "Can not call waitUntil on a script constructed ExtendableEvent". The handler has already started its steps by then, so the window is still sent to the link. A real tap has no such limit. Said in a comment in the test.
+
+Fix committed as `fa7a842`. Then the whole alerts file ran **20 times in a row: 20 of 20** (`alerts-loop.log`). Because a test went red in this step, the fresh critic is asked for three gate runs.
+
+### A finding from retaking the screenshots (work order 6)
+
+Design critic 1's point 6, which I had deferred as momentary, is not momentary: after the app re-sends its subscription on open, Settings keeps saying "0 devices are subscribed on the server." beside "Alerts on" until something else re-reads the count. A false statement on the screen he checks. Red test A1c (`red-wo6.log`, red 3 of 3), work order 6 (`wo-6.md`; gpt-6-sol, medium; Jev sol 0.98, effort by a Sonnet advisor: medium 0.8).
+
+## 4. CLEANUP
+
+Scope-locked refactor pass on the code this step touched, as work order 5 (`wo-5.md`; gpt-6-sol, high, try 1; Jev `model:alerts:wo-5`: sol 0.94, high 0.97). No behaviour change, no test changed. Commit `a4285a8`.
+
+| Where | Simplification |
+|---|---|
+| `notify/push.py` `_send` | The block that records a device's result was written four times; each branch now sets one outcome and it is appended once. |
+| `predictions/engine.py` `refresh_predictions` | The side whose starter changed and the new starter's name are found in one loop; the second lookup and the type check at the call are gone. |
+| `settings/alerts.tsx`, `lib/push.ts` | The words for a test alert reply moved from a nested conditional inside the click handler to one pure function, `testAlertWords`. |
+
+Looked at and left, with the reason: `send_kickoff_reminders` (one loop, reads top to bottom); `alert_prediction_changes` (four plain branches, one per kind of alert); `keepPushSubscription` (linear, early returns); `scripts/smoke.sh` (longer than it could be, but each check is one visible block and the proof pins every line); the test files (long by nature; no helper is duplicated between `alerts.spec.ts` and `pwa.spec.ts` beyond `workerControls`, three lines, not worth a shared module).
+
+`gate.sh wo5` on the cleanup: pytest **126 passed** · ruff clean · no API drift · typecheck 0 · browser tests **99 passed, 1 failed on purpose** (A1c, work order 6), 2 skipped.
