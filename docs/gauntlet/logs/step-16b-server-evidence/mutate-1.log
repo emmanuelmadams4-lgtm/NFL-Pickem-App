@@ -1,0 +1,27 @@
+KILLED  nflpi/api/group.py int(content_length) > cap
+SURVIVED nflpi/api/group.py len(data) + len(chunk) > cap
+SURVIVED nflpi/api/group.py len(data) + len(chunk) > cap
+KILLED  nflpi/api/group.py cap = importer.MAX_BYTES
+SURVIVED nflpi/api/group.py Query(ge=2000, le=2100)
+SURVIVED nflpi/api/group.py Query(ge=2000, le=2100)
+KILLED  nflpi/api/group.py Query(ge=1, le=22)
+KILLED  nflpi/api/group.py Query(ge=1, le=22)
+KILLED  nflpi/api/group.py raise HTTPException(422, str(exc)) from None
+KILLED  nflpi/api/group.py "group import failed: database error"
+KILLED  nflpi/api/group.py     except RuntimeError:         raise HTTPException(500, "g
+KILLED  nflpi/api/group.py dependencies=[Depends(_token)]
+KILLED  nflpi/api/group.py require_token(authorization)
+SURVIVED nflpi/api/group.py await run_in_threadpool(_import_file, season, data)
+KILLED  nflpi/group/queries.py .order_by(Game.kickoff_utc, Game.game_id)
+KILLED  nflpi/group/queries.py Game.season == season, Game.week == week
+KILLED  nflpi/group/queries.py Game.season == season, Game.week == week
+KILLED  nflpi/group/queries.py "share": count / picked if picked else None
+KILLED  nflpi/group/queries.py GroupPick.game_id.in_(game_ids)
+KILLED  nflpi/group/queries.py "avg_confidence": sum(confidence) / len(confidence) if confi
+KILLED  nflpi/group/queries.py "members": len(picks), "picked": picked,                    
+survivors: 5
+--- rerun of the 5 survivors after adding tests (asgi chunk test, small-header test, threadpool test, season detail-is-list):
+SURVIVED nflpi/api/group.py len(data) + len(chunk) > cap -> len(data) > cap  (equivalent: Starlette yields a final empty chunk, which trips the shifted check; the output is the same 413)
+KILLED  group.py len(data) + len(chunk) > cap -> ... > cap + 1
+KILLED  group.py Query(ge=2000) -> ge=1999 ; Query(le=2100) -> le=2101
+KILLED  group.py run_in_threadpool removed

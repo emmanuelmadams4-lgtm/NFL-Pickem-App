@@ -1,0 +1,2 @@
+[31mImportError while importing test module '/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-groupwire/backend/tests/test_group_api.py'.
+    [0m[94mfrom[39;49;00m[90m [39;49;00m[04m[96mnflpi[39;49;00m[04m[96m.[39;49;00m[04m[96mgroup[39;49;00m[04m[96m.[39;49;00m[04m[96mimporter[39;49;00m[90m [39;49;00m[94mimport[39;49;00m GroupDatabaseError, ImportResult[90m[39;49;00m

@@ -1215,6 +1215,199 @@
      }
     }
    }
+  },
+  "/api/group/import": {
+   "post": {
+    "summary": "Import Csv",
+    "operationId": "import_csv_api_group_import_post",
+    "parameters": [
+     {
+      "name": "season",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 2100,
+       "minimum": 2000,
+       "title": "Season"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/group/standings": {
+   "get": {
+    "summary": "Standings",
+    "operationId": "standings_api_group_standings_get",
+    "parameters": [
+     {
+      "name": "season",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 2100,
+       "minimum": 2000,
+       "title": "Season"
+      }
+     },
+     {
+      "name": "week",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 22,
+       "minimum": 1,
+       "title": "Week"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/StandingsOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/group/shares": {
+   "get": {
+    "summary": "Shares",
+    "operationId": "shares_api_group_shares_get",
+    "parameters": [
+     {
+      "name": "season",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 2100,
+       "minimum": 2000,
+       "title": "Season"
+      }
+     },
+     {
+      "name": "week",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "maximum": 22,
+       "minimum": 1,
+       "title": "Week"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SharesOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -1917,6 +2110,53 @@
     ],
     "title": "GameDetail"
    },
+   "GameShareOut": {
+    "properties": {
+     "game_id": {
+      "type": "string",
+      "title": "Game Id"
+     },
+     "away_team": {
+      "type": "string",
+      "title": "Away Team"
+     },
+     "home_team": {
+      "type": "string",
+      "title": "Home Team"
+     },
+     "kickoff_utc": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Kickoff Utc"
+     },
+     "members": {
+      "type": "integer",
+      "title": "Members"
+     },
+     "picked": {
+      "type": "integer",
+      "title": "Picked"
+     },
+     "away": {
+      "$ref": "#/components/schemas/SideOut"
+     },
+     "home": {
+      "$ref": "#/components/schemas/SideOut"
+     }
+    },
+    "type": "object",
+    "required": [
+     "game_id",
+     "away_team",
+     "home_team",
+     "kickoff_utc",
+     "members",
+     "picked",
+     "away",
+     "home"
+    ],
+    "title": "GameShareOut"
+   },
    "GameSummary": {
     "properties": {
      "game_id": {
@@ -2188,6 +2428,33 @@
      "stale_datasets"
     ],
     "title": "HealthOut"
+   },
+   "ImportOut": {
+    "properties": {
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "picks",
+       "standings"
+      ],
+      "title": "Kind"
+     },
+     "rows": {
+      "type": "integer",
+      "title": "Rows"
+     }
+    },
+    "type": "object",
+    "required": [
+     "season",
+     "kind",
+     "rows"
+    ],
+    "title": "ImportOut"
    },
    "ImportResult": {
     "properties": {
@@ -3364,6 +3631,32 @@
     "type": "object",
     "title": "SettingsIn"
    },
+   "SharesOut": {
+    "properties": {
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "games": {
+      "items": {
+       "$ref": "#/components/schemas/GameShareOut"
+      },
+      "type": "array",
+      "title": "Games"
+     }
+    },
+    "type": "object",
+    "required": [
+     "season",
+     "week",
+     "games"
+    ],
+    "title": "SharesOut"
+   },
    "SheetOut": {
     "properties": {
      "label": {
@@ -3468,6 +3761,117 @@
      "differs"
     ],
     "title": "SheetOut"
+   },
+   "SideOut": {
+    "properties": {
+     "team": {
+      "type": "string",
+      "title": "Team"
+     },
+     "picks": {
+      "type": "integer",
+      "title": "Picks"
+     },
+     "share": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Share"
+     },
+     "avg_confidence": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Avg Confidence"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team",
+     "picks",
+     "share",
+     "avg_confidence"
+    ],
+    "title": "SideOut"
+   },
+   "StandingOut": {
+    "properties": {
+     "member": {
+      "type": "string",
+      "title": "Member"
+     },
+     "points": {
+      "type": "integer",
+      "title": "Points"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank"
+     }
+    },
+    "type": "object",
+    "required": [
+     "member",
+     "points",
+     "total",
+     "rank"
+    ],
+    "title": "StandingOut"
+   },
+   "StandingsOut": {
+    "properties": {
+     "season": {
+      "type": "integer",
+      "title": "Season"
+     },
+     "week": {
+      "type": "integer",
+      "title": "Week"
+     },
+     "weeks_counted": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Weeks Counted"
+     },
+     "rows": {
+      "items": {
+       "$ref": "#/components/schemas/StandingOut"
+      },
+      "type": "array",
+      "title": "Rows"
+     }
+    },
+    "type": "object",
+    "required": [
+     "season",
+     "week",
+     "weeks_counted",
+     "rows"
+    ],
+    "title": "StandingsOut"
    },
    "Tally": {
     "properties": {
