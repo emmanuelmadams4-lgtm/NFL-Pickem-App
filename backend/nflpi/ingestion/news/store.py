@@ -30,8 +30,8 @@ def store_items(
             team_ids=tied.team_ids,
             player_ids=tied.player_ids,
             tags=tied.tags,
-        )
-        added += session.execute(stmt.on_conflict_do_nothing()).rowcount
+        ).returning(NewsItem.id)
+        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
     session.commit()
     return added
 

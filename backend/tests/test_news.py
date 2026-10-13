@@ -627,6 +627,21 @@ def test_teams_match_on_whole_names_and_nicknames_ignoring_case(session):
         assert tie(names, miss).team_ids == [], miss
 
 
+def test_odd_unicode_case_in_a_headline_never_raises_and_never_matches_by_accident(session):
+    names = seed_names(session)
+    for text in [
+        "MIAMI DOLPH\u0130NS win",
+        "Bills\u017f beat Jets",
+        "TYREEK H\u0130LL is back",
+        "STRASSE and Stra\u00dfe",
+    ]:
+        got = tie(names, text)
+        assert got.player_ids == [] or text.startswith("TYREEK")
+    assert tie(names, "BILLS and \u212aELLY").team_ids == [
+        "BUF"
+    ]  # the Kelvin sign is not a K we know; Bills still match
+
+
 def test_a_player_matches_on_his_full_name_and_brings_his_club(session):
     names = seed_names(session)
     got = tie(names, "Garrett Wilson limited", "")
@@ -982,6 +997,14 @@ def test_a_page_that_is_not_a_feed_fails_the_run_and_keeps_old_data(session):
     web = web_for(ESPN, b"<html><body>Please enable JavaScript</body></html>")
     (made,) = go(session, web, sources=(ESPN,))
     assert made.status == "failed" and not made.error.startswith("blocked:") and len(rows(session)) == 1
+
+
+def test_a_not_modified_poll_still_prunes(session):
+    names = seed_names(session)
+    store.store_items(session, "espn", make_items("ancient"), names, RECORDED_AT - timedelta(days=45))
+    web = web_for(ESPN, b"", extra={(ESPN.host, "/espn/rss/nfl/news"): httpx.Response(304)})
+    (made,) = go(session, web, sources=(ESPN,))
+    assert made.status == "ok" and made.rows == 0 and rows(session) == []
 
 
 def test_pruning_runs_after_a_good_poll_only(session):

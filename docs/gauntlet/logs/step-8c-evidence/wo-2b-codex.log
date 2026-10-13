@@ -1,0 +1,185 @@
+OpenAI Codex v0.156.1
+--------
+[1mworkdir:[0m /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[1mmodel:[0m gpt-6-luna
+[1mprovider:[0m openai
+[1mapproval:[0m never
+[1msandbox:[0m workspace-write [workdir, /tmp, $TMPDIR]
+[1mreasoning effort:[0m low
+[1mreasoning summaries:[0m none
+[1msession id:[0m 01a1337f-4ac8-7ff2-9327-7dbbf55bd2da
+--------
+[36muser[0m
+CODEX WORK ORDER 2b (narrow correction, lane news; my spec was wrong, not your code)
+
+GOAL: in backend/nflpi/ingestion/news/store.py make store_items return the true number of NEW rows.
+FAILING EVIDENCE: `result.rowcount` is -1 for the single-row `insert(...).values(...).on_conflict_do_nothing()` on this driver (psycopg 3), so store_items returns a negative number (tests expect 1, 2, 100; observed -1, -2, -100).
+ALLOWED SCOPE: backend/nflpi/ingestion/news/store.py only (only the line that counts the inserted rows, and only what that needs).
+REQUIREMENT: add `.returning(NewsItem.id)` to the statement and count a row as new when the executed result yields a row (e.g. `session.execute(stmt).first() is not None`); a conflict (do nothing) yields no row. Keep one commit at the end as today. Leave prune() alone (its rowcount for DELETE is correct).
+PROOF: `bash docs/gauntlet/logs/step-8c-evidence/pure.sh` still ends "PURE OK". You cannot reach the database; the coordinator runs the rest.
+CONSTRAINTS: smallest diff, nothing else touched. DO NOT commit, push, install, use the network.
+RETURN: the changed lines.
+
+[2m2026-10-13T04:22:23.236561Z[0m [31mERROR[0m [2mrmcp::transport::worker[0m[2m:[0m worker quit with fatal: Transport channel closed, when AuthRequired(AuthRequiredError { www_authenticate_header: "Bearer error=\"invalid_request\", error_description=\"No access token was provided in this request\", resource_metadata=\"https://api.githubcopilot.com/.well-known/oauth-protected-resource/mcp/\"" })
+[2m2026-10-13T04:22:23.543894Z[0m [31mERROR[0m [2mrmcp::transport::worker[0m[2m:[0m worker quit with fatal: Transport channel closed, when AuthRequired(AuthRequiredError { www_authenticate_header: "Bearer error=\"invalid_request\", error_description=\"No access token was provided in this request\", resource_metadata=\"https://api.githubcopilot.com/.well-known/oauth-protected-resource/mcp/\"" })
+[35m[3mcodex[0m[0m
+I’ll inspect the target file, make only the requested counting change, then run the specified pure check and report the changed lines.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "sed -n '1,240p' backend/nflpi/ingestion/news/store.py && git status --short"[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 0ms:[0m
+"""Store deduplicated news items in step 8f."""
+
+import hashlib
+from datetime import datetime, timedelta
+
+from sqlalchemy import delete
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import Session
+
+from nflpi.ingestion.news import match, parse
+from nflpi.models import NewsItem
+
+KEEP_DAYS = 30
+
+
+def store_items(
+    session: Session, source_id: str, items: list[parse.Item], names: match.Names, fetched_at: datetime
+) -> int:
+    added = 0
+    for item in items:
+        tied = match.tie(item.title, item.extract, names)
+        stmt = insert(NewsItem).values(
+            source=source_id,
+            title=item.title,
+            title_sha256=hashlib.sha256(item.title.encode()).hexdigest(),
+            url_canonical=item.url,
+            published_at=item.published_at,
+            fetched_at=fetched_at,
+            extract=item.extract,
+            team_ids=tied.team_ids,
+            player_ids=tied.player_ids,
+            tags=tied.tags,
+        )
+        added += session.execute(stmt.on_conflict_do_nothing()).rowcount
+    session.commit()
+    return added
+
+
+def prune(session: Session, now: datetime) -> int:
+    result = session.execute(delete(NewsItem).where(NewsItem.fetched_at < now - timedelta(days=KEEP_DAYS)))
+    session.commit()
+    return result.rowcount
+?? docs/gauntlet/logs/step-8c-evidence/wo-2b-codex.log
+
+[1mapply patch[0m
+[1mpatch:[0m completed
+[2m/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/store.py[0m
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index 72ee19215ae1b0071f7c0c01481e578bf755c121..de972faf5133d6e063af549389f0ddc4258dbc09
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -30,8 +30,8 @@
+             team_ids=tied.team_ids,
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+-        )
+-        added += session.execute(stmt.on_conflict_do_nothing()).rowcount
++        ).returning(NewsItem.id)
++        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
+     session.commit()
+     return added
+ 
+
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index 72ee19215ae1b0071f7c0c01481e578bf755c121..de972faf5133d6e063af549389f0ddc4258dbc09
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -30,8 +30,8 @@
+             team_ids=tied.team_ids,
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+-        )
+-        added += session.execute(stmt.on_conflict_do_nothing()).rowcount
++        ).returning(NewsItem.id)
++        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
+     session.commit()
+     return added
+ 
+
+[35m[3mcodex[0m[0m
+The insert now returns the inserted ID, and the count increments only when execution yields a row. I’m running the requested pure check and confirming the diff is limited to this file.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'bash docs/gauntlet/logs/step-8c-evidence/pure.sh && git diff -- backend/nflpi/ingestion/news/store.py'[0m in /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news
+[32m succeeded in 787ms:[0m
+ERROR tests/test_news.py::test_pruning_runs_after_a_good_poll_only
+ERROR tests/test_news.py::test_with_every_source_down_the_poll_returns_failed_runs_and_never_raises
+ERROR tests/test_news.py::test_a_bad_dns_answer_for_one_source_does_not_stop_the_other
+114 passed, 45 errors in 0.54s
+PURE OK
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index 72ee192..de972fa 100644
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -30,8 +30,8 @@ def store_items(
+             team_ids=tied.team_ids,
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+-        )
+-        added += session.execute(stmt.on_conflict_do_nothing()).rowcount
++        ).returning(NewsItem.id)
++        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
+     session.commit()
+     return added
+ 
+
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index 72ee19215ae1b0071f7c0c01481e578bf755c121..de972faf5133d6e063af549389f0ddc4258dbc09
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -30,8 +30,8 @@
+             team_ids=tied.team_ids,
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+-        )
+-        added += session.execute(stmt.on_conflict_do_nothing()).rowcount
++        ).returning(NewsItem.id)
++        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
+     session.commit()
+     return added
+ 
+
+[35m[3mcodex[0m[0m
+Changed lines in [store.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/store.py:29):
+
+```python
+        ).returning(NewsItem.id)
+        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
+```
+
+`pure.sh` ended with **PURE OK**. It reported 114 passed and 45 errors. No commit made.
+diff --git a/backend/nflpi/ingestion/news/store.py b/backend/nflpi/ingestion/news/store.py
+index 72ee19215ae1b0071f7c0c01481e578bf755c121..de972faf5133d6e063af549389f0ddc4258dbc09
+--- a/backend/nflpi/ingestion/news/store.py
++++ b/backend/nflpi/ingestion/news/store.py
+@@ -30,8 +30,8 @@
+             team_ids=tied.team_ids,
+             player_ids=tied.player_ids,
+             tags=tied.tags,
+-        )
+-        added += session.execute(stmt.on_conflict_do_nothing()).rowcount
++        ).returning(NewsItem.id)
++        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
+     session.commit()
+     return added
+ 
+
+[2mtokens used[0m
+25,644
+Changed lines in [store.py](/Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-news/backend/nflpi/ingestion/news/store.py:29):
+
+```python
+        ).returning(NewsItem.id)
+        added += session.execute(stmt.on_conflict_do_nothing()).first() is not None
+```
+
+`pure.sh` ended with **PURE OK**. It reported 114 passed and 45 errors. No commit made.
