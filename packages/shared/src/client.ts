@@ -28,6 +28,9 @@ export type ImportResult = S["ImportResult"];
 export type PushSubscriptionIn = S["PushSubscriptionIn"];
 export type PushTestOut = S["PushTestOut"];
 export type SettingsIn = S["SettingsIn"];
+export type GroupImportResult = S["ImportOut"];
+export type GroupStandings = S["StandingsOut"];
+export type GroupShares = S["SharesOut"];
 export type Provider = "claude" | "jev";
 
 export class ApiError extends Error {
@@ -47,6 +50,7 @@ export interface ClientConfig {
 }
 
 export const API_TIMEOUT_MS = 5000;
+export const GROUP_UPLOAD_TIMEOUT_MS = 60_000;
 
 /** One typed client for web. Every call goes to our own backend only. */
 export function createClient(config: ClientConfig) {
@@ -115,6 +119,9 @@ export function createClient(config: ClientConfig) {
     updateSettings: (settings: SettingsIn) => call<Meta>("/settings", { method: "PUT", body: JSON.stringify(settings) }),
     refresh: () => call<{ started: boolean; reason?: string }>("/refresh", { method: "POST" }),
     freshness: () => call<Freshness[]>("/freshness"),
+    groupImport: (season: number, file: File) => call<GroupImportResult>(`/group/import?season=${season}`, { method: "POST", body: file, signal: AbortSignal.timeout(GROUP_UPLOAD_TIMEOUT_MS) }),
+    groupStandings: (season: number, week: number) => call<GroupStandings>(`/group/standings?season=${season}&week=${week}`),
+    groupShares: (season: number, week: number) => call<GroupShares>(`/group/shares?season=${season}&week=${week}`),
   };
 }
 

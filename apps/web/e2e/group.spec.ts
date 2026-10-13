@@ -167,9 +167,11 @@ test("PV1 member names never reach the console or browser storage", async ({ pag
 test("U1 a picks file is shown for confirmation with its season, sent as raw bytes only after confirming, and the screen refreshes", async ({ page, request }) => {
   const { text, unique } = await picksFor(request, 5, "Quin Test");
   expect(unique.length).toBeGreaterThanOrEqual(1);
-  const posts: { url: string; type: string; body: Buffer | null }[] = [];
-  page.on("request", (r) => {
-    if (r.method() === "POST" && r.url().includes("/api/group/import")) posts.push({ url: r.url(), type: r.headers()["content-type"] ?? "", body: r.postDataBuffer() });
+  const posts: { url: string; type: string; length: string }[] = [];
+  page.on("request", async (r) => {
+    if (r.method() !== "POST" || !r.url().includes("/api/group/import")) return;
+    const headers = await r.allHeaders(); // Playwright cannot read a File body, so the size is checked from the headers
+    posts.push({ url: r.url(), type: headers["content-type"] ?? "", length: headers["content-length"] ?? "" });
   });
   await open(page, 5);
   await chooser(page).setInputFiles(csvFile("picks-week-5.csv", text));
@@ -183,7 +185,7 @@ test("U1 a picks file is shown for confirmation with its season, sent as raw byt
   expect(posts).toHaveLength(1);
   expect(new URL(posts[0].url).searchParams.get("season")).toBe(String(SEASON));
   expect(posts[0].type).not.toContain("multipart");
-  expect(posts[0].body?.toString()).toBe(text);
+  expect(posts[0].length).toBe(String(Buffer.byteLength(text))); // multipart would add boundary bytes; the server parsed it, so it is raw CSV
   const g = unique[0];
   await expect(gameCard(page, g.away_team, g.home_team).getByTestId(`side-${g.home_team}`)).toContainText("1 of 1");
   await expect(confirmPanel(page)).toHaveCount(0);
@@ -272,7 +274,7 @@ test("L1 each section fails on its own with a retry, and an error is never shown
   await open(page, 3);
   await expect(page.getByRole("alert").filter({ hasText: "Could not load" })).toHaveCount(1);
   await expect(page.getByText("No standings for week 3 yet")).toHaveCount(0);
-  await expect(page.getByTestId("group-game")).not.toHaveCount(0); // the other section still works
+  await expect(page.getByText("No group picks for week 3 yet")).toBeVisible(); // the other section still works
   await page.unroute("**/api/group/standings*");
   await page.getByRole("button", { name: "Retry" }).click();
   await expect(page.getByRole("table", { name: "Standings for week 3" })).toBeVisible();

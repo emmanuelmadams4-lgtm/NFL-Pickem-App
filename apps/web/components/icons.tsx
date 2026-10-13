@@ -120,3 +120,12 @@ export const Gear = (p: IconProps) => (
     <path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4L6 18M18 18l-1.6-1.6M7.6 7.6L6 6" />
   </Icon>
 );
+
+export const People = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="9" cy="8.5" r="3" />
+    <path d="M3.5 19.5c.4-3.2 2.5-5 5.5-5s5.1 1.8 5.5 5" />
+    <circle cx="17" cy="9.5" r="2.4" />
+    <path d="M16.2 14.7c2.6.1 4.1 1.6 4.4 4" />
+  </Icon>
+);
