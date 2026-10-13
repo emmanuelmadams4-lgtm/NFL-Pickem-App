@@ -84,27 +84,41 @@ def calibration(p: np.ndarray, y: np.ndarray, bins: int = 10) -> list[dict]:
     return out
 
 
-def bootstrap_ci(values: np.ndarray, reps: int = 2000, seed: int = 7) -> tuple[float, float]:
+def bootstrap_ci(
+    values: np.ndarray, reps: int = 2000, seed: int = 7, clusters: np.ndarray | None = None
+) -> tuple[float, float]:
     """95% interval for the mean of per-game values (e.g. 1/0 correct)."""
+    if clusters is not None and len(clusters) != len(values):
+        raise ValueError("clusters must match values length")
     if len(values) == 0:
         return (float("nan"), float("nan"))
     rng = np.random.default_rng(seed)
-    idx = rng.integers(0, len(values), size=(reps, len(values)))
-    means = values[idx].mean(axis=1)
+    if clusters is None:
+        idx = rng.integers(0, len(values), size=(reps, len(values)))
+        means = values[idx].mean(axis=1)
+    else:
+        _, inverse = np.unique(clusters, return_inverse=True)
+        n_clusters = int(inverse.max()) + 1
+        sums = np.bincount(inverse, weights=values)
+        counts = np.bincount(inverse)
+        idx = rng.integers(0, n_clusters, size=(reps, n_clusters))
+        means = sums[idx].sum(axis=1) / counts[idx].sum(axis=1)
     return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
 
 
-def paired_gain(p_new: np.ndarray, p_old: np.ndarray, y: np.ndarray) -> dict:
+def paired_gain(p_new: np.ndarray, p_old: np.ndarray, y: np.ndarray, clusters: np.ndarray | None = None) -> dict:
     """Compare two predictions on the same games."""
     if len(p_new) != len(p_old) or len(p_new) != len(y) or len(y) == 0:
         raise ValueError("prediction arrays must have the same nonzero length")
     if not all(np.isfinite(values).all() for values in (p_new, p_old, y)):
         raise ValueError("prediction arrays must contain only finite values")
+    if clusters is not None and len(clusters) != len(y):
+        raise ValueError("clusters must match predictions length")
     loss_diff = game_log_loss(p_old, y) - game_log_loss(p_new, y)
     correct_diff = ((p_new > 0.5) == (y == 1)).astype(float) - ((p_old > 0.5) == (y == 1)).astype(float)
     loss_ci = list(bootstrap_ci(loss_diff))
     accuracy_diff = float(correct_diff.mean())
-    return {
+    result = {
         "n": int(len(y)),
         "log_loss_gain": float(loss_diff.mean()),
         "log_loss_gain_ci": loss_ci,
@@ -112,6 +126,14 @@ def paired_gain(p_new: np.ndarray, p_old: np.ndarray, y: np.ndarray) -> dict:
         "accuracy_diff_ci": list(bootstrap_ci(correct_diff)),
         "ships": bool(loss_ci[0] > 0 and accuracy_diff >= 0),
     }
+    if clusters is not None:
+        cluster_ci = list(bootstrap_ci(loss_diff, clusters=clusters))
+        result.update({
+            "log_loss_gain_ci_cluster": cluster_ci,
+            "accuracy_diff_ci_cluster": list(bootstrap_ci(correct_diff, clusters=clusters)),
+            "ships_cluster": bool(cluster_ci[0] > 0 and accuracy_diff >= 0),
+        })
+    return result
 
 
 def wilson_ci(correct: int, n: int, z: float = 1.96) -> tuple[float | None, float | None]:

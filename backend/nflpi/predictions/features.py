@@ -6,11 +6,20 @@ import numpy as np
 import pandas as pd
 
 from nflpi.predictions.elo import EloParams, run_elo
-from nflpi.predictions.market import novig_home_prob
+from nflpi.predictions.market import devig_home_prob, novig_home_prob
 
 BASE_FEATURES = ["elo_diff", "home_field", "home_qb_change", "away_qb_change"]
 # Tested and dropped: rest_diff (no log-loss gain in the 2012-2025 walk-forward backtest).
 BLEND_FEATURES = ["market_logit", *BASE_FEATURES]
+
+
+def market_logit(df: pd.DataFrame, method: str) -> pd.Series:
+    """Return clipped home market log-odds for the chosen margin method."""
+    probs = pd.Series([
+        devig_home_prob(h, a, method) if not (pd.isna(h) or pd.isna(a)) else np.nan
+        for h, a in zip(df["home_ml"], df["away_ml"], strict=True)
+    ], index=df.index, dtype=float).clip(0.01, 0.99)
+    return np.log(probs / (1 - probs))
 
 
 def team_game_epa(rows: list[dict]) -> pd.DataFrame:
