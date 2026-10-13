@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 
 import httpx
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, select
 
 from nflpi import jobs, live_worker, news_worker
 from nflpi.ingestion.news import sources
@@ -107,7 +107,7 @@ def test_w1_a_step_polls_both_sources_once_and_stores_the_items_tied_by_team(ses
     assert sorted(r.source for r in made) == ["cbs", "espn"]
     assert all(r.status == "ok" for r in made)
     assert session.scalar(select(func.count()).select_from(NewsItem)) > 20
-    assert session.scalar(select(func.count()).select_from(NewsItem).where(NewsItem.team_ids != [])) > 0
+    assert session.scalar(select(func.count()).select_from(NewsItem).where(cast(NewsItem.team_ids, String) != "[]")) > 0
     assert sum(p.endswith(httpx.URL(ESPN.url).path) for p in web.paths()) == 1
 
 
@@ -280,7 +280,7 @@ def test_w9_the_sweep_also_runs_on_every_wake_not_only_at_start_up(session, monk
     calls: list[int] = []
     waits: list[float] = []
     news_worker.run_forever(threading.Event(), wait=lambda s: waits.append(s) or len(waits) >= 3)
-    assert len(calls) >= 4  # once at start, once per wake
+    assert len(calls) == 3  # once at start, then after each of the first two waits (the third wait ends the loop)
 
 
 # ---------------------------------------------------------------- W8
