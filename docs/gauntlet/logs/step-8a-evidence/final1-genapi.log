@@ -1,0 +1,7 @@
+
+> gen:api
+> cd backend && uv run python -c "import json; from nflpi.api.main import app; print(json.dumps(app.openapi(), indent=1))" > ../packages/shared/openapi.json && cd .. && npx --yes openapi-typescript@7.13.0 packages/shared/openapi.json -o packages/shared/src/api-types.ts
+
+✨ [1mopenapi-typescript 7.13.0[22m
+🚀 [32mpackages/shared/openapi.json → [1mpackages/shared/src/api-types.ts[22m[39m [2m[68ms][22m
+no drift

@@ -156,7 +156,7 @@ def handmade() -> tuple[list[dict], list[dict], list[dict]]:
         stat(1, "NE", "00-030", "Two Way", "CB", receiving_yards=10, receptions=1, def_tackles_solo=3),
         stat(1, "NYJ", "00-040", "Trade Guy", "WR", receiving_yards=150, receiving_tds=2),
         stat(1, "NYJ", "00-041", "Stay Put", "WR", receiving_yards=20, receptions=2),
-        stat(1, "KC", "", "", "", rushing_yards=500),  # nflverse team rows have no player id: skipped
+        stat(1, "", "", "", "", rushing_yards=500),  # nflverse club-total rows have no player id: skipped unread
         stat(1, "KC", "00-004", "Cal Catch", "WR", season=2022, receiving_yards=900, receiving_tds=9),  # another season
         # week 2
         stat(2, "KC", "00-001", "Pat Passer", "QB", attempts=30),
@@ -371,6 +371,16 @@ def _without(rows: list[dict], column: str) -> list[dict]:
         "files_end_in_different_weeks",
         "fewer_weeks_than_stored",
         "fewer_clubs_than_stored",
+        "snaps_too_many",
+        "club_code_too_long",
+        "blank_snap_player_id",
+        "duplicate_stat_row",
+        "stat_not_a_number",
+        "stat_infinite",
+        "stat_week_out_of_range",
+        "long_bad_value",
+        "stat_column_all_na",
+        "club_missing_from_one_file",
     ],
 )
 def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
@@ -411,8 +421,29 @@ def test_a_bad_file_fails_the_run_and_keeps_the_old_stars(session, case):
     elif case == "fewer_clubs_than_stored":  # a cut file: one club is gone
         snaps = [r for r in snaps if r["team"] not in ("LV", "OAK")]
         stats = [r for r in stats if r["team"] != "LV"]
+    elif case == "snaps_too_many":  # no player takes more than 300 snaps in a game
+        snaps[0] = snaps[0] | {"offense_snaps": "301"}
+    elif case == "club_code_too_long":
+        snaps[0] = snaps[0] | {"team": "ABCDE"}
+    elif case == "blank_snap_player_id":
+        snaps[0] = snaps[0] | {"pfr_player_id": " "}
+    elif case == "duplicate_stat_row":
+        stats.append(stats[1])
+    elif case == "stat_not_a_number":
+        stats[1] = stats[1] | {"receptions": "many"}
+    elif case == "stat_infinite":
+        stats[1] = stats[1] | {"def_sacks": "inf"}
+    elif case == "stat_week_out_of_range":
+        stats[1] = stats[1] | {"week": "0"}
+    elif case == "long_bad_value":  # the logged error repeats at most 40 characters of the file
+        snaps[0] = snaps[0] | {"defense_snaps": "y" * 300}
+    elif case == "stat_column_all_na":  # a column that went missing upstream must not be ranked as zeros
+        stats = [r | {"def_safeties": "NA"} for r in stats]
+    elif case == "club_missing_from_one_file":  # a cut stats file: the Jets' week 2 rows are gone
+        stats = [r for r in stats if not (r["team"] == "NYJ" and r["week"] == "2")]
     run = service.ingest_stars(session, SEASON, snaps=snaps, stats=stats, players=players)
     assert run.status == "failed"
+    assert "y" * 41 not in run.error
     assert run.error
     if case.startswith("missing_"):  # the logged error names the file
         assert ("snap_counts" if case == "missing_snap_column" else "stats_player_week") in run.error
@@ -554,7 +585,7 @@ def test_stars_out_lists_stars_whose_latest_report_is_out_or_doubtful(session):
 def test_stars_out_matches_by_name_when_either_side_has_no_id(session):
     ingest(session)
     game_id = _game(session, SEASON, 2, "LV", "NE")
-    _injury(session, 2, "LV", "00-099", "Able Tackle", "Out", 3)  # the star has no id: matched by name and club
+    _injury(session, 2, "LV", "00-099", "Able Tackle", "Out", 3.26)  # the star has no id: matched by name and club
     _injury(session, 2, "NE", None, "Two Way", "Doubtful", 6)  # the report has no id: matched by name and club
     _injury(session, 2, "LV", "00-555", "Will Wide", "Out", 3)  # same name, different id: a different person
     result = stars_out(session, game_id, now=NOW)
@@ -562,6 +593,7 @@ def test_stars_out_matches_by_name_when_either_side_has_no_id(session):
         ("LV", "Able Tackle", None, "Out"),
         ("NE", "Two Way", "00-030", "Doubtful"),
     ]
+    assert [r["age_hours"] for r in result["out"]] == [3.3, 6.0]  # rounded to one decimal
     assert result["checked_at"] is None  # injuries were never refreshed: shown as missing, not guessed
 
 
@@ -609,6 +641,7 @@ def test_a_player_missing_from_the_id_file_is_joined_to_his_stats_by_name_and_cl
             snap(1, "DEN", "NewR01", "New Rookie", "WR", off=40),  # NewR01 is not in the id file
             snap(1, "DEN", "ZerQ01", "Zero Quarterback", "QB", off=0),
             snap(1, "DEN", "OthW01", "Other Wide", "WR", off=30),
+            snap(1, "LAC", "LacG01", "Lac Guard", "G", off=10),  # also not in the id file, and no stats: no id
         ],
         [
             stat(1, "DEN", "00-050", "New Rookie", "WR", receiving_yards=50, receptions=4),
@@ -624,4 +657,52 @@ def test_a_player_missing_from_the_id_file_is_joined_to_his_stats_by_name_and_cl
         ("off", 1, "New Rookie", "00-050", "WR", 40, 7.0, 11.0),
         ("off", 2, "Other Wide", "00-053", "WR", 30, 0.0, 3.0),
     ]
-    assert stars(session, 2, "LAC") == [("off", 1, "New Rookie", "00-052", "WR", 0, 30.0, 30.0)]
+    assert stars(session, 2, "LAC") == [
+        ("off", 1, "New Rookie", "00-052", "WR", 0, 30.0, 30.0),
+        ("off", 2, "Lac Guard", None, "G", 10, 0.0, 1.0),
+    ]
+
+
+# Rule edges the first critic found unpinned (S1, S3, S14)
+
+
+def test_tiebreaks_and_the_rarer_weights(session):
+    ids = [
+        {"pfr_id": pfr, "gsis_id": gsis}
+        for pfr, gsis in [
+            ("AaaQ01", "00-060"),
+            ("ZzzQ01", "00-061"),
+            ("TieP01", "00-062"),
+            ("ZerG01", "00-063"),
+            ("SafG01", "00-064"),
+            ("TacT02", "00-065"),
+        ]
+    ]
+    data = (
+        [
+            snap(1, "TB", "AaaQ01", "Aaa Passer", "QB", off=50),
+            snap(1, "TB", "ZzzQ01", "Zzz Passer", "QB", off=50),
+            snap(1, "TB", "TieP01", "Tie Player", "DB", off=20, de=40),
+            snap(1, "TB", "ZerG01", "Zero Guy", "WR"),
+            snap(1, "TB", "SafG01", "Safety Guy", "S", de=20),
+            snap(1, "TB", "TacT02", "Tackler Tom", "LB", de=20),
+        ],
+        [
+            stat(1, "TB", "00-060", "Aaa Passer", "QB", attempts=10),
+            stat(1, "TB", "00-061", "Zzz Passer", "QB", attempts=20),
+            stat(1, "TB", "00-064", "Safety Guy", "S", def_safeties=1, def_tds=1),
+            stat(1, "TB", "00-065", "Tackler Tom", "LB", def_tackles_solo=7),
+        ],
+        ids,
+    )
+    assert ingest(session, data=data).status == "ok"
+    # Quarterbacks tie on 50 snaps: more pass attempts wins before the name does.
+    # Tie Player: offence 0.1 x 20 = 2.0, defence 0.05 x 40 = 2.0: a tie goes to offence.
+    # Zero Guy has no snaps and no production: not ranked, so offence has one star.
+    # Safety Guy 0.05 x 20 + 2 x 1 safety + 6 x 1 touchdown = 9.0; Tackler Tom 0.05 x 20 + 7 = 8.0.
+    assert stars(session, 2, "TB") == [
+        ("qb", 1, "Zzz Passer", "00-061", "QB", 50, 20.0, 50.0),
+        ("off", 1, "Tie Player", "00-062", "DB", 20, 0.0, 2.0),
+        ("def", 1, "Safety Guy", "00-064", "S", 20, 8.0, 9.0),
+        ("def", 2, "Tackler Tom", "00-065", "LB", 20, 7.0, 8.0),
+    ]
