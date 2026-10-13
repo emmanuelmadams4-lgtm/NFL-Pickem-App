@@ -74,7 +74,7 @@ def week_report(session: Session, season: int, week: int) -> dict:
         .where(QbObservation.game_id.in_(ids), QbObservation.observed_at < Game.kickoff_utc)
         .order_by(QbObservation.id)
     ):
-        pregame_qb[(obs.game_id, obs.side)] = obs.qb or None  # later ids overwrite earlier: newest pregame wins
+        pregame_qb[(obs.game_id, obs.side)] = obs.qb  # later ids overwrite earlier: newest pregame wins
     rows = []
     for g in games:
         seen = last_snap.get(g.game_id)
