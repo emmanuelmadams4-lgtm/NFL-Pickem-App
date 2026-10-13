@@ -1,10 +1,11 @@
 """Run ingestion jobs. Each run is logged; a failed run keeps old data in place."""
 
 import logging
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import and_, case, delete, func, select
+from sqlalchemy import and_, case, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -15,6 +16,10 @@ from nflpi.models import Game, IngestionRun, InjuryReport, MarketSnapshot, Team,
 from nflpi.predictions.market import novig_home_prob
 
 log = logging.getLogger(__name__)
+
+_COACH_CACHE: dict[int, tuple[float, dict[str, str]]] = {}
+COACH_CACHE_SECONDS = 6 * 3600
+MIN_CLUBS = 30
 
 STALE_HOURS = {
     "schedules": lambda s: s.stale_hours_schedules,
@@ -101,7 +106,11 @@ def upsert_games(session: Session, games: list[dict], observed_at: datetime) -> 
     return len(rows)
 
 
-def ingest_schedules(session: Session, rows: list[dict[str, str]] | None = None) -> IngestionRun:
+def ingest_schedules(
+    session: Session,
+    rows: list[dict[str, str]] | None = None,
+    head_coaches: dict[str, str] | None = None,
+) -> IngestionRun:
     settings = get_settings()
 
     def job() -> int:
@@ -109,7 +118,47 @@ def ingest_schedules(session: Session, rows: list[dict[str, str]] | None = None)
         games = nflverse.parse_games(data, settings.first_season)
         return upsert_games(session, games, datetime.now(UTC))
 
-    return run_logged(session, nflverse.SOURCE, "schedules", job)
+    run = run_logged(session, nflverse.SOURCE, "schedules", job)
+    if rows is None or head_coaches is not None:
+        ingest_head_coaches(session, head_coaches)
+    return run
+
+
+def ingest_head_coaches(session: Session, coaches: dict[str, str] | None = None) -> IngestionRun:
+    def job() -> int:
+        season = session.scalar(select(func.max(Game.season)))
+        if season is None:
+            raise RuntimeError("no games loaded")
+        if coaches is not None:
+            current_coaches = coaches
+        else:
+            cached = _COACH_CACHE.get(season)
+            if cached is not None and time.monotonic() - cached[0] < COACH_CACHE_SECONDS:
+                current_coaches = cached[1]
+            else:
+                current_coaches = nflverse.fetch_head_coaches(season)
+                if len(current_coaches) < MIN_CLUBS:
+                    raise RuntimeError(
+                        f"ESPN listed a head coach for {len(current_coaches)} of 32 clubs; keeping the feed names"
+                    )
+                _COACH_CACHE[season] = (time.monotonic(), current_coaches)
+        changed = 0
+        for abbr, name in current_coaches.items():
+            for side in ("home", "away"):
+                result = session.execute(
+                    update(Game)
+                    .where(
+                        Game.season == season,
+                        getattr(Game, f"{side}_team") == abbr,
+                        getattr(Game, f"{side}_coach").is_distinct_from(name),
+                    )
+                    .values(**{f"{side}_coach": name})
+                )
+                changed += result.rowcount or 0
+        session.commit()
+        return changed
+
+    return run_logged(session, "espn", "head_coaches", job)
 
 
 def ingest_teams(session: Session, rows: list[dict[str, str]] | None = None) -> IngestionRun:

@@ -1,0 +1,15 @@
+[2mInstalled [1m70 packages[0m [2min 890ms[0m[0m
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m
+=================================== FAILURES ===================================
+[31m[1m_ test_head_coaches_come_back_under_our_club_codes_and_skip_clubs_with_two_listed _[0m
+
+    [0m[94mdef[39;49;00m[90m [39;49;00m[92mtest_head_coaches_come_back_under_our_club_codes_and_skip_clubs_with_two_listed[39;49;00m():[90m[39;49;00m
+        coaches = {[33m"[39;49;00m[33mBUF[39;49;00m[33m"[39;49;00m: [[33m"[39;49;00m[33mJoe Brady[39;49;00m[33m"[39;49;00m], [33m"[39;49;00m[33mLV[39;49;00m[33m"[39;49;00m: [[33m"[39;49;00m[33mKlint Kubiak[39;49;00m[33m"[39;49;00m], [33m"[39;49;00m[33mLAR[39;49;00m[33m"[39;49;00m: [[33m"[39;49;00m[33mSean McVay[39;49;00m[33m"[39;49;00m], [33m"[39;49;00m[33mWSH[39;49;00m[33m"[39;49;00m: [[33m"[39;49;00m[33mDan Quinn[39;49;00m[33m"[39;49;00m], [33m"[39;49;00m[33mARI[39;49;00m[33m"[39;49;00m: [[33m"[39;49;00m[33mA One[39;49;00m[33m"[39;49;00m, [33m"[39;49;00m[33mB Two[39;49;00m[33m"[39;49;00m]}[90m[39;49;00m
+>       got = nflverse.fetch_head_coaches([94m2026[39;49;00m, get=espn_get(coaches))[90m[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE       AttributeError: module 'nflpi.ingestion.nflverse' has no attribute 'fetch_head_coaches'[0m
+
+[1m[31mtests/test_data.py[0m:150: AttributeError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m tests/test_data.py::[1mtest_head_coaches_come_back_under_our_club_codes_and_skip_clubs_with_two_listed[0m - AttributeError: module 'nflpi.ingestion.nflverse' has no attribute 'fetch_h...
+[31m!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!![0m

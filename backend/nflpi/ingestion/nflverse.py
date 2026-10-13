@@ -8,7 +8,9 @@ import csv
 import io
 import math
 import time
+import unicodedata
 from datetime import datetime
+from urllib.parse import urlparse, urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -21,6 +23,31 @@ UTC = ZoneInfo("UTC")
 
 # Old franchise codes -> current code, so ratings carry across relocations.
 FRANCHISE = {"OAK": "LV", "SD": "LAC", "STL": "LA", "LAR": "LA"}
+ESPN_TEAMS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams"
+ESPN_COACHES_URL = "https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{season}/teams/{team_id}/coaches?lang=en"
+ESPN_COACHES_HOST = urlparse(ESPN_COACHES_URL).hostname
+ESPN_FRANCHISE = {"WSH": "WAS"}
+MAX_COACH_NAME_LENGTH = 64
+
+
+def _is_espn_link(url: str) -> bool:
+    parsed = urlsplit(url)
+    return (
+        parsed.scheme == "https"
+        and parsed.hostname == ESPN_COACHES_HOST
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.port in (None, 443)
+    )
+
+
+def _clean_name(first, last) -> str | None:
+    if not isinstance(first, str) or not isinstance(last, str):
+        return None
+    name = " ".join(
+        "".join(char for char in f"{first} {last}" if not unicodedata.category(char).startswith("C")).split()
+    )
+    return name if name and len(name) <= MAX_COACH_NAME_LENGTH else None
 
 
 def franchise(abbr: str) -> str:
@@ -31,16 +58,62 @@ def fetch_csv(path: str) -> list[dict[str, str]]:
     """Download a release asset with retries. Raises on final failure."""
     settings = get_settings()
     url = f"{settings.nflverse_base}/{path}"
+    return list(csv.DictReader(io.StringIO(_fetch(url, settings).text)))
+
+
+def _fetch(url: str, settings, follow_redirects=True, headers=None):
     last_error: Exception | None = None
     for attempt in range(settings.http_retries):
         try:
-            resp = httpx.get(url, timeout=settings.http_timeout_s, follow_redirects=True)
+            kwargs = {"timeout": settings.http_timeout_s, "follow_redirects": follow_redirects}
+            if headers is not None:
+                kwargs["headers"] = headers
+            resp = httpx.get(url, **kwargs)
             resp.raise_for_status()
-            return list(csv.DictReader(io.StringIO(resp.text)))
+            return resp
         except httpx.HTTPError as exc:
             last_error = exc
             time.sleep(2**attempt)
-    raise RuntimeError(f"nflverse download failed for {path}: {last_error}")
+    parsed = urlsplit(url)
+    raise RuntimeError(f"nflverse download failed for {parsed.hostname}{parsed.path}: {last_error}")
+
+
+def fetch_json(url: str) -> dict:
+    settings = get_settings()
+    return _fetch(
+        url, settings, follow_redirects=False, headers={"User-Agent": "nflpi (private pick'em app)"}
+    ).json()
+
+
+def fetch_head_coaches(season: int, get=None) -> dict[str, str]:
+    get = get or fetch_json
+    data = get(ESPN_TEAMS_URL)
+    coaches = {}
+    teams = data["sports"][0]["leagues"][0]["teams"]
+    for entry in teams[:40]:
+        abbr = "unknown"
+        try:
+            team = entry["team"]
+            abbr = franchise(ESPN_FRANCHISE.get(team["abbreviation"], team["abbreviation"]))
+            team_id = str(team["id"])
+            if not team_id.isdigit():
+                continue
+            items = get(ESPN_COACHES_URL.format(season=season, team_id=team_id)).get("items", [])
+            if len(items) != 1:
+                continue
+            url = items[0]["$ref"].replace("http://", "https://")
+            if not _is_espn_link(url):
+                continue
+            coach = get(url)
+            first, last = coach["firstName"], coach["lastName"]
+            name = _clean_name(first, last)
+            if name is not None:
+                coaches[abbr] = name
+        except (KeyError, TypeError) as exc:
+            raise RuntimeError(f"unexpected ESPN reply for {abbr}: {exc!r}") from exc
+    if not coaches:
+        raise RuntimeError("no head coaches found")
+    return coaches
 
 
 def _num(value: str) -> float | None:
