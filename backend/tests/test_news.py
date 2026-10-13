@@ -5,6 +5,7 @@ recorded real feeds and their robots.txt files (tests/fixtures/news) were fetche
 """
 
 import gzip
+import time
 import hashlib
 import socket
 import ssl
@@ -305,6 +306,35 @@ def test_a_public_ipv6_answer_is_pinned_and_compressed_bodies_are_not_requested(
     assert req.headers["accept-encoding"] == "identity"
 
 
+def test_a_hung_dns_lookup_is_cut_off_after_the_resolve_timeout(monkeypatch):
+    def hang(host, port, **kw):
+        time.sleep(2)
+        return []
+
+    monkeypatch.setattr(socket, "getaddrinfo", hang)
+    monkeypatch.setattr(fetch, "RESOLVE_TIMEOUT_S", 0.2)
+    started = time.perf_counter()
+    with pytest.raises(OSError):
+        fetch.default_resolver("www.espn.com")
+    assert time.perf_counter() - started < 1.5
+
+
+@pytest.mark.parametrize("encoding", ["gzip", "br", "deflate", "gzip, identity"])
+def test_a_reply_that_is_compressed_anyway_is_refused_before_it_is_decoded(encoding):
+    web = Web(
+        {("www.espn.com", "/feed"): httpx.Response(200, headers=XML | {"content-encoding": encoding}, content=b"x")}
+    )
+    with pytest.raises(fetch.FetchError, match="encoding"):
+        guarded("https://www.espn.com/feed", web)
+
+
+@pytest.mark.parametrize("encoding", ["", "identity", "Identity"])
+def test_an_uncompressed_reply_is_fine(encoding):
+    headers = XML | ({"content-encoding": encoding} if encoding else {})
+    web = Web({("www.espn.com", "/feed"): httpx.Response(200, headers=headers, content=feed_xml())})
+    assert guarded("https://www.espn.com/feed", web).status == 200
+
+
 def test_default_resolver_asks_for_port_443_and_returns_each_address_once(monkeypatch):
     asked = []
 
@@ -568,6 +598,17 @@ def test_a_feed_whose_every_entry_is_unusable_is_an_error_not_a_quiet_zero():
     old = (RECORDED_AT - timedelta(days=60)).strftime("%a, %d %b %Y %H:%M:%S GMT")
     assert one(feed_xml(item(date=old))) == []  # a quiet feed with only old news is fine
     assert [i.title for i in one(feed_xml(*foreign, item(title="ok")))] == ["ok"]
+
+
+def test_a_hostile_summary_of_unclosed_tags_is_cut_before_the_slow_parser_sees_it():
+    hostile = "<a " * 30_000  # the standard HTML parser is quadratic on this; 90 KB took 46 s uncut
+    started = time.perf_counter()
+    assert parse.clean_text(hostile + "tail", 300) == ""
+    assert time.perf_counter() - started < 1
+    feed = feed_xml(item(desc=("&lt;a " * 30_000)))
+    started = time.perf_counter()
+    (got,) = one(feed)
+    assert time.perf_counter() - started < 2 and len(got.extract) <= 300
 
 
 def test_clean_text_is_the_one_cleaner():
