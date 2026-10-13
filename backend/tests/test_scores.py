@@ -85,12 +85,27 @@ def test_s2_entry_rounds_half_up_and_never_goes_below_zero():
     assert isinstance(scores.entry(24.25), int)
 
 
+def test_s2_entry_pair_keeps_a_whole_number_total_when_both_halves_end_in_point_five():
+    assert scores.entry_pair(24.25, 21.25) == (24, 21)
+    assert scores.entry_pair(23.75, 23.75) == (24, 24)
+    assert scores.entry_pair(23.5, 20.25) == (24, 20)  # only one half: plain rounding
+    assert scores.entry_pair(20.25, 23.5) == (20, 24)
+    # both halves: the home team rounds up, the road team rounds down, so 44 stays 44
+    assert scores.entry_pair(23.5, 20.5) == (24, 20)
+    assert scores.entry_pair(21.5, 23.5) == (22, 23)  # home rounds up even as the underdog
+    assert scores.entry_pair(22.5, 22.5) == (23, 22)
+    assert scores.entry_pair(0.5, 0.5) == (1, 0)
+    assert scores.entry_pair(-3.0, 50.2) == (0, 50)
+    assert all(isinstance(v, int) for v in scores.entry_pair(23.5, 20.5))
+
+
 # ---- S3: the answer the app gives today ----
 
 
 def test_s3_tiebreak_score_is_the_rounded_line_implied_score_and_says_so():
     assert scores.tiebreak_score(3, 45.5) == {"home": 24, "away": 21, "method": "line_implied"}
-    assert scores.tiebreak_score(-2, 45) == {"home": 22, "away": 24, "method": "line_implied"}  # 21.5, 23.5
+    assert scores.tiebreak_score(-2, 45) == {"home": 22, "away": 23, "method": "line_implied"}  # 21.5, 23.5
+    assert scores.tiebreak_score(3, 44) == {"home": 24, "away": 20, "method": "line_implied"}  # 23.5, 20.5
     assert scores.tiebreak_score(None, 45.5) is None
     assert scores.tiebreak_score(3, float("nan")) is None
 
@@ -272,6 +287,9 @@ def test_s9_predictions_are_whole_number_entries_and_the_line_row_is_the_rounded
     assert (other["pred_stats_home"].to_numpy() == test["pred_stats_home"].to_numpy()).all()
     assert (other["pred_stats_away"].to_numpy() == test["pred_stats_away"].to_numpy()).all()
     assert (other["pred_implied_home"] == 16).all() and (other["pred_implied_away"] == 22).all()  # 16, 22
+    moved["spread_line"], moved["total_line"] = 3.0, 44.0  # 23.5 and 20.5: the pair rule keeps the total at 44
+    halves = sb.predict_season(scores.add_score_features(moved, EloParams()), 2021, window=2)
+    assert (halves["pred_implied_home"] == 24).all() and (halves["pred_implied_away"] == 20).all()
 
 
 # ---- S10, S11: the error table and the ship rule ----
@@ -303,12 +321,31 @@ def test_s10_summary_reports_team_score_error_and_total_points_error_by_hand():
     assert comp["stats"]["team_ci"] == list(bootstrap_ci(np.array([1, 3.5, 3, 2])))
     assert comp["stats"]["total_ci"] == list(bootstrap_ci(np.array([-2.0, 1, 0, 4])))
     assert comp["blend"]["team_ci"] == list(bootstrap_ci(np.array([2, 1.5, 2, 1.5])))
+    # both are closer in every game, but four games are far too few to ship anything (S11)
+    assert comp["stats"]["wins"] is False and comp["blend"]["wins"] is False
+    assert sb.pick_winner(report["comparisons"]) is None
+
+
+def test_s11_with_enough_games_both_candidates_win_and_the_bigger_team_gain_is_picked():
+    k = 50  # the same four games fifty times: 200 games
+    report = sb.summary(preds(ACTUAL * k, implied=IMPLIED * k, stats=STATS * k, blend=BLEND * k))
+    comp = {c["candidate"]: c for c in report["comparisons"]}
+    assert report["games"] == 200 == sb.MIN_SHIP_GAMES
+    assert (comp["stats"]["team_mae_gain"], comp["blend"]["team_mae_gain"]) == (2.375, 1.75)
     assert comp["stats"]["wins"] is True and comp["blend"]["wins"] is True
-    assert sb.pick_winner(report["comparisons"]) == "stats"  # both win; stats has the bigger team gain
+    assert sb.pick_winner(report["comparisons"]) == "stats"
+
+
+def test_s11_one_game_short_of_the_minimum_does_not_ship():
+    actual, line, cand = [(20, 20)] * 199, [(23, 19)] * 199, [(21, 21)] * 199
+    report = sb.summary(preds(actual, implied=line, stats=line, blend=cand))
+    blend = next(c for c in report["comparisons"] if c["candidate"] == "blend")
+    assert blend["team_ci"] == [1.0, 1.0] and blend["total_mae_gain"] == 0.0 and blend["wins"] is False
+    assert sb.pick_winner(report["comparisons"]) is None
 
 
 def test_s11_a_candidate_that_is_closer_on_team_scores_but_worse_on_total_points_does_not_ship():
-    n = 30
+    n = 200
     # actual 20-20; line 22-18 (team miss 2, total miss 0); stats 21-21 (team miss 1, total miss 2)
     report = sb.summary(preds([(20, 20)] * n, implied=[(22, 18)] * n, stats=[(21, 21)] * n, blend=[(22, 18)] * n))
     comp = {c["candidate"]: c for c in report["comparisons"]}
@@ -320,7 +357,7 @@ def test_s11_a_candidate_that_is_closer_on_team_scores_but_worse_on_total_points
 
 
 def test_s11_a_clear_team_score_win_with_equal_total_points_error_ships():
-    n = 30
+    n = 200
     # actual 20-20; line 23-19 (team miss 2, total miss 2); blend 21-21 (team miss 1, total miss 2)
     report = sb.summary(preds([(20, 20)] * n, implied=[(23, 19)] * n, stats=[(23, 19)] * n, blend=[(21, 21)] * n))
     comp = {c["candidate"]: c for c in report["comparisons"]}
@@ -329,13 +366,14 @@ def test_s11_a_clear_team_score_win_with_equal_total_points_error_ships():
 
 
 def test_s11_a_better_average_whose_interval_includes_zero_does_not_ship():
-    # even games: line 30-30 (team miss 10), stats 25-25 (team miss 5): +5
-    # odd games: line 20-20 (exact), stats 24-24 (team miss 4): -4.  Mean gain +0.5, interval spans zero.
-    implied = [(30, 30), (20, 20)] * 10
-    stats = [(25, 25), (24, 24)] * 10
-    report = sb.summary(preds([(20, 20)] * 20, implied=implied, stats=stats, blend=implied))
+    # even games: line 30-30 (team miss 10), stats 26-26 (team miss 6): +4
+    # odd games: line 20-20 (exact), stats 24-24 (team miss 4): -4.  Mean gain just above zero, interval spans zero.
+    implied = [(30, 30), (20, 20)] * 100
+    stats = [(26, 26), (24, 24)] * 100  # even games +4, odd games -4 ... plus two games that tip the mean
+    stats[0], stats[2] = (20, 20), (20, 20)  # +10 twice: mean gain = (98 * 4 + 20 - 100 * 4) / 200 = +0.06
+    report = sb.summary(preds([(20, 20)] * 200, implied=implied, stats=stats, blend=implied))
     stat = next(c for c in report["comparisons"] if c["candidate"] == "stats")
-    assert stat["team_mae_gain"] == 0.5 and stat["total_mae_gain"] == 1.0
+    assert stat["team_mae_gain"] == pytest.approx(0.06) and stat["total_mae_gain"] == pytest.approx(0.12)
     assert stat["team_ci"][0] < 0 < stat["team_ci"][1]
     assert stat["wins"] is False and sb.pick_winner(report["comparisons"]) is None
 
@@ -348,6 +386,15 @@ def test_s10_summary_of_no_games_reports_missing_not_a_number():
         assert c["team_mae_gain"] is None and c["total_mae_gain"] is None
         assert c["team_ci"] == [None, None] and c["total_ci"] == [None, None] and c["wins"] is False
     assert sb.pick_winner(report["comparisons"]) is None
+
+
+def test_s10_summary_refuses_a_missing_prediction_or_score():
+    good = preds(ACTUAL, implied=IMPLIED, stats=STATS, blend=BLEND)
+    for col in ("pred_blend_away", "home_score"):
+        bad = good.copy()
+        bad.loc[1, col] = np.nan
+        with pytest.raises(ValueError, match="missing"):
+            sb.summary(bad)
 
 
 # ---- S12: the two tiebreak slots ----
@@ -377,7 +424,8 @@ def test_s12_tiebreak_slot_is_sunday_night_or_monday_in_eastern_time(weekday, ki
 def test_s13_backtest_report_on_the_fixture_matches_an_independent_count():
     df = frame()
     report = sb.run_score_backtest(df, [2021, 2022], window=3)
-    assert set(report) == {"seasons", "games", "methods", "comparisons", "by_season", "tiebreak_slots", "ships"}
+    assert set(report) == {"seasons", "games", "methods", "comparisons", "by_season", "tiebreak_slots", "ships", "excluded"}
+    assert report["excluded"] == 0
     tested = df[df["season"].isin([2021, 2022]) & (df["status"] == "final") & (df["game_type"] == "REG")]
     assert report["seasons"] == [2021, 2022] and report["games"] == len(tested) > 0
     # the fixture line is 3 and 45.5 for every game, so the line entry is 24-21 everywhere
@@ -410,6 +458,20 @@ def test_s14_every_method_is_compared_on_the_same_games():
     report = sb.run_score_backtest(df, [2022], window=3)
     assert report["games"] == base["games"] - 1
     assert report["by_season"][0]["n"] == base["games"] - 1
+    assert (base["excluded"], report["excluded"]) == (0, 1)  # the report says how many games were left out
+
+
+def test_s13_the_run_puts_games_in_kickoff_order_itself():
+    df = frame()
+    shuffled = df.sample(frac=1, random_state=3).reset_index(drop=True)
+    in_order = sb.run_score_backtest(df, [2021, 2022], window=3)
+    assert sb.run_score_backtest(shuffled, [2021, 2022], window=3) == in_order
+
+
+@pytest.mark.parametrize("seasons", [[], [2022, 2022]])
+def test_s13_an_empty_or_repeated_season_list_is_refused(seasons):
+    with pytest.raises(ValueError, match="seasons"):
+        sb.run_score_backtest(frame(), seasons, window=3)
 
 
 # ---- S15: no file, network or database access in the new modules ----
@@ -421,3 +483,38 @@ def test_s15_the_new_modules_do_no_file_network_or_database_access():
         text = (root / rel).read_text()
         for banned in ("sqlalchemy", "httpx", "requests", "urllib", "open(", "os.environ", "subprocess", "socket"):
             assert banned not in text, f"{rel} uses {banned}"
+
+
+# ---- S8, S11, S13: what the whole run is built from ----
+
+
+def test_s8_s11_the_run_uses_default_elo_a_ten_season_window_and_decides_on_all_games(monkeypatch):
+    calls = {"elo": [], "window": [], "decided_on": []}
+    real_features, real_season, real_pick = sb.add_score_features, sb.predict_season, sb.pick_winner
+
+    def features(df, elo):
+        calls["elo"].append(elo)
+        return real_features(df, elo)
+
+    def season(frame_, season_, window):
+        calls["window"].append(window)
+        return real_season(frame_, season_, window)
+
+    def pick(comparisons):
+        calls["decided_on"].append(comparisons)
+        return real_pick(comparisons)
+
+    monkeypatch.setattr(sb, "add_score_features", features)
+    monkeypatch.setattr(sb, "predict_season", season)
+    monkeypatch.setattr(sb, "pick_winner", pick)
+    df = frame()
+    # the fixture's weekdays depend on today's date, so pin them: one tested game on Monday, the rest on Thursday
+    df["weekday"] = "Thursday"
+    target = df[(df["season"] == 2022) & (df["status"] == "final")].index[0]
+    df.loc[target, "weekday"] = "Monday"
+    report = sb.run_score_backtest(df, [2021, 2022])
+    assert calls["elo"] == [EloParams()]
+    assert calls["window"] == [10, 10]
+    assert report["tiebreak_slots"]["games"] == 1 < report["games"]
+    assert calls["decided_on"] == [report["comparisons"]]
+    assert report["comparisons"] != report["tiebreak_slots"]["comparisons"]
