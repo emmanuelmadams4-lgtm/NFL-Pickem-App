@@ -59,6 +59,7 @@ CAUGHT   S13 empty season list accepted
 CAUGHT   S13 repeated season accepted
 CAUGHT   S13 excluded count always zero
 CAUGHT   S11 smaller gain picked
+CAUGHT   S11 first winner picked
 CAUGHT   S11 decided on the tiebreak slots
 CAUGHT   S12 Sunday from 8 pm
 CAUGHT   S12 Sunday after 7 pm only
@@ -69,4 +70,6 @@ CAUGHT   S13 slots are all games
 CAUGHT   S13 season rows use every game
 CAUGHT   S14 unpredicted games kept
 CAUGHT   S15 reads the environment
-71 of 71 caught
+CAUGHT   S15 pandas read_csv
+CAUGHT   S15 imports a database driver
+74 of 74 caught

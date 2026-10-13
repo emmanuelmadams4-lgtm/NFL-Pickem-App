@@ -1,8 +1,8 @@
-HEAD f8fe4f2 2026-10-13T07:13:09Z label=final1
-PASS pytest exit=0 :: [32m[32m[1m235 passed[0m[32m in 45.62s[0m[0m
+HEAD 2f89a26 2026-10-13T07:24:17Z label=final1
+PASS pytest exit=0 :: [32m[32m[1m236 passed[0m[32m in 41.42s[0m[0m
 PASS ruff exit=0 :: [1;32mAll checks passed![0m
 PASS alembic-upgrade exit=0 :: 
 PASS alembic-check exit=0 :: No new upgrade operations detected.
-PASS genapi exit=0 :: 🚀 [32mpackages/shared/openapi.json → [1mpackages/shared/src/api-types.ts[22m[39m [2m[67.7ms][22m
+PASS genapi exit=0 :: 🚀 [32mpackages/shared/openapi.json → [1mpackages/shared/src/api-types.ts[22m[39m [2m[48.5ms][22m
 PASS genapi-drift exit=0 :: 
 GATE PASS label=final1
