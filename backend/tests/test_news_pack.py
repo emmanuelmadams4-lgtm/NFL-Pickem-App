@@ -294,6 +294,11 @@ def test_n8_the_news_part_never_passes_five_items_or_the_character_cap(loaded, p
     check_items(items)
 
 
+def test_n8_the_pack_builder_itself_never_returns_more_than_five_items():
+    out = news_pack.news_items([row(f"Item {i}", minutes=i + 1) for i in range(9)], BY_ID, NOW)
+    assert len(out) == 5 and "Item 4" in out[-1]
+
+
 def test_n8_the_cap_drops_the_oldest_items_first(monkeypatch):
     rows = [row(f"Item {i}", "E" * 300, minutes=i + 1) for i in range(5)]
     one = len(news_pack.news_items(rows[:1], BY_ID, NOW)[0])
