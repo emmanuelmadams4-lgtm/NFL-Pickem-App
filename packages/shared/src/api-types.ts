@@ -353,6 +353,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/group/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Csv */
+        post: operations["import_csv_api_group_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/group/standings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Standings */
+        get: operations["standings_api_group_standings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/group/shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Shares */
+        get: operations["shares_api_group_shares_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -584,6 +635,26 @@ export interface components {
             /** Weekday */
             weekday: string;
         };
+        /** GameShareOut */
+        GameShareOut: {
+            /** Game Id */
+            game_id: string;
+            /** Away Team */
+            away_team: string;
+            /** Home Team */
+            home_team: string;
+            /**
+             * Kickoff Utc
+             * Format: date-time
+             */
+            kickoff_utc: string;
+            /** Members */
+            members: number;
+            /** Picked */
+            picked: number;
+            away: components["schemas"]["SideOut"];
+            home: components["schemas"]["SideOut"];
+        };
         /** GameSummary */
         GameSummary: {
             /** Game Id */
@@ -665,6 +736,18 @@ export interface components {
             stale_datasets: string[];
             /** Worker Heartbeat */
             worker_heartbeat?: string | null;
+        };
+        /** ImportOut */
+        ImportOut: {
+            /** Season */
+            season: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "picks" | "standings";
+            /** Rows */
+            rows: number;
         };
         /** ImportResult */
         ImportResult: {
@@ -1052,6 +1135,15 @@ export interface components {
              */
             reminder_minutes?: number | null;
         };
+        /** SharesOut */
+        SharesOut: {
+            /** Season */
+            season: number;
+            /** Week */
+            week: number;
+            /** Games */
+            games: components["schemas"]["GameShareOut"][];
+        };
         /** SheetOut */
         SheetOut: {
             /** Label */
@@ -1078,6 +1170,39 @@ export interface components {
             points_by: "app" | "user";
             /** Differs */
             differs: boolean;
+        };
+        /** SideOut */
+        SideOut: {
+            /** Team */
+            team: string;
+            /** Picks */
+            picks: number;
+            /** Share */
+            share: number | null;
+            /** Avg Confidence */
+            avg_confidence: number | null;
+        };
+        /** StandingOut */
+        StandingOut: {
+            /** Member */
+            member: string;
+            /** Points */
+            points: number;
+            /** Total */
+            total: number;
+            /** Rank */
+            rank: number | null;
+        };
+        /** StandingsOut */
+        StandingsOut: {
+            /** Season */
+            season: number;
+            /** Week */
+            week: number;
+            /** Weeks Counted */
+            weeks_counted: number[];
+            /** Rows */
+            rows: components["schemas"]["StandingOut"][];
         };
         /** Tally */
         Tally: {
@@ -2001,6 +2126,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LiveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_csv_api_group_import_post: {
+        parameters: {
+            query: {
+                season: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    standings_api_group_standings_get: {
+        parameters: {
+            query: {
+                season: number;
+                week: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StandingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    shares_api_group_shares_get: {
+        parameters: {
+            query: {
+                season: number;
+                week: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharesOut"];
                 };
             };
             /** @description Validation Error */
