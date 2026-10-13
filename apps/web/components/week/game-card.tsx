@@ -195,6 +195,7 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
         </div>
 
         {game.status === "scheduled" && (star ? (
+          <div>
           <div role="group" aria-label="Stars out" className="flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-label text-text-2">
             <span className="shrink-0 font-medium text-text">Stars out</span>
             <span className="min-w-0 truncate">{star.team} {star.player}</span>
@@ -203,9 +204,8 @@ export function GameCard({ game, highlight, pointsCount }: { game: GameSummary; 
             {stars.length > 1 && <span className="shrink-0 text-subtle">+{stars.length - 1} more</span>}
             {star.observed_at && <span aria-hidden="true" className="shrink-0 text-subtle">·</span>}
             {star.observed_at && <span className="shrink-0 text-subtle">{ago(star.observed_at)}</span>}
-            {game.stars_out.no_list.map((club) => (
-              <span key={club} className="shrink-0 text-text-2">{club}: no star list</span>
-            ))}
+          </div>
+          {game.stars_out.no_list.length > 0 && <p className="text-label text-text-2">{starNote}</p>}
           </div>
         ) : starNote ? <p className="text-label text-text-2">{starNote}</p> : null)}
 

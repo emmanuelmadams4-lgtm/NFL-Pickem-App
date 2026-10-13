@@ -1,0 +1,9 @@
+HEAD 85ccb1a load: load averages: 8.48 6.50 6.14
+
+[2mRunning [22m3[2m tests using [22m1[2m worker[22m
+
+  [32m✓[39m  [2m1 [22me2e/zz-shots.spec.ts:6:7 › shots phone[2m (1.0s)[22m
+  [32m✓[39m  [2m2 [22me2e/zz-shots.spec.ts:6:7 › shots tablet[2m (860ms)[22m
+  [32m✓[39m  [2m3 [22me2e/zz-shots.spec.ts:6:7 › shots desktop[2m (953ms)[22m
+
+[32m  3 passed[39m[2m (9.6s)[22m
