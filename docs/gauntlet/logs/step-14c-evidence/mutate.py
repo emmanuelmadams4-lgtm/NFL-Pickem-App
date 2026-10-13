@@ -22,7 +22,7 @@ M = [  # (clause, old text, new text)
     ("T3", "n_iter = int(np.argmin(losses)) + 1", "n_iter = TREE_MAX_ITER"),
     ("T3", 'cls._classifier(depth, leaf, n_iter).fit(rows[features], rows["home_win"])',
      'cls._classifier(depth, leaf, n_iter).fit(fit[features], fit["home_win"])'),
-    ("T3", 'held = rows[rows["season"] == last]', 'held = rows[rows["season"] == rows["season"].min()]'),
+    ("T3", 'rows[rows["season"] == last]', 'rows[rows["season"] == rows["season"].min()]'),
     ("T3", 'rows = train[train["home_win"].notna()]', "rows = train"),
     ("T4", "test = backtest.predict_season(frames, season, window)\n        _, train = backtest._train_rows(frames, season, window)\n        train = train.dropna(subset=[\"market_logit\"])\n        for set_name",
      "test = backtest.predict_season(frames, season, window)\n        _, train = backtest._train_rows(frames, season, window + 1)\n        train = train.dropna(subset=[\"market_logit\"])\n        for set_name"),

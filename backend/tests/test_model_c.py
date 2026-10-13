@@ -67,6 +67,34 @@ def test_a_tree_model_stops_early_on_the_last_training_season_and_refits_on_all(
     assert p[0] > 0.7 and p[2] > 0.7 and p[1] < 0.3  # it learned a shape a straight line cannot
 
 
+def test_early_stopping_picks_the_tree_count_from_the_last_season_and_ignores_unplayed_games():
+    rng = np.random.default_rng(6)
+    rows = []
+    for season in (2015, 2016, 2017):
+        x = rng.uniform(-2, 2, 120)
+        win = (x > 0).astype(float) if season < 2017 else (x < 0).astype(float)  # the last season runs the other way
+        rows.append(pd.DataFrame({"season": season, "x": x, "home_win": win}))
+    train = pd.concat(rows, ignore_index=True)
+    train.loc[len(train)] = {"season": 2017, "x": 0.1, "home_win": np.nan}  # a game not played yet
+    model = mc.TreeModel.fit_early(train, ["x"], depth=2, leaf=5)
+    assert model.n_iter < 10 < mc.TREE_MAX_ITER  # more trees only fit the wrong way for 2017, so it stops at once
+
+
+def test_the_trees_are_fitted_on_the_coded_roof_and_division_flag(monkeypatch):
+    df = lines_frame()
+    df.loc[df.index[::3], "roof"] = "dome"
+    trains = []
+    real = mc.TreeModel.fit_early.__func__
+
+    def spy(cls, train, features, depth, leaf):
+        trains.append(train)
+        return real(cls, train, features, depth, leaf)
+
+    monkeypatch.setattr(mc.TreeModel, "fit_early", classmethod(spy))
+    mc.tree_preds(df, [2022], window=3, grid=SMALL_GRID[:1])
+    assert trains and all(set(t["roof_indoor"].dropna()) == {0.0, 1.0} and (t["div_flag"] == 1.0).all() for t in trains)
+
+
 def test_tree_preds_carry_the_blend_and_eight_variants_for_the_bench_games():
     df = lines_frame()
     base = bt.candidate_preds(df, SEASONS, window=3)
@@ -225,6 +253,29 @@ def test_margin_preds_never_use_a_result_from_the_test_week_or_later():
     assert all(not np.allclose(got[c], earlier[c]) for c in cols)
 
 
+def test_margin_chances_use_the_held_out_season_spread_and_the_frozen_scales(monkeypatch):
+    assert (mc.MARGIN_SCALE, mc.TOTAL_CENTER, mc.TOTAL_SCALE) == (7, 45, 10)
+    monkeypatch.setattr(mc, "_miss_sigma", lambda *args: 5.0)
+    got = mc.margin_preds(lines_frame(), [2022], window=3)
+    want = mc.margin_to_prob(got["m_margin_stats"], 5.0)
+    assert np.allclose(got["p_m_stats"], want)
+
+
+def test_the_line_input_is_scored_by_the_line_model_not_the_stats_model(monkeypatch):
+    seen = []
+    real = mc.LogitModel.fit.__func__
+
+    def spy(cls, train, features, *args, **kwargs):
+        seen.append((list(features), train.copy()))
+        return real(cls, train, features, *args, **kwargs)
+
+    monkeypatch.setattr(mc.LogitModel, "fit", classmethod(spy))
+    mc.margin_preds(lines_frame(), [2022], window=3)
+    rows = next(t for f, t in seen if "in_margin_line" in f and "in_margin_stats" not in f)
+    both = next(t for f, t in seen if "in_margin_stats" in f)
+    assert not np.allclose(rows["in_margin_line"], both["in_margin_stats"])
+
+
 def test_margin_variants_that_need_a_line_keep_the_blend_when_the_line_is_missing():
     df = lines_frame()
     week1 = df[(df["season"] == 2022) & (df["week"] == 1)].index
@@ -316,6 +367,13 @@ def test_swap_ceiling_counts_what_the_sheets_tie_rule_could_cost_at_most():
     week = _week([0.700, 0.695, 0.60, 0.595, 0.80], [1.0] * 5)
     # sorted picks: 0.80, 0.700, 0.695, 0.60, 0.595 -> the rule swaps (0.700, 0.695), then (0.60, 0.595)
     assert mc.swap_ceiling(week) == pytest.approx(0.005 + 0.005)
+
+
+def test_a_pick_joins_only_one_swap_and_a_gap_at_the_band_is_not_a_swap():
+    chain = _week([0.700, 0.695, 0.692], [1.0] * 3)
+    assert mc.swap_ceiling(chain) == pytest.approx(0.005)  # (0.700, 0.695) swap; 0.692 is not paired again
+    apart = _week([0.80, 0.785], [1.0] * 2)
+    assert mc.swap_ceiling(apart) == 0.0  # 0.015 is outside the 0.01 band
 
 
 def test_points_report_has_every_order_per_week_and_a_paired_interval_for_the_gap():
