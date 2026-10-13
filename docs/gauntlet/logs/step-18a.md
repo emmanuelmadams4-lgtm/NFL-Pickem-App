@@ -100,11 +100,37 @@ No file changed in this pass, so no proof was rerun for it.
 
 ## 5. VERIFICATION
 
-VERIFICATION_PLACEHOLDER
+All on the lane's own database (`nflpi-lane-model-db`, port 15442). Raw logs are outside the repository in `~/.claude/plans/nfl-pickem-lanes/logs/` (file names below).
+
+| Check | Result | Log |
+|---|---|---|
+| Audit test file, twice in a row, on the final test code | 6 passed, 6 passed | `step-18a-final-audit-run1.log`, `-run2.log` |
+| Planted-defect sweep, coordinator's run under `res:gate-b` | **10 of 10 KILLED**, no file left changed | `step-18a-evidence/mutation.log` |
+| **Full gate, one run on `639f430`** under `res:gate-b` | **PASS**: `pytest` 1,462 passed in 614 s, 0 failed, 0 skipped; `ruff` all checks passed; `alembic upgrade head` then `check` on a fresh scratch database: no new upgrade operations; `npm run gen:api`: no drift | `step-18a-final2.out`, `step-18a-final2-*.log` |
+| Bench numbers reproduce the stored ones | 3,649 games, market 0.6094, blend 0.6107 (equal to step 14) | `step-18a-evidence/audit-numbers.json` |
+| Lane guard | `OK` | `python3 ~/.claude/bin/lane-guard.py check …/lanes.md audit main` |
+
+An earlier full-gate run on the previous candidate was stopped by the coordinator after 15 minutes without a result, because the test file was about to change and the run was holding a machine lock others were waiting for; it proves nothing and is not counted.
+
+**Critics (each new, no build transcript, `ecc:mle-reviewer`).**
+
+| Round | Commit | Verdict | What it did |
+|---|---|---|---|
+| 1 | `d2a6f7b` (same content as `8e8670e`) | **FAIL on one rule** | Re-derived six VERIFIED findings (A9, A10, A4, A6, A8, A2/A3, plus A13/A14 arithmetic): all confirmed. All six repository rows match the clones (commit, date, license). Test file: 6 passed. Every clause S1 to S4 has a test and a killed defect. The failure: two HYPOTHESIS claims (A6, A8) were worded as fact in the summary's point 4 and in the "Realistic cutoffs" paragraph, and A8's "little" was an inference. Report: `step-18a-evidence/reviews/critic-1.md` |
+| fix, once | `957a1c0` | | The three places reworded; every document searched for the same fault. Its advisory was also taken: the score rewrite in the S1 tests now changes the total as well as the winner, and planted defect M10 (total points in a feature) proves it on both paths |
+| 2 (delta brief) | `639f430` | **PASS** | Read all of `AUDIT.md` again for the failed rule, checked A9 and A10's numbers in the evidence files, the test change, all ten killed defects, the citations after the branch move, and one repository claim the first critic could not confirm. Test file: 6 passed. Report: `step-18a-evidence/reviews/critic-2.md` |
+
+**After critic 2, documents only.** Its three advisory notes were taken by softening three sentences in `AUDIT.md` (A4: the size of the regularization effect is no longer claimed; the 2022 to 2025 gap is no longer called chance; A10: "should change"). No code or test changed after the gate: `git diff --stat 639f430 HEAD` lists only `docs/`.
+
+**Jev (did the review truly pass?).** `JEV: passed -> 0.82`. With a green gate and the critic's PASS, that meets the bar (0.8).
+
+**Counts.** Critic rounds: 2 (one FAIL, fixed once, one PASS). Builder tries: 2 on the Sonnet rung (work orders 1 and 1b). Strikes: none. Continuations: 0.
 
 ## 6. LANDING
 
-Not done by this lane, by rule: no push, no pull request, no merge. The integrator (god) lands it and is the final reviewer. LANDING_PLACEHOLDER
+Not done by this lane, by rule: no push, no pull request, no merge. The integrator (god) lands it and is the final reviewer. State handed to the integrator: branch `lane/audit` on main `589aa3b`, gate green on `639f430`, critic PASS on `639f430`, later commits documents only. Not pushed, no pull request, nothing deployed, live app untouched.
+
+What is done: the audit, the repository table, the plan, six tests, ten planted defects all caught. What is blocked or left: nothing in this step. Two findings can only be settled by the 2026 live log (AUDIT A6, A8), and one decision is the owner's (below).
 
 ## Seams needed
 

@@ -92,8 +92,8 @@ Blend, 2012 to 2025, 3,649 games, sorted by the home team's stated chance (`audi
 | 9 | 365 | 75.5% | 76.4% | +0.9 | 71.8 to 80.5 |
 | 10 | 365 | 83.9% | 86.8% | +2.9 | 83.0 to 89.9 |
 
-* Average gap, weighted by games: 1.5 points. Calibration slope 1.02, intercept +0.01 (a slope of 1 is perfect; below 1 means overconfident). The slope is fitted with the app's own lightly regularized logistic fit (`predictions/model.py:22`), which pulls it toward zero by well under 0.01 at this sample size.
-* On 2022 to 2025 alone (1,084 games, about 108 per group): slope 1.02, average gap 3.1 points, every group still inside its interval. The larger gap is what groups of 108 games give by chance; it is not evidence of drift.
+* Average gap, weighted by games: 1.5 points. Calibration slope 1.02, intercept +0.01 (a slope of 1 is perfect; below 1 means overconfident). The slope is fitted with the app's own lightly regularized logistic fit (`predictions/model.py:22`), which shrinks it a little; the unregularized slope was not computed.
+* On 2022 to 2025 alone (1,084 games, about 108 per group): slope 1.02, average gap 3.1 points, every group still inside its interval, so this table gives no evidence of drift. With about 108 games a group each interval is up to 9 points wide on either side, so the larger average gap is not a finding by itself.
 * For comparison, same games: market slope 1.07 (slightly cautious), stats model 0.97 (slightly overconfident).
 * Code: reliability in the app itself is `analytics/metrics.py:67-84` (five buckets by the picked side). Step 14b tested recalibrating the blend (Platt and isotonic); it did not ship, which fits: there is little to correct.
 
@@ -151,7 +151,7 @@ Paired, same games, log-loss gain of the first over the second (positive = first
 **A10. VERIFIED. The blend is the market with small changes.**
 * Command `blend_vs_market.py`, output `blend-vs-market.txt`: the blend's pick differs from the market's in 72 of 3,649 games (1.97%); in those 72 it was right 34 times. The two probabilities differ by 1.6 points on average and correlate at 0.993.
 * The weights a fit on 2016 to 2025 gives: 1.03 on the line's log-odds, 0.016 on the Elo difference (same file).
-* This is the evidence behind line 1 of the summary. What follows for the plan is a reading of these numbers, not a new measurement: while the line stays in the model with a weight near 1, an added input changes a pick only where it disagrees with the closing line strongly enough to cross 50%.
+* This is the evidence behind line 1 of the summary. What follows for the plan is a reading of these numbers, not a new measurement: while the line stays in the model with a weight near 1, an added input should change a pick only where it disagrees with the closing line strongly enough to cross 50%.
 
 ## One trap for the next lanes
 
