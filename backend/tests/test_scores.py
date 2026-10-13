@@ -148,6 +148,24 @@ def test_s4_scoring_form_uses_only_the_last_n_games_and_n_is_16():
     assert (form["home_pf"][4], form["home_pa"][4]) == (10.5, 16.5)
 
 
+def test_s4_default_scoring_window_is_16_for_form_and_score_features():
+    earlier = [("A", f"T{i}", i, 0, "final") for i in range(1, 21)]
+    history = mini([*earlier, ("A", "Z", None, None, "scheduled")])
+    default = scores.scoring_form(history)
+    sixteen = scores.scoring_form(history, games=16)
+    fifteen = scores.scoring_form(history, games=15)
+    assert default["home_pf"][-1] == sixteen["home_pf"][-1] == pytest.approx(12.5)
+    assert default["home_pf"][-1] != fifteen["home_pf"][-1]  # 15-game mean is 13
+
+    rows = [*earlier, ("A", "Z", None, None, "scheduled")]
+    features = frame().iloc[[0]].copy()
+    features = pd.concat([features] * len(rows), ignore_index=True)
+    for column, position in (("home_team", 0), ("away_team", 1), ("home_score", 2), ("away_score", 3), ("status", 4)):
+        features[column] = [row[position] for row in rows]
+    enriched = scores.add_score_features(features, EloParams())
+    assert enriched["home_pf"].iloc[-1] == pytest.approx(12.5)
+
+
 def test_s4_a_final_game_with_a_missing_score_is_not_counted():
     rows = [*FORM_ROWS]
     rows[2] = ("A", "C", 7, None, "final")
@@ -379,6 +397,17 @@ def test_s11_a_candidate_that_is_closer_on_team_scores_but_worse_on_total_points
     assert sb.pick_winner(report["comparisons"]) is None
 
 
+def test_s11_a_small_total_points_loss_does_not_ship():
+    n = 200
+    report = sb.summary(
+        preds([(20, 20)] * n, implied=[(22, 18)] * n, stats=[(21, 19.1)] * n, blend=[(22, 18)] * n)
+    )
+    stat = next(c for c in report["comparisons"] if c["candidate"] == "stats")
+    assert stat["team_ci"] == pytest.approx([1.05, 1.05])
+    assert stat["total_mae_gain"] == pytest.approx(-0.1)
+    assert stat["wins"] is False
+
+
 def test_s11_a_clear_team_score_win_with_equal_total_points_error_ships():
     n = 200
     # actual 20-20; line 23-19 (team miss 2, total miss 2); blend 21-21 (team miss 1, total miss 2)
@@ -485,6 +514,23 @@ def test_s14_every_method_is_compared_on_the_same_games():
     assert (base["excluded"], report["excluded"]) == (0, 1)  # the report says how many games were left out
 
 
+def test_s14_a_missing_stats_feature_excludes_the_game_from_every_method(monkeypatch):
+    df = frame()
+    base = sb.run_score_backtest(df, [2022], window=3)
+    real_features = sb.add_score_features
+
+    def features_with_missing_form(source, elo):
+        out = real_features(source, elo)
+        target = out[(out["season"] == 2022) & (out["status"] == "final")].index[0]
+        out.loc[target, "home_pf"] = np.nan
+        return out
+
+    monkeypatch.setattr(sb, "add_score_features", features_with_missing_form)
+    report = sb.run_score_backtest(df, [2022], window=3)
+    assert report["games"] == base["games"] - 1 == report["by_season"][0]["n"]
+    assert report["excluded"] == 1
+
+
 def test_s13_the_run_puts_games_in_kickoff_order_itself():
     df = frame()
     shuffled = df.sample(frac=1, random_state=3).reset_index(drop=True)
@@ -523,8 +569,18 @@ def test_s15_the_new_modules_do_no_file_network_or_database_access():
             assert all(module in allowed_imports for module in imported), f"{rel} imports {imported}"
             if isinstance(node, ast.Name):
                 assert node.id not in banned_names, f"{rel} uses {node.id}"
+                assert not node.id.startswith(("read_", "to_", "load", "save", "dump")), f"{rel} uses {node.id}"
+                assert node.id not in {
+                    "urlopen", "urlretrieve", "connect", "request", "system", "popen", "run", "call"
+                }, f"{rel} uses {node.id}"
             elif isinstance(node, ast.Attribute):
                 assert node.attr not in banned_names, f"{rel} uses {node.attr}"
+                # DataFrame.to_numpy() is an allowed in-memory conversion.
+                risky = node.attr.startswith(("read_", "to_", "load", "save", "dump")) and node.attr != "to_numpy"
+                assert not risky, f"{rel} uses {node.attr}"
+                assert node.attr not in {
+                    "urlopen", "urlretrieve", "connect", "request", "system", "popen", "run", "call"
+                }, f"{rel} uses {node.attr}"
 
 
 # ---- S8, S11, S13: what the whole run is built from ----

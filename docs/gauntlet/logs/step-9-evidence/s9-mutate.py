@@ -41,6 +41,10 @@ MUTANTS = [
     ("S4 points for and against swapped", SCORES, "history.setdefault(row.home_team, []).append((home, away))",
      "history.setdefault(row.home_team, []).append((away, home))"),
     ("S4 window is 8", SCORES, "FORM_GAMES = 16", "FORM_GAMES = 8"),
+    ("S4 default window is 15", SCORES,
+     "def scoring_form(df: pd.DataFrame, games: int = FORM_GAMES)",
+     "def scoring_form(df: pd.DataFrame, games: int = 15)"),
+    ("S4 add_score_features window is 8", SCORES, "scoring_form(out)", "scoring_form(out, games=8)"),
     ("S5 own result leaks into the form", SCORES, LEAK_OLD, LEAK_NEW),
     ("S6 implied home takes the road number", SCORES, 'out["implied_home"] = [pair[0]', 'out["implied_home"] = [pair[1]'),
     ("S6 missing line becomes zero", SCORES, "pair[1] if pair is not None else np.nan", "pair[1] if pair is not None else 0.0"),
@@ -73,6 +77,7 @@ MUTANTS = [
     ("S11 upper end is enough", BACK, "team_ci[0] > 0 and", "team_ci[1] > 0 and"),
     ("S11 equal total refused", BACK, "total_mean >= 0)", "total_mean > 0)"),
     ("S11 total points ignored", BACK, " and total_mean >= 0)", ")"),
+    ("S11 total tolerance", BACK, "total_mean >= 0)", "total_mean >= -0.5)"),
     ("S11 minimum is 100 games", BACK, "MIN_SHIP_GAMES = 200", "MIN_SHIP_GAMES = 100"),
     ("S11 exactly the minimum refused", BACK, "n >= MIN_SHIP_GAMES and", "n > MIN_SHIP_GAMES and"),
     ("S11 no minimum", BACK, "n >= MIN_SHIP_GAMES and", "n and"),
@@ -94,9 +99,12 @@ MUTANTS = [
     ("S13 slots are all games", BACK, '"tiebreak_slots": summary(predictions.loc[slots])', '"tiebreak_slots": summary(predictions)'),
     ("S13 season rows use every game", BACK, 'summary(predictions.loc[predictions["season"] == season])', "summary(predictions)"),
     ("S14 unpredicted games kept", BACK, "predictions = predictions.dropna(subset=PRED_COLS)", "pass"),
+    ("S14 only line columns checked", BACK, "dropna(subset=PRED_COLS)", "dropna(subset=PRED_COLS[:2])"),
     ("S15 reads the environment", SCORES, "import numpy as np", "import os\nimport numpy as np\n_ = os.environ"),
     ("S15 pandas read_csv", SCORES, "import pandas as pd", "import pandas as pd\n_ = pd.read_csv"),
     ("S15 imports a database driver", SCORES, "import numpy as np", "import psycopg\nimport numpy as np"),
+    ("S15 np.loadtxt", SCORES, "import numpy as np", "import numpy as np\n_ = np.loadtxt"),
+    ("S15 pd.read_json", SCORES, "import pandas as pd", "import pandas as pd\n_ = pd.read_json"),
 ]
 
 
