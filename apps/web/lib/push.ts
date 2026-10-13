@@ -22,19 +22,19 @@ export function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-export async function keepPushSubscription(api: Api, publicKey: string | null): Promise<void> {
-  if (!publicKey || !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window) || Notification.permission !== "granted") return;
+export async function keepPushSubscription(api: Api, publicKey: string | null): Promise<boolean> {
+  if (!publicKey || !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window) || Notification.permission !== "granted") return false;
   try {
     await navigator.serviceWorker.ready;
     const reg = await navigator.serviceWorker.getRegistration();
     const old = await reg?.pushManager.getSubscription();
-    if (!reg || !old) return;
+    if (!reg || !old) return false;
     const key = urlBase64ToUint8Array(publicKey);
     const current = old.options.applicationServerKey;
     const currentBytes = current && new Uint8Array(current);
     if (currentBytes && currentBytes.length === key.length && currentBytes.every((byte, i) => byte === key[i])) {
       await api.pushSubscribe(old.toJSON() as PushSubscriptionIn);
-      return;
+      return true;
     }
     await old.unsubscribe();
     const fresh = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
@@ -44,7 +44,9 @@ export async function keepPushSubscription(api: Api, publicKey: string | null): 
     } catch {
       /* The new device is active even if the server could not remove the old address. */
     }
+    return true;
   } catch {
     /* Retry on the next open; Settings shows the device state without showing a background error. */
+    return false;
   }
 }

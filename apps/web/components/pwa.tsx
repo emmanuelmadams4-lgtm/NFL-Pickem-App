@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ago } from "@nflpi/shared";
+import { ago, keys } from "@nflpi/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApi } from "@/lib/api";
 import { flushPicks, isServerReachable, pendingCount, useOnline, useServerReachable } from "@/lib/sync";
@@ -14,13 +14,16 @@ import { keepPushSubscription } from "@/lib/push";
 /** Restores this device's existing push subscription once its server key is known. */
 export function PushKeepAlive() {
   const api = useApi();
+  const qc = useQueryClient();
   const { data: meta } = useMeta();
   const ran = useRef(false);
   useEffect(() => {
     if (!meta || ran.current) return;
     ran.current = true;
-    void keepPushSubscription(api, meta.push_public_key);
-  }, [api, meta]);
+    void keepPushSubscription(api, meta.push_public_key).then((sent) => {
+      if (sent) void qc.invalidateQueries({ queryKey: keys.meta });
+    });
+  }, [api, meta, qc]);
   return null;
 }
 
