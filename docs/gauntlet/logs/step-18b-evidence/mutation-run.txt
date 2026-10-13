@@ -1,0 +1,7 @@
+SURVIVOR snapshot.py line 94: True->False
+SURVIVOR settle.py line 36: Gt->GtE
+SURVIVOR settle.py line 36: 0->1
+SURVIVOR odds.py line 22: 0->1
+SURVIVOR edge.py line 42: True->False
+SURVIVOR odds.py line 22: Gt->GtE
+sites=128 tried=128 killed=122 survivors=6 secs=142

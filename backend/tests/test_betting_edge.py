@@ -63,6 +63,12 @@ def test_conditional_win_is_undefined_when_every_outcome_is_a_push():
         _ = SettlementProbs(0.0, 1.0, 0.0).conditional_win
 
 
+def test_edge_result_is_immutable():
+    got = evaluate(snap("moneyline", "home", 150), SettlementProbs(0.5, 0.0, 0.5), now=NOW, max_age=MAX_AGE)
+    with pytest.raises(AttributeError):
+        got.expected_value = 1.0  # type: ignore[misc]
+
+
 # ---- Expected value ------------------------------------------------------------------------
 
 

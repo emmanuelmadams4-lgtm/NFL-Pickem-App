@@ -183,3 +183,10 @@ def test_settle_dispatches_on_market_type():
     assert settle(make("spread", "away", -3.5), 26, 23) == "win"
     assert settle(make("total", "over", 47.5), 28, 20) == "win"
     assert settle(make("total", "under", 47.0), 27, 20) == "push"
+
+
+def test_one_point_margin_decides_a_moneyline():
+    assert settle_moneyline("home", 24, 23) == "win"
+    assert settle_moneyline("away", 24, 23) == "loss"
+    assert settle_moneyline("home", 23, 24) == "loss"
+    assert settle_moneyline("away", 23, 24) == "win"
