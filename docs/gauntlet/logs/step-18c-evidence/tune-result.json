@@ -1,0 +1,38 @@
+{
+  "seasons": [
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021
+  ],
+  "n_simulations": 10000,
+  "games": 2576,
+  "pooled_crps": {
+    "poisson": 16.135608441785713,
+    "paired_residual": 15.046860438365682,
+    "bivariate_normal": 15.059085222193321,
+    "shared_gamma_poisson": 15.060847269673912
+  },
+  "by_source": {
+    "football_only": {
+      "poisson": 16.362729287437887,
+      "paired_residual": 15.224495723796583,
+      "bivariate_normal": 15.239800085364905,
+      "shared_gamma_poisson": 15.23566253765528
+    },
+    "market_informed": {
+      "poisson": 15.90848759613354,
+      "paired_residual": 14.869225152934781,
+      "bivariate_normal": 14.878370359021737,
+      "shared_gamma_poisson": 14.886032001692547
+    }
+  },
+  "default": "paired_residual",
+  "rule": "lowest pooled mean of CRPS(margin)+CRPS(total) over the tuning seasons and both sources; ties to the earlier distribution"
+}
