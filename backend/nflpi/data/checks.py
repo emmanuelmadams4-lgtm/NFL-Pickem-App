@@ -15,6 +15,7 @@ GAME_COLUMNS = (
 )  # fmt: skip
 SNAPSHOT_COLUMNS = ("game_id", "observed_at", "kind", "home_moneyline", "away_moneyline", "spread_line", "total_line")
 WEEK_RANGE = (1, 22)
+MAX_PICKEM_MONEYLINE = 125
 MIN_MONEYLINE_MAGNITUDE = 100
 MAX_EXAMPLES = 5
 
@@ -160,7 +161,9 @@ def check_snapshots(df: pd.DataFrame) -> None:
             )
     home = pd.to_numeric(df["home_moneyline"], errors="coerce")
     away = pd.to_numeric(df["away_moneyline"], errors="coerce")
-    same_sign = home.notna() & away.notna() & (home * away > 0)
+    # A pick'em can be -110/-110; two underdogs or two heavy favourites are not a market.
+    both = home.notna() & away.notna()
+    same_sign = both & (((home > 0) & (away > 0)) | ((home < -MAX_PICKEM_MONEYLINE) & (away < -MAX_PICKEM_MONEYLINE)))
     if same_sign.any():
         raise _fail(
             "check_snapshots", "home and away moneyline have the same sign", df.loc[same_sign, "game_id"].tolist()

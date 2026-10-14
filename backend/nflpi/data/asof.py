@@ -21,7 +21,8 @@ from nflpi.models import Game, InjuryReport, MarketSnapshot, QbObservation, Weat
 
 RESULT_LAG = timedelta(hours=4)
 SIDES = ("home", "away")
-LINE_COLUMNS = ["home_moneyline", "away_moneyline", "spread_line", "total_line", "home_prob_novig", "kind"]
+LINE_COLUMNS = ["home_moneyline", "away_moneyline", "spread_line", "total_line", "home_prob_novig"]
+# `kind` is dropped from the output: ingestion flips latest to closing in place after the game (after-cutoff news).
 GAME_COLUMNS = [
     "game_id", "season", "week", "game_type", "kickoff_utc", "home_team", "away_team", "home_score", "away_score",
     "status", "neutral_site", "home_qb", "away_qb", "temp_f", "wind_mph",
@@ -112,7 +113,9 @@ def asof_games(games: pd.DataFrame, cutoff: datetime) -> pd.DataFrame:
 
 def asof_lines(snapshots: pd.DataFrame, cutoff: datetime) -> pd.DataFrame:
     _require_aware(cutoff)
-    out = _latest(_prep(snapshots, ["game_id", *LINE_COLUMNS]), ["game_id"], cutoff)
+    out = _latest(_prep(snapshots, ["game_id", *LINE_COLUMNS]), ["game_id"], cutoff).drop(
+        columns="kind", errors="ignore"
+    )
     out["line_age_hours"] = (cutoff - out["observed_at"]).dt.total_seconds() / 3600
     out["home_spread"] = home_spread_from_nflverse(out["spread_line"])
     return out

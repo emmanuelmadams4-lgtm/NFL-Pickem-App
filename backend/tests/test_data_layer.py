@@ -715,3 +715,12 @@ def test_check_snapshots_rejects_same_sign_moneylines():
     with pytest.raises(checks.DataCheckError, match="sign"):
         checks.check_snapshots(snapshots_ok(home_moneyline=-150.0, away_moneyline=-130.0))
     checks.check_snapshots(snapshots_ok(home_moneyline=-150.0, away_moneyline=np.nan))
+
+
+def test_check_snapshots_allows_a_pickem_pair_of_negative_lines():
+    checks.check_snapshots(snapshots_ok(home_moneyline=-110.0, away_moneyline=-110.0))
+
+
+def test_asof_lines_do_not_carry_the_mutable_kind_column():
+    lines = asof.asof_lines(snapshots_ok(), CUT)
+    assert "kind" not in lines.columns

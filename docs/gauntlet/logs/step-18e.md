@@ -17,3 +17,6 @@ Note: TDD order deviated for C3 to C5 (tests written with or after code); the te
 
 ## C6: critic round 1 (head 04d1efc): FAIL
 2 HIGH (asof_games kept the after-the-fact quarterback names; FEATURES.md said the code was not built), 5 MEDIUM (naive timestamps read as UTC, missing observed_at silently empty, duplicate game ids, injury key collapse and case, tie order), LOW check gaps. All fixed in the next commit with 12 new tests (68 total).
+
+## C6: critic round 2 (head 526f037, fresh critic): PASS with warnings
+No leak found. Two MEDIUM fixed in the final commit: `kind` dropped from the as-of lines (ingestion flips latest to closing after the game), and a -110/-110 pick'em pair now allowed by the moneyline sign check. LOW left as is: `check_snapshots` runs on the whole table before the cutoff filter; `check_games` is not called by the as-of builder (callers run it); duplicate key differs from the DB constraint (no `source` column in the check). Final: 70 passed, ruff clean.
