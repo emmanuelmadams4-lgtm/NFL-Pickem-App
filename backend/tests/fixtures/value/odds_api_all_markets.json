@@ -1,0 +1,73 @@
+[
+  {
+    "id": "made-up-event-1",
+    "sport_key": "americanfootball_nfl",
+    "commence_time": "2026-10-18T17:00:00Z",
+    "home_team": "Buffalo Bills",
+    "away_team": "Miami Dolphins",
+    "bookmakers": [
+      {
+        "key": "bookone",
+        "title": "Book One",
+        "last_update": "2026-10-17T15:00:00Z",
+        "markets": [
+          {"key": "h2h", "last_update": "2026-10-17T15:00:00Z", "outcomes": [
+            {"name": "Buffalo Bills", "price": -180},
+            {"name": "Miami Dolphins", "price": 155}
+          ]},
+          {"key": "spreads", "last_update": "2026-10-17T15:00:00Z", "outcomes": [
+            {"name": "Buffalo Bills", "price": -110, "point": -3.5},
+            {"name": "Miami Dolphins", "price": -110, "point": 3.5}
+          ]},
+          {"key": "totals", "last_update": "2026-10-17T15:00:00Z", "outcomes": [
+            {"name": "Over", "price": -105, "point": 47.5},
+            {"name": "Under", "price": -115, "point": 47.5}
+          ]}
+        ]
+      },
+      {
+        "key": "booktwo",
+        "title": "Book Two",
+        "last_update": "2026-10-17T15:05:00Z",
+        "markets": [
+          {"key": "h2h", "last_update": "2026-10-17T15:05:00Z", "outcomes": [
+            {"name": "Miami Dolphins", "price": 160},
+            {"name": "Buffalo Bills", "price": -190}
+          ]},
+          {"key": "spreads", "last_update": "2026-10-17T15:05:00Z", "outcomes": [
+            {"name": "Buffalo Bills", "price": -110, "point": -3.5},
+            {"name": "Miami Dolphins", "price": -110, "point": 4.5}
+          ]},
+          {"key": "totals", "last_update": "2026-10-17T15:05:00Z", "outcomes": [
+            {"name": "Over", "price": -110, "point": 47.5},
+            {"name": "Under", "price": -110, "point": 48.5}
+          ]}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "made-up-event-2",
+    "sport_key": "americanfootball_nfl",
+    "commence_time": "2026-10-18T20:25:00Z",
+    "home_team": "Kansas City Chiefs",
+    "away_team": "Las Vegas Raiders",
+    "bookmakers": [
+      {
+        "key": "bookone",
+        "title": "Book One",
+        "last_update": "2026-10-17T15:00:00Z",
+        "markets": [
+          {"key": "h2h", "last_update": "2026-10-17T15:00:00Z", "outcomes": [
+            {"name": "Kansas City Chiefs", "price": -400},
+            {"name": "Las Vegas Raiders", "price": 320}
+          ]},
+          {"key": "spreads", "last_update": "2026-10-17T15:00:00Z", "outcomes": [
+            {"name": "Kansas City Chiefs", "price": -110, "point": -9.5},
+            {"name": "Las Vegas Raiders", "price": -110, "point": 9.5}
+          ]}
+        ]
+      }
+    ]
+  }
+]
