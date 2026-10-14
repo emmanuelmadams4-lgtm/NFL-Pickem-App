@@ -382,3 +382,11 @@ def test_repeated_failures_back_off_longer_each_time(loaded, claude):
     assert len(claude.calls) == 2  # second failure doubles the pause
     engine.refresh_predictions(loaded, now=now() + 5 * run_checker.RETRY_AFTER)
     assert len(claude.calls) == 3
+
+
+def test_the_api_serves_a_backfill_run_that_was_not_checked(loaded, claude, client):
+    engine.save_sim_params(loaded, CURRENT, synthetic_params())
+    engine.refresh_predictions(loaded, kind="backfill")
+    game = upcoming(loaded)[0]
+    pred = client.get(f"/api/games/{game.game_id}").json()["prediction"]
+    assert pred["simulation"] is None and pred["simulation_check"]["status"] == "not_checked"

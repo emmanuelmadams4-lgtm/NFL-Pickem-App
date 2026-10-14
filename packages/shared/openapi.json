@@ -4659,7 +4659,8 @@
       "type": "string",
       "enum": [
        "failed",
-       "no_verdict"
+       "no_verdict",
+       "not_checked"
       ],
       "title": "Status"
      },

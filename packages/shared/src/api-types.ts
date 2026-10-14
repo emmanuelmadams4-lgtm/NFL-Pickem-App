@@ -1502,7 +1502,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "failed" | "no_verdict";
+            status: "failed" | "no_verdict" | "not_checked";
             /** Note */
             note: string;
         };
