@@ -1,0 +1,970 @@
+{
+ "stage": "points",
+ "games": 3649,
+ "confirm_games": 1084,
+ "confirm_clusters": 72,
+ "baseline": {
+  "market": {
+   "n": 3649,
+   "accuracy": 0.6656618251575774,
+   "accuracy_ci": [
+    0.6508632502055358,
+    0.6807344477939161
+   ],
+   "brier": 0.21101053281928192,
+   "log_loss": 0.6094274267769724
+  },
+  "blend": {
+   "n": 3649,
+   "accuracy": 0.6645656344203892,
+   "accuracy_ci": [
+    0.6492189640997533,
+    0.6793642093724308
+   ],
+   "brier": 0.2115343303375747,
+   "log_loss": 0.6106975489610106
+  }
+ },
+ "baseline_confirm": {
+  "market": {
+   "n": 1084,
+   "accuracy": 0.6780442804428044,
+   "accuracy_ci": [
+    0.6494464944649446,
+    0.7075645756457565
+   ],
+   "brier": 0.21045524447924308,
+   "log_loss": 0.6081896562059822
+  },
+  "blend": {
+   "n": 1084,
+   "accuracy": 0.6752767527675276,
+   "accuracy_ci": [
+    0.6476014760147601,
+    0.7038745387453874
+   ],
+   "brier": 0.21111446829834304,
+   "log_loss": 0.6095256237556241
+  }
+ },
+ "points": {
+  "all": {
+   "weeks": 243,
+   "orders": {
+    "sort": {
+     "expected_per_week": 86.4072362350207,
+     "actual_per_week": 86.8724279835391,
+     "sort_minus_order_actual": {
+      "mean": 0.0,
+      "ci": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "market": {
+     "expected_per_week": 86.25697827950411,
+     "actual_per_week": 87.03292181069959,
+     "sort_minus_order_actual": {
+      "mean": -0.16049382716049382,
+      "ci": [
+       -0.4652263374485597,
+       0.15637860082304528
+      ]
+     }
+    },
+    "kickoff": {
+     "expected_per_week": 80.32101666257623,
+     "actual_per_week": 80.89300411522633,
+     "sort_minus_order_actual": {
+      "mean": 5.979423868312757,
+      "ci": [
+       4.559670781893004,
+       7.473456790123455
+      ]
+     }
+    },
+    "reverse": {
+     "expected_per_week": 74.26437537464949,
+     "actual_per_week": 73.80658436213992,
+     "sort_minus_order_actual": {
+      "mean": 13.065843621399177,
+      "ci": [
+       11.13559670781893,
+       15.115329218106995
+      ]
+     }
+    },
+    "oracle": {
+     "expected_per_week": 84.83764774335204,
+     "actual_per_week": 103.8395061728395,
+     "sort_minus_order_actual": {
+      "mean": -16.967078189300413,
+      "ci": [
+       -18.057716049382716,
+       -15.863786008230456
+      ]
+     }
+    }
+   },
+   "by_season": [
+    {
+     "season": 2012,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 84.33123844318253,
+       "actual_per_week": 86.70588235294117
+      },
+      "market": {
+       "expected_per_week": 84.22624365064003,
+       "actual_per_week": 86.94117647058823
+      },
+      "kickoff": {
+       "expected_per_week": 79.28676626774137,
+       "actual_per_week": 78.29411764705883
+      },
+      "reverse": {
+       "expected_per_week": 73.24125387895785,
+       "actual_per_week": 68.6470588235294
+      },
+      "oracle": {
+       "expected_per_week": 83.31714622410112,
+       "actual_per_week": 101.17647058823529
+      }
+     }
+    },
+    {
+     "season": 2013,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 85.45294904477743,
+       "actual_per_week": 90.11764705882354
+      },
+      "market": {
+       "expected_per_week": 85.26742085670382,
+       "actual_per_week": 90.76470588235294
+      },
+      "kickoff": {
+       "expected_per_week": 78.96671540221789,
+       "actual_per_week": 84.88235294117646
+      },
+      "reverse": {
+       "expected_per_week": 73.4600488731888,
+       "actual_per_week": 82.82352941176471
+      },
+      "oracle": {
+       "expected_per_week": 83.73225347751081,
+       "actual_per_week": 107.88235294117646
+      }
+     }
+    },
+    {
+     "season": 2014,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.14842799104393,
+       "actual_per_week": 88.11764705882354
+      },
+      "market": {
+       "expected_per_week": 85.96330436534444,
+       "actual_per_week": 88.17647058823529
+      },
+      "kickoff": {
+       "expected_per_week": 79.85016688915687,
+       "actual_per_week": 80.88235294117646
+      },
+      "reverse": {
+       "expected_per_week": 74.30077983075901,
+       "actual_per_week": 73.47058823529412
+      },
+      "oracle": {
+       "expected_per_week": 84.67464569859017,
+       "actual_per_week": 104.23529411764706
+      }
+     }
+    },
+    {
+     "season": 2015,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 85.36132134923737,
+       "actual_per_week": 80.94117647058823
+      },
+      "market": {
+       "expected_per_week": 85.14361114133649,
+       "actual_per_week": 80.82352941176471
+      },
+      "kickoff": {
+       "expected_per_week": 78.46693178095086,
+       "actual_per_week": 77.47058823529412
+      },
+      "reverse": {
+       "expected_per_week": 73.37484757175291,
+       "actual_per_week": 71.0
+      },
+      "oracle": {
+       "expected_per_week": 83.50937494195935,
+       "actual_per_week": 100.23529411764706
+      }
+     }
+    },
+    {
+     "season": 2016,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 82.25645134492403,
+       "actual_per_week": 81.05882352941177
+      },
+      "market": {
+       "expected_per_week": 82.0774945230948,
+       "actual_per_week": 81.0
+      },
+      "kickoff": {
+       "expected_per_week": 77.01648420222102,
+       "actual_per_week": 79.58823529411765
+      },
+      "reverse": {
+       "expected_per_week": 71.92689536215089,
+       "actual_per_week": 71.88235294117646
+      },
+      "oracle": {
+       "expected_per_week": 80.76379129490763,
+       "actual_per_week": 100.47058823529412
+      }
+     }
+    },
+    {
+     "season": 2017,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.76719917907602,
+       "actual_per_week": 90.76470588235294
+      },
+      "market": {
+       "expected_per_week": 86.60818944755295,
+       "actual_per_week": 90.6470588235294
+      },
+      "kickoff": {
+       "expected_per_week": 80.51379191209925,
+       "actual_per_week": 84.11764705882354
+      },
+      "reverse": {
+       "expected_per_week": 74.43183799200096,
+       "actual_per_week": 80.52941176470588
+      },
+      "oracle": {
+       "expected_per_week": 85.15307711617096,
+       "actual_per_week": 106.76470588235294
+      }
+     }
+    },
+    {
+     "season": 2018,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.63520806321942,
+       "actual_per_week": 86.11764705882354
+      },
+      "market": {
+       "expected_per_week": 86.47361639026047,
+       "actual_per_week": 85.88235294117646
+      },
+      "kickoff": {
+       "expected_per_week": 80.62241424178478,
+       "actual_per_week": 77.58823529411765
+      },
+      "reverse": {
+       "expected_per_week": 75.02576767187392,
+       "actual_per_week": 70.29411764705883
+      },
+      "oracle": {
+       "expected_per_week": 85.09926526492706,
+       "actual_per_week": 102.76470588235294
+      }
+     }
+    },
+    {
+     "season": 2019,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 87.95507678366673,
+       "actual_per_week": 85.88235294117646
+      },
+      "market": {
+       "expected_per_week": 87.8638653431882,
+       "actual_per_week": 85.94117647058823
+      },
+      "kickoff": {
+       "expected_per_week": 82.25221551072757,
+       "actual_per_week": 79.6470588235294
+      },
+      "reverse": {
+       "expected_per_week": 75.35004550438629,
+       "actual_per_week": 69.17647058823529
+      },
+      "oracle": {
+       "expected_per_week": 86.52664779336592,
+       "actual_per_week": 101.76470588235294
+      }
+     }
+    },
+    {
+     "season": 2020,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 87.81261619656583,
+       "actual_per_week": 91.3529411764706
+      },
+      "market": {
+       "expected_per_week": 87.74915599878375,
+       "actual_per_week": 90.52941176470588
+      },
+      "kickoff": {
+       "expected_per_week": 80.85469207759084,
+       "actual_per_week": 80.17647058823529
+      },
+      "reverse": {
+       "expected_per_week": 74.99981615639375,
+       "actual_per_week": 72.52941176470588
+      },
+      "oracle": {
+       "expected_per_week": 86.41049618703819,
+       "actual_per_week": 105.41176470588235
+      }
+     }
+    },
+    {
+     "season": 2021,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 89.79763446957487,
+       "actual_per_week": 84.27777777777777
+      },
+      "market": {
+       "expected_per_week": 89.56621182567136,
+       "actual_per_week": 85.38888888888889
+      },
+      "kickoff": {
+       "expected_per_week": 83.74994717507535,
+       "actual_per_week": 77.83333333333333
+      },
+      "reverse": {
+       "expected_per_week": 76.54917712997695,
+       "actual_per_week": 67.16666666666667
+      },
+      "oracle": {
+       "expected_per_week": 88.20017649711195,
+       "actual_per_week": 101.16666666666667
+      }
+     }
+    },
+    {
+     "season": 2022,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 84.66939352242275,
+       "actual_per_week": 86.22222222222223
+      },
+      "market": {
+       "expected_per_week": 84.52180018831434,
+       "actual_per_week": 86.66666666666667
+      },
+      "kickoff": {
+       "expected_per_week": 78.676176572619,
+       "actual_per_week": 81.55555555555556
+      },
+      "reverse": {
+       "expected_per_week": 72.74623301603548,
+       "actual_per_week": 72.88888888888889
+      },
+      "oracle": {
+       "expected_per_week": 83.11986727828486,
+       "actual_per_week": 103.22222222222223
+      }
+     }
+    },
+    {
+     "season": 2023,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.75190062971579,
+       "actual_per_week": 83.77777777777777
+      },
+      "market": {
+       "expected_per_week": 86.52917622293938,
+       "actual_per_week": 85.22222222222223
+      },
+      "kickoff": {
+       "expected_per_week": 80.42859565042774,
+       "actual_per_week": 84.5
+      },
+      "reverse": {
+       "expected_per_week": 74.13313600852162,
+       "actual_per_week": 79.88888888888889
+      },
+      "oracle": {
+       "expected_per_week": 84.56981425275778,
+       "actual_per_week": 105.77777777777777
+      }
+     }
+    },
+    {
+     "season": 2024,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.2454094829108,
+       "actual_per_week": 92.72222222222223
+      },
+      "market": {
+       "expected_per_week": 86.17397754278034,
+       "actual_per_week": 93.16666666666667
+      },
+      "kickoff": {
+       "expected_per_week": 80.49548207540212,
+       "actual_per_week": 85.22222222222223
+      },
+      "reverse": {
+       "expected_per_week": 74.4795833832103,
+       "actual_per_week": 81.55555555555556
+      },
+      "oracle": {
+       "expected_per_week": 84.71901809790117,
+       "actual_per_week": 108.66666666666667
+      }
+     }
+    },
+    {
+     "season": 2025,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 89.24177869444496,
+       "actual_per_week": 88.11111111111111
+      },
+      "market": {
+       "expected_per_week": 89.15918937207874,
+       "actual_per_week": 87.16666666666667
+      },
+      "kickoff": {
+       "expected_per_week": 83.03279953590273,
+       "actual_per_week": 80.44444444444444
+      },
+      "reverse": {
+       "expected_per_week": 75.5558281141964,
+       "actual_per_week": 71.22222222222223
+      },
+      "oracle": {
+       "expected_per_week": 87.68970918832386,
+       "actual_per_week": 104.0
+      }
+     }
+    }
+   ],
+   "swap_ceiling_per_week": 0.01688213830037152
+  },
+  "tune": {
+   "weeks": 171,
+   "orders": {
+    "sort": {
+     "expected_per_week": 86.27254808876687,
+     "actual_per_week": 86.52046783625731,
+     "sort_minus_order_actual": {
+      "mean": 0.0,
+      "ci": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "market": {
+     "expected_per_week": 86.11421720496764,
+     "actual_per_week": 86.60233918128655,
+     "sort_minus_order_actual": {
+      "mean": -0.08187134502923976,
+      "ci": [
+       -0.4328947368421052,
+       0.29239766081871343
+      ]
+     }
+    },
+    "kickoff": {
+     "expected_per_week": 80.17901801162395,
+     "actual_per_week": 80.03508771929825,
+     "sort_minus_order_actual": {
+      "mean": 6.485380116959064,
+      "ci": [
+       4.77719298245614,
+       8.240497076023388
+      ]
+     }
+    },
+    "reverse": {
+     "expected_per_week": 74.27939863534783,
+     "actual_per_week": 72.71929824561404,
+     "sort_minus_order_actual": {
+      "mean": 13.801169590643275,
+      "ci": [
+       11.397514619883042,
+       16.216374269005847
+      ]
+     }
+    },
+    "oracle": {
+     "expected_per_week": 84.75893007557734,
+     "actual_per_week": 103.17543859649123,
+     "sort_minus_order_actual": {
+      "mean": -16.65497076023392,
+      "ci": [
+       -17.976754385964913,
+       -15.333333333333334
+      ]
+     }
+    }
+   },
+   "by_season": [
+    {
+     "season": 2012,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 84.33123844318253,
+       "actual_per_week": 86.70588235294117
+      },
+      "market": {
+       "expected_per_week": 84.22624365064003,
+       "actual_per_week": 86.94117647058823
+      },
+      "kickoff": {
+       "expected_per_week": 79.28676626774137,
+       "actual_per_week": 78.29411764705883
+      },
+      "reverse": {
+       "expected_per_week": 73.24125387895785,
+       "actual_per_week": 68.6470588235294
+      },
+      "oracle": {
+       "expected_per_week": 83.31714622410112,
+       "actual_per_week": 101.17647058823529
+      }
+     }
+    },
+    {
+     "season": 2013,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 85.45294904477743,
+       "actual_per_week": 90.11764705882354
+      },
+      "market": {
+       "expected_per_week": 85.26742085670382,
+       "actual_per_week": 90.76470588235294
+      },
+      "kickoff": {
+       "expected_per_week": 78.96671540221789,
+       "actual_per_week": 84.88235294117646
+      },
+      "reverse": {
+       "expected_per_week": 73.4600488731888,
+       "actual_per_week": 82.82352941176471
+      },
+      "oracle": {
+       "expected_per_week": 83.73225347751081,
+       "actual_per_week": 107.88235294117646
+      }
+     }
+    },
+    {
+     "season": 2014,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.14842799104393,
+       "actual_per_week": 88.11764705882354
+      },
+      "market": {
+       "expected_per_week": 85.96330436534444,
+       "actual_per_week": 88.17647058823529
+      },
+      "kickoff": {
+       "expected_per_week": 79.85016688915687,
+       "actual_per_week": 80.88235294117646
+      },
+      "reverse": {
+       "expected_per_week": 74.30077983075901,
+       "actual_per_week": 73.47058823529412
+      },
+      "oracle": {
+       "expected_per_week": 84.67464569859017,
+       "actual_per_week": 104.23529411764706
+      }
+     }
+    },
+    {
+     "season": 2015,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 85.36132134923737,
+       "actual_per_week": 80.94117647058823
+      },
+      "market": {
+       "expected_per_week": 85.14361114133649,
+       "actual_per_week": 80.82352941176471
+      },
+      "kickoff": {
+       "expected_per_week": 78.46693178095086,
+       "actual_per_week": 77.47058823529412
+      },
+      "reverse": {
+       "expected_per_week": 73.37484757175291,
+       "actual_per_week": 71.0
+      },
+      "oracle": {
+       "expected_per_week": 83.50937494195935,
+       "actual_per_week": 100.23529411764706
+      }
+     }
+    },
+    {
+     "season": 2016,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 82.25645134492403,
+       "actual_per_week": 81.05882352941177
+      },
+      "market": {
+       "expected_per_week": 82.0774945230948,
+       "actual_per_week": 81.0
+      },
+      "kickoff": {
+       "expected_per_week": 77.01648420222102,
+       "actual_per_week": 79.58823529411765
+      },
+      "reverse": {
+       "expected_per_week": 71.92689536215089,
+       "actual_per_week": 71.88235294117646
+      },
+      "oracle": {
+       "expected_per_week": 80.76379129490763,
+       "actual_per_week": 100.47058823529412
+      }
+     }
+    },
+    {
+     "season": 2017,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.76719917907602,
+       "actual_per_week": 90.76470588235294
+      },
+      "market": {
+       "expected_per_week": 86.60818944755295,
+       "actual_per_week": 90.6470588235294
+      },
+      "kickoff": {
+       "expected_per_week": 80.51379191209925,
+       "actual_per_week": 84.11764705882354
+      },
+      "reverse": {
+       "expected_per_week": 74.43183799200096,
+       "actual_per_week": 80.52941176470588
+      },
+      "oracle": {
+       "expected_per_week": 85.15307711617096,
+       "actual_per_week": 106.76470588235294
+      }
+     }
+    },
+    {
+     "season": 2018,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.63520806321942,
+       "actual_per_week": 86.11764705882354
+      },
+      "market": {
+       "expected_per_week": 86.47361639026047,
+       "actual_per_week": 85.88235294117646
+      },
+      "kickoff": {
+       "expected_per_week": 80.62241424178478,
+       "actual_per_week": 77.58823529411765
+      },
+      "reverse": {
+       "expected_per_week": 75.02576767187392,
+       "actual_per_week": 70.29411764705883
+      },
+      "oracle": {
+       "expected_per_week": 85.09926526492706,
+       "actual_per_week": 102.76470588235294
+      }
+     }
+    },
+    {
+     "season": 2019,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 87.95507678366673,
+       "actual_per_week": 85.88235294117646
+      },
+      "market": {
+       "expected_per_week": 87.8638653431882,
+       "actual_per_week": 85.94117647058823
+      },
+      "kickoff": {
+       "expected_per_week": 82.25221551072757,
+       "actual_per_week": 79.6470588235294
+      },
+      "reverse": {
+       "expected_per_week": 75.35004550438629,
+       "actual_per_week": 69.17647058823529
+      },
+      "oracle": {
+       "expected_per_week": 86.52664779336592,
+       "actual_per_week": 101.76470588235294
+      }
+     }
+    },
+    {
+     "season": 2020,
+     "weeks": 17,
+     "orders": {
+      "sort": {
+       "expected_per_week": 87.81261619656583,
+       "actual_per_week": 91.3529411764706
+      },
+      "market": {
+       "expected_per_week": 87.74915599878375,
+       "actual_per_week": 90.52941176470588
+      },
+      "kickoff": {
+       "expected_per_week": 80.85469207759084,
+       "actual_per_week": 80.17647058823529
+      },
+      "reverse": {
+       "expected_per_week": 74.99981615639375,
+       "actual_per_week": 72.52941176470588
+      },
+      "oracle": {
+       "expected_per_week": 86.41049618703819,
+       "actual_per_week": 105.41176470588235
+      }
+     }
+    },
+    {
+     "season": 2021,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 89.79763446957487,
+       "actual_per_week": 84.27777777777777
+      },
+      "market": {
+       "expected_per_week": 89.56621182567136,
+       "actual_per_week": 85.38888888888889
+      },
+      "kickoff": {
+       "expected_per_week": 83.74994717507535,
+       "actual_per_week": 77.83333333333333
+      },
+      "reverse": {
+       "expected_per_week": 76.54917712997695,
+       "actual_per_week": 67.16666666666667
+      },
+      "oracle": {
+       "expected_per_week": 88.20017649711195,
+       "actual_per_week": 101.16666666666667
+      }
+     }
+    }
+   ],
+   "swap_ceiling_per_week": 0.016948429451401417
+  },
+  "confirm": {
+   "weeks": 72,
+   "orders": {
+    "sort": {
+     "expected_per_week": 86.72712058237357,
+     "actual_per_week": 87.70833333333333,
+     "sort_minus_order_actual": {
+      "mean": 0.0,
+      "ci": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "market": {
+     "expected_per_week": 86.59603583152823,
+     "actual_per_week": 88.05555555555556,
+     "sort_minus_order_actual": {
+      "mean": -0.3472222222222222,
+      "ci": [
+       -0.9447916666666666,
+       0.2638888888888889
+      ]
+     }
+    },
+    "kickoff": {
+     "expected_per_week": 80.6582634585879,
+     "actual_per_week": 82.93055555555556,
+     "sort_minus_order_actual": {
+      "mean": 4.777777777777778,
+      "ci": [
+       2.2222222222222223,
+       7.513888888888889
+      ]
+     }
+    },
+    "reverse": {
+     "expected_per_week": 74.22869513049096,
+     "actual_per_week": 76.38888888888889,
+     "sort_minus_order_actual": {
+      "mean": 11.319444444444445,
+      "ci": [
+       7.5,
+       15.26388888888889
+      ]
+     }
+    },
+    "oracle": {
+     "expected_per_week": 85.0246022043169,
+     "actual_per_week": 105.41666666666667,
+     "sort_minus_order_actual": {
+      "mean": -17.708333333333332,
+      "ci": [
+       -19.680902777777778,
+       -15.596875
+      ]
+     }
+    }
+   },
+   "by_season": [
+    {
+     "season": 2022,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 84.66939352242275,
+       "actual_per_week": 86.22222222222223
+      },
+      "market": {
+       "expected_per_week": 84.52180018831434,
+       "actual_per_week": 86.66666666666667
+      },
+      "kickoff": {
+       "expected_per_week": 78.676176572619,
+       "actual_per_week": 81.55555555555556
+      },
+      "reverse": {
+       "expected_per_week": 72.74623301603548,
+       "actual_per_week": 72.88888888888889
+      },
+      "oracle": {
+       "expected_per_week": 83.11986727828486,
+       "actual_per_week": 103.22222222222223
+      }
+     }
+    },
+    {
+     "season": 2023,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.75190062971579,
+       "actual_per_week": 83.77777777777777
+      },
+      "market": {
+       "expected_per_week": 86.52917622293938,
+       "actual_per_week": 85.22222222222223
+      },
+      "kickoff": {
+       "expected_per_week": 80.42859565042774,
+       "actual_per_week": 84.5
+      },
+      "reverse": {
+       "expected_per_week": 74.13313600852162,
+       "actual_per_week": 79.88888888888889
+      },
+      "oracle": {
+       "expected_per_week": 84.56981425275778,
+       "actual_per_week": 105.77777777777777
+      }
+     }
+    },
+    {
+     "season": 2024,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 86.2454094829108,
+       "actual_per_week": 92.72222222222223
+      },
+      "market": {
+       "expected_per_week": 86.17397754278034,
+       "actual_per_week": 93.16666666666667
+      },
+      "kickoff": {
+       "expected_per_week": 80.49548207540212,
+       "actual_per_week": 85.22222222222223
+      },
+      "reverse": {
+       "expected_per_week": 74.4795833832103,
+       "actual_per_week": 81.55555555555556
+      },
+      "oracle": {
+       "expected_per_week": 84.71901809790117,
+       "actual_per_week": 108.66666666666667
+      }
+     }
+    },
+    {
+     "season": 2025,
+     "weeks": 18,
+     "orders": {
+      "sort": {
+       "expected_per_week": 89.24177869444496,
+       "actual_per_week": 88.11111111111111
+      },
+      "market": {
+       "expected_per_week": 89.15918937207874,
+       "actual_per_week": 87.16666666666667
+      },
+      "kickoff": {
+       "expected_per_week": 83.03279953590273,
+       "actual_per_week": 80.44444444444444
+      },
+      "reverse": {
+       "expected_per_week": 75.5558281141964,
+       "actual_per_week": 71.22222222222223
+      },
+      "oracle": {
+       "expected_per_week": 87.68970918832386,
+       "actual_per_week": 104.0
+      }
+     }
+    }
+   ],
+   "swap_ceiling_per_week": 0.016724696816675513
+  }
+ },
+ "seconds": 5.8
+}
