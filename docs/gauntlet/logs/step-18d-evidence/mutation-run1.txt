@@ -1,0 +1,38 @@
+KILLED   P2 half tie share
+KILLED   P2 larger share
+KILLED   P3 exact tie break
+KILLED   P4 share is probability
+KILLED   P5 close call boundary
+KILLED   P5 qb flag
+KILLED   P5 disagree boundary
+KILLED   P6 push bonus half
+KILLED   P6 ats larger
+KILLED   P6 equal goes to tie_break
+KILLED   P7 line recorded
+KILLED   P8 fallback margin sign
+KILLED   P8 zero margin
+KILLED   P9 no spread warning
+KILLED   P10 total fallback sign
+KILLED   P10 default side
+KILLED   P11 coin flip warning
+KILLED   P12 duplicate ids
+KILLED   P13 assumed flag
+KILLED   P13 unknown mode
+KILLED   P14 unique weights
+KILLED   P14 default weights
+KILLED   P15 share order
+KILLED   P15 expected points
+KILLED   P16 game id order
+KILLED   P17 spread settle
+KILLED   P17 no line
+KILLED   P18 half push
+KILLED   P19 nflverse sign
+KILLED   P20 stale price
+KILLED   P20 ev boundary
+KILLED   P21 validation
+KILLED   P22 star count
+KILLED   P22 below first
+KILLED   P23 qb missing
+KILLED   P24 rubric strictly increasing
+KILLED   P1 probability bound
+killed 37, survived 0, skipped 0
