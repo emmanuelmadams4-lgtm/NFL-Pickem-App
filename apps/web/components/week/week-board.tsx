@@ -106,7 +106,6 @@ export function WeekBoard() {
             <span className="lg:hidden">{season}{data ? ` · ${data.summary.games_total} games` : ""}</span>
             <span className="hidden lg:inline">{season} season{data ? `, ${data.summary.games_total} games` : ""}</span>
             {data && <span className="ml-2 text-xs text-subtle">Updated {ago(data.generated_at)}{q.isFetching && !q.isPending ? ", refreshing" : ""}</span>}
-            {data && <span className="block text-xs text-subtle">{data.pick_mode.label}</span>}
           </>
         }
         aside={
@@ -115,6 +114,7 @@ export function WeekBoard() {
           </Link>
         }
       />
+      {data && <p className="text-xs text-subtle">{data.pick_mode.label}</p>}
 
       {/* Filter chips directly under the title, before any summary (design.md § 0); one scrolling row on the phone. */}
       <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex min-w-0 items-center gap-2 overflow-x-auto pl-4 pr-12 max-lg:[mask-image:linear-gradient(to_right,black_85%,transparent)] lg:mx-0 lg:flex-wrap lg:px-0">

@@ -27,26 +27,26 @@ export function SimulationSection({ game }: { game: GameDetail }) {
   return (
     <Section id="simulator" title="Score simulator" note={sim?.label}>
       {!sim ? (
-        <p className="pt-4 text-sm text-text-2">No simulation for this game yet.</p>
+        <p className="text-sm text-text-2">No simulation for this game yet.</p>
       ) : (
-        <div className="space-y-6 pt-4">
+        <div className="space-y-6">
           <p className="text-sm text-text-2">Shown only: not a pick, and it does not change the pick above.</p>
 
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
             <Fact label="Average score">
-              <span className="block text-sm font-medium text-text-2">{game.away.abbr} {sim.away_points.toFixed(1)}</span>
               <span className="block text-sm font-medium text-text-2">{game.home.abbr} {sim.home_points.toFixed(1)}</span>
+              <span className="block text-sm font-medium text-text-2">{game.away.abbr} {sim.away_points.toFixed(1)}</span>
             </Fact>
-            <Fact label="Home margin">
+            <Fact label={`${game.home.abbr} margin`}>
               {signed(sim.expected_margin)}
               <span className="block text-xs font-normal text-subtle">
-                80% of runs between {signed(sim.margin_80[0])} and {signed(sim.margin_80[1])}
+                80% of runs: {signed(sim.margin_80[0])} to {signed(sim.margin_80[1])}
               </span>
             </Fact>
             <Fact label="Total points">
               {sim.expected_total.toFixed(1)}
               <span className="block text-xs font-normal text-subtle">
-                80% of runs between {sim.total_80[0].toFixed(1)} and {sim.total_80[1].toFixed(1)}
+                80% of runs: {sim.total_80[0].toFixed(1)} to {sim.total_80[1].toFixed(1)}
               </span>
             </Fact>
           </dl>
@@ -56,10 +56,10 @@ export function SimulationSection({ game }: { game: GameDetail }) {
               <p className="text-sm text-text-2">No spread yet.</p>
             ) : (
               <>
-                <h3 className="mb-3 text-sm font-medium text-text">
-                  {game.home.abbr} {spreadText(sim.home_spread)}
+                <h3 className="mb-2 text-xs font-medium text-text">
+                  {game.home.abbr} {spreadText(sim.home_spread)}, <span>the line the simulator used</span>
                 </h3>
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                <dl className="grid grid-cols-3 gap-x-6 gap-y-4">
                   <Fact label={`${game.home.abbr} covers`}>{pct(sim.home_cover, 0)}</Fact>
                   <Fact label={`${game.away.abbr} covers`}>{pct(sim.away_cover, 0)}</Fact>
                   <Fact label="Push">{pct(sim.spread_push, 0)}</Fact>
@@ -73,8 +73,10 @@ export function SimulationSection({ game }: { game: GameDetail }) {
               <p className="text-sm text-text-2">No total yet.</p>
             ) : (
               <>
-                <h3 className="mb-3 text-sm font-medium text-text">Over/under {sim.total}</h3>
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                <h3 className="mb-2 text-xs font-medium text-text">
+                  Over/under {sim.total}, <span>the line the simulator used</span>
+                </h3>
+                <dl className="grid grid-cols-3 gap-x-6 gap-y-4">
                   <Fact label="Over">{pct(sim.over, 0)}</Fact>
                   <Fact label="Under">{pct(sim.under, 0)}</Fact>
                   <Fact label="Push">{pct(sim.total_push, 0)}</Fact>
@@ -83,7 +85,7 @@ export function SimulationSection({ game }: { game: GameDetail }) {
             )}
           </div>
 
-          <p className="text-xs text-subtle">Based on {sim.n_simulations.toLocaleString("en-US")} simulated games.</p>
+          <p className="text-[11px] text-subtle">Based on {sim.n_simulations.toLocaleString("en-US")} simulated games.</p>
         </div>
       )}
     </Section>
