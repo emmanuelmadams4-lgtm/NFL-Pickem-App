@@ -141,3 +141,9 @@ Runs (logs in `~/.claude/plans/nfl-pickem-lanes/logs/step-15-web/<name>.log`):
 **Fresh critic 1 on `5a91a18`: PASS + 1 MEDIUM** (`evidence/reviews/critic-1.md`). **Amendment 3:** S1 lists the
 home team first (design finding 6, WO2). S5b (new): a week reply without `pick_mode` (an old reply from the offline
 cache) still shows the board's cards. Red: `s18j-red-3` (no game card in 15 s). Fix: WO4.
+
+**WO4.** `evidence/wo-4.md`, try 1. Ryan reported at 23:31 UTC. The diff matched (one guarded line in
+`week-board.tsx`); typecheck 0. `s18j-green-5` (a fresh build: sim18j and phone-layout): 18 passed, 2 failed.
+S5b now passes (it was red in `s18j-red-3`); L1 passes. The 2 failures: sim18j S3 timed out "while setting up page"
+(the browser fixture, before any app code ran; S3 passed in green-1, green-2, green-4 and critic-1), and phone-layout
+L2 waited for `game-card` (it passed in green-4). Same slow-load pattern; PR CI decides (D71).
