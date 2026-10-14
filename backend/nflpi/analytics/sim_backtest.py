@@ -246,7 +246,7 @@ def _win_block(v: pd.DataFrame) -> tuple[dict, dict]:
 
 
 def _variant(v: pd.DataFrame, source: str, distribution: str, default: str) -> dict:
-    spread = -v["spread_line"].to_numpy(float)
+    spread = quoted_home_spread(v["spread_line"].to_numpy(float))
     margin = (v["home_score"] - v["away_score"]).to_numpy(float)
     total = (v["home_score"] + v["away_score"]).to_numpy(float)
     cover = np.where(margin + spread == 0, np.nan, (margin + spread > 0).astype(float))

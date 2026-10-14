@@ -166,6 +166,17 @@ def test_quoted_home_spread_is_the_negative_of_the_nflverse_line():
     assert margin + bench.quoted_home_spread(line) > 0
 
 
+def test_spread_sign_is_converted_only_in_quoted_home_spread():
+    # AUDIT A13: one named conversion; no other place negates spread_line.
+    import inspect
+    import re
+
+    src = inspect.getsource(bench)
+    body = src.replace(inspect.getsource(bench.quoted_home_spread), "")
+    assert not re.search(r"-\s*\w+\[\"spread_line\"\]|-\s*spread_line", body)
+    assert "quoted_home_spread(" in inspect.getsource(bench._variant)
+
+
 # --- B7 metric helpers --------------------------------------------------------------------------------
 
 def test_reliability_table_brier_and_flat_brier():
