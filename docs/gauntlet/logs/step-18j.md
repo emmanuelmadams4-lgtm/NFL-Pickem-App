@@ -83,3 +83,28 @@ D71 the pull request's CI is the full gate again on the final head.
 line the simulator used" and the total heading "Over/under <total>, the line the simulator used" (the simulator keeps
 the line from its prediction run; Market shows the latest line, so the two can differ). Tests updated in the same
 commit as this amendment.
+
+## 3. IMPLEMENTATION
+
+Provider: Codex (Ryan `ryan-mv5mjwq1`), rung unchanged, no climbs. Red first: `1bf2cc2` (run `s18j-red-1`, 6/6 fail:
+no `#simulator` section, no pick-mode line).
+- WO1 (`evidence/wo-1.md`, try 1): `3b0ffc9`, new `components/game/simulation.tsx`, tab and section in `game-view.tsx`,
+  pick-mode line in `week-board.tsx`. Diff inspected (allowed files only); typecheck 0; `s18j-green-1` 6/6 on a fresh build.
+- Design Gauntlet: before/after screenshots at 393 and 1280 px in `~/.claude/plans/nfl-pickem-lanes-logs/step-18j/`;
+  fresh read-only design critic, report and triage in `evidence/reviews/design-1.md` (1 MUST: the simulator's spread
+  could differ from Market's line with no word saying so; accepted with 2, 4-9; not taken: 3, 10, reasons there).
+  Defect to test first: spec amendment and amended tests `258d62f`, red for the right reason (`s18j-red-2`: S1 fails on
+  "LV margin", 5 pass).
+- WO2 (`evidence/wo-2.md`, try 1): Ryan went quiet at 18:04 UTC (god nudged), reported done 19:05 UTC; no ladder
+  climb. Diff inspected (simulation.tsx, week-board.tsx only); typecheck 0; `s18j-green-2` 6/6 on a fresh build;
+  committed `fd99c20`. Re-shot `after2-*` (393, 1280): all eight design items visible; the phone header keeps
+  "Yahoo sheet" on its row; the pick-mode line sits under the header. design.md: no durable change.
+
+## 4. CLEANUP
+
+Scope-locked `/refactor` read of the touched code (`simulation.tsx`, the `week-board.tsx` line, `game-view.tsx` two
+lines) on `fd99c20`. Result: **no change needed**. Reasons: the spread and total blocks look alike but differ in
+labels, null field and values; a shared helper would add props for two callers (ponytail). `Fact`, `signed` and
+`spreadText` are local, small and used only here (moving `Fact` to `ui.tsx` was design finding 10, not taken). The
+`<span>` in each line heading is the single text node the spec test counts; harmless. No dead code, no unused
+imports (typecheck 0). No proof rerun needed (no edit).
