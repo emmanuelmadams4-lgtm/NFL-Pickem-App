@@ -106,6 +106,7 @@ export function WeekBoard() {
             <span className="lg:hidden">{season}{data ? ` · ${data.summary.games_total} games` : ""}</span>
             <span className="hidden lg:inline">{season} season{data ? `, ${data.summary.games_total} games` : ""}</span>
             {data && <span className="ml-2 text-xs text-subtle">Updated {ago(data.generated_at)}{q.isFetching && !q.isPending ? ", refreshing" : ""}</span>}
+            {data && <span className="block text-xs text-subtle">{data.pick_mode.label}</span>}
           </>
         }
         aside={
