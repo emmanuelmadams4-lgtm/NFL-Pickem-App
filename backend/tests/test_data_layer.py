@@ -551,9 +551,13 @@ def test_nothing_in_the_shipping_code_imports_the_data_package():
     root = Path(asof.__file__).resolve().parents[1]
     files = [*root.joinpath("predictions").rglob("*.py"), *root.joinpath("api").rglob("*.py")]
     files += [*root.joinpath("analytics").rglob("*.py"), root / "jobs.py"]
+    # ponytail: bench_*.py are research benches the app never loads (checked below), so they may read the data layer
+    benches = [f for f in files if f.name.startswith("bench_")]
+    files = [f for f in files if f not in benches]
     assert files
     offenders = [f.name for f in files if "nflpi.data" in f.read_text() or "from nflpi import data" in f.read_text()]
     assert offenders == []
+    assert [f.name for f in files if any(b.stem in f.read_text() for b in benches)] == []
 
 
 # --- database loader ------------------------------------------------------------------------------------------------
