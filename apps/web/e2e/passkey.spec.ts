@@ -234,6 +234,16 @@ test("K5 the name stops at 64 characters; refusals while adding are words", asyn
   expect(await rows(page)).toHaveLength(0);
 });
 
+test("K5 a second passkey from the same device is refused in plain words, not the browser's own text", async ({ context, page }) => {
+  await authenticator(context, page);
+  await passkeys(page, true);
+  await signedIn(page);
+  await addFromSettings(page, "Only one");
+  await section(page).getByRole("button", { name: "Add a passkey" }).click();
+  await expect(section(page).getByRole("alert")).toHaveText("This device already has a passkey for this app.");
+  expect(await rows(page)).toHaveLength(1);
+});
+
 test("K7 passkeys off: Settings still lists passkeys (so one can be removed) and offers no add", async ({ context, page }) => {
   await authenticator(context, page);
   await passkeys(page, true);
