@@ -41,8 +41,14 @@ M = [
     ("V11", "nflpi/ingestion/live/run.py", '"line": -p.line if flip', '"line": p.line if flip'),
     ("V11", "nflpi/ingestion/live/run.py", "FLIP[p.selection] if flip else p.selection", "p.selection"),
     ("V11", "nflpi/ingestion/live/run.py", "min(book.updated, now)", "book.updated"),
-    ("V11", "nflpi/ingestion/live/run.py", "                    _save_book_prices(session, event, book, game, now)\n", "                    pass\n"),
-    ("V11", "nflpi/ingestion/live/run.py", "                with session.begin_nested():\n                    _save", "                if True:\n                    _save"),
+    ("V11", "nflpi/ingestion/live/run.py", "                    saved += _save_book_prices(session, event, book, game, now)\n", "                    pass\n"),
+    ("V11", "nflpi/ingestion/live/run.py", "book.updated > now + BOOK_CLOCK_SKEW", "False"),
+    ("V11", "nflpi/ingestion/live/run.py", "BOOK_CLOCK_SKEW = timedelta(minutes=2)", "BOOK_CLOCK_SKEW = timedelta(minutes=5)"),
+    ("V11", "nflpi/ingestion/live/run.py", "                dropped += len(book.prices)\n", ""),
+    ("V5", "nflpi/ingestion/live/oddsapi.py", "for o in outcomes if isinstance(o.get(\"name\"), str)}", "for o in outcomes}"),
+    ("V5", "nflpi/config.py", "\"odds_api_key\", \"database_url\"", "\"database_url\""),
+    ("V5", "nflpi/config.py", "\"odds_api_key\", \"database_url\"", "\"odds_api_key\""),
+    ("V11", "nflpi/ingestion/live/run.py", "                with session.begin_nested():\n                    saved", "                if True:\n                    saved"),
     ("V11", "nflpi/ingestion/live/run.py", "            except Exception as exc:", "            except ZeroDivisionError as exc:"),
 ]
 

@@ -114,7 +114,7 @@ def _pair(market: dict, names: tuple[str, str]) -> list[dict] | None:
     outcomes = market.get("outcomes")
     if not isinstance(outcomes, list) or len(outcomes) != 2 or not all(isinstance(o, dict) for o in outcomes):
         return None
-    by_name = {o.get("name"): o for o in outcomes}
+    by_name = {o["name"]: o for o in outcomes if isinstance(o.get("name"), str)}
     if len(by_name) != 2 or set(by_name) != set(names):
         return None
     first, second = by_name[names[0]], by_name[names[1]]

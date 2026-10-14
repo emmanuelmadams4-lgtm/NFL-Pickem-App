@@ -4,7 +4,9 @@ from pathlib import Path
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_HIDDEN_REPR_FIELDS = frozenset({"anthropic_api_key", "openrouter_api_key", "app_access_token", "vapid_private_key"})
+_HIDDEN_REPR_FIELDS = frozenset(
+    {"anthropic_api_key", "openrouter_api_key", "app_access_token", "vapid_private_key", "odds_api_key", "database_url"}
+)
 
 
 class Settings(BaseSettings):

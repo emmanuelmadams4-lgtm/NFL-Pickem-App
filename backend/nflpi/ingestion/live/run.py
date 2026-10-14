@@ -384,11 +384,14 @@ def _save_odds(session: Session, event: oddsapi.Event, book: oddsapi.Book, game:
     )
 
 
+BOOK_CLOCK_SKEW = timedelta(minutes=2)  # a book clock further ahead would re-insert one price every poll
 FLIP = {"home": "away", "away": "home", "over": "over", "under": "under"}
 
 
 def _save_book_prices(session: Session, event: oddsapi.Event, book: oddsapi.Book, game: Game, now: datetime) -> int:
     """Every parsed price of one book into book_prices, sides as our game has them (insert-only)."""
+    if book.updated > now + BOOK_CLOCK_SKEW:
+        raise ValueError("book clock ahead of ours")
     flip = oddsapi.TEAM_NAMES[event.home] != game.home_team
     quotes = [
         {
@@ -415,7 +418,7 @@ def _odds_job(
         credits[0] = int(header)
     events, skipped = oddsapi.parse_events(result.data)
     games = _quote_candidates(session, now)
-    inserted, matched = 0, 0
+    inserted, matched, saved, dropped = 0, 0, 0, 0
     for event in events:
         game = _quote_game(
             games,
@@ -431,9 +434,11 @@ def _odds_job(
                 inserted += 1
             try:
                 with session.begin_nested():
-                    _save_book_prices(session, event, book, game, now)
+                    saved += _save_book_prices(session, event, book, game, now)
             except Exception as exc:  # never lose the win-market quotes over a book price
+                dropped += len(book.prices)
                 log.warning("oddsapi book prices skipped for %s: %s", book.key, safe_error(exc))
+    log.info("oddsapi book prices: %d saved, %d dropped", saved, dropped)
     if len(events) >= 3 and matched == 0:
         raise ValueError("no match")
     return inserted, skipped, None

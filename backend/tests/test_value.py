@@ -460,7 +460,7 @@ def test_v11_odds_job_saves_book_prices_with_our_sides(session):
         )
     )  # fmt: skip
     session.commit()
-    now = T0 + timedelta(minutes=2)
+    now = T0 + timedelta(minutes=4)  # booktwo's clock (15:05) is 1 minute ahead: kept, capped at now
     calls: list[str] = []
 
     def get(url: str) -> fetch.JsonResult:
@@ -474,7 +474,7 @@ def test_v11_odds_job_saves_book_prices_with_our_sides(session):
     got = {(r.game_id, r.sportsbook, r.market_type, r.selection, r.line, r.price, r.observed_at) for r in rows(session)}
     assert ("2026_07_MIA_BUF", "bookone", "spread", "home", -3.5, -110, T0) in got
     assert ("2026_07_MIA_BUF", "bookone", "total", "under", 47.5, -115, T0) in got
-    assert ("2026_07_MIA_BUF", "booktwo", "moneyline", "home", None, -190, now) in got  # book time 15:05 capped at now
+    assert ("2026_07_MIA_BUF", "booktwo", "moneyline", "home", None, -190, now) in got  # capped at now
     assert ("2026_07_KC_LV", "bookone", "spread", "away", 9.5, -110, T0) in got  # their home KC is our away; LV +9.5
     assert ("2026_07_KC_LV", "bookone", "spread", "home", 9.5, -110, T0) in got
     assert ("2026_07_KC_LV", "bookone", "moneyline", "away", None, -400, T0) in got
@@ -551,3 +551,34 @@ def test_v11_bad_book_price_keeps_moneyline_quote_and_job_ok(session, monkeypatc
     assert run.refresh_odds_quotes(session, get=odds_get, now=T0, api_key=KEY).status == "ok"
     assert session.scalar(select(MarketQuote.id).where(MarketQuote.game_id == "2026_07_KC_LV").limit(1)) is not None
     assert rows(session) == []
+
+
+# Dwight V1: an outcome name that is not a string drops that market, never the poll
+@pytest.mark.parametrize("name", [["Buffalo Bills"], {"a": 1}, None])
+def test_v5_non_string_outcome_name_drops_market_only(name):
+    book = _first_book_with("spreads", lambda o: o[0].update(name=name))
+    assert book.home_ml == -180
+    assert not any(p[0] == "spread" for p in book.prices)
+    assert any(p[0] == "total" for p in book.prices)
+
+
+# Dwight V2 + V3: a book clock too far ahead of ours is refused, counted and logged
+def test_v11_book_clock_ahead_refused_and_counted(session, caplog):
+    from nflpi.ingestion.live import run
+    from nflpi.models import MarketQuote
+
+    game(session)
+    session.commit()
+    now = T0 + timedelta(minutes=2)  # booktwo says 15:05: 3 minutes ahead, over the 2 minute skew
+    assert run.BOOK_CLOCK_SKEW == timedelta(minutes=2)
+    with caplog.at_level("INFO", logger="nflpi.ingestion.live.run"):
+        assert run.refresh_odds_quotes(session, get=odds_get, now=now, api_key=KEY).status == "ok"
+    assert {r.sportsbook for r in rows(session)} == {"bookone"}
+    assert session.scalar(select(MarketQuote.id).where(MarketQuote.game_id == GAME).limit(1)) is not None
+    assert "oddsapi book prices: 6 saved, 2 dropped" in caplog.text
+
+
+# Dwight V5: settings repr hides the Odds API key and the database URL
+def test_v5_settings_repr_hides_odds_key_and_database_url():
+    shown = repr(Settings(odds_api_key="k" * 32, database_url="postgresql+psycopg://u:sekretpw@h/db"))
+    assert "k" * 32 not in shown and "sekretpw" not in shown
