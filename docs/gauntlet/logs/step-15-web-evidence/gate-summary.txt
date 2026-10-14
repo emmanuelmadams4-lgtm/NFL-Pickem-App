@@ -23,3 +23,5 @@ cut short by another lane's stop signal (hive 1d8260): g3 e2e, g4
 1e2cbad PASS g6 genapi exit=0 :: no drift 
 1e2cbad PASS g6 typecheck exit=0 :: 
 1e2cbad PASS g6 e2e exit=0 ::   ✓  155 e2e/restyle.spec.ts:379:7 › G4 stale weather with no logged error never claims the source is down (1.5s)   205 passed (6.9m) 
+e6bc37e STOPPED g7 pytest at 74% after 3 h 31 min: machine out of memory (load 76), stopped by process id on god's word (hive c10df0); not counted
+e6bc37e STOPPED g8 during pytest on god's ruling D71 (hive b7e15d): no full local run; the pull request's CI is the full gate

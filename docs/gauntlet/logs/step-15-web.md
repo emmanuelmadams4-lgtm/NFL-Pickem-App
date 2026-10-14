@@ -114,3 +114,23 @@ Implementation critic PASS WITH FIXES, no critical or high (`reviews/impl-1.md`,
 **Work order 5 (`wo-5.md`), scope-locked `/refactor`. Builder: Ryan, Codex default model, try 1.** Diff read: `live/live-label.tsx` (new, 14 lines) replaces the sliced-string label JSX that sat in two files; `dim` on the state replaces four "S3 or S4" tests; the S5 chance lines moved unchanged into `s5ChanceLines`; `LIVE_POLL_MS`, `LIVE_ENDED_POLL_MS`, `NOT_UPDATING_AFTER_MS` named; one comment on `refetchInterval`. `game-view.tsx`: no change needed. Nothing else proposed by the builder. Not changed, with reasons: `heldPosts` stays a module-level Map (marked `ponytail:`, ceiling named); the `checkedAt` tick offset (reads "just now"). Proof: typecheck exit 0, then the landing gate below (the whole suite on the cleaned code).
 
 **Replay.** Lane replayed onto main `a1fd984` (40 commits, PR #23 among them) with no conflict; `npm run gen:api` after it: no change. All work orders in this step were built by Codex (Ryan, default model); none by Claude.
+
+## 5. VERIFICATION
+
+**Gate** (`step-15-web-evidence/gate.sh`: pytest, ruff, `gen:api` no drift, typecheck, the whole browser suite; summaries in `gate-summary.txt`, raw logs outside the repo in `~/.claude/plans/nfl-pickem-lanes/logs/step-15-web/`).
+
+| Run | Commit | Load before | Result |
+|---|---|---|---|
+| g1 | `dedb762` | 13.74 | green: pytest 1340 passed, ruff clean, no drift, typecheck 0, browser 205 passed |
+| g2 | `dedb762` | 19.36 | backend green; browser 204 passed, 1 failed: L8 at 393 px, `route.fetch` after the page closed. A defect in the coordinator's test (its own route handler lacked the teardown guard the shared `fake()` has); fixed in `2661605` (was `1e2cbad`), test only |
+| g3, g4 | `1e2cbad` | 11.19 / 14.74 | cut short by another lane's stray stop signal (hive 1d8260); backend of g3 green; not counted |
+| **g5** | `1e2cbad` | 11.19 | **green**: pytest 1340, ruff, no drift, typecheck, browser 205 passed |
+| **g6** | `1e2cbad` | 10.62 | **green**: pytest 1340, ruff, no drift, typecheck, browser 205 passed |
+| g7 | `e6bc37e` (replayed onto main `a028f2a`) | 12.92 | stalled at 74% of pytest after 3 h 31 min, Mac out of memory (load 76 to 115); stopped by process id on god's word (hive c10df0) |
+| g8 | `e6bc37e` | 22.54 | stopped during pytest on god's ruling D71 |
+
+**Ruling D71 (god, 2026-10-14 03:00 UTC, hive b7e15d), recorded here where the gate numbers go:** the Mac cannot finish a full test run in useful time. The full gate on the final head is the CI of the lane's pull request (alembic upgrade and check, whole pytest suite, ruff, web build and types, browser suite, docker build, on the merge with main); god merges only if it is green. Locally: g5 and g6 green on `1e2cbad` plus Dwight's PASS stand as the evidence. The replay onto `a028f2a` changed no file of this step (no conflict; main's changes since are docs, one backend test file and the group screen); lane-guard against main `6c2846a`: `OK`, no further replay needed.
+
+**Security review (Dwight):** PASS at `6296c54`, nothing critical or high; seven findings, each decided in `reviews/security-1.md`. Code unchanged since, apart from the test-only fix above.
+
+**Lane-guard:** `python3 ~/.claude/bin/lane-guard.py check ~/.claude/plans/nfl-pickem-lanes/lanes.md web main --repo .` → `OK`.
