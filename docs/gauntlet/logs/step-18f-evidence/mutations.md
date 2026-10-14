@@ -56,3 +56,11 @@ Per clause (primary mutation, first row of each clause): R1 S, R2 S, R3 S, R4 K,
 ## Spec note
 
 EVALUATION.md R5 says 10 bins; `RELIABILITY_BINS = 20` in report.py:34 (the test `test_r5_..._has_ten_bins_...` passes, so it likely reads the 20-bin table of `metrics.calibration` in a different way, or checks a different value). Worth a glance.
+
+## Re-run (after added tests)
+
+17 tests appended to `backend/tests/test_report.py` (no source change): R1 season list, R2 tie / no-moneyline counts via `_sample`, R3 D72 boundary at `2026-10-15T00:00:00Z` vs one second earlier and season 2026, R6 band edge 0.5 / 0.6 / 0.7, R9 `pushes == games - n`, R10 stored intervals (positive, negative, spanning, lo == 0), R11 exact missing-file reason, R12 `_same` on a 1e-3 difference and `matches_stored_confirm` True / False through `main --simulate`, R15 margin / total values and a literal 42-column header, R17 `mae: missing`, R18 4-decimal floats (`0.6094`, `0.5910`, `0.6125`).
+
+Suite: 48 passed, 1 skipped (real-file gate). Each of the 15 earlier survivors was re-applied alone and restored with `git checkout -- backend/nflpi`: all 15 KILLED (R1, R2, R2b, R3, R3b, R6b, R9b, R10, R11, R12, R12b, R15, R15b, R17b, R18b).
+
+New totals: 31 of 32 mutations killed; 1 survivor, R16b, equivalent by design (`_cell` already maps NaN to None). Per clause: 18 of 18 primary mutations killed.

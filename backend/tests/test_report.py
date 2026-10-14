@@ -18,11 +18,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from nflpi.analytics.manifest import file_sha256, git_revision, run_record
-from nflpi.export import PREDICTION_COLUMNS, prediction_record, to_csv_text, to_json_text
 
 from nflpi.analytics import backtest
 from nflpi.analytics import report as rep
+from nflpi.analytics.manifest import file_sha256, git_revision, run_record
+from nflpi.export import PREDICTION_COLUMNS, prediction_record, to_csv_text, to_json_text
 
 # --- synthetic fixtures --------------------------------------------------------------------------
 
@@ -698,3 +698,185 @@ def test_real_file_gate_reproduces_the_stored_bench(tmp_path):
     assert (seasons[0], seasons[-1]) == (2012, 2025)
     csv_rows = list(csv.DictReader(io.StringIO((tmp_path / "predictions.csv").read_text())))
     assert len(csv_rows) == 3649 and len(json.loads((tmp_path / "predictions.json").read_text())) == 3649
+
+
+# --- mutation re-run additions (step 18f) --------------------------------------------------------
+
+LITERAL_HEADER = [
+    "game_id", "season", "week", "kickoff_utc", "home_team", "away_team", "home_win", "home_score", "away_score",
+    "margin", "total", "spread_line", "home_spread", "total_line", "p_home", "p_elo", "p_logistic", "p_market",
+    "p_blend", "blend_pick", "blend_confidence_band",
+    "pred_implied_home", "pred_implied_away", "pred_stats_home", "pred_stats_away", "pred_blend_home",
+    "pred_blend_away", "cover_result", "over_result", "line_kind",
+    *[f"sim_{s}_{m}" for s in ("football_only", "market_informed")
+      for m in ("mean_margin", "mean_total", "p_win_half", "p_tie", "p_cover_nopush", "p_over_nopush")],
+]
+
+
+def _frame_at(kickoff: str, season: int = 2025) -> pd.DataFrame:
+    return pd.DataFrame({"season": [season], "kickoff_utc": [kickoff], "home_score": [20.0], "away_score": [17.0]})
+
+
+def test_r1_bench_seasons_are_exactly_2012_to_2025():
+    assert rep.BENCH_SEASONS == list(range(2012, 2026))
+    assert (rep.BENCH_SEASONS[0], rep.BENCH_SEASONS[-1], len(rep.BENCH_SEASONS)) == (2012, 2025, 14)
+
+
+def test_r2_sample_counts_one_tie_and_one_game_without_a_moneyline():
+    # Arrange: 3 regular-season finals (one tie), one non-final, one playoff; one game lacks p_market
+    frame = pd.DataFrame({
+        "game_type": ["REG", "REG", "REG", "REG", "POST"], "status": ["final", "final", "final", "scheduled", "final"],
+        "season": [2024] * 5, "home_score": [20, 17, 10, None, 30], "away_score": [10, 17, 13, None, 3],
+    })
+    preds = pd.DataFrame({"p_market": [0.6, 0.5, np.nan]})
+    record = pd.DataFrame({"season": [2024, 2024], "game_id": ["a", "b"]})
+    score_preds = pd.DataFrame({c: [1.0, 2.0] for c in rep.score_backtest.PRED_COLS})
+
+    # Act
+    sample = rep._sample(frame, [2024], preds, record, score_preds)
+
+    # Assert
+    assert sample["finals"] == 3
+    assert sample["ties_excluded"] == 1
+    assert sample["no_moneyline_excluded"] == 1
+    assert sample["games"] == 2 and sample["by_season"] == {2024: 2}
+
+
+def test_r3_d72_boundary_midnight_utc_raises_and_one_second_earlier_passes():
+    # Arrange / Act / Assert
+    with pytest.raises(rep.ReportError):
+        rep.guard_scored(_frame_at("2026-10-15T00:00:00Z"), [2025])
+    rep.guard_scored(_frame_at("2026-10-14T23:59:59Z"), [2025])
+    with pytest.raises(rep.ReportError):
+        rep.guard_finals(_frame_at("2026-10-15T00:00:00Z"))
+    rep.guard_finals(_frame_at("2026-10-14T23:59:59Z"))
+
+
+def test_r3_season_2026_is_refused_even_when_no_kickoff_is_late():
+    with pytest.raises(rep.ReportError):
+        rep.guard_scored(_frame_at("2026-09-10T00:00:00Z", season=2026), [2026])
+
+
+def test_r6_a_picked_probability_exactly_on_a_band_edge_lands_in_the_upper_band():
+    # Arrange: picked probabilities 0.5, 0.6 and 0.7 (home lost only at 0.7)
+    record = pd.DataFrame({"p_blend": [0.5, 0.6, 0.7], "home_win": [1, 1, 0]})
+
+    # Act
+    bands = {b["band"]: b for b in rep._confidence_bands(record)}
+
+    # Assert
+    assert (bands["50-60%"]["n"], bands["60-70%"]["n"], bands["70%+"]["n"]) == (1, 1, 1)
+    assert bands["60-70%"]["hit_rate"] == 1.0
+    assert bands["50-60%"]["hit_rate"] == 0.0 and bands["70%+"]["hit_rate"] == 0.0
+
+
+def test_r9_pushes_are_games_minus_the_calibration_n():
+    # Arrange: 45 games, calibration tables hold 40 each
+    variant = {**make_sim_stored()["variants"][0], "games": 45}
+
+    # Act
+    rates, _ = rep._rates(variant)
+
+    # Assert
+    assert rates["cover"]["n"] == 40 and rates["cover"]["pushes"] == 5
+    assert rates["over"]["n"] == 40 and rates["over"]["pushes"] == 5
+
+
+@pytest.mark.parametrize(("ci", "includes"), [([0.001, 0.02], False), ([-0.02, -0.001], False),
+                                              ([-0.01, 0.02], True), ([0.0, 0.02], True)])
+def test_r10_stored_interval_is_reported_as_stored(ci, includes):
+    # Arrange
+    variant = make_sim_stored()["variants"][0]
+    variant["win_probability"]["log_loss_gain_ci"] = ci
+
+    # Act
+    out = rep._sim_variant(variant)
+
+    # Assert
+    assert out["verdict"]["gain_interval_includes_zero"] is includes
+    assert out["verdict"]["text"].endswith("includes zero" if includes else "excludes zero")
+    assert out["win_probability"]["log_loss_gain_ci"] == ci
+
+
+def test_r11_missing_confirm_file_gives_the_exact_reason(tmp_path, monkeypatch):
+    # Arrange
+    expected = f"confirm-result.json not found in {tmp_path}"
+    games = write_games_csv(tmp_path / "games.csv", [nflverse_row("2025_01_T01_T02", 2025, "2025-09-07", 20, 17)])
+    monkeypatch.setattr(rep, "bench_frames", lambda frame, seasons: (make_record(), make_score_preds(), dict(SAMPLE)))
+    out = tmp_path / "out"
+
+    # Act
+    stored, reason = rep.load_stored(str(tmp_path))
+    rep.main([str(games), str(out), "--sim-dir", str(tmp_path)])
+
+    # Assert
+    assert stored is None and reason == expected
+    assert json.loads((out / "report.json").read_text())["simulator"]["reason"] == expected
+    assert rep.load_stored(None) == (None, rep.NO_SIM_REASON)
+
+
+def _confirm_like(coverage_margin: float = 0.45, brier_cover: float = 0.2825) -> dict:
+    return {"coverage": {"margin": {"0.5": coverage_margin, "0.8": 0.7}, "total": {"0.5": 0.4, "0.8": 0.65}},
+            "calibration": {"cover": {"brier": brier_cover}, "over": {"brier": 0.2675}}}
+
+
+def test_r12_same_is_true_for_equal_results_and_false_on_a_1e3_difference():
+    # Arrange / Act / Assert
+    assert rep._same(_confirm_like(), _confirm_like()) is True
+    assert rep._same(_confirm_like(coverage_margin=0.451), _confirm_like()) is False
+    assert rep._same(_confirm_like(brier_cover=0.2835), _confirm_like()) is False
+
+
+@pytest.mark.parametrize("matches", [False, True])
+def test_r12_main_simulate_writes_the_match_result_as_computed(tmp_path, monkeypatch, matches):
+    # Arrange
+    games = write_games_csv(tmp_path / "games.csv", [nflverse_row("2025_01_T01_T02", 2025, "2025-09-07", 20, 17)])
+    sim = tmp_path / "sim"
+    sim.mkdir()
+    (sim / "confirm-result.json").write_text(json.dumps(make_sim_stored()))
+    monkeypatch.setattr(rep, "bench_frames", lambda frame, seasons: (make_record(), make_score_preds(), dict(SAMPLE)))
+    monkeypatch.setattr(rep, "simulate_confirm", lambda frame, record, stored: (None, matches))
+    out = tmp_path / "out"
+
+    # Act
+    rep.main([str(games), str(out), "--sim-dir", str(sim), "--simulate"])
+
+    # Assert
+    assert json.loads((out / "report.json").read_text())["simulator"]["matches_stored_confirm"] is matches
+
+
+def test_r15_margin_and_total_are_home_minus_away_and_home_plus_away_with_a_literal_header():
+    # Arrange / Act
+    df = prediction_record(make_record(), make_score_preds())
+
+    # Assert: first game is 27-24, the last is 14-31
+    assert list(df.columns) == LITERAL_HEADER and len(LITERAL_HEADER) == 42
+    assert (df.loc[0, "margin"], df.loc[0, "total"]) == (3, 51)
+    assert (df.loc[7, "margin"], df.loc[7, "total"]) == (-17, 45)
+    assert df["margin"].tolist() == MARGINS and df["total"].tolist() == TOTALS
+    assert to_csv_text(df).splitlines()[0] == ",".join(LITERAL_HEADER)
+    assert list(json.loads(to_json_text(df))[0]) == LITERAL_HEADER
+
+
+def test_r17_a_none_value_renders_as_the_word_missing_not_zero():
+    # Arrange / Act
+    text = rep.render_text({"a": {"n": 3, "mae": None}})
+
+    # Assert
+    assert "mae: missing" in text and "mae: 0" not in text
+    assert "n: 3" in text
+
+
+def test_r18_floats_render_at_four_decimals_and_ints_have_no_decimals():
+    # Arrange
+    report = build(sim=make_sim_stored())
+    expected_ll = (3 * -math.log(0.8) - math.log(0.2) + 3 * -math.log(0.6) - math.log(0.4)) / 8
+
+    # Act
+    text = rep.render_text(report)
+
+    # Assert
+    assert "x: 0.6094" in rep.render_text({"x": 0.6094})
+    assert f"log_loss: {expected_ll:.4f}" in text and f"{expected_ll:.4f}" == "0.5910"
+    assert "blend_log_loss: 0.6125" in text and "market_log_loss: 0.6075" in text
+    assert "mean_abs: 0.1125" in text
