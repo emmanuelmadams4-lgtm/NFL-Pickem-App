@@ -312,3 +312,74 @@ for (const width of [393, 320]) {
     expect(await scroll()).toBeLessThanOrEqual(0);
   });
 }
+
+/** Signed in with a passkey session (added with the token first), on Settings. Returns the session value. */
+async function passkeySession(context: BrowserContext, page: Page, name: string): Promise<string> {
+  await authenticator(context, page);
+  await passkeys(page, true);
+  await signedIn(page);
+  await addFromSettings(page, name);
+  await page.getByRole("button", { name: "Sign out" }).first().click();
+  await expect(card(page)).toBeVisible({ timeout: 15_000 });
+  await passkeySignIn(page);
+  const value = await stored(page);
+  expect(value).toMatch(/^pks_/);
+  return value!;
+}
+
+const SERVER_KEPT = "Signed out on this device, but the server could not end the passkey sign-in. Remove that passkey in Settings to end it now.";
+const REFUSED = "Your browser refused the passkey.";
+
+test("M1 a failed server sign-out still signs out here and says the server session may still be live", async ({ context, page }) => {
+  await passkeySession(context, page, "Sign-out fails");
+  await page.route("**/api/passkey/signout", (route) => route.fulfill({ status: 500, json: { detail: "boom" } }));
+  await page.getByRole("button", { name: "Sign out" }).first().click();
+  await expect(card(page)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(SERVER_KEPT)).toBeVisible();
+  expect(await stored(page)).toBeNull();
+});
+
+test("M1 changing from a passkey session to the token in Settings ends the passkey session on the server", async ({ context, page }) => {
+  const old = await passkeySession(context, page, "Change token");
+  await page.goto(`${ORIGIN}/settings`);
+  const signout = page.waitForResponse((r) => r.url().endsWith("/api/passkey/signout") && r.request().method() === "POST", { timeout: 15_000 });
+  await page.getByPlaceholder("New access token").fill(TOKEN);
+  await page.getByRole("button", { name: "Update" }).click();
+  expect((await signout).status()).toBe(204);
+  await expect.poll(() => stored(page)).toBe(TOKEN);
+  await expect(section(page).getByRole("heading", { name: "Passkeys" })).toBeVisible();
+  const after = await page.request.get(`${ORIGIN}/api/meta`, { headers: { Authorization: `Bearer ${old}` } });
+  expect(after.status()).toBe(401);
+});
+
+test("M2 a browser refusal is named as the browser's, not as an unreachable server; a real network failure still is", async ({ context, page }) => {
+  await authenticator(context, page);
+  await passkeys(page, true);
+  await page.goto(`${ORIGIN}/`);
+  const button = card(page).getByRole("button", { name: "Sign in with a passkey" });
+  await expect(button).toBeVisible({ timeout: 15_000 });
+  for (const name of ["SecurityError", "NotSupportedError"]) {
+    await page.evaluate((n) => { navigator.credentials.get = () => Promise.reject(new DOMException("refused", n)); }, name);
+    await button.click();
+    await expect(card(page).getByRole("alert")).toContainText(REFUSED);
+    await expect(card(page).getByRole("alert")).not.toContainText("Could not reach the API");
+  }
+  await page.evaluate(() => {
+    Object.defineProperty(PublicKeyCredential, "parseRequestOptionsFromJSON", { value: () => { throw new TypeError("bad options"); }, configurable: true });
+  });
+  await button.click();
+  await expect(card(page).getByRole("alert")).toContainText(REFUSED);
+
+  await page.route("**/api/passkey/signin/begin", (route) => route.abort("connectionrefused"));
+  await button.click();
+  await expect(card(page).getByRole("alert")).toContainText("Could not reach the API");
+  await page.unroute("**/api/passkey/signin/begin");
+
+  // the same words when adding a passkey in Settings
+  await signedIn(page);
+  await page.goto(`${ORIGIN}/settings`);
+  await expect(section(page).getByRole("button", { name: "Add a passkey" })).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => { navigator.credentials.create = () => Promise.reject(new DOMException("refused", "SecurityError")); });
+  await section(page).getByRole("button", { name: "Add a passkey" }).click();
+  await expect(section(page).getByRole("alert")).toContainText(REFUSED);
+});

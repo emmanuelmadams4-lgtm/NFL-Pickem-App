@@ -157,3 +157,18 @@ On HEAD (this commit, code as `363bb7f`):
 
 God opens the pull request and lands it (D71: its CI is the full gate on this head). PENDING after landing: the
 iPhone check and the two PC settings (`PASSKEY_RP_ID`, `PASSKEY_ORIGINS`), owner and god.
+
+## Re-opened: M1 + M2 folded in (god 7b856b, 2026-10-14)
+
+God's decision on Dwight's MEDIUM findings: fold in before landing, LOWs carried. Spec added (frozen before code):
+- M1a A failed `POST /api/passkey/signout` still signs out on this device and says "Signed out on this device, but the
+  server could not end the passkey sign-in. Remove that passkey in Settings to end it now." (the 401 path keeps its own
+  words).
+- M1b Changing from a passkey session to the token in Settings first ends the passkey session on the server.
+- M2 Browser refusals (`SecurityError`, `NotSupportedError`, a `TypeError` from the options parser) say "Your browser
+  refused the passkey." on the card and in Settings; a real network failure still says "Could not reach the API".
+Red: `s10-red-4` (3 new tests, all fail for the intended reason). Work order 6: `wo-6.md`.
+Carried LOWs (not fixed): Add shown to a passkey session (fails with the 403 words); add/remove 401 bypasses the
+sign-out handler; no `pks_` check on the sign-in reply; a failed health check reads as "switched off"; two older 401
+paths say "token rejected" for a passkey session; no timeout or guard on concurrent sign-out calls; K4 (no credential
+id shown), K11 keyboard reach and the K5 422 words not tested.
