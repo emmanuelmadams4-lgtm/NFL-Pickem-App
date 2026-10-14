@@ -288,7 +288,7 @@ def _simulation(row: pd.Series, params: SimParams, model: ScoreModel | None, fra
     try:  # what the API cannot serve (a NaN turned null) is never stored: it would 500 the week
         SimulationOut.model_validate(out)
     except ValidationError:
-        log.error("simulation for %s fails the API contract; stored as missing", row["game_id"])
+        log.error("simulation for %s fails the API contract; stored as missing", row["game_id"], exc_info=True)
         return None
     return out
 
@@ -308,7 +308,11 @@ def _simulations(session: Session, targets: pd.DataFrame) -> dict[str, dict | No
     params = {s: load_sim_params(session, s) for s in {int(s) for s in targets["season"]}}
     if not any(params.values()):
         return dict.fromkeys(targets["game_id"])
-    frame = add_score_features(load_frame(session), EloParams())
+    try:
+        frame = add_score_features(load_frame(session), EloParams())
+    except Exception:  # the simulator is optional
+        log.exception("score features failed; no simulations this run")
+        return dict.fromkeys(targets["game_id"])
     models = {s: _score_model(frame, s) for s, p in params.items() if p is not None}
     return {
         row["game_id"]: _safe_simulation(row, params[int(row["season"])], models.get(int(row["season"])), frame)

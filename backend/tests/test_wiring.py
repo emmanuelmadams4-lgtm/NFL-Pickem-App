@@ -296,3 +296,15 @@ def test_a_nan_simulation_is_stored_as_none_and_the_week_still_answers(loaded, c
     engine.refresh_predictions(loaded)
     assert all(latest(loaded, g.game_id).features["simulation"] is None for g in upcoming(loaded))
     assert client.get(f"/api/weeks/{CURRENT}/4").status_code == 200
+
+
+def test_a_score_frame_that_cannot_be_built_still_writes_every_prediction(loaded, monkeypatch):
+    engine.save_sim_params(loaded, CURRENT, synthetic_params())
+
+    def broken(*a, **kw):
+        raise RuntimeError("frame failed")
+
+    monkeypatch.setattr(engine, "add_score_features", broken)
+    engine.refresh_predictions(loaded)
+    assert all_games_have_rows(loaded)
+    assert all(latest(loaded, g.game_id).features["simulation"] is None for g in upcoming(loaded))
