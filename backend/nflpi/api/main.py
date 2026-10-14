@@ -58,7 +58,11 @@ def health(session: DB) -> s.HealthOut:
         db_ok = True
     except Exception:  # noqa: BLE001 - health reports, never raises
         return s.HealthOut(
-            status="degraded", database=False, active_model=False, stale_datasets=[], passkeys=passkeys.config() is not None
+            status="degraded",
+            database=False,
+            active_model=False,
+            stale_datasets=[],
+            passkeys=passkeys.config() is not None,
         )
     stale = [f["dataset"] for f in freshness(session) if f["stale"]]
     has_model = engine.active_model(session) is not None

@@ -35,6 +35,7 @@ export function PasskeysSection() {
       await qc.invalidateQueries({ queryKey: keys.passkeys });
     } catch (err) {
       if (passkeyCancelled(err)) setError("No passkey was added.");
+      else if (err instanceof DOMException && err.name === "InvalidStateError") setError("This device already has a passkey for this app.");
       else if (err instanceof ApiError && err.status === 403) setError("Adding a passkey needs the access token. Sign in with the token, then add it here.");
       else setError(errorMessage(err));
     } finally {
