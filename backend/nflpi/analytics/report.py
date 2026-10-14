@@ -40,6 +40,7 @@ CUTOFF_RULE = "fitted on seasons S-10 to S-1 for test season S"
 SIM_LABEL = "not shown to beat a coin flip against the closing line"
 RETURNS_REASON = "no history of timestamped prices exists, so no returns or profit are reported (PLAN 3.5)"
 NO_SIM_REASON = "stored simulator results not supplied; pass --sim-dir with confirm-result.json"
+STORED_KEYS = ("seasons", "n_simulations", "default_distribution", "games", "sources_note", "variants")
 CLOSING_LINE_MODELS = {"market", "blend"}
 RECORD_COLUMNS = [
     "game_id", "season", "week", "kickoff_utc", "home_team", "away_team", "home_win", "home_score", "away_score",
@@ -58,7 +59,7 @@ class ReportError(ValueError):
 # --- sample and the D72 gate ----------------------------------------------------------------------
 
 def _kickoffs(frame: pd.DataFrame) -> pd.Series:
-    return pd.to_datetime(frame["kickoff_utc"], utc=True)
+    return pd.to_datetime(frame["kickoff_utc"], utc=True, errors="coerce")
 
 
 def _protected_cut() -> pd.Timestamp:
@@ -69,14 +70,20 @@ def guard_scored(frame: pd.DataFrame, seasons: list[int]) -> None:
     if any(s >= D72_FIRST_SEASON for s in seasons):
         raise ReportError(f"D72: seasons from {D72_FIRST_SEASON} on are never scored")
     scored = frame[frame["season"].isin(seasons)]
-    if (_kickoffs(scored) >= _protected_cut()).any():
+    kickoffs = _kickoffs(scored)
+    if kickoffs.isna().any():
+        raise ReportError("D72: a scored game has no readable kickoff, so it cannot be checked against the cutoff")
+    if (kickoffs >= _protected_cut()).any():
         raise ReportError(f"D72: a game with kickoff on or after {D72_FIRST_PROTECTED} would be scored")
 
 
 def guard_finals(frame: pd.DataFrame) -> None:
     """A final score on or after the protected date means the file itself breaks D72."""
     finals = frame[frame["home_score"].notna() & frame["away_score"].notna()]
-    if (_kickoffs(finals) >= _protected_cut()).any():
+    kickoffs = _kickoffs(finals)
+    if kickoffs.isna().any():
+        raise ReportError("D72: the file holds a final game with no readable kickoff")
+    if (kickoffs >= _protected_cut()).any():
         raise ReportError(f"D72: the file holds a final game with kickoff on or after {D72_FIRST_PROTECTED}")
 
 
@@ -213,8 +220,10 @@ def _rates(v: dict) -> tuple[dict, dict]:
 
 def _sim_variant(v: dict) -> dict:
     rates, briers = _rates(v)
-    lo, hi = v["win_probability"]["log_loss_gain_ci"]
-    includes_zero = lo <= 0 <= hi
+    interval = v["win_probability"].get("log_loss_gain_ci")
+    includes_zero = None if interval is None else interval[0] <= 0 <= interval[1]
+    verdict = ("interval missing" if includes_zero is None
+               else "interval includes zero" if includes_zero else "interval excludes zero")
     return {
         "source": v["source"], "distribution": v["distribution"], "is_default": v["is_default"], "n": v["games"],
         "margin": {"n": v["games"], "mae": v["margin_mae"], "rmse": v["margin_rmse"]},
@@ -225,8 +234,7 @@ def _sim_variant(v: dict) -> dict:
         "key_numbers": v["key_numbers"], "win_probability": v["win_probability"],
         "win_gap_vs_blend": v["win_gap_vs_blend"],
         "verdict": {"gain_interval_includes_zero": includes_zero,
-                    "text": "stored log loss gain over the blend: interval "
-                            + ("includes zero" if includes_zero else "excludes zero")},
+                    "text": f"stored log loss gain over the blend: {verdict}"},
     }
 
 
@@ -268,6 +276,7 @@ def _same(fresh: dict, stored: dict) -> bool:
 
 def simulate_confirm(frame: pd.DataFrame, record: pd.DataFrame, stored: dict) -> tuple[pd.DataFrame, bool]:
     """Per-game simulator columns for the stored seasons, and whether they reproduce the stored confirm file."""
+    guard_scored(frame, [int(s) for s in stored["seasons"]])
     table = sim_backtest.build_table(frame)
     default = stored["default_distribution"]
     rows = sim_backtest.simulate_table(table, stored["seasons"], distributions=(default,),
@@ -336,28 +345,45 @@ def render_text(report: dict) -> str:
 
 # --- run records ----------------------------------------------------------------------------------
 
-def _record_specs(stored: dict | None) -> list[tuple[str, str, bool, int | None]]:
-    specs = [(m, backtest.LABELS[m], m in CLOSING_LINE_MODELS, None) for m in backtest.MODELS]
-    specs += [(f"score_{m}", score_backtest.LABELS[m], m != "stats", None) for m in score_backtest.METHODS]
-    if stored is not None:
-        specs += [(f"sim_{s}", f"Simulator, {s}", s == "market_informed", sim_backtest.BASE_SEED)
-                  for s in sim_backtest.SOURCES]
-    return specs
+SIM_CUTOFF_RULE = "learned on seasons S-10 to S-1 before test season S"
+SIM_SEED_NOTE = (f"the code constant sim_backtest.BASE_SEED, because {CONFIRM_FILE} stores no seed; "
+                 "--simulate recomputing the stored confirm result is the evidence")
+
+
+def _iso(latest) -> str | None:
+    return pd.Timestamp(latest).strftime("%Y-%m-%dT%H:%M:%SZ") if pd.notna(latest) else None
+
+
+def _sim_cutoff_rule(seasons: list[int], latest: str | None) -> str:
+    rule = (f"{SIM_CUTOFF_RULE}; confirm seasons {min(seasons)} to {max(seasons)}, "
+            f"read from the stored {CONFIRM_FILE}")
+    return rule if latest else f"{rule}; latest kickoff unavailable: no bench game in those seasons"
+
+
+def _record_kwargs(record: pd.DataFrame) -> list[dict]:
+    seasons = sorted(int(s) for s in record["season"].unique())
+    shared = {"cutoff_rule": CUTOFF_RULE, "latest_kickoff": _iso(record["kickoff_utc"].max()),
+              "n_games": len(record), "seasons": seasons, "seed": None,
+              "seed_note": "deterministic, no random draws"}
+    specs = [{"model": m, "label": backtest.LABELS[m], "uses_closing_line": m in CLOSING_LINE_MODELS, **shared}
+             for m in backtest.MODELS]
+    return specs + [{"model": f"score_{m}", "label": score_backtest.LABELS[m], "uses_closing_line": m != "stats",
+                     **shared} for m in score_backtest.METHODS]
+
+
+def _sim_kwargs(record: pd.DataFrame, stored: dict) -> list[dict]:
+    seasons = sorted(int(s) for s in stored["seasons"])
+    latest = _iso(record.loc[record["season"].isin(seasons), "kickoff_utc"].max())
+    return [{"model": f"sim_{s}", "label": f"Simulator, {s}", "uses_closing_line": s == "market_informed",
+             "cutoff_rule": _sim_cutoff_rule(seasons, latest), "latest_kickoff": latest,
+             "n_games": int(stored["games"]), "seasons": seasons, "seed": sim_backtest.BASE_SEED,
+             "seed_note": SIM_SEED_NOTE} for s in sim_backtest.SOURCES]
 
 
 def build_records(record: pd.DataFrame, stored: dict | None, data_files: dict[str, Path]) -> list[dict]:
     repo_root = Path(__file__).resolve().parents[3]
-    latest = record["kickoff_utc"].max()
-    latest_iso = pd.Timestamp(latest).strftime("%Y-%m-%dT%H:%M:%SZ") if pd.notna(latest) else None
-    seasons = sorted(int(s) for s in record["season"].unique())
-    return [
-        run_record(
-            name, label=label, seed=seed, seed_note=None if seed is not None else "deterministic, no random draws",
-            cutoff_rule=CUTOFF_RULE, latest_kickoff=latest_iso, n_games=len(record), seasons=seasons,
-            uses_closing_line=closing, data_files=data_files, repo_root=repo_root,
-        )
-        for name, label, closing, seed in _record_specs(stored)
-    ]
+    specs = _record_kwargs(record) + ([] if stored is None else _sim_kwargs(record, stored))
+    return [run_record(data_files=data_files, repo_root=repo_root, **spec) for spec in specs]
 
 
 # --- command line ---------------------------------------------------------------------------------
@@ -368,7 +394,20 @@ def load_stored(sim_dir: str | None) -> tuple[dict | None, str | None]:
     path = Path(sim_dir) / CONFIRM_FILE
     if not path.is_file():
         return None, f"{CONFIRM_FILE} not found in {sim_dir}"
-    return json.loads(path.read_text()), None
+    return _read_stored(path), None
+
+
+def _read_stored(path: Path) -> dict:
+    try:
+        stored = json.loads(path.read_text())
+    except (OSError, ValueError) as err:
+        raise ReportError(f"{CONFIRM_FILE} cannot be read as JSON: {err}") from err
+    missing = [k for k in STORED_KEYS if not isinstance(stored, dict) or k not in stored]
+    seasons = stored.get("seasons") if isinstance(stored, dict) else None
+    if missing or not isinstance(seasons, list) or not seasons or not all(isinstance(x, int) for x in seasons):
+        raise ReportError(f"{CONFIRM_FILE} is not a valid confirm result (missing or invalid: "
+                          f"{', '.join(missing) or 'seasons'})")
+    return stored
 
 
 def _input_files(games_csv: str, sim_dir: str | None) -> dict[str, Path]:
@@ -403,6 +442,8 @@ def main(argv: list[str]) -> None:
     stored, reason = load_stored(args.sim_dir)
     if args.simulate and stored is None:
         raise ReportError(f"--simulate needs the stored confirm file: {reason}")
+    if stored is not None:
+        guard_scored(frame, [int(s) for s in stored["seasons"]])
     sim_rows, matches = simulate_confirm(frame, record, stored) if args.simulate else (None, None)
     report = build_report(record, score_preds, sample, stored, reason)
     if args.simulate:
@@ -418,5 +459,15 @@ def main(argv: list[str]) -> None:
     _write(out, "predictions.json", to_json_text(export))
 
 
+def cli(argv: list[str]) -> int:
+    """main() with a clear one-line message instead of a traceback; nothing is written on a ReportError."""
+    try:
+        main(argv)
+    except ReportError as err:
+        print(f"report: {err}", file=sys.stderr)
+        return 1
+    return 0
+
+
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    sys.exit(cli(sys.argv[1:]))

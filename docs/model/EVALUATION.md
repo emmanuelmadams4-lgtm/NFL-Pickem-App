@@ -39,7 +39,7 @@ Writes to `<out_dir>`: `report.json`, `report.txt`, `run-records.json`, `predict
 * R12 With `--simulate`, the per-game simulator columns are added and `matches_stored_confirm` states whether the recomputed interval coverage and Brier values equal the stored ones; if not, the report says so and still writes.
 
 **Run records**
-* R13 One record per model (`home`, `elo`, `logistic`, `market`, `blend`, `score_implied`, `score_stats`, `score_blend`, and each simulator source): model name and label, `code_revision` (git HEAD, plus `git_dirty`), `lock_file_sha256` (`backend/uv.lock`), `data_sha256` (every input file, by file name), `seed` (the simulator's stored seed; `null` with `seed_note` "deterministic, no random draws" for the others), `cutoff` (rule: fitted on seasons S-10 to S-1 for test season S; and the latest kickoff in the record), `n_games`, `seasons`, `uses_closing_line`. A value that cannot be read (no git, no lock file) is `null` with a reason, never guessed.
+* R13 One record per model (`home`, `elo`, `logistic`, `market`, `blend`, `score_implied`, `score_stats`, `score_blend`, and each simulator source): model name and label, `code_revision` (git HEAD, plus `git_dirty`), `lock_file_sha256` (`backend/uv.lock`), `data_sha256` (every input file, by file name), `seed` (the simulator's seed, the code constant `BASE_SEED`, noted as such in `seed_note` because `confirm-result.json` stores no seed; `--simulate` recomputing the stored confirm result is the evidence; `null` with `seed_note` "deterministic, no random draws" for the others), `cutoff` (rule: fitted on seasons S-10 to S-1 for test season S; and the latest kickoff in the record; simulator records use their own rule, "learned on seasons S-10 to S-1 before test season S; confirm seasons 2022 to 2025, read from the stored confirm-result.json", with the stored confirm file's games and seasons and the latest kickoff of those seasons, `null` with the reason in the rule if unavailable), `n_games`, `seasons`, `uses_closing_line`. A value that cannot be read (no git, no lock file) is `null` with a reason, never guessed.
 * R14 Same inputs give a byte-identical `run-records.json`.
 
 **Export**
@@ -54,4 +54,5 @@ Writes to `<out_dir>`: `report.json`, `report.txt`, `run-records.json`, `predict
 
 * It reports the bench, not the live app. The live `predictions` table (kinds `live` and `backfill`, market snapshots, push chance, edge, warnings) is not exported here: that needs the database and a route, which are step 18h seams.
 * The closing line is a benchmark, not what was on offer at decision time (AUDIT A6); every closing-line number is labelled so.
+* A blend probability of exactly 0.5 counts as an away pick in the confidence bands and in `blend_pick` (a home pick needs more than 0.5).
 * The bench has been scored many times on 2022 to 2025 (AUDIT A11). This report is a read, not a new test; it ships nothing and tunes nothing.

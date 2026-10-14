@@ -245,7 +245,10 @@ def test_r5_reliability_has_ten_bins_models_and_an_n_on_every_bin():
     for bins in reliability.values():
         assert all("n" in b for b in bins) and sum(b["n"] for b in bins) == 8
     assert sorted(b["n"] for b in reliability["market"] if b["n"]) == [4, 4]
-    assert len(reliability["market"]) in {10, 2}  # ten bins, or only the occupied ones if empties are omitted
+    assert len(reliability["market"]) == 10
+    empty = [b for b in reliability["market"] if b["n"] == 0]
+    assert len(empty) == 8
+    assert all(b["predicted"] is None and b["observed"] is None for b in empty)
 
 
 def test_r6_by_season_and_confidence_bands_count_and_hit_rates_by_hand():
@@ -880,3 +883,131 @@ def test_r18_floats_render_at_four_decimals_and_ints_have_no_decimals():
     assert f"log_loss: {expected_ll:.4f}" in text and f"{expected_ll:.4f}" == "0.5910"
     assert "blend_log_loss: 0.6125" in text and "market_log_loss: 0.6075" in text
     assert "mean_abs: 0.1125" in text
+
+
+# --- critic fixes: simulator run records, D72 holes, seed note, null and corrupt stored input -------
+
+def _sim_records(stored: dict | None, tmp_path: Path) -> dict[str, dict]:
+    data = tmp_path / "games.csv"
+    data.write_text("x\n")
+    return {r["model"]: r for r in rep.build_records(make_record(), stored, {"games.csv": data})}
+
+
+def test_r13_simulator_records_use_the_stored_confirm_games_seasons_cutoff_and_seed_note(tmp_path):
+    # Arrange
+    stored = make_sim_stored()
+
+    # Act
+    records = _sim_records(stored, tmp_path)
+
+    # Assert
+    for name in ("sim_football_only", "sim_market_informed"):
+        rec = records[name]
+        assert (rec["n_games"], rec["seasons"]) == (40, [2024, 2025])
+        assert rec["cutoff"]["latest_kickoff"] == "2025-09-14T20:00:00Z"
+        assert "learned on seasons S-10 to S-1 before test season S" in rec["cutoff"]["rule"]
+        assert "confirm seasons 2024 to 2025" in rec["cutoff"]["rule"]
+        assert "confirm-result.json" in rec["cutoff"]["rule"]
+        assert rec["seed"] == rep.sim_backtest.BASE_SEED
+        assert "BASE_SEED" in rec["seed_note"] and "confirm-result.json stores no seed" in rec["seed_note"]
+    assert records["market"]["n_games"] == 8 and records["market"]["seasons"] == [2024, 2025]
+    assert records["market"]["cutoff"]["rule"] == rep.CUTOFF_RULE
+
+
+def test_r13_simulator_latest_kickoff_is_none_with_a_reason_when_the_record_lacks_those_seasons(tmp_path):
+    # Arrange
+    stored = {**make_sim_stored(), "seasons": [2022, 2023]}
+
+    # Act
+    rec = _sim_records(stored, tmp_path)["sim_football_only"]
+
+    # Assert
+    assert rec["cutoff"]["latest_kickoff"] is None
+    assert "latest kickoff unavailable" in rec["cutoff"]["rule"]
+
+
+def test_r13_without_stored_results_there_are_no_simulator_records(tmp_path):
+    # Arrange / Act
+    names = set(_sim_records(None, tmp_path))
+
+    # Assert
+    assert not any(n.startswith("sim_") for n in names) and "market" in names
+
+
+@pytest.mark.parametrize("kickoff", [None, "", "not a date"])
+def test_r3_a_missing_kickoff_on_a_scored_row_is_refused(kickoff):
+    # Arrange
+    frame = _frame_at("2025-09-07T00:00:00Z")
+    frame["kickoff_utc"] = [kickoff]
+
+    # Act / Assert
+    with pytest.raises(rep.ReportError):
+        rep.guard_scored(frame, [2025])
+
+
+def test_r3_a_missing_kickoff_on_a_final_row_is_refused():
+    frame = _frame_at("2025-09-07T00:00:00Z")
+    frame["kickoff_utc"] = [None]
+    with pytest.raises(rep.ReportError):
+        rep.guard_finals(frame)
+
+
+def test_r3_a_stored_file_listing_2026_raises_before_simulating_or_writing(tmp_path, monkeypatch):
+    # Arrange
+    games = write_games_csv(tmp_path / "games.csv", [nflverse_row("2025_01_T01_T02", 2025, "2025-09-07", 20, 17)])
+    sim = tmp_path / "sim"
+    sim.mkdir()
+    (sim / "confirm-result.json").write_text(json.dumps({**make_sim_stored(), "seasons": [2025, 2026]}))
+    monkeypatch.setattr(rep, "bench_frames", lambda frame, seasons: (make_record(), make_score_preds(), dict(SAMPLE)))
+    monkeypatch.setattr(rep.sim_backtest, "simulate_table",
+                        lambda *a, **k: pytest.fail("simulated despite a protected season"))
+    out = tmp_path / "out"
+
+    # Act / Assert
+    with pytest.raises(rep.ReportError, match="D72"):
+        rep.main([str(games), str(out), "--sim-dir", str(sim), "--simulate"])
+    assert not out.exists() or list(out.iterdir()) == []
+
+
+def test_r3_simulate_confirm_itself_guards_the_stored_seasons():
+    # Arrange
+    frame = pd.DataFrame({"season": [2025], "kickoff_utc": ["2025-09-07T00:00:00Z"]})
+    stored = {**make_sim_stored(), "seasons": [2026]}
+
+    # Act / Assert
+    with pytest.raises(rep.ReportError, match="D72"):
+        rep.simulate_confirm(frame, make_record(), stored)
+
+
+def test_r10_a_null_stored_interval_is_missing_not_a_type_error():
+    # Arrange
+    variant = make_sim_stored()["variants"][0]
+    variant["win_probability"]["log_loss_gain_ci"] = None
+
+    # Act
+    out = rep._sim_variant(variant)
+
+    # Assert
+    assert out["verdict"]["gain_interval_includes_zero"] is None
+    assert out["verdict"]["text"] == "stored log loss gain over the blend: interval missing"
+    assert out["win_probability"]["log_loss_gain_ci"] is None
+
+
+@pytest.mark.parametrize("text", ["{not json", "[1, 2]", "{}", '{"seasons": "2025"}'])
+def test_r11_a_corrupt_confirm_file_is_a_report_error_and_nothing_is_written(tmp_path, monkeypatch, capsys, text):
+    # Arrange
+    games = write_games_csv(tmp_path / "games.csv", [nflverse_row("2025_01_T01_T02", 2025, "2025-09-07", 20, 17)])
+    sim = tmp_path / "sim"
+    sim.mkdir()
+    (sim / "confirm-result.json").write_text(text)
+    monkeypatch.setattr(rep, "bench_frames", lambda frame, seasons: (make_record(), make_score_preds(), dict(SAMPLE)))
+    out = tmp_path / "out"
+
+    # Act
+    with pytest.raises(rep.ReportError):
+        rep.main([str(games), str(out), "--sim-dir", str(sim)])
+    code = rep.cli([str(games), str(out), "--sim-dir", str(sim)])
+
+    # Assert
+    assert code == 1 and "confirm-result.json" in capsys.readouterr().err
+    assert not out.exists() or list(out.iterdir()) == []
