@@ -25,7 +25,7 @@ Writes to `<out_dir>`: `report.json`, `report.txt`, `run-records.json`, `predict
 
 **Win model**
 * R4 For each of `home`, `elo`, `logistic`, `market`, `blend` (labels as in `backtest.LABELS`): n, accuracy with its interval, log loss, Brier, via `metrics.summarize`. Equal to the stored bench: market log loss 0.6094, blend 0.6107, n 3,649. Closing-line models are labelled as using the closing line.
-* R5 Decile reliability (10 bins, `metrics.calibration`) for `logistic`, `blend`, `market`; every bin has its n.
+* R5 Reliability in ten bins of the picked side's chance, 50 to 100 percent in 5-point steps (`metrics.calibration`, which buckets by the picked side, so these are ten bins, not deciles of 0 to 1) for `logistic`, `blend`, `market`; every bin has its n.
 * R6 By season (n, accuracy, log loss per model) and by confidence band of the blend pick (`backtest.label_report`, plus bands 50-60, 60-70, 70+ percent of the picked side): n, share, hit rate. An empty band prints as missing, never as 0.
 
 **Points**
