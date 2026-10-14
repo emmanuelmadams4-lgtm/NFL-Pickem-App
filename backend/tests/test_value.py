@@ -16,7 +16,7 @@ from nflpi.betting.odds import BettingError
 from nflpi.betting.snapshot import MarketSnapshot
 from nflpi.config import Settings, get_settings
 from nflpi.ingestion.live import oddsapi
-from nflpi.models import BookPrice, Game
+from nflpi.models import BookPrice, Game, MarketQuote, SourceStatus
 
 FIXTURES = Path(__file__).parent / "fixtures" / "value"
 KEY = "a" * 32
@@ -557,8 +557,6 @@ def test_v10_fixture_is_not_mutated_by_parse():
 # V11 the odds job stores every price, sides as our game has them
 def test_v11_odds_job_saves_book_prices_with_our_sides(session):
     from nflpi.ingestion.live import fetch, run
-    from nflpi.models import MarketQuote
-
     game(session, "2026_07_MIA_BUF")
     session.add(
         Game(
@@ -649,8 +647,6 @@ def test_v11_bad_book_price_keeps_moneyline_quote_and_job_ok(session, monkeypatc
     from sqlalchemy import text
 
     from nflpi.ingestion.live import run
-    from nflpi.models import MarketQuote
-
     kc_lv(session)
     parse = oddsapi.parse_events
     if db_error:  # a failed statement must not poison the odds run's transaction
@@ -683,8 +679,6 @@ def test_v5_non_string_outcome_name_drops_market_only(name):
 # Dwight V2 + V3: a book clock too far ahead of ours is refused, counted and logged
 def test_v11_book_clock_ahead_refused_and_counted(session, caplog):
     from nflpi.ingestion.live import run
-    from nflpi.models import MarketQuote
-
     game(session)
     session.commit()
     now = T0 + timedelta(minutes=2)  # booktwo says 15:05: 3 minutes ahead, over the 2 minute skew
@@ -734,8 +728,6 @@ def test_p2_setting_off_asks_for_win_market_only(session, monkeypatch):
 
 
 def test_p2_a_book_without_a_win_price_keeps_its_spread_and_total_rows_in_the_job(session):
-    from nflpi.models import MarketQuote
-
     game(session)
     session.commit()
     data = recorded()
@@ -800,8 +792,9 @@ def test_p2_out_of_credits_retries_once_with_the_fallback_key_and_logs_the_slot(
     with caplog.at_level("INFO", logger="nflpi.ingestion.live.run"):
         result, seen = _keys_seen(session, [fetch.Blocked("status 401"), _ok("333")])
     assert result.status == "ok" and len(seen) == 2
+    assert result.detail == "primary refused (401), on fallback; 333 credits left"  # W2
     assert f"apiKey={KEY}" in seen[0] and f"apiKey={KEY2}" in seen[1]
-    assert "key slot primary is out of credits" in caplog.text
+    assert "key slot primary refused (401)" in caplog.text
     assert "key slot fallback used, credits remaining: 333" in caplog.text
     assert KEY not in caplog.text and KEY2 not in caplog.text
 
@@ -816,7 +809,7 @@ def test_p2_fallback_out_of_credits_too_fails_after_one_retry(session):
     kc_lv(session)
     result, seen = _keys_seen(session, [fetch.Blocked("status 401"), fetch.Blocked("status 401")])
     assert result.status == "failed" and len(seen) == 2
-    assert result.detail == "Blocked: status 401"  # the real reply is reported, not a loop fall-through
+    assert result.detail == "Blocked: both keys refused (401)"  # W2: two refusals are not one bad key
 
 
 def test_p2_a_rate_limit_429_never_switches_keys(session):
@@ -844,9 +837,9 @@ def test_p2_zero_credits_left_does_not_stop_the_source_when_a_fallback_is_set(se
     kc_lv(session)
     result, seen = _keys_seen(session, [_ok("0")])
     assert result.status == "ok" and len(seen) == 1
-    later = T0 + timedelta(hours=7)  # the primary now answers 401 (free): the same run goes on to the fallback
-    result, seen = _keys_seen(session, [fetch.Blocked("status 401"), _ok("300")], now=later)
-    assert result.status == "ok" and len(seen) == 2 and f"apiKey={KEY2}" in seen[1]
+    later = T0 + timedelta(hours=7)  # W1: the primary's last count is under 50, so only the fallback is asked
+    result, seen = _keys_seen(session, [_ok("300")], now=later)
+    assert result.status == "ok" and len(seen) == 1 and f"apiKey={KEY2}" in seen[0]
 
 
 def test_p2_zero_credits_left_still_stops_the_source_with_no_fallback(session):
@@ -891,11 +884,11 @@ def test_p2_total_pair_loads_as_over_and_under(session):
     assert [(s.selection, s.line, s.price) for s in got] == [("over", 47.5, -105), ("under", 47.5, -115)]
 
 
-def test_p2_h2h_market_without_a_time_keeps_the_win_prices_but_stores_no_moneyline_row():
+def test_p2_h2h_market_without_a_time_stores_no_win_price_at_all():
     data = recorded()
     del data[0]["bookmakers"][0]["markets"][0]["last_update"]
     one = by_key(oddsapi.parse_events(data)[0][0])["bookone"]
-    assert (one.home_ml, one.away_ml) == (-180, 155)
+    assert (one.home_ml, one.away_ml) == (None, None)  # W5: no time, no price, no market_quotes row
     assert {p.market_type for p in one.prices} == {"spread", "total"}
 
 
@@ -914,5 +907,108 @@ def test_p2_adding_a_fallback_lifts_an_earlier_credits_low_stop(session):
     kc_lv(session)
     result, _ = _keys_seen(session, [_ok("0")], fallback="")  # single key: stopped for 35 days
     assert result.status == "ok"
-    result, seen = _keys_seen(session, [fetch.Blocked("status 401"), _ok("300")], now=T0 + timedelta(hours=7))
+    result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(hours=7))
+    assert result.status == "ok" and len(seen) == 1 and f"apiKey={KEY2}" in seen[0]
+
+
+# --- Security fixes W1 to W6 (Dwight, PR #37)
+def _slot(session, name: str):
+    return session.get(SourceStatus, f"oddsapi:{name}", populate_existing=True)
+
+
+def test_w1_a_slot_under_50_is_skipped_while_the_other_is_usable(session):
+    kc_lv(session)
+    result, seen = _keys_seen(session, [_ok("30")])  # primary answers with 30 left: no stop, a spare is usable
+    assert result.status == "ok" and len(seen) == 1
+    assert _slot(session, "primary").credits_left == 30
+    result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(hours=7))
+    assert result.status == "ok" and len(seen) == 1 and f"apiKey={KEY2}" in seen[0]
+    assert _slot(session, "fallback").credits_left == 300 and _slot(session, "primary").credits_left == 30
+
+
+def test_w1_the_last_usable_slot_under_50_sets_the_35_day_stop(session):
+    kc_lv(session)
+    _keys_seen(session, [_ok("30")])  # primary low
+    result, _ = _keys_seen(session, [_ok("40")], now=T0 + timedelta(hours=7))  # fallback low too
+    assert result.status == "ok"
+    result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(days=34))
+    assert result.status == "skipped" and seen == [] and result.detail == "credits low"
+    result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(days=35, hours=8))
+    assert result.status == "ok" and f"apiKey={KEY}" in seen[0]  # credits reset monthly: primary asked again
+
+
+def test_w1_a_skipped_slot_is_tried_again_35_days_after_its_low_count(session):
+    kc_lv(session)
+    _keys_seen(session, [_ok("30")])
+    for hours in (7, 14):
+        _keys_seen(session, [_ok("300")], now=T0 + timedelta(hours=hours))
+    result, seen = _keys_seen(session, [_ok("450")], now=T0 + timedelta(days=35, minutes=1))
+    assert result.status == "ok" and f"apiKey={KEY}" in seen[0]
+
+
+def test_w1_a_single_key_is_exactly_as_before(session):
+    kc_lv(session)
+    result, seen = _keys_seen(session, [_ok("49")], fallback="")
+    assert result.status == "ok"
+    result, seen = _keys_seen(session, [_ok("300")], fallback="", now=T0 + timedelta(days=34))
+    assert result.status == "skipped" and seen == []
+    result, seen = _keys_seen(session, [_ok("300")], fallback="", now=T0 + timedelta(days=36))
+    assert result.status == "ok" and len(seen) == 1
+
+
+def test_w1_a_401_is_still_a_second_signal_when_the_header_said_nothing(session):
+    kc_lv(session)
+    reply = fetch.JsonResult(200, recorded(), {})  # no x-requests-remaining header
+    _keys_seen(session, [reply])
+    result, seen = _keys_seen(session, [fetch.Blocked("status 401"), _ok("200")], now=T0 + timedelta(hours=7))
     assert result.status == "ok" and len(seen) == 2
+
+
+def test_w2_the_run_says_which_slot_answered_and_its_count(session):
+    kc_lv(session)
+    result, _ = _keys_seen(session, [_ok("480")])
+    assert result.detail == "primary answered; 480 credits left"
+
+
+def test_w2_a_switch_is_kept_on_the_source_status(session):
+    kc_lv(session)
+    _keys_seen(session, [fetch.Blocked("status 401"), _ok("333")])
+    main = session.get(SourceStatus, "oddsapi", populate_existing=True)
+    assert main.last_error == "primary refused (401), on fallback" and main.credits_left == 333
+    assert _slot(session, "primary").last_error == "refused (401)"
+    assert _slot(session, "fallback").credits_left == 333
+
+
+def test_w2_both_keys_refused_is_said_on_the_run_and_the_status(session):
+    kc_lv(session)
+    result, _ = _keys_seen(session, [fetch.Blocked("status 401"), fetch.Blocked("status 401")])
+    assert result.status == "failed" and result.detail == "Blocked: both keys refused (401)"
+    assert session.get(SourceStatus, "oddsapi", populate_existing=True).last_error == (
+        "Blocked: both keys refused (401)"
+    )
+
+
+def test_w3_the_key_choice_rests_on_the_header_not_on_a_status_code(session):
+    kc_lv(session)
+    _keys_seen(session, [_ok("0")])  # primary is spent but the API never printed a 401 for it
+    result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(hours=7))
+    assert len(seen) == 1 and f"apiKey={KEY2}" in seen[0]  # no refused call to the spent key
+
+
+def test_w5_a_book_with_no_h2h_time_stores_no_market_quote(session):
+    kc_lv(session)
+    data = recorded()
+    del data[0]["bookmakers"][0]["markets"][0]["last_update"]
+    result = run.refresh_odds_quotes(
+        session, get=lambda url: fetch.JsonResult(200, data, {}), now=T0, api_key=KEY, fallback_key=""
+    )
+    assert result.status == "ok"
+    assert session.scalars(select(MarketQuote).where(MarketQuote.source == "oddsapi:bookone")).first() is None
+
+
+def test_w6_the_log_carries_the_parsed_count_never_the_raw_header(session, caplog):
+    kc_lv(session)
+    reply = fetch.JsonResult(200, recorded(), {"x-requests-remaining": "12\nforged line"})
+    with caplog.at_level("INFO", logger="nflpi.ingestion.live.run"):
+        _keys_seen(session, [reply], fallback="")
+    assert "forged" not in caplog.text and "credits remaining: None" in caplog.text
