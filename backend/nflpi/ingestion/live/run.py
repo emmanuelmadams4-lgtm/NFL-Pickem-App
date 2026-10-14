@@ -430,11 +430,31 @@ def _slot_source(slot: str) -> str:
 def _slot_usable(session: Session, slot: str, now: datetime, legacy: SourceStatus | None) -> bool:
     """False while the slot's last remaining count was under 50 and seen less than 35 days ago."""
     row = session.get(SourceStatus, _slot_source(slot), populate_existing=True)
-    if row is None and slot == "primary":
-        row = legacy  # a count stored before per-slot counts existed was the first key's
+    if row is None and slot == "primary" and legacy is not None and legacy.credits_left is not None:
+        # a count stored before per-slot counts existed was the first key's: keep it as the slot's own
+        session.add(
+            row := SourceStatus(
+                source=_slot_source(slot),
+                consecutive_failures=0,
+                credits_left=legacy.credits_left,
+                last_ok_at=legacy.last_ok_at,
+                updated_at=now,
+            )
+        )
+        session.commit()
     if row is None or row.credits_left is None or row.credits_left >= LOW_CREDITS:
         return True
     return row.last_ok_at is not None and now >= row.last_ok_at + CREDITS_RESET
+
+
+def _stop_until(session: Session, keys: list[tuple[str, str]], now: datetime) -> datetime:
+    """The earliest moment any low slot is due a retry (35 days after its own low count)."""
+    due = [now + CREDITS_RESET]
+    for slot, _ in keys:
+        row = session.get(SourceStatus, _slot_source(slot), populate_existing=True)
+        if row is not None and row.credits_left is not None and row.credits_left < LOW_CREDITS and row.last_ok_at:
+            due.append(row.last_ok_at + CREDITS_RESET)
+    return min(due)
 
 
 def _record_slot(session: Session, slot: str, now: datetime, credits: int | None, error: str | None) -> None:
@@ -445,6 +465,7 @@ def _record_slot(session: Session, slot: str, now: datetime, credits: int | None
     row.updated_at, row.last_error = now, error
     if error is None and credits is not None:  # a reply without a count leaves the last known count in place
         row.credits_left, row.last_ok_at = credits, now
+    session.commit()  # a later failure in the run must not lose what this key said
 
 
 @dataclass
@@ -581,7 +602,7 @@ def refresh_odds_quotes(
             session.get(SourceStatus, "oddsapi").last_error = note.split(";")[0]
         spare = [slot for slot, _ in usable if slot != outcome.slot and slot not in outcome.refused]
         if outcome.credits is not None and outcome.credits < LOW_CREDITS and not spare:
-            store.mark_stopped(session, "oddsapi", now, now + CREDITS_RESET, outcome.credits)
+            store.mark_stopped(session, "oddsapi", now, _stop_until(session, keys, now), outcome.credits)
             log.warning("oddsapi stopped: credits low")
         session.commit()
         result = replace(result, detail=note)

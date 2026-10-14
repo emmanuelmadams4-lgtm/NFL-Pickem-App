@@ -1013,3 +1013,27 @@ def test_w6_the_log_carries_the_parsed_count_never_the_raw_header(session, caplo
     with caplog.at_level("INFO", logger="nflpi.ingestion.live.run"):
         _keys_seen(session, [reply], fallback="")
     assert "forged" not in caplog.text and "credits remaining: None" in caplog.text
+
+
+def test_critic_stop_ends_when_the_earliest_low_slot_is_due(session):
+    kc_lv(session)
+    _keys_seen(session, [_ok("30")])  # primary low on day 0
+    _keys_seen(session, [_ok("40")], now=T0 + timedelta(days=10))  # fallback low on day 10: stop
+    result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(days=35, minutes=1))
+    assert result.status == "ok" and f"apiKey={KEY}" in seen[0]  # not held until day 45
+
+
+def test_critic_an_old_single_key_count_stays_the_primarys_after_the_fallback_answers(session):
+    kc_lv(session)
+    _keys_seen(session, [_ok("0")], fallback="")  # legacy: only the oddsapi row knows
+    _keys_seen(session, [_ok("300")], now=T0 + timedelta(hours=7))  # fallback answers
+    result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(hours=14))
+    assert len(seen) == 1 and f"apiKey={KEY2}" in seen[0]
+    assert _slot(session, "primary").credits_left == 0
+
+
+def test_critic_a_failure_after_the_fetch_keeps_the_slot_count(session):
+    kc_lv(session)
+    bad = fetch.JsonResult(200, {"not": "a list"}, {"x-requests-remaining": "20"})
+    result, _ = _keys_seen(session, [bad])
+    assert result.status == "failed" and _slot(session, "primary").credits_left == 20
