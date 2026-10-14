@@ -1,0 +1,359 @@
+{
+ "stage": "travel",
+ "confirm_looks_before": 15,
+ "games_without_travel_features": 0,
+ "games_scored_frame": 3663,
+ "unknown_stadium_ids": [],
+ "games": 3649,
+ "confirm_games": 1084,
+ "confirm_clusters": 72,
+ "baseline": {
+  "market": {
+   "n": 3649,
+   "accuracy": 0.6656618251575774,
+   "accuracy_ci": [
+    0.6508632502055358,
+    0.6807344477939161
+   ],
+   "brier": 0.21101053281928192,
+   "log_loss": 0.6094274267769724
+  },
+  "blend": {
+   "n": 3649,
+   "accuracy": 0.6645656344203892,
+   "accuracy_ci": [
+    0.6492189640997533,
+    0.6793642093724308
+   ],
+   "brier": 0.2115343303375747,
+   "log_loss": 0.6106975489610106
+  }
+ },
+ "baseline_confirm": {
+  "market": {
+   "n": 1084,
+   "accuracy": 0.6780442804428044,
+   "accuracy_ci": [
+    0.6494464944649446,
+    0.7075645756457565
+   ],
+   "brier": 0.21045524447924308,
+   "log_loss": 0.6081896562059822
+  },
+  "blend": {
+   "n": 1084,
+   "accuracy": 0.6752767527675276,
+   "accuracy_ci": [
+    0.6476014760147601,
+    0.7038745387453874
+   ],
+   "brier": 0.21111446829834304,
+   "log_loss": 0.6095256237556241
+  }
+ },
+ "candidates": [
+  {
+   "candidate": "travel_market",
+   "variants": [
+    {
+     "variant": "p_travel_blend_travel",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.000502815264951153,
+      "log_loss_gain_ci": [
+       -0.0014204708220362397,
+       0.00036871547900032555
+      ],
+      "accuracy_diff": -0.0031189083820662767,
+      "accuracy_diff_ci": [
+       -0.007017543859649123,
+       0.00039961013645218853
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.001369043922589435,
+       0.00039222438716766456
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.00699327909444641,
+       0.0007746610740204763
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_travel_blend_tz",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": 2.7487895979254537e-05,
+      "log_loss_gain_ci": [
+       -0.0005812537559351098,
+       0.0006519401093406362
+      ],
+      "accuracy_diff": 0.0031189083820662767,
+      "accuracy_diff_ci": [
+       -0.0003898635477582846,
+       0.006237816764132553
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0006190849209869831,
+       0.0006955576978784188
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.0003868696951947098,
+       0.00665108229284382
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_travel_blend_both",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.0005095202296172687,
+      "log_loss_gain_ci": [
+       -0.0016137987170324628,
+       0.0005402935388403078
+      ],
+      "accuracy_diff": -0.0027290448343079924,
+      "accuracy_diff_ci": [
+       -0.007017543859649123,
+       0.0015594541910331384
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0015726264881227763,
+       0.0006206336871013558
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.007014809041309431,
+       0.0011691462352946538
+      ],
+      "ships_cluster": false
+     }
+    }
+   ],
+   "chosen": "p_travel_blend_tz",
+   "baseline": "p_blend",
+   "confirm": {
+    "n": 1084,
+    "log_loss_gain": -0.0006666303974954168,
+    "log_loss_gain_ci": [
+     -0.0013272801644407138,
+     -3.227385525893263e-05
+    ],
+    "accuracy_diff": -0.0009225092250922509,
+    "accuracy_diff_ci": [
+     -0.007380073800738007,
+     0.004612546125461255
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.0013784336668379747,
+     2.4276793266536412e-05
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.007313116959936459,
+     0.004617018714076685
+    ],
+    "ships_cluster": false
+   },
+   "ships": false,
+   "all_variants": [
+    {
+     "variant": "p_travel_blend_travel",
+     "tune_gain": -0.000502815264951153,
+     "confirm_gain": 0.00013094634670412472,
+     "gap": -0.0006337616116552777
+    },
+    {
+     "variant": "p_travel_blend_tz",
+     "tune_gain": 2.7487895979254537e-05,
+     "confirm_gain": -0.0006666303974954168,
+     "gap": 0.0006941182934746713
+    },
+    {
+     "variant": "p_travel_blend_both",
+     "tune_gain": -0.0005095202296172687,
+     "confirm_gain": -0.0005339189946669108,
+     "gap": 2.4398765049642038e-05
+    }
+   ],
+   "label": "market-informed",
+   "verdict": "does not ship",
+   "confirm_half_width": {
+    "game": 0.0006475031545908906,
+    "cluster": 0.0007013552300522555
+   }
+  },
+  {
+   "candidate": "travel_football",
+   "variants": [
+    {
+     "variant": "p_travel_base_travel",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.0007720164882290848,
+      "log_loss_gain_ci": [
+       -0.002043700443911618,
+       0.0004656468908112494
+      ],
+      "accuracy_diff": 0.0,
+      "accuracy_diff_ci": [
+       -0.005458089668615985,
+       0.005077972709551604
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0019794894163768645,
+       0.0005096085422871952
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.005864416133928161,
+       0.005871129273627257
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_travel_base_tz",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": 9.645865329933484e-05,
+      "log_loss_gain_ci": [
+       -0.0006946439374774288,
+       0.00090063618004664
+      ],
+      "accuracy_diff": -0.0003898635477582846,
+      "accuracy_diff_ci": [
+       -0.004678362573099415,
+       0.003898635477582846
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0007753904211855536,
+       0.0010584182045285935
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.004710507620769826,
+       0.003910871258927134
+      ],
+      "ships_cluster": false
+     }
+    },
+    {
+     "variant": "p_travel_base_both",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.0007738673564362943,
+      "log_loss_gain_ci": [
+       -0.002304368510486638,
+       0.00070726087909866
+      ],
+      "accuracy_diff": -0.0011695906432748538,
+      "accuracy_diff_ci": [
+       -0.007407407407407408,
+       0.0050682261208577
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.0023179744604521686,
+       0.0008417040104932422
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.007803431587995016,
+       0.005464534217550777
+      ],
+      "ships_cluster": false
+     }
+    }
+   ],
+   "chosen": "p_travel_base_tz",
+   "baseline": "p_logistic",
+   "confirm": {
+    "n": 1084,
+    "log_loss_gain": -0.0010883785876347858,
+    "log_loss_gain_ci": [
+     -0.002262127509582055,
+     5.612567592808871e-05
+    ],
+    "accuracy_diff": -0.0027675276752767526,
+    "accuracy_diff_ci": [
+     -0.00922509225092251,
+     0.0027675276752767526
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.0024205858769623793,
+     0.0001910582231797123
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.009208315299029967,
+     0.0036331434233341587
+    ],
+    "ships_cluster": false
+   },
+   "ships": false,
+   "all_variants": [
+    {
+     "variant": "p_travel_base_travel",
+     "tune_gain": -0.0007720164882290848,
+     "confirm_gain": 0.0001126076319844427,
+     "gap": -0.0008846241202135275
+    },
+    {
+     "variant": "p_travel_base_tz",
+     "tune_gain": 9.645865329933484e-05,
+     "confirm_gain": -0.0010883785876347858,
+     "gap": 0.0011848372409341205
+    },
+    {
+     "variant": "p_travel_base_both",
+     "tune_gain": -0.0007738673564362943,
+     "confirm_gain": -0.0009393296227769387,
+     "gap": 0.00016546226634064432
+    }
+   ],
+   "label": "football-only",
+   "verdict": "does not ship",
+   "confirm_half_width": {
+    "game": 0.001159126592755072,
+    "cluster": 0.0013058220500710457
+   },
+   "confirm_vs_blend": {
+    "n": 1084,
+    "log_loss_gain": -0.02468300353607497,
+    "log_loss_gain_ci": [
+     -0.03540206562848591,
+     -0.013214043398388636
+    ],
+    "accuracy_diff": -0.04151291512915129,
+    "accuracy_diff_ci": [
+     -0.06549815498154982,
+     -0.018427121771217837
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.034562787780739575,
+     -0.015305737501077863
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.0625014374425023,
+     -0.02022058823529412
+    ],
+    "ships_cluster": false
+   },
+   "verdict_vs_blend": "does not ship"
+  }
+ ],
+ "variant_columns_equal_to_baseline": {
+  "p_travel_blend_travel": 2,
+  "p_travel_blend_tz": 25,
+  "p_travel_blend_both": 3,
+  "p_travel_base_travel": 0,
+  "p_travel_base_tz": 10,
+  "p_travel_base_both": 0
+ },
+ "seconds": 1.8
+}

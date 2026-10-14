@@ -1,0 +1,225 @@
+{
+ "stage": "matchup",
+ "confirm_looks_before": 15,
+ "input_gap_blend_vs_blend_plus_matchup_logodds": 0.0022169750278084877,
+ "games": 3649,
+ "confirm_games": 1084,
+ "confirm_clusters": 72,
+ "baseline": {
+  "market": {
+   "n": 3649,
+   "accuracy": 0.6656618251575774,
+   "accuracy_ci": [
+    0.6508632502055358,
+    0.6807344477939161
+   ],
+   "brier": 0.21101053281928192,
+   "log_loss": 0.6094274267769724
+  },
+  "blend": {
+   "n": 3649,
+   "accuracy": 0.6645656344203892,
+   "accuracy_ci": [
+    0.6492189640997533,
+    0.6793642093724308
+   ],
+   "brier": 0.2115343303375747,
+   "log_loss": 0.6106975489610106
+  }
+ },
+ "baseline_confirm": {
+  "market": {
+   "n": 1084,
+   "accuracy": 0.6780442804428044,
+   "accuracy_ci": [
+    0.6494464944649446,
+    0.7075645756457565
+   ],
+   "brier": 0.21045524447924308,
+   "log_loss": 0.6081896562059822
+  },
+  "blend": {
+   "n": 1084,
+   "accuracy": 0.6752767527675276,
+   "accuracy_ci": [
+    0.6476014760147601,
+    0.7038745387453874
+   ],
+   "brier": 0.21111446829834304,
+   "log_loss": 0.6095256237556241
+  }
+ },
+ "candidates": [
+  {
+   "candidate": "matchup_football",
+   "variants": [
+    {
+     "variant": "p_match_football",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.008316974889071958,
+      "log_loss_gain_ci": [
+       -0.014977210646549007,
+       -0.0020873083494897648
+      ],
+      "accuracy_diff": -0.012085769980506823,
+      "accuracy_diff_ci": [
+       -0.028070175438596492,
+       0.0031189083820662767
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.014704359425152429,
+       -0.0021909345485157166
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.02858373639197261,
+       0.003495795159305343
+      ],
+      "ships_cluster": false
+     }
+    }
+   ],
+   "chosen": "p_match_football",
+   "baseline": "p_logistic",
+   "confirm": {
+    "n": 1084,
+    "log_loss_gain": -0.008286244860524292,
+    "log_loss_gain_ci": [
+     -0.016870548814008967,
+     8.0914394738717e-05
+    ],
+    "accuracy_diff": 0.008302583025830259,
+    "accuracy_diff_ci": [
+     -0.012915129151291513,
+     0.03044280442804428
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.016497568691570392,
+     -0.00013931321785419772
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.010110526645110666,
+     0.02708452248824054
+    ],
+    "ships_cluster": false
+   },
+   "ships": false,
+   "all_variants": [
+    {
+     "variant": "p_match_football",
+     "tune_gain": -0.008316974889071958,
+     "confirm_gain": -0.008286244860524292,
+     "gap": -3.0730028547665614e-05
+    }
+   ],
+   "label": "football-only",
+   "verdict": "does not ship",
+   "confirm_half_width": {
+    "game": 0.008475731604373841,
+    "cluster": 0.008179127736858097
+   },
+   "confirm_vs_blend": {
+    "n": 1084,
+    "log_loss_gain": -0.03188086980896448,
+    "log_loss_gain_ci": [
+     -0.04535870705185522,
+     -0.018919423071130356
+    ],
+    "accuracy_diff": -0.03044280442804428,
+    "accuracy_diff_ci": [
+     -0.05350553505535055,
+     -0.005535055350553505
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.04621277665519076,
+     -0.018651037111690236
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.051613341514726505,
+     -0.008426180194532958
+    ],
+    "ships_cluster": false
+   },
+   "verdict_vs_blend": "does not ship"
+  },
+  {
+   "candidate": "matchup_market",
+   "variants": [
+    {
+     "variant": "p_match_market",
+     "tune": {
+      "n": 2565,
+      "log_loss_gain": -0.0040192792530793055,
+      "log_loss_gain_ci": [
+       -0.008481338145948819,
+       0.0003050278699934107
+      ],
+      "accuracy_diff": -0.004678362573099415,
+      "accuracy_diff_ci": [
+       -0.0152046783625731,
+       0.005847953216374269
+      ],
+      "ships": false,
+      "log_loss_gain_ci_cluster": [
+       -0.00815841455898953,
+       0.00036260173094096487
+      ],
+      "accuracy_diff_ci_cluster": [
+       -0.01572145185117497,
+       0.006185490559594083
+      ],
+      "ships_cluster": false
+     }
+    }
+   ],
+   "chosen": "p_match_market",
+   "baseline": "p_blend",
+   "confirm": {
+    "n": 1084,
+    "log_loss_gain": -0.008628655668063269,
+    "log_loss_gain_ci": [
+     -0.015029020238519786,
+     -0.0022108648342381034
+    ],
+    "accuracy_diff": -0.006457564575645757,
+    "accuracy_diff_ci": [
+     -0.023062730627306273,
+     0.01014760147601476
+    ],
+    "ships": false,
+    "log_loss_gain_ci_cluster": [
+     -0.014905561358374435,
+     -0.002502197963817272
+    ],
+    "accuracy_diff_ci_cluster": [
+     -0.024074074074074074,
+     0.012797367659578738
+    ],
+    "ships_cluster": false
+   },
+   "ships": false,
+   "all_variants": [
+    {
+     "variant": "p_match_market",
+     "tune_gain": -0.0040192792530793055,
+     "confirm_gain": -0.008628655668063269,
+     "gap": 0.004609376414983963
+    }
+   ],
+   "label": "market-informed",
+   "verdict": "does not ship",
+   "confirm_half_width": {
+    "game": 0.006409077702140841,
+    "cluster": 0.006201681697278582
+   }
+  }
+ ],
+ "variant_columns_equal_to_baseline": {
+  "p_match_football": 0,
+  "p_match_market": 0
+ },
+ "seconds": 2.1
+}

@@ -1,0 +1,50 @@
+== pythag: games 3649, confirm 1084, seconds 1.9
+  pythag_market [market-informed] vs p_blend: chosen p_pyth_blend_8
+     p_pyth_blend_4: tune -0.00020 confirm -0.00063 gap +0.00043
+     p_pyth_blend_8: tune -0.00015 confirm -0.00056 gap +0.00041
+     p_pyth_blend_16: tune -0.00021 confirm -0.00033 gap +0.00012
+     CONFIRM gain -0.00056 ci -0.00107..-0.00001 cluster -0.00125..+0.00003 acc -0.0009 -> does not ship
+  pythag_football [football-only] vs p_logistic: chosen p_pyth_base_8
+     p_pyth_base_4: tune +0.00137 confirm +0.00085 gap +0.00051
+     p_pyth_base_8: tune +0.00142 confirm -0.00023 gap +0.00165
+     p_pyth_base_16: tune +0.00021 confirm -0.00073 gap +0.00094
+     CONFIRM gain -0.00023 ci -0.00343..+0.00303 cluster -0.00438..+0.00372 acc +0.0046 -> does not ship
+     vs BLEND gain -0.02382 ci -0.03399..-0.01259 acc -0.0341 -> does not ship
+== qb: games 3649, confirm 1084, seconds 25.4
+   quarterback_games_in_log 12304
+   games_missing_a_starter_id 179
+  qb_market [market-informed] vs p_blend: chosen p_qb_blend_32
+     p_qb_blend_8: tune +0.00060 confirm -0.00048 gap +0.00108
+     p_qb_blend_16: tune +0.00096 confirm -0.00142 gap +0.00238
+     p_qb_blend_32: tune +0.00119 confirm -0.00187 gap +0.00306
+     CONFIRM gain -0.00187 ci -0.00533..+0.00183 cluster -0.00527..+0.00179 acc +0.0037 -> does not ship
+  qb_football [football-only] vs p_logistic: chosen p_qb_base_32
+     p_qb_base_8: tune +0.00464 confirm +0.00176 gap +0.00288
+     p_qb_base_16: tune +0.00547 confirm +0.00044 gap +0.00503
+     p_qb_base_32: tune +0.00569 confirm -0.00029 gap +0.00598
+     CONFIRM gain -0.00029 ci -0.00947..+0.00945 cluster -0.00889..+0.00858 acc +0.0111 -> does not ship
+     vs BLEND gain -0.02389 ci -0.03432..-0.01346 acc -0.0277 -> does not ship
+== travel: games 3649, confirm 1084, seconds 1.8
+   games_without_travel_features 0
+   games_scored_frame 3663
+   unknown_stadium_ids []
+  travel_market [market-informed] vs p_blend: chosen p_travel_blend_tz
+     p_travel_blend_travel: tune -0.00050 confirm +0.00013 gap -0.00063
+     p_travel_blend_tz: tune +0.00003 confirm -0.00067 gap +0.00069
+     p_travel_blend_both: tune -0.00051 confirm -0.00053 gap +0.00002
+     CONFIRM gain -0.00067 ci -0.00133..-0.00003 cluster -0.00138..+0.00002 acc -0.0009 -> does not ship
+  travel_football [football-only] vs p_logistic: chosen p_travel_base_tz
+     p_travel_base_travel: tune -0.00077 confirm +0.00011 gap -0.00088
+     p_travel_base_tz: tune +0.00010 confirm -0.00109 gap +0.00118
+     p_travel_base_both: tune -0.00077 confirm -0.00094 gap +0.00017
+     CONFIRM gain -0.00109 ci -0.00226..+0.00006 cluster -0.00242..+0.00019 acc -0.0028 -> does not ship
+     vs BLEND gain -0.02468 ci -0.03540..-0.01321 acc -0.0415 -> does not ship
+== matchup: games 3649, confirm 1084, seconds 2.1
+   input_gap_blend_vs_blend_plus_matchup_logodds 0.0022169750278084877
+  matchup_football [football-only] vs p_logistic: chosen p_match_football
+     p_match_football: tune -0.00832 confirm -0.00829 gap -0.00003
+     CONFIRM gain -0.00829 ci -0.01687..+0.00008 cluster -0.01650..-0.00014 acc +0.0083 -> does not ship
+     vs BLEND gain -0.03188 ci -0.04536..-0.01892 acc -0.0304 -> does not ship
+  matchup_market [market-informed] vs p_blend: chosen p_match_market
+     p_match_market: tune -0.00402 confirm -0.00863 gap +0.00461
+     CONFIRM gain -0.00863 ci -0.01503..-0.00221 cluster -0.01491..-0.00250 acc -0.0065 -> does not ship
