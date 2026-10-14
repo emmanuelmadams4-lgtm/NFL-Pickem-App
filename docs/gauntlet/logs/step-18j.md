@@ -113,3 +113,23 @@ imports (typecheck 0). No proof rerun needed (no edit).
 foot of the week board, after "Select a game for the full matchup. Picks lock at kickoff.", not under the heading. Why:
 under the heading it wraps to two lines at 393 px and pushes the first game's pick buttons below the first screen
 (`phone-layout.spec.ts` L1: 803 > 778). The red test is L1 itself; S5 already checks the label is shown.
+
+**WO3 (after amendment 2).** `evidence/wo-3.md`, try 1. Ryan edited at 20:15 UTC and reported at 22:25 UTC. The
+diff matched the order (one line moved in `week-board.tsx`); typecheck 0. Committed `907f6fa`.
+
+## 5. VERIFICATION
+
+Runs (logs in `~/.claude/plans/nfl-pickem-lanes/logs/step-15-web/<name>.log`):
+- `s18j-full-1` on `b4ba105`, the FULL suite on a fresh build: 246 passed, 6 failed, 2 skipped, 20.4 min. One real
+  failure, phone-layout L1 (803 > 778, caused by 18j), which led to amendment 2 and WO3. Five timeouts: live L9 (axe
+  `page.evaluate`), passkey K3, phone-layout L8 (cards never loaded), pwa P12 and P13.
+- `s18j-green-3` on `10b9978` plus the WO3 diff, a fresh build of five spec files: L1 passes; 9 failed, every one a
+  timeout of minutes (passkey K1, K3, K11; phone-layout L6; pwa P3, P4, P9, P12, P13), 53 min. The failing set changed
+  from run to run. The machine was under heavy CPU load from other sessions.
+- god (2026-10-14 22:20 UTC, under D71): PR CI is the full gate. Locally, show green on the specs 18j touches.
+- `s18j-green-4` on `907f6fa`, a fresh build of sim18j, phone-layout, step2 and restyle: 56 passed, 2 failed. sim18j
+  6/6, and phone-layout in full (L1 and L6 included). The two failures are restyle R1 and step2 E3, both waiting for
+  `game-card`. E3's page said "Loading week"; R1's page snapshot shows the cards arrived after the limit. These are
+  slow loads; the full suite runs on PR CI.
+- typecheck 0 on `907f6fa`. Security: Dwight PASS on `b4ba105` (`evidence/reviews/security-1.md`). The only later
+  code change is WO3's one-line move.
