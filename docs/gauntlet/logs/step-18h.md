@@ -46,3 +46,11 @@ X2, X3, X6 stay as they are (carried to the integrator).
 4. LOW: the no-leak test checks the game's own score, not later games' scores (the season window excludes them).
 * Also: `analytics/` and `jobs.py` may not contain `nflpi.data` (`test_data_layer`), so `sim_backtest.py` imports the asof function through `nflpi.picks`, as the engine does. Old `jev_tiebreak_*` rows in `app_settings` are now unused.
 * Final critic (fresh, on `13ef0ce`): PASS, 0 critical, 0 high. Advisory MEDIUM: the guard around `load_frame` in `_simulations` could hide a failed database read (aborted transaction); that read is also made unguarded elsewhere in `refresh_predictions`, so a real database fault still surfaces there.
+
+## LANDING
+
+**Landed 2026-10-14.** Dwight X1/X4/X5 fixed by a finisher (head `9d7be06`, fresh critic PASS); Dwight re-check of `4fa0d32..9d7be06` PASS; integrator scans clean (no member names, no secret patterns). Pull request #38 merged by the owner as `400677b` at 15:31 UTC; one duplicate docker check was still pending, every other check (8) green.
+
+**Deployed:** deploy 11 to the owner's PC at `400677b`, 15:35 UTC (D73), with step 18i part 2: backup first, worker stopped for the migration, alembic `0010`, row counts unchanged, `/api/health` 200, no log errors. Simulator parameters for season 2026 learned by a one-off (`sim_backtest.learn_for_season` + `engine.save_sim_params`, prior seasons only), not by `jobs train`, which would also refit the win model mid-season.
+
+**Carried:** a failed simulator-parameter fit is only logged (X2); a flaky simulator writes a new prediction row per game when it fails and again when it recovers (Dwight LOW); no `sim-params` command yet.

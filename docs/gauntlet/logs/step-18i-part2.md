@@ -72,3 +72,9 @@ Tests: new or changed in `test_value.py`, committed red first (`6f9704b`; the fi
 | LOW `_answer_note` | Uses `REFUSED` | |
 
 Gate: test_value, test_live, test_hardening 453 passed; ruff clean (throwaway Postgres on port 15999, removed). Fresh critic (ecc:python-reviewer): items 1, 2, 3, 5 PASS; item 4 PASS WITH CAVEATS (vacuous `detail` clause, run log unchecked, conditional assert), all three fixed afterwards in test code only. Carried: other LOWs; `ruff format` nit at an older test.
+
+## LANDING
+
+**Landed 2026-10-14.** Critic fixes M1/M2/M3/M5 by a finisher (head `7250391`; 453 tests passed; fresh critic PASS on items 1, 2, 3 and 5; the later test-only commit reviewed by the integrator). Pull request #37: CI 9 of 9 green on `7250391` (D71). Merged as `ef68bab` at 15:28 UTC.
+
+**Deployed:** deploy 11 to the owner's PC at `400677b`, 15:35 UTC (D73): migration `0010` applied with the worker stopped, row counts unchanged. **Second key:** the key the owner pasted is the one already set as `ODDS_API_KEY`, so `ODDS_API_KEY_FALLBACK` is left unset; the switch works once a different key is added.
