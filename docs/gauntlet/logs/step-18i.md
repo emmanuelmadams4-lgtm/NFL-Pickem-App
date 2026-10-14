@@ -22,3 +22,12 @@ Public functions: `nflpi.value.save_prices`, `nflpi.value.load_snapshots`, `nflp
 
 ## Seams for the integrator
 - A config switch for `extra_markets` waits for the owner's yes to triple credits.
+
+## Evidence
+- Commits: `894a496` spec + red tests, `d42f02a` implementation (Sonnet builder, lead fixed two parser edge cases and wired `run.py`), `4a308de` V9 test + sweep.
+- `tests/test_value.py`: 62 passed. With test_live, test_live_worker, test_live_api, test_hardening, test_picks, test_betting_odds: 731 passed. Ruff clean.
+- Mutation sweep (`step-18i-evidence/mutate.py`, log `mutation-sweep.log`): 34/34 killed, at least one per clause V1-V11.
+- Migration on a scratch database: upgrade to 0009, downgrade to 0008 (table gone), upgrade again: OK.
+- Lane-guard against origin/main: only the four granted seams (models.py append, migration 0009, config.py one setting, test_hardening.py one line).
+- Critic (ecc:python-reviewer, fresh, no transcript) on `4a308de`: **PASS**. Three LOW notes, none acted on: no guard around `_save_book_prices` in the odds job (no raising path found), pick'em spread may store -0.0, `fetched_at` checked after quote validation (nothing written either way).
+- Zero real Odds API calls; the job still asks for h2h only.
