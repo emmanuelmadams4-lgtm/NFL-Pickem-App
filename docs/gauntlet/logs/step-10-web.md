@@ -180,3 +180,9 @@ Sync with main (god 7b856b): PR #38 (wire18h) merged as `400677b`; `origin/main`
 (no conflicts, under `res:git-integrate`). `npm run gen:api` rerun: no change (the merged `openapi.json`/`api-types.ts`
 already carry `HealthOut.passkeys`). On `73337a1`: typecheck 0; `test_health_passkeys.py` 7 passed (port 15436); ruff
 clean; `s10-green-6` fresh build **17 passed, 0 failed**.
+Reviews on the re-opened part: Dwight delta (`363bb7f..5f82d94`) **PASS**, nothing CRITICAL/HIGH/MEDIUM
+(`reviews/security-2.md`). New fresh critic on `97819a9` **PASS** (`reviews/critic-2.md`); its reruns: typecheck 0,
+health tests 7 passed, ruff clean, `gen:api` no change, `e2e/passkey.spec.ts` fresh build 17 passed 0 failed. Carried
+LOWs added: the token-change toast says "Signed out on this device…" although the user stays signed in with the new
+token (wording); `InvalidStateError` on sign-in maps to "refused", untested; a caller's own sign-out message hides the
+server-failure notice (only the 401 paths pass one today).
