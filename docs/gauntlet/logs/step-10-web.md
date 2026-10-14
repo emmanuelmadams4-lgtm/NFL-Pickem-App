@@ -105,7 +105,8 @@ and `res:e2e` held for each browser run).
 | K3 test fix | — | test registers a passkey before the refusal cases | `6dc1051` |
 | WO1b (`wo-1.md` §1b) | K7: health flag came from the saved offline cache | shared `usePasskeysEnabled` hook, fresh fetch on every open; `s10-green-2` 11/11; health 7/7 | `a67a065` |
 | WO2 (`wo-2.md`) | `s10-red-2b`: raw browser text for a second passkey on one device; ruff E501 in `main.py` | plain words; line wrapped; ruff clean | `821db49` |
-| WO3 (`wo-3.md`) | `s10-red-3`: both K12 tests fail for the intended reason | Cancel, split errors, texts, date | see below |
+| WO3 (`wo-3.md`) | `s10-red-3`: both K12 tests fail for the intended reason | Cancel, split errors, texts, date; `s10-green-3` 13/14: its K12 test passed through Cancel and the date, then failed at line 266 on a real defect | `75c4060` |
+| WO4 (`wo-4.md`) | `s10-green-3` line 266: a deleted passkey still listed after reopening Settings (saved cache + 60 s staleTime, no refetch; server log shows no `GET /api/passkey`) | list query refetches on every open; typecheck 0; browser proof in the run after WO5 | see next commit |
 
 Coordinator edits to production code: one `ruff check --fix` on `backend/nflpi/api/main.py` (import order only, after
 WO1). `packages/shared/openapi.json` and `api-types.ts` regenerated with `npm run gen:api` (SEAM god 9f6599), never hand

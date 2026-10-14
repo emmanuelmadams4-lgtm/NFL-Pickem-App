@@ -12,7 +12,7 @@ export function PasskeysSection() {
   const api = useApi();
   const qc = useQueryClient();
   const nameId = useId();
-  const list = useQuery({ queryKey: keys.passkeys, queryFn: () => api.passkeys(), retry: false });
+  const list = useQuery({ queryKey: keys.passkeys, queryFn: () => api.passkeys(), refetchOnMount: "always", retry: false });
   const enabled = usePasskeysEnabled(api);
   const [name, setName] = useState("");
   const [adding, setAdding] = useState(false);
