@@ -1,0 +1,346 @@
+diff --git a/packages/shared/openapi.json b/packages/shared/openapi.json
+index ede9304..3b9b7da 100644
+--- a/packages/shared/openapi.json
++++ b/packages/shared/openapi.json
+@@ -3912,6 +3912,33 @@
+     ],
+     "title": "PickIn"
+    },
++   "PickModeOut": {
++    "properties": {
++     "mode": {
++      "type": "string",
++      "enum": [
++       "straight_up",
++       "confidence_pool"
++      ],
++      "title": "Mode"
++     },
++     "assumed": {
++      "type": "boolean",
++      "title": "Assumed"
++     },
++     "label": {
++      "type": "string",
++      "title": "Label"
++     }
++    },
++    "type": "object",
++    "required": [
++     "mode",
++     "assumed",
++     "label"
++    ],
++    "title": "PickModeOut"
++   },
+    "PickOut": {
+     "properties": {
+      "game_id": {
+@@ -4065,6 +4092,16 @@
+       },
+       "type": "object",
+       "title": "Data Freshness"
++     },
++     "simulation": {
++      "anyOf": [
++       {
++        "$ref": "#/components/schemas/SimulationOut"
++       },
++       {
++        "type": "null"
++       }
++      ]
+      }
+     },
+     "type": "object",
+@@ -4606,6 +4643,181 @@
+     ],
+     "title": "SideOut"
+    },
++   "SimulationOut": {
++    "properties": {
++     "source": {
++      "type": "string",
++      "title": "Source"
++     },
++     "distribution": {
++      "type": "string",
++      "title": "Distribution"
++     },
++     "n_simulations": {
++      "type": "integer",
++      "title": "N Simulations"
++     },
++     "home_points": {
++      "type": "number",
++      "title": "Home Points"
++     },
++     "away_points": {
++      "type": "number",
++      "title": "Away Points"
++     },
++     "home_win": {
++      "type": "number",
++      "title": "Home Win"
++     },
++     "away_win": {
++      "type": "number",
++      "title": "Away Win"
++     },
++     "tie": {
++      "type": "number",
++      "title": "Tie"
++     },
++     "expected_margin": {
++      "type": "number",
++      "title": "Expected Margin"
++     },
++     "expected_total": {
++      "type": "number",
++      "title": "Expected Total"
++     },
++     "margin_80": {
++      "items": {
++       "type": "number"
++      },
++      "type": "array",
++      "title": "Margin 80"
++     },
++     "total_80": {
++      "items": {
++       "type": "number"
++      },
++      "type": "array",
++      "title": "Total 80"
++     },
++     "home_spread": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Home Spread"
++     },
++     "total": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Total"
++     },
++     "home_cover": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Home Cover"
++     },
++     "away_cover": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Away Cover"
++     },
++     "spread_push": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Spread Push"
++     },
++     "over": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Over"
++     },
++     "under": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Under"
++     },
++     "total_push": {
++      "anyOf": [
++       {
++        "type": "number"
++       },
++       {
++        "type": "null"
++       }
++      ],
++      "title": "Total Push"
++     },
++     "label": {
++      "type": "string",
++      "title": "Label"
++     }
++    },
++    "type": "object",
++    "required": [
++     "source",
++     "distribution",
++     "n_simulations",
++     "home_points",
++     "away_points",
++     "home_win",
++     "away_win",
++     "tie",
++     "expected_margin",
++     "expected_total",
++     "margin_80",
++     "total_80",
++     "home_spread",
++     "total",
++     "home_cover",
++     "away_cover",
++     "spread_push",
++     "over",
++     "under",
++     "total_push",
++     "label"
++    ],
++    "title": "SimulationOut"
++   },
+    "StandingOut": {
+     "properties": {
+      "member": {
+@@ -5282,6 +5494,9 @@
+       "type": "integer",
+       "title": "Week"
+      },
++     "pick_mode": {
++      "$ref": "#/components/schemas/PickModeOut"
++     },
+      "summary": {
+       "$ref": "#/components/schemas/WeekSummary"
+      },
+@@ -5309,6 +5524,7 @@
+     "required": [
+      "season",
+      "week",
++     "pick_mode",
+      "summary",
+      "games",
+      "freshness",
+diff --git a/packages/shared/src/api-types.ts b/packages/shared/src/api-types.ts
+index 602a1d3..0adbb88 100644
+--- a/packages/shared/src/api-types.ts
++++ b/packages/shared/src/api-types.ts
+@@ -1254,6 +1254,18 @@ export interface components {
+             /** Team */
+             team: string;
+         };
++        /** PickModeOut */
++        PickModeOut: {
++            /**
++             * Mode
++             * @enum {string}
++             */
++            mode: "straight_up" | "confidence_pool";
++            /** Assumed */
++            assumed: boolean;
++            /** Label */
++            label: string;
++        };
+         /** PickOut */
+         PickOut: {
+             /** Game Id */
+@@ -1316,6 +1328,7 @@ export interface components {
+             data_freshness: {
+                 [key: string]: string | null;
+             };
++            simulation?: components["schemas"]["SimulationOut"] | null;
+         };
+         /** PushKeys */
+         PushKeys: {
+@@ -1482,6 +1495,51 @@ export interface components {
+             /** Avg Confidence */
+             avg_confidence: number | null;
+         };
++        /** SimulationOut */
++        SimulationOut: {
++            /** Source */
++            source: string;
++            /** Distribution */
++            distribution: string;
++            /** N Simulations */
++            n_simulations: number;
++            /** Home Points */
++            home_points: number;
++            /** Away Points */
++            away_points: number;
++            /** Home Win */
++            home_win: number;
++            /** Away Win */
++            away_win: number;
++            /** Tie */
++            tie: number;
++            /** Expected Margin */
++            expected_margin: number;
++            /** Expected Total */
++            expected_total: number;
++            /** Margin 80 */
++            margin_80: number[];
++            /** Total 80 */
++            total_80: number[];
++            /** Home Spread */
++            home_spread: number | null;
++            /** Total */
++            total: number | null;
++            /** Home Cover */
++            home_cover: number | null;
++            /** Away Cover */
++            away_cover: number | null;
++            /** Spread Push */
++            spread_push: number | null;
++            /** Over */
++            over: number | null;
++            /** Under */
++            under: number | null;
++            /** Total Push */
++            total_push: number | null;
++            /** Label */
++            label: string;
++        };
+         /** StandingOut */
+         StandingOut: {
+             /** Member */
+@@ -1674,6 +1732,7 @@ export interface components {
+             season: number;
+             /** Week */
+             week: number;
++            pick_mode: components["schemas"]["PickModeOut"];
+             summary: components["schemas"]["WeekSummary"];
+             /** Games */
+             games: components["schemas"]["GameSummary"][];

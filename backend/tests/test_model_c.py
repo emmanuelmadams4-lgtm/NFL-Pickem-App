@@ -359,7 +359,7 @@ def test_todays_pick_sheet_without_ai_evidence_is_the_probability_sort():
     probs = rng.uniform(0.05, 0.95, 16)
     week = _week(probs, (rng.uniform(size=16) < probs).astype(float))
     pick = np.maximum(week["p_blend"], 1 - week["p_blend"])
-    sheet = order([Ranked(g, p) for g, p in zip(week["game_id"], pick, strict=True)], {})
+    sheet = order([Ranked(g, p) for g, p in zip(week["game_id"], pick, strict=True)])
     assert sheet == mc.points_order(week, "sort")
 
 
