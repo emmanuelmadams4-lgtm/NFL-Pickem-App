@@ -48,3 +48,15 @@ Unchanged and re-tested: both stored selections carry the HOME spread; a book wh
 | 4 | Own tests and lint | ruff check and format clean on changed files |
 | 5 | Fresh critic, no transcript | ecc:python-reviewer on `2a40aca`: **PASS**, 0 HIGH, 2 MEDIUM, 3 LOW. Fixed: a 35 day credits-low stop set before a fallback key was added is now lifted (test added); dead `credits[1]` removed. Not changed: per-slot credit tracking (MEDIUM 2, intended: the 401 is the switch signal); the migration test is a text check, the real up/down run is in `migration.txt`. |
 | 6 | Lane-guard | flags only the granted seams (`.env.example`, `config.py`, `models.py`, `test_hardening.py`, migration `0010`) and `tests/test_live.py` (not granted; see Seams) |
+
+## Security fixes (Dwight, PR #37, 2026-10-14)
+| Finding | Fix | Commits |
+|---------|-----|---------|
+| W1 credit reserve unknown with two keys | Key choice rests on the `x-requests-remaining` header, kept per slot in `source_status` rows `oddsapi:primary` / `oddsapi:fallback` (`credits_left`, `last_ok_at`; no new column or migration). A slot whose last count is under 50 is skipped while another is usable; the last usable slot under 50 sets the 35 day stop; a skipped slot is asked again 35 days after its low count. One key behaves as before (an older single-key count on the `oddsapi` row counts as the primary's). | tests `6f9704b`, fix `457995f` |
+| W2 dead primary invisible | Run detail: `primary answered; N credits left`, or `primary refused (401), on fallback; N credits left`. The same switch text is kept on the `oddsapi` status; both failing gives `Blocked: both keys refused (401)`. | `6f9704b`, `457995f` |
+| W3 401 assumption | The 401 is only a second signal now; the header decides. A spent primary (count under 50) costs no refused call on later polls. | `6f9704b`, `457995f` |
+| W4, W7 | Unchanged (LOW, accepted). W8 accepted by the integrator. | n/a |
+| W5 h2h with no time still priced | `_book` takes an h2h market only with its own time: no time, no `home_ml`/`away_ml`, no `market_quotes` row, no `book_prices` row. | `6f9704b`, `457995f` |
+| W6 raw header in log | Log carries `_credits_header` (parsed count or None). | `6f9704b`, `457995f` |
+
+Tests: 14 new or changed in `test_value.py` (red first: 11 failed on `a898bdb` code, then green). `test_value.py` + `test_live.py`: 418 passed; `test_hardening.py`: 25 passed; ruff check clean. No real Odds API call, no key value anywhere.
