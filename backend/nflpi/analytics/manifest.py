@@ -47,12 +47,12 @@ def _lock_hash(repo: Path) -> tuple[str | None, str | None]:
 def run_record(
     model: str, *, label: str, seed: int | None, seed_note: str | None, cutoff_rule: str, latest_kickoff: str | None,
     n_games: int, seasons: list[int], uses_closing_line: bool, data_files: dict[str, str | Path],
-    repo_root: str | Path,
+    repo_root: str | Path, games: dict[str, dict] | None = None,
 ) -> dict:
     repo = Path(repo_root)
     revision, dirty = git_revision(repo)
     lock_sha, lock_reason = _lock_hash(repo)
-    return {
+    record = {
         "model": model,
         "label": label,
         "code_revision": revision,
@@ -68,3 +68,6 @@ def run_record(
         "seasons": [int(s) for s in seasons],
         "uses_closing_line": bool(uses_closing_line),
     }
+    if games is not None:  # per game: {"n_simulations": int | None, "inputs_used": [FEATURES.md names]}
+        record["games"] = games
+    return record

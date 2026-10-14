@@ -4102,6 +4102,16 @@
         "type": "null"
        }
       ]
+     },
+     "simulation_check": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/SimulationCheckOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
      }
     },
     "type": "object",
@@ -4642,6 +4652,28 @@
      "avg_confidence"
     ],
     "title": "SideOut"
+   },
+   "SimulationCheckOut": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "enum": [
+       "failed",
+       "no_verdict"
+      ],
+      "title": "Status"
+     },
+     "note": {
+      "type": "string",
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "note"
+    ],
+    "title": "SimulationCheckOut"
    },
    "SimulationOut": {
     "properties": {

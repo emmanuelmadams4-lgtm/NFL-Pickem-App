@@ -308,3 +308,18 @@ def test_a_score_frame_that_cannot_be_built_still_writes_every_prediction(loaded
     engine.refresh_predictions(loaded)
     assert all_games_have_rows(loaded)
     assert all(latest(loaded, g.game_id).features["simulation"] is None for g in upcoming(loaded))
+
+
+# Step 18k: the run check gates every stored simulation; these tests use a Claude that always says PASS ----------------
+
+@pytest.fixture(autouse=True)
+def _claude_passes(monkeypatch):
+    from nflpi.ai import run_checker
+
+    class AlwaysPass:
+        name, model = "claude", "fake"
+
+        def complete(self, system, user, json_schema=None, max_tokens=16000):
+            return "PASS"
+
+    monkeypatch.setattr(run_checker, "get_provider", lambda name: AlwaysPass())

@@ -55,6 +55,11 @@ class SimulationOut(BaseModel):
     label: str
 
 
+class SimulationCheckOut(BaseModel):
+    status: Literal["failed", "no_verdict"]
+    note: str
+
+
 class PredictionOut(BaseModel):
     id: int
     created_at: datetime
@@ -72,6 +77,7 @@ class PredictionOut(BaseModel):
     change_note: str | None
     data_freshness: dict[str, str | None]
     simulation: SimulationOut | None = None
+    simulation_check: SimulationCheckOut | None = None  # set when the run check blocked this run's simulation
 
 
 class WeatherOut(BaseModel):
