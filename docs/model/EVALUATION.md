@@ -30,7 +30,7 @@ Writes to `<out_dir>`: `report.json`, `report.txt`, `run-records.json`, `predict
 
 **Points**
 * R7 Margin and total error for the three score methods (`implied`, `stats`, `blend`): n, MAE, RMSE, mean error (bias), margin and total, overall and by season. Games with a missing prediction are excluded and counted.
-* R8 Closing-line outcomes against the quoted lines: home covers, away covers, pushes, overs, unders, pushes, each with n, overall and by season, settled with `nflpi.betting.settle` and the home spread `h = -spread_line` through the one existing conversion (`sim_backtest.quoted_home_spread`; audit A13). No returns or profit are reported: there is no history of timestamped prices (PLAN 3.5). Printed as missing with that reason.
+* R8 Closing-line outcomes against the quoted lines: home covers, away covers, pushes, overs, unders, pushes, each with n, overall and by season, settled with `nflpi.betting.settle` and the home spread `h = -spread_line` through `nflpi.data.asof.home_spread_from_nflverse` (the one place the sign is flipped; audit A13). No returns or profit are reported: there is no history of timestamped prices (PLAN 3.5). Printed as missing with that reason.
 
 **Simulator (seasons 2022 to 2025 only, from the stored confirm file)**
 * R9 For each stored variant (source x distribution): n, margin and total MAE and RMSE, interval coverage at 50, 80, 95 percent for margin and total with the nominal level beside it, simulated cover and over rates (sample-weighted mean of the stored reliability table) beside the real rates with pushes excluded and counted, tie rate, Brier against a flat 0.5. Label kept: "not shown to beat a coin flip against the closing line".
@@ -55,4 +55,3 @@ Writes to `<out_dir>`: `report.json`, `report.txt`, `run-records.json`, `predict
 * It reports the bench, not the live app. The live `predictions` table (kinds `live` and `backfill`, market snapshots, push chance, edge, warnings) is not exported here: that needs the database and a route, which are step 18h seams.
 * The closing line is a benchmark, not what was on offer at decision time (AUDIT A6); every closing-line number is labelled so.
 * The bench has been scored many times on 2022 to 2025 (AUDIT A11). This report is a read, not a new test; it ships nothing and tunes nothing.
-* Spread sign: `nflpi.data.asof.home_spread_from_nflverse` (PR #31) was not on the base this lane was cut from. The report uses the existing `sim_backtest.quoted_home_spread`. Seam: swap the import after PR #31 lands; one line.
