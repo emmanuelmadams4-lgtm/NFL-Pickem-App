@@ -167,7 +167,7 @@ def test_bench_spread_is_the_negative_of_the_nflverse_line():
 
 
 def test_bench_uses_the_one_data_layer_spread_conversion():
-    # AUDIT A13 and step 18h: one named conversion, nflpi.data.asof.home_spread_from_nflverse; the bench negates nothing.
+    # AUDIT A13, step 18h: one named conversion, nflpi.data.asof.home_spread_from_nflverse; the bench negates nothing.
     import inspect
     import re
 

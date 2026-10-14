@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from nflpi.analytics import stars
 from nflpi.analytics.metrics import calibration, wilson_ci
 from nflpi.api import schemas as s
+from nflpi.config import get_settings
 from nflpi.ingestion.service import freshness
 from nflpi.models import (
     AIReport,
@@ -26,6 +27,7 @@ from nflpi.models import (
     WeatherForecast,
     WeeklyRank,
 )
+from nflpi.picks import make_picks
 from nflpi.predictions import sheet
 
 
@@ -97,6 +99,7 @@ def prediction_out(p: Prediction, names: dict[int, str]) -> s.PredictionOut:
         upset_flags=p.features.get("upset_flags", []),
         change_note=p.change_note,
         data_freshness=p.data_freshness,
+        simulation=p.features.get("simulation"),
     )
 
 
@@ -290,9 +293,11 @@ def week_view(session: Session, season: int, week: int) -> s.WeekOut:
         league_leader_accuracy=get_setting(session, "league_leader_accuracy"),
         attention=attention,
     )
+    picks = make_picks([], mode=get_settings().pick_mode)
     return s.WeekOut(
         season=season,
         week=week,
+        pick_mode=s.PickModeOut(mode=picks.mode, assumed=picks.mode_assumed, label=picks.label),
         summary=summary,
         games=items,
         freshness=[s.DatasetFreshness(**f) for f in freshness(session, now)],

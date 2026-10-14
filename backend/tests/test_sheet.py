@@ -357,12 +357,12 @@ def test_rank_entry_refuses_bad_numbers(loaded, client, body):
     assert client.put(f"/api/ranks/{CURRENT}/{WEEK}", json=body).status_code == 422
 
 
-# S6 confidence order is maths only (D74 replaces the D43 Jev tie-break) ---------------------------------------------
+# S6 confidence order is maths only (D74 replaces the D43 Jev tie-break) --------------------------------------------
 
 
 def test_order_is_by_win_chance_then_game_id_and_near_ties_are_not_reordered():
     close = [sheet.Ranked("b", 0.700), sheet.Ranked("c", 0.600), sheet.Ranked("a", 0.704), sheet.Ranked("d", 0.700)]
-    assert sheet.order(close) == ["a", "b", "d", "c"]  # 0.4 points apart keeps win-chance order; an exact tie goes by id
+    assert sheet.order(close) == ["a", "b", "d", "c"]  # 0.4 points apart keeps win-chance order; exact tie: by id
 
 
 def test_no_ai_is_asked_about_the_order_and_old_ai_answers_are_ignored(loaded, client, monkeypatch):

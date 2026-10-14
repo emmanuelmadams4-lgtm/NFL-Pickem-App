@@ -7,7 +7,8 @@ when the inputs change; earlier rows are never edited.
 
 import hashlib
 import json
-from dataclasses import dataclass
+import zlib
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
@@ -17,19 +18,27 @@ from sqlalchemy.orm import Session
 
 from nflpi.analytics.backtest import _elo_frames, run_backtest, tune_elo
 from nflpi.analytics.metrics import EARLY_WEEK_END, UPSET_GAP, pick_label, uncertainty_grade, upset_watch
+from nflpi.analytics.sim_backtest import BASE_SEED, N_SIMULATIONS, WINDOW
 from nflpi.config import get_settings
 from nflpi.ingestion.service import freshness
-from nflpi.models import BacktestRun, Game, MarketSnapshot, ModelVersion, Prediction
+from nflpi.models import AppSetting, BacktestRun, Game, MarketSnapshot, ModelVersion, Prediction
+from nflpi.picks import home_spread_from_nflverse
 from nflpi.predictions.elo import EloParams
 from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features
 from nflpi.predictions.model import LogitModel
+from nflpi.predictions.scores import STATS_FEATURES, ScoreModel, add_score_features
+from nflpi.sim import DEFAULT_DISTRIBUTION, SimParams, TeamFeatures, simulate_game
 
 MODEL_KIND = "blend-elo-qb"
+SIM_LABEL = "Score simulator, football-only inputs: not shown to beat the betting market or the win model"
+MAX_EXPECTED_POINTS = 100
+_SIM_ARRAYS = ("residual_a", "residual_b", "ot_increments")
 CHANGE_WORDS = {
     "elo_diff": "team ratings after new results",
     "market_logit": "betting line",
     "home_qb": "starting QB",
     "away_qb": "starting QB",
+    "simulation": "score simulation",
     "home_rest": "rest days",
     "away_rest": "rest days",
 }
@@ -82,6 +91,8 @@ def load_frame(session: Session) -> pd.DataFrame:
                 "away_qb": g.away_qb,
                 "home_ml": m.home_moneyline if m else np.nan,
                 "away_ml": m.away_moneyline if m else np.nan,
+                "spread_line": m.spread_line if m and m.spread_line is not None else np.nan,
+                "total_line": m.total_line if m and m.total_line is not None else np.nan,
                 "market_kind": m.kind if m else None,
                 "market_observed_at": m.observed_at if m else None,
             }
@@ -209,6 +220,77 @@ def _clean(v: object) -> object:
     return v
 
 
+def save_sim_params(session: Session, season: int, params: SimParams) -> None:
+    value = {k: [int(x) for x in v] if k in _SIM_ARRAYS else v for k, v in asdict(params).items()}
+    key = f"sim_params_{season}"
+    row = session.get(AppSetting, key)
+    if row is None:
+        session.add(AppSetting(key=key, value=value))
+    else:
+        row.value = value
+    session.commit()
+
+
+def load_sim_params(session: Session, season: int) -> SimParams | None:
+    row = session.get(AppSetting, f"sim_params_{season}")
+    if row is None:
+        return None
+    return SimParams(**{k: np.array(v, dtype=np.int64) if k in _SIM_ARRAYS else v for k, v in row.value.items()})
+
+
+def _finite(v: object) -> bool:
+    return v is not None and bool(np.isfinite(v))
+
+
+def _score_model(frame: pd.DataFrame, season: int) -> ScoreModel | None:
+    """Football-only expected points fit on the WINDOW seasons before `season` (walk-forward, as the 18c bench)."""
+    try:
+        return ScoreModel.fit(frame[frame["season"].between(season - WINDOW, season - 1)], STATS_FEATURES)
+    except ValueError:
+        return None
+
+
+def _simulation(row: pd.Series, params: SimParams | None, model: ScoreModel | None, frame: pd.DataFrame) -> dict | None:
+    """The score simulation for one game, or None when the inputs are missing (never guessed)."""
+    if params is None or model is None:
+        return None
+    home, away = (float(x[0]) for x in model.predict(frame[frame["game_id"] == row["game_id"]]))
+    if not all(_finite(x) and 0 < x <= MAX_EXPECTED_POINTS for x in (home, away)):
+        return None
+    spread = float(home_spread_from_nflverse(row["spread_line"])) if _finite(row["spread_line"]) else None
+    total = float(row["total_line"]) if _finite(row["total_line"]) and row["total_line"] > 0 else None
+    res = simulate_game(
+        TeamFeatures(home), TeamFeatures(away), N_SIMULATIONS, params=params,
+        seed=zlib.crc32(row["game_id"].encode()) ^ BASE_SEED, spread=spread, total=total,
+        neutral_site=bool(row["neutral_site"]), distribution=DEFAULT_DISTRIBUTION, playoff=row["game_type"] != "REG",
+    )
+    out = {
+        "source": "football_only", "distribution": res.distribution, "n_simulations": res.n,
+        "home_points": home, "away_points": away, "home_win": res.p_a_win, "away_win": res.p_b_win,
+        "tie": res.p_tie, "expected_margin": res.expected_margin, "expected_total": res.expected_total,
+        "margin_80": list(res.margin_intervals[0.8]), "total_80": list(res.total_intervals[0.8]),
+        "home_spread": spread, "total": total, "home_cover": res.p_a_cover, "away_cover": res.p_b_cover,
+        "spread_push": res.p_spread_push, "over": res.p_over, "under": res.p_under, "total_push": res.p_total_push,
+    }
+    out = {k: [_clean(x) for x in v] if isinstance(v, list) else _clean(v) for k, v in out.items()}
+    return out | {"label": SIM_LABEL}
+
+
+def _simulations(session: Session, targets: pd.DataFrame) -> dict[str, dict | None]:
+    """One simulation per target game; None for a season with no learned parameters."""
+    if targets.empty:
+        return {}
+    params = {s: load_sim_params(session, s) for s in {int(s) for s in targets["season"]}}
+    if not any(params.values()):
+        return dict.fromkeys(targets["game_id"])
+    frame = add_score_features(load_frame(session), EloParams())
+    models = {s: _score_model(frame, s) for s, p in params.items() if p is not None}
+    return {
+        row["game_id"]: _simulation(row, params[int(row["season"])], models.get(int(row["season"])), frame)
+        for _, row in targets.iterrows()
+    }
+
+
 def refresh_predictions(
     session: Session, now: datetime | None = None, game_ids: list[str] | None = None, kind: str = "live"
 ) -> list[ChangeEvent]:
@@ -234,6 +316,7 @@ def refresh_predictions(
     if kind != "live":
         stale = []
     events: list[ChangeEvent] = []
+    simulations = _simulations(session, targets)
     for _, row in targets.iterrows():
         base_p = base.predict_one(row)
         has_market = not pd.isna(row["market_logit"])
@@ -274,6 +357,7 @@ def refresh_predictions(
         for col in ("home_qb", "away_qb", "home_prev_qb", "away_prev_qb"):
             features[col] = row[col]
         features = {k: _clean(v) for k, v in features.items()}
+        features["simulation"] = simulations[row["game_id"]]
         h = _hash({"mv": mv.id, "f": features, "u": reasons})
 
         prev = session.scalars(

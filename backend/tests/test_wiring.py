@@ -104,7 +104,8 @@ def test_without_learned_parameters_the_simulation_is_missing_not_guessed(loaded
 
 def test_a_game_without_a_line_gets_win_chances_but_no_cover_or_total_chances(loaded):
     gid = upcoming(loaded)[0].game_id
-    loaded.execute(update(MarketSnapshot).where(MarketSnapshot.game_id == gid).values(spread_line=None, total_line=None))
+    no_line = update(MarketSnapshot).where(MarketSnapshot.game_id == gid).values(spread_line=None, total_line=None)
+    loaded.execute(no_line)
     loaded.commit()
     simulated(loaded)
     sim = latest(loaded, gid).features["simulation"]
@@ -124,7 +125,7 @@ def test_adding_parameters_inserts_one_new_row_per_game_and_never_edits_old_rows
             for p in loaded.scalars(select(Prediction).where(Prediction.id.in_(old)))} == old
 
 
-# W5 no leak: a game's own result never reaches its simulation ------------------------------------------------------------
+# W5 no leak: a game's own result never reaches its simulation -------------------------------------------------------
 
 def test_a_games_own_result_does_not_reach_its_simulation(loaded):
     engine.save_sim_params(loaded, CURRENT, synthetic_params())
@@ -148,7 +149,7 @@ def test_playoff_games_never_end_tied_and_regular_season_games_can(loaded):
     assert latest(loaded, games[1].game_id).features["simulation"]["tie"] > 0
 
 
-# W7 `jobs train` learns the parameters for the season it predicts ------------------------------------------------------
+# W7 `jobs train` learns the parameters for the season it predicts -------------------------------------------------
 
 def _overtime_rows() -> list[dict]:
     rows = schedule_rows()
