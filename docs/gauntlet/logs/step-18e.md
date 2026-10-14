@@ -11,7 +11,7 @@ Base main `4cd599b`, branch `lane/data`. ONE_SHOT. Builder: Claude Sonnet subage
 | C5 | Docs and matchup score | `docs/model/FEATURES.md`; `matchup.py` (bench candidate only, imported by nothing in predictions, api, analytics or jobs; a test greps for that) |
 | C6 | Critic, lane-guard | see end of file |
 
-Own tests: `tests/test_data_layer.py` 56 passed. ruff clean. No existing file edited, no migration, no route, no dependency. App code does no file write; network only through the existing `fetch_csv` (public nflverse files), only inside the coverage module.
+Own tests: `tests/test_data_layer.py` 70 passed. ruff clean. No existing file edited, no migration, no route, no dependency. App code does no file write; network only through the existing `fetch_csv` (public nflverse files), only inside the coverage module.
 
 Note: TDD order deviated for C3 to C5 (tests written with or after code); the tests passed first run, so they were not shown to fail for the intended reason.
 
