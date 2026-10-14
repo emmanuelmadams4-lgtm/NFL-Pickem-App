@@ -108,3 +108,8 @@ labels, null field and values; a shared helper would add props for two callers (
 `spreadText` are local, small and used only here (moving `Fact` to `ui.tsx` was design finding 10, not taken). The
 `<span>` in each line heading is the single text node the spec test counts; harmless. No dead code, no unused
 imports (typecheck 0). No proof rerun needed (no edit).
+
+**Spec amendment 2 (after full run `s18j-full-1` on `b4ba105`).** S5: the pick-mode label (word for word) sits at the
+foot of the week board, after "Select a game for the full matchup. Picks lock at kickoff.", not under the heading. Why:
+under the heading it wraps to two lines at 393 px and pushes the first game's pick buttons below the first screen
+(`phone-layout.spec.ts` L1: 803 > 778). The red test is L1 itself; S5 already checks the label is shown.
