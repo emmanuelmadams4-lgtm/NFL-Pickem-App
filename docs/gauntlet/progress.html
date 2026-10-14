@@ -91,9 +91,9 @@ footer { color: var(--muted); font-size: 13px; }
   <div class="headline">
     <div class="big">12<small> / 18 steps landed</small></div>
     <div class="now">
-      <p><b>Today, 13 October:</b> 23 pieces of work merged into main and 9 deploys to your PC, each with a database backup first. Four more steps are partly landed and still in build.</p>
+      <p><b>Since 13 October morning:</b> 25 pieces of work merged into main and 9 deploys to your PC, each with a database backup first. Four more steps are partly landed and still in build.</p>
       <p><b>Live on your PC now:</b> star players and who is out on the game card, star alerts with a morning summary, the news worker, news inside the AI report, the data-timing log, live game data in the background, and the grading of win chances during games. Claude runs through your subscription sign-in with the API key as backup.</p>
-      <p><b>In build right now:</b> the live scores screen, a third round of model tests, and the model rebuild from your brief (step 18): the audit of the current model, the odds maths and the game simulator are running.</p>
+      <p><b>In build right now:</b> the live scores screen, and the model rebuild from your brief (step 18): a point-in-time data layer with a feature dictionary, and the pick rules for straight-up, spread, totals and confidence points. The audit, the odds maths and the game simulator have landed.</p>
       <p><b>Passkey sign-in:</b> the server half landed after your sign-off and is on your PC, switched off. The sign-in screen is next. Until it is built you keep signing in with the app token.</p>
     </div>
   </div>
@@ -126,10 +126,9 @@ footer { color: var(--muted); font-size: 13px; }
       <li>On your iPhone: turn alerts on in Settings and tap "Send test alert".</li>
       <li>Thursday 15 October: open the app during the first game and look at the live score.</li>
       <li>Group screen: open Group in the app and upload your Yahoo picks file and weekly performance file. The tables are empty until you do.</li>
-      <li>One model question on the ASK ME board (HAG-72): should the rest of the 2026 season be the model's untouched final exam? My pick is yes.</li>
       <li>Passkey sign-in: signed off and landed, switched off. Your iPhone check comes when the sign-in screen is built.</li>
-      <li>Restart Angela (reviewer) from the app. She has not answered since about 08:00 UTC. Nothing waits on her.</li>
-      <li>Your yes to deploy after each landing covers today only. From tomorrow I ask again.</li>
+      <li>Archive Angela (reviewer) and Ryan (Codex dev) from the app: both have been idle since 13 October and nothing waits on them.</li>
+      <li>Your yes to deploy after each landing covers 14 October only. From 15 October I ask again.</li>
     </ul>
   </div>
 
@@ -152,11 +151,11 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td class="num">11</td><td>Go-live: AI and keys<span class="sub">Your keys, your server, your iPhone</span></td><td>Done so far: the PC is live, and Claude answers through your sign-in with the key as backup (both live test calls passed). Open: your iPhone alert test</td><td><span class="pill todo">Yours</span></td></tr>
           <tr><td class="num">12</td><td>Trends<span class="sub">Team, quarterback, coach and venue records with sample size</span></td><td>Landed (PR #4)</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">13</td><td>Backend cleanup + data timing<span class="sub">How fresh lines and quarterback news are; a faster Week board</span></td><td>Landed and live: the data-timing log (PR #21), collecting since 15:03 UTC today. The week 6 report can be read after 19 October. Not started: the code cleanup</td><td><span class="pill prog">Part landed</span></td></tr>
-          <tr><td class="num">14</td><td>The model gets better<span class="sub">A test bench; an idea ships only if it beats the current model</span></td><td>Landed: the bench (PR #9) and round two, five ideas from the GitHub repo review (PR #13). Nothing beat the current model, so nothing changed. Round three is running now</td><td><span class="pill done">Done</span></td></tr>
+          <tr><td class="num">14</td><td>The model gets better<span class="sub">A test bench; an idea ships only if it beats the current model</span></td><td>Landed: the bench (PR #9), round two (PR #13) and round three (PR #29): boosted trees, a stacked blend, a margin model and explosive plays. None beat the current model, so nothing changed. Sorting confidence points by win chance beats kickoff order by about 6 points a week and ties the market's order</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">15</td><td>Live scores<span class="sub">Score, clock and win chance while games are on</span></td><td>Landed and live: live game data and market prices (PR #14), the live worker and route (PR #15), grading of win chances during games (PR #23). In build: the screen. First check against a real game: Thursday 15 October</td><td><span class="pill prog">In build</span></td></tr>
           <tr><td class="num">16</td><td>Group picks<span class="sub">Your Yahoo group files: standings and how the group picked</span></td><td>Landed and live: tables and import (PR #10), upload and read routes (PR #16), the Group screen with the upload form, standings and how the group picked (PR #26). No real member name is in the code repository. Your part: upload your Yahoo files on the Group screen</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">17</td><td>Claude through your sign-in<span class="sub">Your Claude subscription first, the API key as backup</span></td><td>Landed (PR #18) and proven live on the PC with two test calls</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">18</td><td>Model rebuild from your brief<span class="sub">Audit, spread and totals picks, game simulator, betting value</span></td><td>Opened 13 October from your 13-section brief, kept word for word in the repo. <b>The audit landed (PR #27).</b> What it found: your model is in practice the closing betting line. Its pick differs from the market favourite in 72 of 3,649 games, and it got 34 of those right. It has no leak, the test bench matches the live path, and its percentages are honest (well calibrated). It beats "always home" and "ratings only" clearly but not the market alone (66.46% against 66.57%). Of your six repositories, none holds a method shown to beat it: one is worth adding later as a data loader, two give ideas, three are rejected (two of them leak the result into their inputs). <b>Odds maths landed (PR #28):</b> prices, removing the bookmaker's margin, settling bets with pushes, expected value; not yet used by the app. Still finishing: the game-score simulator. Next, cut from the audit's plan: pick rules for straight-up, against-the-spread, totals and confidence pools; a point-in-time data layer with a feature dictionary; one evaluation report; value ratings; the screens. The live model changes only on a measured win</td><td><span class="pill prog">In build</span></td></tr>
+          <tr><td class="num">18</td><td>Model rebuild from your brief<span class="sub">Audit, spread and totals picks, game simulator, betting value</span></td><td>Opened 13 October from your 13-section brief, kept word for word in the repo. <b>The audit landed (PR #27).</b> What it found: your model is in practice the closing betting line. Its pick differs from the market favourite in 72 of 3,649 games, and it got 34 of those right. It has no leak, the test bench matches the live path, and its percentages are honest (well calibrated). It beats "always home" and "ratings only" clearly but not the market alone (66.46% against 66.57%). Of your six repositories, none holds a method shown to beat it: one is worth adding later as a data loader, two give ideas, three are rejected (two of them leak the result into their inputs). <b>Odds maths landed (PR #28):</b> prices, removing the bookmaker's margin, settling bets with pushes, expected value; not yet used by the app. <b>Game simulator landed (PR #30):</b> plays each game 10,000 times for win, cover and over/under chances. On 2022 to 2025 it does not beat the market on covers or totals, so for now it is shown only, never used to pick. In build now: the pick rules and a point-in-time data layer with a feature dictionary. Next: one evaluation report, value ratings, wiring into the app, the screens. Your answer to HAG-72: games from 15 October on are the untouched final exam, read once after the season. The live model changes only on a measured win</td><td><span class="pill prog">In build</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -172,10 +171,10 @@ footer { color: var(--muted); font-size: 13px; }
     </div>
     <div class="card">
       <h3>Model ideas tested</h3>
-      <div class="stat"><span>Ideas tested</span><span>9</span></div>
+      <div class="stat"><span>Ideas tested</span><span>13</span></div>
       <div class="stat"><span>Beat the live model</span><span>0</span></div>
-      <div class="stat"><span>Round three</span><span>Running</span></div>
-      <p class="note">Tested so far: weekly refit, play-by-play ratings, the bootstrap check, other ways to remove the bookmaker's margin with spread and total as inputs, calibration, recency weights, offence and defence split, stars out, and score models. Round three covers the GitHub techniques not yet tried: boosted trees, a stacked blend, a margin model, explosive plays, and how confidence points are ordered. The test seasons (2022 to 2025, 1,084 games) cannot show a gain smaller than about 0.001 log loss.</p>
+      <div class="stat"><span>Game simulator</span><span>Display only</span></div>
+      <p class="note">Tested so far: weekly refit, play-by-play ratings, the bootstrap check, other ways to remove the bookmaker's margin with spread and total as inputs, calibration, recency weights, offence and defence split, stars out, and score models. Round three added boosted trees, a stacked blend, a margin model and explosive plays; none beat the live model. The test seasons (2022 to 2025, 1,084 games) cannot show a gain smaller than about 0.001 log loss.</p>
     </div>
     <div class="card">
       <h3>Live app on your PC</h3>
@@ -183,19 +182,19 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="stat"><span>Last deploy</span><span>19:51 UTC</span></div>
       <div class="stat"><span>Health</span><span>OK</span></div>
       <div class="stat"><span>Your picks</span><span>93</span></div>
-      <p class="note">Runs everything through PR #26. PR #27 (documents) and PR #28 (odds maths the app does not call yet) needed no deploy. A database backup is taken before every deploy, and the row counts are compared before and after: unchanged every time.</p>
+      <p class="note">Runs everything through PR #26. PRs #27 to #30 (documents, odds maths, model tests, the simulator; nothing the app calls yet) needed no deploy. A database backup is taken before every deploy, and the row counts are compared before and after: unchanged every time.</p>
     </div>
     <div class="card">
       <h3>In build now</h3>
       <div class="stat"><span>Live scores screen</span><span>Jim</span></div>
       <div class="stat"><span>Passkey sign-in screen</span><span>Next for Jim</span></div>
-      <div class="stat"><span>Model round three</span><span>Running</span></div>
-      <div class="stat"><span>Model rebuild: audit</span><span>Landed</span></div>
-      <div class="stat"><span>Odds maths</span><span>Landed</span></div>
-      <div class="stat"><span>Game simulator</span><span>Finishing</span></div>
+      <div class="stat"><span>Model round three</span><span>Landed</span></div>
+      <div class="stat"><span>Odds maths, simulator</span><span>Landed</span></div>
+      <div class="stat"><span>Data layer</span><span>In build</span></div>
+      <div class="stat"><span>Pick rules</span><span>In build</span></div>
       <p class="note">Each piece runs in its own copy of the code and passes a security review where needed, a fresh reviewer and a final check before it lands. The Claude usage limit paused the build four times today; work restarted from saved state each time. In the evening the Mac also ran out of memory with four full test runs at once, which cost about three hours; test runs now take turns.</p>
     </div>
   </div>
 
-  <footer>Updated 2026-10-14 11:30 UTC · 12 of 18 steps landed, 4 more partly landed, step 18 under way (audit and odds maths landed) · 23 landings and 9 deploys since 13 October morning (PRs #6 to #28)</footer>
+  <footer>Updated 2026-10-14 13:56 UTC · 12 of 18 steps landed, 4 more partly landed, step 18 under way (audit, odds maths and simulator landed) · 25 landings and 9 deploys since 13 October morning (PRs #6 to #30)</footer>
 </div>
