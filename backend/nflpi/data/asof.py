@@ -16,6 +16,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from nflpi.data.checks import DataCheckError, _is_tz_aware, check_snapshots
 from nflpi.models import Game, InjuryReport, MarketSnapshot, QbObservation, WeatherForecast
 
 RESULT_LAG = timedelta(hours=4)
@@ -56,20 +57,37 @@ def home_spread_from_nflverse(spread_line):
 
 
 def _prep(df: pd.DataFrame, columns: list[str], times: tuple[str, ...] = ("observed_at",)) -> pd.DataFrame:
-    """Copy with the expected columns present (NaN when absent) and time columns as UTC datetimes."""
+    """Copy with the expected columns present (NaN when absent) and time columns as UTC datetimes.
+
+    A non-empty frame must carry every time column, with no missing values, tz-aware; otherwise DataCheckError.
+    """
     out = df.copy()
+    for t in times:
+        if t not in out.columns and len(out):
+            raise DataCheckError(f"_prep: time column {t} is missing from a non-empty frame")
     for c in [*columns, *times]:
         if c not in out.columns:
             out[c] = np.nan
     for t in times:
+        if len(out) and out[t].isna().any():
+            raise DataCheckError(f"_prep: time column {t} has missing values in {int(out[t].isna().sum())} row(s)")
+        if len(out) and not _is_tz_aware(out[t]):
+            raise DataCheckError(f"_prep: time column {t} must be tz-aware; examples: {out[t].head(5).tolist()}")
         out[t] = pd.to_datetime(out[t], utc=True)
     return out
 
 
 def _latest(df: pd.DataFrame, keys: list[str], cutoff: datetime) -> pd.DataFrame:
-    """Newest row per key with observed_at <= cutoff; ties on observed_at go to the highest id."""
+    """Newest row per key with observed_at <= cutoff.
+
+    Ties on observed_at go to the highest ``id``. Without an ``id`` column the tiebreak is every remaining column in
+    name order (ascending, missing last), so the pick never depends on input row order.
+    """
     seen = df[df["observed_at"] <= cutoff]
-    order = ["observed_at", "id"] if "id" in seen.columns else ["observed_at"]
+    if "id" in seen.columns:
+        order = ["observed_at", "id"]
+    else:
+        order = ["observed_at", *sorted(c for c in seen.columns if c != "observed_at")]
     return seen.sort_values(order, kind="stable").groupby(keys, sort=False, dropna=False).tail(1).reset_index(drop=True)
 
 
@@ -83,6 +101,9 @@ def asof_games(games: pd.DataFrame, cutoff: datetime) -> pd.DataFrame:
     hidden = ~_result_known(out, cutoff)
     for c in _REALIZED:
         out[c] = out[c].astype(float)
+        out.loc[hidden, c] = np.nan
+    for c in ("home_qb", "away_qb"):
+        out[c] = out[c].astype(object)
         out.loc[hidden, c] = np.nan
     out["status"] = out["status"].astype(object)
     out.loc[hidden, "status"] = "scheduled"
@@ -106,7 +127,11 @@ def asof_qbs(observations: pd.DataFrame, cutoff: datetime) -> pd.DataFrame:
 def asof_injuries(injuries: pd.DataFrame, cutoff: datetime) -> pd.DataFrame:
     _require_aware(cutoff)
     prepared = _prep(injuries, ["season", "week", "team", "player_id", "player", "report_status"])
-    prepared["_player_key"] = prepared["player_id"].fillna(prepared["player"])
+    prepared = prepared.reset_index(drop=True)
+    key = prepared["player_id"].astype(object).fillna(prepared["player"].astype(object))
+    unkeyed = key.isna()
+    key[unkeyed] = [f"__row{i}" for i in prepared.index[unkeyed]]
+    prepared["_player_key"] = key
     latest = _latest(prepared, ["season", "week", "team", "_player_key"], cutoff)
     return latest.drop(columns="_player_key")
 
@@ -127,7 +152,7 @@ def _qb_columns(frame: pd.DataFrame, qbs: pd.DataFrame, known: pd.Series, games_
 
 
 def _out_counts(frame: pd.DataFrame, injuries: pd.DataFrame) -> pd.DataFrame:
-    out_rows = injuries[injuries["report_status"] == "Out"]
+    out_rows = injuries[injuries["report_status"].astype(str).str.strip().str.lower() == "out"]
     counts = out_rows.groupby(["season", "week", "team"]).size()
     for side in SIDES:
         keys = pd.MultiIndex.from_arrays([frame["season"], frame["week"], frame[f"{side}_team"]])
@@ -139,6 +164,11 @@ def build_asof_frame(tables: AsofTables, cutoff: datetime) -> pd.DataFrame:
     """One row per game, sorted by kickoff then id, with everything known at ``cutoff``."""
     _require_aware(cutoff)
     games = _prep(tables.games, GAME_COLUMNS, times=("kickoff_utc",))
+    dup_ids = games.loc[games["game_id"].duplicated(keep=False), "game_id"].unique().tolist()
+    if dup_ids:
+        raise DataCheckError(f"check_duplicate_games: duplicate game_id; examples: {dup_ids[:5]}")
+    if len(tables.snapshots):
+        check_snapshots(tables.snapshots)
     known = _result_known(games, cutoff)
     frame = asof_games(tables.games, cutoff)
 

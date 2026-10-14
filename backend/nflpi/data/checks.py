@@ -55,11 +55,9 @@ def check_teams(df: pd.DataFrame, known: frozenset[str] = KNOWN_TEAMS) -> None:
         bad = sorted({str(v) for v in df[col] if v not in known})
         if bad:
             raise _fail("check_teams", f"column {col} has unknown team code(s)", bad)
-    same = df.loc[df["home_team"] == df["away_team"], "game_id"] if "game_id" in df.columns else None
-    if (df["home_team"] == df["away_team"]).any():
-        examples = (
-            same.tolist() if same is not None else df.loc[df["home_team"] == df["away_team"], "home_team"].tolist()
-        )
+    tied = df["home_team"] == df["away_team"]
+    if tied.any():
+        examples = df.loc[tied, "game_id" if "game_id" in df.columns else "home_team"].tolist()
         raise _fail("check_teams", "home_team equals away_team", examples)
 
 
@@ -109,6 +107,22 @@ def check_seasons(df: pd.DataFrame) -> dict[int, tuple[str, str]]:
     return bounds
 
 
+def check_scores_and_status(df: pd.DataFrame) -> None:
+    """Scores are non-negative; a final game has both scores; a scheduled game has none."""
+    scores = {c: pd.to_numeric(df[c], errors="coerce") for c in ("home_score", "away_score")}
+    for col, values in scores.items():
+        if (values < 0).any():
+            raise _fail("check_games", f"{col} has negative score(s)", df.loc[values < 0, "game_id"].tolist())
+    status = df["status"].astype(str).str.strip().str.lower()
+    missing = scores["home_score"].isna() | scores["away_score"].isna()
+    final_blank = (status == "final") & missing
+    if final_blank.any():
+        raise _fail("check_games", "status final with a missing score", df.loc[final_blank, "game_id"].tolist())
+    scheduled_scored = (status == "scheduled") & ~(scores["home_score"].isna() & scores["away_score"].isna())
+    if scheduled_scored.any():
+        raise _fail("check_games", "status scheduled with a score", df.loc[scheduled_scored, "game_id"].tolist())
+
+
 def missing_counts(df: pd.DataFrame, columns: Sequence[str] | None = None) -> dict[str, MissingCount]:
     """Count NaN, None and '' per column. Data, not errors."""
     n = len(df)
@@ -125,6 +139,7 @@ def check_games(df: pd.DataFrame, known: frozenset[str] = KNOWN_TEAMS) -> CheckR
     require_columns(df, GAME_COLUMNS, "games")
     check_teams(df, known)
     check_duplicate_games(df)
+    check_scores_and_status(df)
     bounds = check_seasons(df)
     seasons = sorted(bounds)
     return CheckReport(
@@ -143,6 +158,13 @@ def check_snapshots(df: pd.DataFrame) -> None:
             raise _fail(
                 "check_snapshots", f"{col} must be missing or |ml| >= {MIN_MONEYLINE_MAGNITUDE}", small.tolist()
             )
+    home = pd.to_numeric(df["home_moneyline"], errors="coerce")
+    away = pd.to_numeric(df["away_moneyline"], errors="coerce")
+    same_sign = home.notna() & away.notna() & (home * away > 0)
+    if same_sign.any():
+        raise _fail(
+            "check_snapshots", "home and away moneyline have the same sign", df.loc[same_sign, "game_id"].tolist()
+        )
     keys = ["game_id", "observed_at", "kind"]
     dup = df[df.duplicated(keys, keep=False)]
     if not dup.empty:

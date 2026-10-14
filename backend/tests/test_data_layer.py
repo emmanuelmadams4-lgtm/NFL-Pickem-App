@@ -607,3 +607,111 @@ def test_asof_frame_from_db_is_read_only_and_a_later_cutoff_sees_more(session):
     later = asof.asof_frame_from_db(session, CUT + 10 * HOUR).set_index("game_id")
     assert later.loc["F", "spread_line"] == 9.0 and later.loc["F", "home_qb"] == "Late Change"
     assert len(asof.load_tables(session).snapshots) == 2
+
+
+# --- review fixes -----------------------------------------------------------------------------------------------------
+
+
+def test_asof_games_blanks_qb_names_of_unplayed_games_but_keeps_played():
+    future = asof.asof_games(games_df(FUTURE_GAME | {"home_qb": "After"}), CUT)
+    assert pd.isna(future.loc[0, "home_qb"]) and pd.isna(future.loc[0, "away_qb"])
+    played = asof.asof_games(games_df(PLAYED_GAME), CUT)
+    assert played.loc[0, "home_qb"] == "Josh Allen"
+
+
+@pytest.mark.parametrize("column", ["observed_at", "kickoff_utc"])
+def test_naive_time_column_is_refused(column):
+    naive = datetime(2026, 10, 18, 1)
+    if column == "kickoff_utc":
+        with pytest.raises(checks.DataCheckError, match="tz-aware"):
+            asof.asof_games(games_df(PLAYED_GAME | {"kickoff_utc": naive}), CUT)
+    else:
+        with pytest.raises(checks.DataCheckError, match="tz-aware"):
+            asof.asof_lines(snaps_df({"observed_at": naive}), CUT)
+
+
+def test_missing_observed_at_column_on_non_empty_frame_is_refused():
+    with pytest.raises(checks.DataCheckError, match="observed_at"):
+        asof.asof_lines(snaps_df({}), CUT)
+
+
+def test_nat_observed_at_is_refused_not_dropped():
+    with pytest.raises(checks.DataCheckError, match="observed_at"):
+        asof.asof_lines(snaps_df({"observed_at": pd.NaT}, {"id": 2, "observed_at": CUT}), CUT)
+
+
+def test_build_refuses_duplicate_game_id_and_bad_snapshots():
+    with pytest.raises(checks.DataCheckError, match="duplicate game_id"):
+        asof.build_asof_frame(tables(games=games_df(PLAYED_GAME, PLAYED_GAME)), CUT)
+    bad = snaps_df({"observed_at": CUT, "home_moneyline": 50.0})
+    with pytest.raises(checks.DataCheckError, match="check_snapshots"):
+        asof.build_asof_frame(tables(games=games_df(PLAYED_GAME), snapshots=bad), CUT)
+
+
+def test_injuries_key_on_player_id_else_player_and_null_both_are_not_collapsed():
+    rows = [
+        {"id": 1, "observed_at": CUT - 3 * HOUR, "player_id": None, "player": "Name A"},
+        {
+            "id": 2,
+            "observed_at": CUT - 2 * HOUR,
+            "player_id": None,
+            "player": "Name A",
+            "report_status": "Questionable",
+        },
+        {"id": 3, "observed_at": CUT - 2 * HOUR, "player_id": None, "player": None},
+        {"id": 4, "observed_at": CUT - 2 * HOUR, "player_id": None, "player": None},
+    ]
+    out = asof.asof_injuries(inj_df(*rows), CUT)
+    assert len(out) == 3
+    assert sorted(out["id"]) == [2, 3, 4]
+
+
+def test_out_count_matches_report_status_case_insensitively():
+    inj = inj_df(
+        {"observed_at": CUT - HOUR, "report_status": "OUT"},
+        {"id": 2, "player_id": "p2", "observed_at": CUT - HOUR, "report_status": " out "},
+    )
+    frame = asof.build_asof_frame(tables(games=games_df(FUTURE_GAME | {"week": 6}), injuries=inj), CUT)
+    assert frame.loc[0, "home_out_count"] == 2
+
+
+def test_ties_without_id_do_not_depend_on_row_order():
+    rows = [
+        {"observed_at": CUT - HOUR, "spread_line": 3.0},
+        {"observed_at": CUT - HOUR, "spread_line": 7.0},
+        {"observed_at": CUT - HOUR, "spread_line": 1.0},
+    ]
+    frame = snaps_df(*rows).drop(columns="id")
+    first = asof.asof_lines(frame, CUT)["spread_line"].tolist()
+    for seed in range(5):
+        shuffled = frame.sample(frac=1, random_state=seed)
+        assert asof.asof_lines(shuffled, CUT)["spread_line"].tolist() == first
+
+
+def test_check_games_rejects_negative_score():
+    with pytest.raises(checks.DataCheckError, match="negative"):
+        checks.check_games(
+            checked_games(
+                {
+                    "game_id": "A",
+                    "season": 2026,
+                    "week": 1,
+                    "kickoff_utc": datetime(2026, 9, 13, 17, tzinfo=UTC),
+                    "home_score": -1.0,
+                }
+            )
+        )
+
+
+def test_check_games_rejects_final_without_score_and_scheduled_with_score():
+    kick = {"game_id": "A", "season": 2026, "week": 1, "kickoff_utc": datetime(2026, 9, 13, 17, tzinfo=UTC)}
+    with pytest.raises(checks.DataCheckError, match="final"):
+        checks.check_games(checked_games(kick | {"home_score": np.nan}))
+    with pytest.raises(checks.DataCheckError, match="scheduled"):
+        checks.check_games(checked_games(kick | {"status": "scheduled"}))
+
+
+def test_check_snapshots_rejects_same_sign_moneylines():
+    with pytest.raises(checks.DataCheckError, match="sign"):
+        checks.check_snapshots(snapshots_ok(home_moneyline=-150.0, away_moneyline=-130.0))
+    checks.check_snapshots(snapshots_ok(home_moneyline=-150.0, away_moneyline=np.nan))

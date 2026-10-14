@@ -14,3 +14,6 @@ Base main `4cd599b`, branch `lane/data`. ONE_SHOT. Builder: Claude Sonnet subage
 Own tests: `tests/test_data_layer.py` 56 passed. ruff clean. No existing file edited, no migration, no route, no dependency. App code does no file write; network only through the existing `fetch_csv` (public nflverse files), only inside the coverage module.
 
 Note: TDD order deviated for C3 to C5 (tests written with or after code); the tests passed first run, so they were not shown to fail for the intended reason.
+
+## C6: critic round 1 (head 04d1efc): FAIL
+2 HIGH (asof_games kept the after-the-fact quarterback names; FEATURES.md said the code was not built), 5 MEDIUM (naive timestamps read as UTC, missing observed_at silently empty, duplicate game ids, injury key collapse and case, tie order), LOW check gaps. All fixed in the next commit with 12 new tests (68 total).
