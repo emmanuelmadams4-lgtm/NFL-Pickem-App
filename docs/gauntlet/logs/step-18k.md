@@ -19,3 +19,20 @@ Carried:
 3. A backfill run over a game with a live checked simulation writes a row with `None`.
 4. A cap hit raises the back-off count though no call was made; `get_provider` errors are labelled `error`, not `provider`.
 5. The web app does not show `simulation_check` yet.
+
+## Mean check on real data (carried item 1)
+Measured 2026-10-14 on public nflverse `schedules/games.csv` (rows before 2026-10-15 only, D72), live path: `sim_backtest.learn_for_season(table, S, "football_only")`, `engine._score_model`, `engine._simulation`, `run_check.check_game` (inputs marked present). No database, no paid call.
+
+| Season | Games | All checks | Margin mean | Total mean | Sums | n |
+|---|---|---|---|---|---|---|
+| 2022 | 271 | 84.5% | 84.5% | 100% | 100% | 100% |
+| 2023 | 272 | 86.4% | 86.4% | 100% | 100% | 100% |
+| 2024 | 272 | 87.5% | 87.5% | 100% | 100% | 100% |
+| 2025 | 272 | 83.8% | 83.8% | 100% | 100% | 100% |
+| 2026 wk 1-5 | 79 | 97.5% | 97.5% | 100% | 100% | 100% |
+
+Simulated minus inputs, margin: mean -0.46 to -0.51 per season (5%-95% about -0.73 to -0.21); total: mean -0.19 to +0.15. Sampling error about 0.13, slack 0.65. A 16-game week passes only if all 16 pass (about 0.85^16, 7%), so live runs would almost always be blocked.
+
+Cause: the paired_residual pool mean (margin -0.41 to -0.52) shifts the simulated mean; simulated mean = mu + pool mean to within sampling error (mean gap 0.004). The pool shift comes from 2019 (-2.68) and 2020 (-2.01): older walk-forward models over-predicted home margin there. The target season's mu is fit on those same seasons, so the shift counts the home-field drop a second time. On 2022-2025 (1087 games) the bias actual minus mean margin is +0.11 for mu and +0.60 for the simulation (worse in 3 of 4 seasons); MSE +0.20 (95% CI -0.57 to 0.97).
+
+Verdict: case (b), double count. Simulator, check and numbers left unchanged; sent to god as an owner-level model change (D70, D74).
