@@ -87,10 +87,11 @@ test("S1 S2 S4 the simulator's numbers, labelled as shown only, never a pick", a
   await expect(s).toContainText("Shown only: not a pick, and it does not change the pick above.");
   await expect(s).toContainText(`${g.away.abbr} 21.5`);
   await expect(s).toContainText(`${g.home.abbr} 24.6`);
+  await expect(s).toContainText(`${g.home.abbr} margin`);
   await expect(s).toContainText("+3.1");
-  await expect(s).toContainText(/80% of runs between [−-]9\.0 and \+15\.2/);
+  await expect(s).toContainText(/80% of runs: [−-]9\.0 to \+15\.2/);
   await expect(s).toContainText("46.1");
-  await expect(s).toContainText("80% of runs between 32.4 and 60.8");
+  await expect(s).toContainText("80% of runs: 32.4 to 60.8");
   await expect(s).toContainText("Based on 10,000 simulated games.");
 
   // S2: against the spread and the total, whole percents, each with its side
@@ -99,6 +100,8 @@ test("S1 S2 S4 the simulator's numbers, labelled as shown only, never a pick", a
   await expect(s).toContainText(new RegExp(`${g.away.abbr}\\D{0,24}49%`));
   await expect(s).toContainText(/Push\D{0,12}3%/);
   await expect(s).toContainText("Over/under 45.5");
+  // the simulator's lines can differ from the latest line in Market, so each says which line it used
+  await expect(s.getByText("the line the simulator used")).toHaveCount(2);
   await expect(s).toContainText(/Over\D{0,12}51%/);
   await expect(s).toContainText(/Under\D{0,12}49%/);
 
@@ -124,6 +127,7 @@ test("S3 no simulation for the game: one plain sentence", async ({ page, request
   const s = section(page);
   await expect(s).toContainText("No simulation for this game yet.");
   await expect(s).not.toContainText("80% of runs");
+  await expect(s).not.toContainText("the line the simulator used");
 });
 
 test("S5 the week board names the pick mode the API reports", async ({ page, request }) => {

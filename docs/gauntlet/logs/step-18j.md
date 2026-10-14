@@ -77,3 +77,9 @@ Quality:
 
 Gate: `apps/web/e2e/sim18j.spec.ts` (new), then the FULL browser suite on a fresh build (`e2e/`), typecheck. Under
 D71 the pull request's CI is the full gate again on the final head.
+
+**Spec amendment after design critic 1 (before WO2; `reviews/design-1.md`).** S1: the margin fact is labelled
+"<home abbr> margin"; ranges read "80% of runs: A to B". S2: the spread heading reads "<home abbr> <signed spread>, the
+line the simulator used" and the total heading "Over/under <total>, the line the simulator used" (the simulator keeps
+the line from its prediction run; Market shows the latest line, so the two can differ). Tests updated in the same
+commit as this amendment.
