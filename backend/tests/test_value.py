@@ -78,7 +78,15 @@ def test_v1_table_columns_and_unique_key():
     table = BookPrice.__table__
     assert table.name == "book_prices"
     assert {c.name for c in table.columns} == {
-        "id", "game_id", "sportsbook", "market_type", "selection", "line", "price", "observed_at", "fetched_at",
+        "id",
+        "game_id",
+        "sportsbook",
+        "market_type",
+        "selection",
+        "line",
+        "price",
+        "observed_at",
+        "fetched_at",
     }
     assert table.c.line.nullable and not table.c.price.nullable and not table.c.observed_at.nullable
     assert [fk.target_fullname for fk in table.c.game_id.foreign_keys] == ["games.game_id"]
@@ -262,6 +270,7 @@ def _first_book_with(market: str, mutate) -> oddsapi.Book:
         lambda o: o.pop(),
         lambda o: o.append({"name": "Buffalo Bills", "price": -110, "point": -3.5}),
         lambda o: o[0].pop("point"),
+        lambda o: (o[0].update(point=-(10**400)), o[1].update(point=10**400)),
     ],
 )
 def test_v5_bad_spread_dropped(mutate):
@@ -280,6 +289,8 @@ def test_v5_bad_spread_dropped(mutate):
         lambda o: o[1].update(name="Over"),
         lambda o: o[1].update(price=None),
         lambda o: o[0].update(point=None),
+        lambda o: (o[0].update(point=1), o[1].update(point=True)),
+        lambda o: (o[0].update(point=10**400), o[1].update(point=10**400)),
     ],
 )
 def test_v5_bad_total_dropped(mutate):
@@ -427,3 +438,39 @@ def test_v10_fixture_is_not_mutated_by_parse():
     before = copy.deepcopy(data)
     oddsapi.parse_events(data)
     assert data == before
+
+
+# V11 the odds job stores every price, sides as our game has them
+def test_v11_odds_job_saves_book_prices_with_our_sides(session):
+    from nflpi.ingestion.live import fetch, run
+    from nflpi.models import MarketQuote
+
+    game(session, "2026_07_MIA_BUF")
+    session.add(
+        Game(
+            game_id="2026_07_KC_LV", season=2026, week=7, game_type="REG",
+            kickoff_utc=datetime(2026, 10, 18, 20, 25, tzinfo=UTC), weekday="Sunday",
+            away_team="KC", home_team="LV", status="scheduled", source="test",
+        )
+    )  # fmt: skip
+    session.commit()
+    now = T0 + timedelta(minutes=2)
+    calls: list[str] = []
+
+    def get(url: str) -> fetch.JsonResult:
+        calls.append(url)
+        return fetch.JsonResult(200, recorded(), {"x-requests-remaining": "480"})
+
+    result = run.refresh_odds_quotes(session, get=get, now=now, api_key=KEY)
+    assert result.status == "ok" and calls == [oddsapi.odds_url(KEY)]
+    assert session.scalar(select(MarketQuote.id).limit(1)) is not None
+
+    got = {(r.game_id, r.sportsbook, r.market_type, r.selection, r.line, r.price, r.observed_at) for r in rows(session)}
+    assert ("2026_07_MIA_BUF", "bookone", "spread", "home", -3.5, -110, T0) in got
+    assert ("2026_07_MIA_BUF", "bookone", "total", "under", 47.5, -115, T0) in got
+    assert ("2026_07_MIA_BUF", "booktwo", "moneyline", "home", None, -190, now) in got  # book time 15:05 capped at now
+    assert ("2026_07_KC_LV", "bookone", "spread", "away", 9.5, -110, T0) in got  # their home KC is our away
+    assert ("2026_07_KC_LV", "bookone", "spread", "home", -9.5, -110, T0) in got
+    assert ("2026_07_KC_LV", "bookone", "moneyline", "away", None, -400, T0) in got
+    assert len(got) == 6 + 2 + 4
+    assert all(r.fetched_at == now for r in rows(session))

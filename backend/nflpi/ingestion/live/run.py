@@ -13,6 +13,7 @@ from nflpi.config import get_settings
 from nflpi.ingestion.live import espn, fetch, kalshi, oddsapi, store
 from nflpi.models import Game, IngestionRun, LiveState, SourceStatus
 from nflpi.predictions.market import implied_prob, novig_home_prob
+from nflpi.value import save_prices
 
 log = logging.getLogger(__name__)
 EASTERN = ZoneInfo("America/New_York")
@@ -383,6 +384,24 @@ def _save_odds(session: Session, event: oddsapi.Event, book: oddsapi.Book, game:
     )
 
 
+FLIP = {"home": "away", "away": "home", "over": "over", "under": "under"}
+
+
+def _save_book_prices(session: Session, event: oddsapi.Event, book: oddsapi.Book, game: Game, now: datetime) -> int:
+    """Every parsed price of one book into book_prices, sides as our game has them (insert-only)."""
+    flip = oddsapi.TEAM_NAMES[event.home] != game.home_team
+    quotes = [
+        {
+            "market_type": p.market_type,
+            "selection": FLIP[p.selection] if flip else p.selection,
+            "line": -p.line if flip and p.market_type == "spread" else p.line,
+            "price": p.price,
+        }
+        for p in book.prices
+    ]
+    return save_prices(session, game.game_id, book.key, min(book.updated, now), now, quotes)
+
+
 def _odds_job(
     session: Session,
     get: Callable[[str], fetch.JsonResult],
@@ -410,6 +429,7 @@ def _odds_job(
         for book in event.books:
             if _save_odds(session, event, book, game, now):
                 inserted += 1
+            _save_book_prices(session, event, book, game, now)
     if len(events) >= 3 and matched == 0:
         raise ValueError("no match")
     return inserted, skipped, None

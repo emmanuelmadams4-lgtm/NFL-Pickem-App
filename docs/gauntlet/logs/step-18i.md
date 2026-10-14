@@ -17,8 +17,8 @@ Public functions: `nflpi.value.save_prices`, `nflpi.value.load_snapshots`, `nflp
 | V7 | `rate_price(snapshot, probs, *, now, max_age=None, qb_missing=False)` goes through `nflpi.picks.betting_advice` (not rebuilt): a stale or future price gives `NO_BET` (`STALE_PRICE`); expected value at or below 0 gives `NO_BET` (`NONPOSITIVE_EV`). `max_age=None` uses the setting. |
 | V8 | No rubric is passed, so with no validation history every rating with positive value is `UNRATED` (`NO_VALIDATION_HISTORY`), never stars, until PLAN section 3.4 can be met. |
 | V9 | No price is shown as still available: the rating carries the book, the price, `observed_at` and its age at `now`, and a note saying when the price was seen and that it may no longer be offered. No field or text claims the price is available, current or live. |
+| V11 | `run.py` odds job (now lane value's file, god 14:09): each matched book's `prices` go to `save_prices` with sides as our game has them (Odds API home not our home: home and away swap, spread line negates; totals unchanged), `observed_at` = the book's time capped at `now`, `fetched_at` = `now`. The request stays `odds_url(key)` (h2h only); the credit-low guard and the `market_quotes` rows are unchanged. |
 | V10 | Zero real Odds API calls: `nflpi.value` does no network I/O; tests use recorded-shape fixtures in `backend/tests/fixtures/value/`. No automated wagering. |
 
-## Seams for the integrator (not edited by this lane)
-- `ingestion/live/run.py` `_odds_job`: call `value.save_prices` for each matched book's `prices` (game side mapped as `_save_odds` does). Left to the integrator; run.py is not lane value's file.
+## Seams for the integrator
 - A config switch for `extra_markets` waits for the owner's yes to triple credits.

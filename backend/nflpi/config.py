@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     stale_hours_weather: float = 6
     stale_hours_stars: float = 24 * 8
     stale_hours_head_coaches: float = 24 * 30
+    # Value ratings: a book price older than this is stale (NO_BET).
+    value_max_price_age_minutes: int = Field(default=30, gt=0)
 
     # Model
     train_window_seasons: int = 10
