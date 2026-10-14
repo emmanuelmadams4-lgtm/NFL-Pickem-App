@@ -12,7 +12,7 @@ interface Session {
   baseUrl: string;
   api: Api | null;
   signIn: (token: string) => void;
-  signOut: (notice?: string) => void;
+  signOut: (notice?: string) => Promise<void>;
   notice: string | null;
   ready: boolean;
 }
@@ -65,7 +65,15 @@ export function SessionProvider({ children, onSignOut }: { children: ReactNode; 
   }, []);
 
   const signOut = useCallback(
-    (message?: string) => {
+    async (message?: string) => {
+      const current = tokenSnapshot();
+      if (current?.startsWith("pks_")) {
+        try {
+          await createClient({ baseUrl: BASE_URL, token: current }).passkeySignout();
+        } catch {
+          /* clear the local session even when server sign-out fails */
+        }
+      }
       memoryToken = null;
       memoryTouched = true;
       try {

@@ -5,6 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ApiError, createClient, keys } from "@nflpi/shared";
 import { BASE_URL, useSession } from "@/lib/api";
 import { Bezel, Button, Notice } from "@/components/ui";
+import { getPasskey, passkeyCancelled, passkeyReady, passkeyUnsupported } from "@/components/passkey/browser";
+import { usePasskeysEnabled } from "@/components/passkey/use-passkeys-enabled";
 
 export function SignIn({ notice }: { notice?: string | null }) {
   const { signIn } = useSession();
@@ -12,6 +14,32 @@ export function SignIn({ notice }: { notice?: string | null }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
+  const publicApi = createClient({ baseUrl: BASE_URL, token: "" });
+  const passkeysOn = usePasskeysEnabled(publicApi);
+
+  async function signInWithPasskey() {
+    setError(null);
+    if (!passkeyReady("get")) {
+      setError(passkeyUnsupported);
+      return;
+    }
+    setPasskeyBusy(true);
+    try {
+      const options = await publicApi.passkeySigninBegin();
+      const credential = await getPasskey(options);
+      const session = await publicApi.passkeySigninFinish(credential);
+      signIn(session.session);
+    } catch (err) {
+      if (passkeyCancelled(err)) setError("No passkey was used.");
+      else if (err instanceof ApiError && err.status === 401) setError("Passkey sign-in failed.");
+      else if (err instanceof ApiError) setError(err.message);
+      else if (err instanceof Error && err.message === passkeyUnsupported) setError(passkeyUnsupported);
+      else setError(`Could not reach the API${BASE_URL ? ` at ${BASE_URL}` : ""}. Check that the server is running.`);
+    } finally {
+      setPasskeyBusy(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,9 +103,14 @@ export function SignIn({ notice }: { notice?: string | null }) {
             )}
           </div>
 
-          <Button type="submit" variant="primary" loading={busy} className="mt-5 w-full">
+          <Button type="submit" variant="primary" loading={busy} disabled={passkeyBusy} className="mt-5 w-full">
             {busy ? "Checking" : "Sign in"}
           </Button>
+          {passkeysOn && (
+            <Button type="button" onClick={signInWithPasskey} loading={passkeyBusy} disabled={busy} className="mt-3 w-full">
+              Sign in with a passkey
+            </Button>
+          )}
         </form>
       </Bezel>
     </main>

@@ -2996,6 +2996,10 @@
        }
       ],
       "title": "Worker Heartbeat"
+     },
+     "passkeys": {
+      "type": "boolean",
+      "title": "Passkeys"
      }
     },
     "type": "object",
@@ -3003,7 +3007,8 @@
      "status",
      "database",
      "active_model",
-     "stale_datasets"
+     "stale_datasets",
+     "passkeys"
     ],
     "title": "HealthOut"
    },

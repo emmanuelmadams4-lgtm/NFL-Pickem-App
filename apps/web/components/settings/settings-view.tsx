@@ -13,6 +13,7 @@ import { safeGet, safeSet } from "@/lib/fmt";
 import { useOnline } from "@/lib/sync";
 import { useStorageStatus } from "@/lib/persist";
 import { AlertsSection } from "@/components/settings/alerts";
+import { PasskeysSection } from "@/components/passkey/passkeys-section";
 
 function Row({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -408,6 +409,7 @@ export function SettingsView() {
           <LeaderSection meta={meta} />
           <CsvSection meta={meta} />
           <ModelSection meta={meta} />
+          <PasskeysSection />
           <AccessSection />
         </>
       )}

@@ -24,6 +24,7 @@ from nflpi.api import news as news_api
 from nflpi.api import passkey as passkey_api
 from nflpi.api import schemas as s
 from nflpi.api import views
+from nflpi.auth import passkeys
 from nflpi.config import get_settings
 from nflpi.db import acquire_refresh_lock, get_session, release_refresh_lock, session_factory
 from nflpi.ingestion.service import freshness
@@ -56,7 +57,9 @@ def health(session: DB) -> s.HealthOut:
         session.execute(text("select 1"))
         db_ok = True
     except Exception:  # noqa: BLE001 - health reports, never raises
-        return s.HealthOut(status="degraded", database=False, active_model=False, stale_datasets=[])
+        return s.HealthOut(
+            status="degraded", database=False, active_model=False, stale_datasets=[], passkeys=passkeys.config() is not None
+        )
     stale = [f["dataset"] for f in freshness(session) if f["stale"]]
     has_model = engine.active_model(session) is not None
     heartbeat_row = session.get(AppSetting, jobs.HEARTBEAT_KEY)
@@ -76,6 +79,7 @@ def health(session: DB) -> s.HealthOut:
         active_model=has_model,
         stale_datasets=stale,
         worker_heartbeat=heartbeat,
+        passkeys=passkeys.config() is not None,
     )
 
 
