@@ -319,7 +319,7 @@ test("G2 lime paints what is mine: a picked pill, the selected chip, the primary
   const { open } = await board(request);
   const bg = (l: ReturnType<Page["locator"]>) => l.evaluate((el) => getComputedStyle(el).backgroundColor);
   await page.goto("/");
-  expect(await bg(page.getByRole("button", { name: "Sign in" }))).toBe(LIME);
+  expect(await bg(page.getByRole("button", { name: "Sign in", exact: true }))).toBe(LIME);
   await page.goto(`/game/?id=${open[0].game_id}`);
   await page.evaluate((t) => localStorage.setItem("nflpi_token", t), TOKEN);
   await page.reload();

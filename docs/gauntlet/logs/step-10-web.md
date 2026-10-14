@@ -186,3 +186,10 @@ health tests 7 passed, ruff clean, `gen:api` no change, `e2e/passkey.spec.ts` fr
 LOWs added: the token-change toast says "Signed out on this device…" although the user stays signed in with the new
 token (wording); `InvalidStateError` on sign-in maps to "refused", untested; a caller's own sign-out message hides the
 server-failure notice (only the 401 paths pass one today).
+PR #39 CI (god 89fe02, run 38591469182): 2 e2e failures, Playwright strict mode: the shared test server has passkeys
+on (`scripts/e2e-server.sh`), so a loose "Sign in" locator also matches "Sign in with a passkey". Test-only fix by the
+coordinator: the token button is located exactly (`{ name: "Sign in", exact: true }`) in `step2.spec.ts` (2),
+`pwa.spec.ts` (1), `restyle.spec.ts` (1) and `group.spec.ts` (2; lane groupweb's file, same two-line change, as god
+asked for every such locator). Full browser suite on a fresh build of `da823a3` (`s10-full-1`): 244 passed, 2 failed
+(the two `group.spec.ts` locators, then still loose), 2 skipped; after the `group.spec.ts` change the four touched files
+(`s10-full-1b`): 94 passed, 0 failed.
