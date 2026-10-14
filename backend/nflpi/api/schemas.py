@@ -31,6 +31,30 @@ class Factor(BaseModel):
     weight: float = Field(description="Push on the home team's log-odds; sign shows direction")
 
 
+class SimulationOut(BaseModel):
+    source: str
+    distribution: str
+    n_simulations: int
+    home_points: float
+    away_points: float
+    home_win: float
+    away_win: float
+    tie: float
+    expected_margin: float
+    expected_total: float
+    margin_80: list[float]
+    total_80: list[float]
+    home_spread: float | None
+    total: float | None
+    home_cover: float | None
+    away_cover: float | None
+    spread_push: float | None
+    over: float | None
+    under: float | None
+    total_push: float | None
+    label: str
+
+
 class PredictionOut(BaseModel):
     id: int
     created_at: datetime
@@ -47,6 +71,7 @@ class PredictionOut(BaseModel):
     upset_flags: list[str]
     change_note: str | None
     data_freshness: dict[str, str | None]
+    simulation: SimulationOut | None = None
 
 
 class WeatherOut(BaseModel):
@@ -153,9 +178,16 @@ class WeekSummary(BaseModel):
     attention: int = Field(description="Games with high uncertainty or an upset flag still to play")
 
 
+class PickModeOut(BaseModel):
+    mode: Literal["straight_up", "confidence_pool"]
+    assumed: bool
+    label: str
+
+
 class WeekOut(BaseModel):
     season: int
     week: int
+    pick_mode: PickModeOut
     summary: WeekSummary
     games: list[GameSummary]
     freshness: list[DatasetFreshness]

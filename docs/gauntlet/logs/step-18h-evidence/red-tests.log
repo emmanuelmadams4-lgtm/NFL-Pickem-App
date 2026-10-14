@@ -1,0 +1,396 @@
+FFFFFFFFFFFFFF...............................FF............FF........... [ 33%]
+........................................................................ [ 66%]
+.....................................F.................................. [ 99%]
+..                                                                       [100%]
+=================================== FAILURES ===================================
+________ test_simulation_is_stored_beside_the_unchanged_win_probability ________
+
+loaded = <sqlalchemy.orm.session.Session object at 0x116d067b0>
+
+    def test_simulation_is_stored_beside_the_unchanged_win_probability(loaded):
+        before = {g.game_id: latest(loaded, g.game_id).home_win_prob for g in upcoming(loaded)}
+>       simulated(loaded)
+
+tests/test_wiring.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <sqlalchemy.orm.session.Session object at 0x116d067b0>
+
+    def simulated(session) -> None:
+>       engine.save_sim_params(session, CURRENT, synthetic_params())
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'save_sim_params'
+
+tests/test_wiring.py:53: AttributeError
+___ test_stored_simulation_is_the_simulator_on_walk_forward_expected_points ____
+
+loaded = <sqlalchemy.orm.session.Session object at 0x116d06900>
+
+    def test_stored_simulation_is_the_simulator_on_walk_forward_expected_points(loaded):
+>       simulated(loaded)
+
+tests/test_wiring.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <sqlalchemy.orm.session.Session object at 0x116d06900>
+
+    def simulated(session) -> None:
+>       engine.save_sim_params(session, CURRENT, synthetic_params())
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'save_sim_params'
+
+tests/test_wiring.py:53: AttributeError
+____ test_without_learned_parameters_the_simulation_is_missing_not_guessed _____
+
+loaded = <sqlalchemy.orm.session.Session object at 0x1175846e0>
+client = <starlette.testclient.TestClient object at 0x117585160>
+
+    def test_without_learned_parameters_the_simulation_is_missing_not_guessed(loaded, client):
+>       assert all(latest(loaded, g.game_id).features["simulation"] is None for g in upcoming(loaded))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_wiring.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+.0 = <list_iterator object at 0x1173bc160>
+
+>   assert all(latest(loaded, g.game_id).features["simulation"] is None for g in upcoming(loaded))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'simulation'
+
+tests/test_wiring.py:100: KeyError
+__ test_a_game_without_a_line_gets_win_chances_but_no_cover_or_total_chances ___
+
+loaded = <sqlalchemy.orm.session.Session object at 0x117585a90>
+
+    def test_a_game_without_a_line_gets_win_chances_but_no_cover_or_total_chances(loaded):
+        gid = upcoming(loaded)[0].game_id
+        loaded.execute(update(MarketSnapshot).where(MarketSnapshot.game_id == gid).values(spread_line=None, total_line=None))
+        loaded.commit()
+>       simulated(loaded)
+
+tests/test_wiring.py:109: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <sqlalchemy.orm.session.Session object at 0x117585a90>
+
+    def simulated(session) -> None:
+>       engine.save_sim_params(session, CURRENT, synthetic_params())
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'save_sim_params'
+
+tests/test_wiring.py:53: AttributeError
+_ test_adding_parameters_inserts_one_new_row_per_game_and_never_edits_old_rows _
+
+loaded = <sqlalchemy.orm.session.Session object at 0x117585e80>
+
+    def test_adding_parameters_inserts_one_new_row_per_game_and_never_edits_old_rows(loaded):
+        old = {p.id: (p.inputs_hash, dict(p.features), p.home_win_prob) for p in loaded.scalars(select(Prediction))}
+>       simulated(loaded)
+
+tests/test_wiring.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <sqlalchemy.orm.session.Session object at 0x117585e80>
+
+    def simulated(session) -> None:
+>       engine.save_sim_params(session, CURRENT, synthetic_params())
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'save_sim_params'
+
+tests/test_wiring.py:53: AttributeError
+____________ test_a_games_own_result_does_not_reach_its_simulation _____________
+
+loaded = <sqlalchemy.orm.session.Session object at 0x117585fd0>
+
+    def test_a_games_own_result_does_not_reach_its_simulation(loaded):
+>       engine.save_sim_params(loaded, CURRENT, synthetic_params())
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'save_sim_params'
+
+tests/test_wiring.py:130: AttributeError
+________ test_playoff_games_never_end_tied_and_regular_season_games_can ________
+
+loaded = <sqlalchemy.orm.session.Session object at 0x116d06900>
+
+    def test_playoff_games_never_end_tied_and_regular_season_games_can(loaded):
+        games = upcoming(loaded)
+        games[0].game_type = "WC"
+        loaded.commit()
+>       simulated(loaded)
+
+tests/test_wiring.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <sqlalchemy.orm.session.Session object at 0x116d06900>
+
+    def simulated(session) -> None:
+>       engine.save_sim_params(session, CURRENT, synthetic_params())
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'save_sim_params'
+
+tests/test_wiring.py:53: AttributeError
+_ test_train_learns_and_saves_simulator_parameters_for_the_season_it_predicts __
+
+session = <sqlalchemy.orm.session.Session object at 0x116d067b0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x117596520>
+
+    def test_train_learns_and_saves_simulator_parameters_for_the_season_it_predicts(session, monkeypatch):
+        monkeypatch.setattr(sim_params, "MIN_TRAIN_GAMES", 10)  # the fixture has five past seasons of 15 games
+        monkeypatch.setattr(nflverse, "fetch_csv", lambda path: _overtime_rows())
+        service.ingest_schedules(session, schedule_rows())
+        service.ingest_teams(session, team_rows())
+        jobs.train(session)
+>       params = engine.load_sim_params(session, CURRENT)
+                 ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'load_sim_params'
+
+tests/test_wiring.py:166: AttributeError
+____ test_train_still_trains_the_win_model_when_the_simulator_cannot_learn _____
+
+session = <sqlalchemy.orm.session.Session object at 0x116d06900>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x116d9e3f0>
+
+    def test_train_still_trains_the_win_model_when_the_simulator_cannot_learn(session, monkeypatch):
+        def offline(path):
+            raise OSError("no network")
+    
+        monkeypatch.setattr(nflverse, "fetch_csv", offline)
+        service.ingest_schedules(session, schedule_rows())
+        service.ingest_teams(session, team_rows())
+        assert jobs.train(session).is_active
+>       assert engine.load_sim_params(session, CURRENT) is None
+               ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'load_sim_params'
+
+tests/test_wiring.py:181: AttributeError
+___________________ test_saved_parameters_round_trip_exactly ___________________
+
+session = <sqlalchemy.orm.session.Session object at 0x116d067b0>
+
+    def test_saved_parameters_round_trip_exactly(session):
+        params = synthetic_params()
+>       engine.save_sim_params(session, CURRENT, params)
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'save_sim_params'
+
+tests/test_wiring.py:186: AttributeError
+____________________ test_api_exposes_the_stored_simulation ____________________
+
+loaded = <sqlalchemy.orm.session.Session object at 0x117585160>
+client = <starlette.testclient.TestClient object at 0x11749f610>
+
+    def test_api_exposes_the_stored_simulation(loaded, client):
+>       simulated(loaded)
+
+tests/test_wiring.py:197: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <sqlalchemy.orm.session.Session object at 0x117585160>
+
+    def simulated(session) -> None:
+>       engine.save_sim_params(session, CURRENT, synthetic_params())
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.predictions.engine' has no attribute 'save_sim_params'
+
+tests/test_wiring.py:53: AttributeError
+________ test_pick_mode_is_straight_up_and_labelled_assumed_by_default _________
+
+loaded = <sqlalchemy.orm.session.Session object at 0x116d06900>
+client = <starlette.testclient.TestClient object at 0x11749f110>
+
+    def test_pick_mode_is_straight_up_and_labelled_assumed_by_default(loaded, client):
+        week = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json())
+>       assert week.pick_mode == s.PickModeOut(mode="straight_up", assumed=True, label=ASSUMED_LABEL)
+               ^^^^^^^^^^^^^^
+
+tests/test_wiring.py:205: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = WeekOut(season=2023, week=4, summary=WeekSummary(games_total=3, games_final=0, games_remaining=3, picks_made=0, picks_...one, stale=True, last_error=None)], generated_at=datetime.datetime(2026, 10, 14, 14, 51, 46, 130711, tzinfo=TzInfo(0)))
+item = 'pick_mode'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'WeekOut' object has no attribute 'pick_mode'
+
+.venv/lib/python3.13/site-packages/pydantic/main.py:1105: AttributeError
+________ test_a_configured_pick_mode_is_shown_and_not_labelled_assumed _________
+
+loaded = <sqlalchemy.orm.session.Session object at 0x117584830>
+client = <starlette.testclient.TestClient object at 0x11777a8b0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a93a450>
+
+    def test_a_configured_pick_mode_is_shown_and_not_labelled_assumed(loaded, client, monkeypatch):
+        monkeypatch.setenv("PICK_MODE", "confidence_pool")
+        get_settings.cache_clear()
+        try:
+            week = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json())
+        finally:
+            monkeypatch.delenv("PICK_MODE")
+            get_settings.cache_clear()
+>       assert week.pick_mode == s.PickModeOut(mode="confidence_pool", assumed=False, label="Confidence pool")
+               ^^^^^^^^^^^^^^
+
+tests/test_wiring.py:216: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = WeekOut(season=2023, week=4, summary=WeekSummary(games_total=3, games_final=0, games_remaining=3, picks_made=0, picks_...one, stale=True, last_error=None)], generated_at=datetime.datetime(2026, 10, 14, 14, 51, 46, 438513, tzinfo=TzInfo(0)))
+item = 'pick_mode'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'WeekOut' object has no attribute 'pick_mode'
+
+.venv/lib/python3.13/site-packages/pydantic/main.py:1105: AttributeError
+______________ test_pick_modes_the_sheet_cannot_show_are_refused _______________
+
+    def test_pick_modes_the_sheet_cannot_show_are_refused():
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/test_wiring.py:220: Failed
+___ test_order_is_by_win_chance_then_game_id_and_near_ties_are_not_reordered ___
+
+    def test_order_is_by_win_chance_then_game_id_and_near_ties_are_not_reordered():
+        close = [sheet.Ranked("b", 0.700), sheet.Ranked("c", 0.600), sheet.Ranked("a", 0.704), sheet.Ranked("d", 0.700)]
+>       assert sheet.order(close) == ["a", "b", "d", "c"]  # 0.4 points apart keeps win-chance order; an exact tie goes by id
+               ^^^^^^^^^^^^^^^^^^
+E       TypeError: order() missing 1 required positional argument: 'evidence'
+
+tests/test_sheet.py:365: TypeError
+______ test_no_ai_is_asked_about_the_order_and_old_ai_answers_are_ignored ______
+
+loaded = <sqlalchemy.orm.session.Session object at 0x116d067b0>
+client = <starlette.testclient.TestClient object at 0x1177d5470>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x116da7ac0>
+
+    def test_no_ai_is_asked_about_the_order_and_old_ai_answers_are_ignored(loaded, client, monkeypatch):
+        def refuse(*args, **kwargs):
+            raise AssertionError("an AI was asked about the pick order")
+    
+        monkeypatch.setattr(sheet, "TIE_BAND", 1.0)
+        monkeypatch.setattr("nflpi.ai.jev.configured", lambda: True)
+        monkeypatch.setattr("nflpi.ai.jev.decide", refuse)
+        high, mid, low = by_points(client)
+        loaded.add(AppSetting(key=f"jev_tiebreak_{CURRENT}_{WEEK}", value={
+            gid: {"hash": loaded.scalars(select(Prediction).where(Prediction.game_id == gid)
+                                        .order_by(Prediction.id.desc())).first().inputs_hash,
+                  "score": score, "confidence": 0.9} for gid, score in ((high, 0.0), (mid, 3.0), (low, 0.0))}))
+        loaded.commit()
+    
+        jobs.predict(loaded)
+    
+>       assert by_points(client) == [high, mid, low]
+E       AssertionError: assert ['2023_04_MIA...23_04_MIA_LV'] == ['2023_04_NE_...23_04_MIA_LV']
+E         
+E         At index 0 diff: '2023_04_MIA_BUF' != '2023_04_NE_KC'
+E         Use -v to get more diff
+
+tests/test_sheet.py:384: AssertionError
+____________ test_bench_spread_is_the_negative_of_the_nflverse_line ____________
+
+    def test_bench_spread_is_the_negative_of_the_nflverse_line():
+>       assert bench.home_spread_from_nflverse(3.0) == -3.0  # home favoured by 3: home covers when margin - 3 > 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.analytics.sim_backtest' has no attribute 'home_spread_from_nflverse'
+
+tests/test_sim_backtest.py:163: AttributeError
+_____________ test_bench_uses_the_one_data_layer_spread_conversion _____________
+
+    def test_bench_uses_the_one_data_layer_spread_conversion():
+        # AUDIT A13 and step 18h: one named conversion, nflpi.data.asof.home_spread_from_nflverse; the bench negates nothing.
+        import inspect
+        import re
+    
+        from nflpi.data import asof
+    
+>       assert bench.home_spread_from_nflverse is asof.home_spread_from_nflverse
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'nflpi.analytics.sim_backtest' has no attribute 'home_spread_from_nflverse'
+
+tests/test_sim_backtest.py:176: AttributeError
+_ test_p19_conversion_is_the_one_data_layer_function_and_picks_negates_nothing _
+
+    def test_p19_conversion_is_the_one_data_layer_function_and_picks_negates_nothing():
+        from nflpi.data import asof
+    
+>       assert home_spread_from_nflverse is asof.home_spread_from_nflverse
+E       AssertionError: assert home_spread_from_nflverse is <function home_spread_from_nflverse at 0x117a85f80>
+E        +  where <function home_spread_from_nflverse at 0x117a85f80> = <module 'nflpi.data.asof' from '/Users/emmanueladams/HarnessAgents/worktrees/worker-wire18h/backend/nflpi/data/asof.py'>.home_spread_from_nflverse
+
+tests/test_picks.py:650: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_wiring.py::test_simulation_is_stored_beside_the_unchanged_win_probability
+FAILED tests/test_wiring.py::test_stored_simulation_is_the_simulator_on_walk_forward_expected_points
+FAILED tests/test_wiring.py::test_without_learned_parameters_the_simulation_is_missing_not_guessed
+FAILED tests/test_wiring.py::test_a_game_without_a_line_gets_win_chances_but_no_cover_or_total_chances
+FAILED tests/test_wiring.py::test_adding_parameters_inserts_one_new_row_per_game_and_never_edits_old_rows
+FAILED tests/test_wiring.py::test_a_games_own_result_does_not_reach_its_simulation
+FAILED tests/test_wiring.py::test_playoff_games_never_end_tied_and_regular_season_games_can
+FAILED tests/test_wiring.py::test_train_learns_and_saves_simulator_parameters_for_the_season_it_predicts
+FAILED tests/test_wiring.py::test_train_still_trains_the_win_model_when_the_simulator_cannot_learn
+FAILED tests/test_wiring.py::test_saved_parameters_round_trip_exactly - Attri...
+FAILED tests/test_wiring.py::test_api_exposes_the_stored_simulation - Attribu...
+FAILED tests/test_wiring.py::test_pick_mode_is_straight_up_and_labelled_assumed_by_default
+FAILED tests/test_wiring.py::test_a_configured_pick_mode_is_shown_and_not_labelled_assumed
+FAILED tests/test_wiring.py::test_pick_modes_the_sheet_cannot_show_are_refused
+FAILED tests/test_sheet.py::test_order_is_by_win_chance_then_game_id_and_near_ties_are_not_reordered
+FAILED tests/test_sheet.py::test_no_ai_is_asked_about_the_order_and_old_ai_answers_are_ignored
+FAILED tests/test_sim_backtest.py::test_bench_spread_is_the_negative_of_the_nflverse_line
+FAILED tests/test_sim_backtest.py::test_bench_uses_the_one_data_layer_spread_conversion
+FAILED tests/test_picks.py::test_p19_conversion_is_the_one_data_layer_function_and_picks_negates_nothing
+19 failed, 199 passed in 18.62s

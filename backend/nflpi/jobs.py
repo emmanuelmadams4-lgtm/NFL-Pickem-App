@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from nflpi import live_worker, news_worker
+from nflpi.analytics import sim_backtest
 from nflpi.analytics.backtest import run_backtest
 from nflpi.analytics.metrics import EARLY_WEEK_END, UNCERTAINTY_GAP, UPSET_GAP
 from nflpi.db import acquire_refresh_lock, release_refresh_lock, session_factory
@@ -53,13 +54,18 @@ def ingest(session, weather: bool = True) -> dict:
 
 def train(session) -> ModelVersion:
     season, _ = engine.current_week(session)
-    return engine.train(session, through_season=season - 1)
+    mv = engine.train(session, through_season=season - 1)
+    try:
+        table = sim_backtest.build_table(sim_backtest.load_games(nflverse.fetch_csv("schedules/games.csv")))
+        engine.save_sim_params(session, season, sim_backtest.learn_for_season(table, season, "football_only"))
+    except Exception:  # noqa: BLE001 - the simulator is optional; the win model is trained either way
+        log.exception("simulator parameters not learned")
+        session.rollback()
+    return mv
 
 
 def predict(session) -> int:
     events = engine.refresh_predictions(session)
-    season, week = engine.current_week(session)
-    sheet.refresh_tiebreaks(session, season, week)
     return push.alert_prediction_changes(session, events)
 
 

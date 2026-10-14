@@ -3912,6 +3912,33 @@
     ],
     "title": "PickIn"
    },
+   "PickModeOut": {
+    "properties": {
+     "mode": {
+      "type": "string",
+      "enum": [
+       "straight_up",
+       "confidence_pool"
+      ],
+      "title": "Mode"
+     },
+     "assumed": {
+      "type": "boolean",
+      "title": "Assumed"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mode",
+     "assumed",
+     "label"
+    ],
+    "title": "PickModeOut"
+   },
    "PickOut": {
     "properties": {
      "game_id": {
@@ -4065,6 +4092,16 @@
       },
       "type": "object",
       "title": "Data Freshness"
+     },
+     "simulation": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/SimulationOut"
+       },
+       {
+        "type": "null"
+       }
+      ]
      }
     },
     "type": "object",
@@ -4605,6 +4642,181 @@
      "avg_confidence"
     ],
     "title": "SideOut"
+   },
+   "SimulationOut": {
+    "properties": {
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "distribution": {
+      "type": "string",
+      "title": "Distribution"
+     },
+     "n_simulations": {
+      "type": "integer",
+      "title": "N Simulations"
+     },
+     "home_points": {
+      "type": "number",
+      "title": "Home Points"
+     },
+     "away_points": {
+      "type": "number",
+      "title": "Away Points"
+     },
+     "home_win": {
+      "type": "number",
+      "title": "Home Win"
+     },
+     "away_win": {
+      "type": "number",
+      "title": "Away Win"
+     },
+     "tie": {
+      "type": "number",
+      "title": "Tie"
+     },
+     "expected_margin": {
+      "type": "number",
+      "title": "Expected Margin"
+     },
+     "expected_total": {
+      "type": "number",
+      "title": "Expected Total"
+     },
+     "margin_80": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Margin 80"
+     },
+     "total_80": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Total 80"
+     },
+     "home_spread": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Spread"
+     },
+     "total": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total"
+     },
+     "home_cover": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Home Cover"
+     },
+     "away_cover": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Away Cover"
+     },
+     "spread_push": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Spread Push"
+     },
+     "over": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Over"
+     },
+     "under": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Under"
+     },
+     "total_push": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total Push"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     }
+    },
+    "type": "object",
+    "required": [
+     "source",
+     "distribution",
+     "n_simulations",
+     "home_points",
+     "away_points",
+     "home_win",
+     "away_win",
+     "tie",
+     "expected_margin",
+     "expected_total",
+     "margin_80",
+     "total_80",
+     "home_spread",
+     "total",
+     "home_cover",
+     "away_cover",
+     "spread_push",
+     "over",
+     "under",
+     "total_push",
+     "label"
+    ],
+    "title": "SimulationOut"
    },
    "StandingOut": {
     "properties": {
@@ -5282,6 +5494,9 @@
       "type": "integer",
       "title": "Week"
      },
+     "pick_mode": {
+      "$ref": "#/components/schemas/PickModeOut"
+     },
      "summary": {
       "$ref": "#/components/schemas/WeekSummary"
      },
@@ -5309,6 +5524,7 @@
     "required": [
      "season",
      "week",
+     "pick_mode",
      "summary",
      "games",
      "freshness",

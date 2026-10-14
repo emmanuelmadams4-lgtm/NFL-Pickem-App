@@ -12,6 +12,7 @@ import pandas as pd
 from nflpi.analytics import metrics
 from nflpi.analytics.backtest import candidate_preds
 from nflpi.ingestion import nflverse
+from nflpi.picks import home_spread_from_nflverse
 from nflpi.predictions.elo import EloParams
 from nflpi.predictions.features import games_frame
 from nflpi.predictions.scores import STATS_FEATURES, ScoreModel, add_score_features
@@ -81,11 +82,6 @@ def build_table(frame: pd.DataFrame) -> pd.DataFrame:
     return out.sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)
 
 
-def quoted_home_spread(spread_line: float) -> float:
-    """nflverse is positive when home is favoured; the home side covers when margin + h > 0."""
-    return -spread_line
-
-
 def learn_for_season(table: pd.DataFrame, season: int, source: str) -> SimParams:
     window = table[table["season"].between(max(MIN_TRAIN_SEASON, season - WINDOW), season - 1)]
     p = PREFIX[source]
@@ -121,8 +117,8 @@ def _game_row(game, source: str, distribution: str, params: SimParams, n: int, b
     res = simulate_game(
         TeamFeatures(getattr(game, f"{p}home")), TeamFeatures(getattr(game, f"{p}away")), n_simulations=n,
         params=params, seed=zlib.crc32(game.game_id.encode()) ^ base_seed,
-        spread=quoted_home_spread(game.spread_line), total=game.total_line, neutral_site=bool(game.neutral_site),
-        distribution=distribution,
+        spread=home_spread_from_nflverse(game.spread_line), total=game.total_line,
+        neutral_site=bool(game.neutral_site), distribution=distribution,
     )
     margin, points = res.a_score - res.b_score, res.a_score + res.b_score
     actual_margin, actual_total = game.home_score - game.away_score, game.home_score + game.away_score
@@ -246,7 +242,7 @@ def _win_block(v: pd.DataFrame) -> tuple[dict, dict]:
 
 
 def _variant(v: pd.DataFrame, source: str, distribution: str, default: str) -> dict:
-    spread = quoted_home_spread(v["spread_line"].to_numpy(float))
+    spread = home_spread_from_nflverse(v["spread_line"].to_numpy(float))
     margin = (v["home_score"] - v["away_score"]).to_numpy(float)
     total = (v["home_score"] + v["away_score"]).to_numpy(float)
     cover = np.where(margin + spread == 0, np.nan, (margin + spread > 0).astype(float))

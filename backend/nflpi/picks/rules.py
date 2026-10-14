@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 
 from nflpi.betting.settle import settle_moneyline, settle_spread, settle_total
+from nflpi.data.asof import home_spread_from_nflverse  # noqa: F401 - re-exported by nflpi.picks
 from nflpi.picks.types import GameInputs, Pick, PicksError, PickSet
 
 COIN_FLIP = "NOT_SHOWN_TO_BEAT_COIN_FLIP"
@@ -13,11 +14,6 @@ LABELS = {
     "totals": "Over/under picks",
     "confidence_pool": "Confidence pool",
 }
-
-
-def home_spread_from_nflverse(spread_line: float) -> float:
-    """nflverse spread_line has the opposite sign to the brief's home spread."""
-    return -spread_line
 
 
 def one_of(value: str, allowed: tuple[str, ...], name: str) -> str:

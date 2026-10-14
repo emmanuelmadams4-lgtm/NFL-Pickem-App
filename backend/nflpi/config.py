@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -47,6 +48,8 @@ class Settings(BaseSettings):
     # Model
     train_window_seasons: int = 10
     first_season: int = 2002
+    # How the owner's pool scores picks (env PICK_MODE). Both modes pick the straight-up winner; ats/totals are refused.
+    pick_mode: Literal["straight_up", "confidence_pool"] | None = None
 
     # AI (keys stay on the server)
     anthropic_api_key: str = ""

@@ -644,15 +644,15 @@ def test_p19_home_spread_is_the_negated_nflverse_line():
     assert math.isclose(home_spread_from_nflverse(-6.5), 6.5)
 
 
-def test_p19_conversion_appears_only_inside_that_one_function():
+def test_p19_conversion_is_the_one_data_layer_function_and_picks_negates_nothing():
+    from nflpi.data import asof
+
+    assert home_spread_from_nflverse is asof.home_spread_from_nflverse
     files = sorted((Path(nflpi.__file__).parent / "picks").glob("*.py"))
     assert files, "nflpi.picks has no source files"
     text = "\n".join(f.read_text() for f in files)
-    assert len(re.findall(r"def home_spread_from_nflverse\b", text)) == 1
-    function = re.compile(r"^def home_spread_from_nflverse\b.*?(?=^\S|\Z)", re.S | re.M)
-    assert function.search(text) and "-spread_line" in function.search(text).group(0)
-    rest = function.sub("", text)
-    rest = "\n".join(line for line in rest.splitlines() if not line.lstrip().startswith("#"))
+    assert "def home_spread_from_nflverse" not in text
+    rest = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
     assert "spread_line" not in rest
     assert not re.search(r"\*\s*-\s*1\b|\*\s*\(\s*-1\s*\)|\b-1\s*\*", rest)
 
