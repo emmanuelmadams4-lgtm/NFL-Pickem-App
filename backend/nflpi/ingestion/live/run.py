@@ -13,6 +13,7 @@ from nflpi.config import get_settings
 from nflpi.ingestion.live import espn, fetch, kalshi, oddsapi, store
 from nflpi.models import Game, IngestionRun, LiveState, SourceStatus
 from nflpi.predictions.market import implied_prob, novig_home_prob
+from nflpi.value import save_prices
 
 log = logging.getLogger(__name__)
 EASTERN = ZoneInfo("America/New_York")
@@ -383,6 +384,27 @@ def _save_odds(session: Session, event: oddsapi.Event, book: oddsapi.Book, game:
     )
 
 
+BOOK_CLOCK_SKEW = timedelta(minutes=2)  # a book clock further ahead would re-insert one price every poll
+FLIP = {"home": "away", "away": "home", "over": "over", "under": "under"}
+
+
+def _save_book_prices(session: Session, event: oddsapi.Event, book: oddsapi.Book, game: Game, now: datetime) -> int:
+    """Every parsed price of one book into book_prices, sides as our game has them (insert-only)."""
+    if book.updated > now + BOOK_CLOCK_SKEW:
+        raise ValueError("book clock ahead of ours")
+    flip = oddsapi.TEAM_NAMES[event.home] != game.home_team
+    quotes = [
+        {
+            "market_type": p.market_type,
+            "selection": FLIP[p.selection] if flip else p.selection,
+            "line": -p.line if flip and p.market_type == "spread" else p.line,
+            "price": p.price,
+        }
+        for p in book.prices
+    ]
+    return save_prices(session, game.game_id, book.key, min(book.updated, now), now, quotes)
+
+
 def _odds_job(
     session: Session,
     get: Callable[[str], fetch.JsonResult],
@@ -396,7 +418,7 @@ def _odds_job(
         credits[0] = int(header)
     events, skipped = oddsapi.parse_events(result.data)
     games = _quote_candidates(session, now)
-    inserted, matched = 0, 0
+    inserted, matched, saved, dropped = 0, 0, 0, 0
     for event in events:
         game = _quote_game(
             games,
@@ -410,6 +432,13 @@ def _odds_job(
         for book in event.books:
             if _save_odds(session, event, book, game, now):
                 inserted += 1
+            try:
+                with session.begin_nested():
+                    saved += _save_book_prices(session, event, book, game, now)
+            except Exception as exc:  # never lose the win-market quotes over a book price
+                dropped += len(book.prices)
+                log.warning("oddsapi book prices skipped for %s: %s", book.key, safe_error(exc))
+    log.info("oddsapi book prices: %d saved, %d dropped", saved, dropped)
     if len(events) >= 3 and matched == 0:
         raise ValueError("no match")
     return inserted, skipped, None

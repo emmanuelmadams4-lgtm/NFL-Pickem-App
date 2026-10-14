@@ -427,3 +427,22 @@ class PasskeySession(Base):
     credential_id: Mapped[int] = mapped_column(ForeignKey("passkey_credentials.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class BookPrice(Base):
+    """Insert-only book prices with the book's own time."""
+
+    __tablename__ = "book_prices"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    game_id: Mapped[str] = mapped_column(ForeignKey("games.game_id"), nullable=False)
+    sportsbook: Mapped[str] = mapped_column(String(24), nullable=False)
+    market_type: Mapped[str] = mapped_column(String(9), nullable=False)  # moneyline | spread | total
+    selection: Mapped[str] = mapped_column(String(5), nullable=False)  # home | away | over | under
+    line: Mapped[float | None] = mapped_column(Float)
+    price: Mapped[float] = mapped_column(Float, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("game_id", "sportsbook", "market_type", "selection", "observed_at", name="uq_book_prices_key"),
+    )

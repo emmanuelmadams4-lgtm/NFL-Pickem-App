@@ -4,7 +4,7 @@ import math
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, NamedTuple
 from urllib.parse import urlencode
 
 from nflpi.ingestion.live.times import parse_utc
@@ -16,6 +16,8 @@ CREDIT = re.compile(r"[0-9]{1,7}")
 UTC_TIME = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z")
 # Three unusable items suggest the whole reply changed format.
 SHAPE_FAILURE_THRESHOLD = 3
+MAX_SPREAD = 60
+MAX_TOTAL = 150
 TEAM_NAMES = {
     "Arizona Cardinals": "ARI",
     "Atlanta Falcons": "ATL",
@@ -52,12 +54,20 @@ TEAM_NAMES = {
 }
 
 
+class Price(NamedTuple):
+    market_type: str
+    selection: str
+    line: float | None
+    price: float
+
+
 @dataclass(frozen=True)
 class Book:
     key: str
     updated: datetime
     home_ml: float
     away_ml: float
+    prices: tuple[Price, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -68,10 +78,11 @@ class Event:
     books: list[Book]
 
 
-def odds_url(key: str) -> str:
+def odds_url(key: str, *, extra_markets: bool = False) -> str:
     if not isinstance(key, str) or KEY.fullmatch(key) is None:
         raise ValueError("key")
-    return ODDS_URL + urlencode({"regions": "us", "markets": "h2h", "oddsFormat": "american", "apiKey": key})
+    markets = "h2h,spreads,totals" if extra_markets else "h2h"
+    return ODDS_URL + urlencode({"regions": "us", "markets": markets, "oddsFormat": "american", "apiKey": key})
 
 
 def _time(value: Any) -> datetime | None:
@@ -89,6 +100,62 @@ def _price(value: Any) -> bool:
         return False
 
 
+def _point(value: Any) -> bool:
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def _pair(market: dict, names: tuple[str, str]) -> list[dict] | None:
+    """The two outcomes of a market in the order of names, or None unless exactly those two names appear."""
+    outcomes = market.get("outcomes")
+    if not isinstance(outcomes, list) or len(outcomes) != 2 or not all(isinstance(o, dict) for o in outcomes):
+        return None
+    by_name = {o["name"]: o for o in outcomes if isinstance(o.get("name"), str)}
+    if len(by_name) != 2 or set(by_name) != set(names):
+        return None
+    first, second = by_name[names[0]], by_name[names[1]]
+    return [first, second] if _price(first.get("price")) and _price(second.get("price")) else None
+
+
+def _spread_prices(market: dict, home: str, away: str) -> tuple[Price, ...]:
+    pair = _pair(market, (home, away))
+    if pair is None:
+        return ()
+    h, a = pair
+    hp, ap = h.get("point"), a.get("point")
+    if not (_point(hp) and _point(ap)) or hp != -ap or abs(hp) > MAX_SPREAD:
+        return ()
+    # the HOME spread on both selections, as betting.MarketSnapshot keeps it
+    return (Price("spread", "home", hp, h["price"]), Price("spread", "away", hp, a["price"]))
+
+
+def _total_prices(market: dict) -> tuple[Price, ...]:
+    pair = _pair(market, ("Over", "Under"))
+    if pair is None:
+        return ()
+    over, under = pair
+    point = over.get("point")
+    if not (_point(point) and _point(under.get("point"))) or under.get("point") != point or not 0 < point <= MAX_TOTAL:
+        return ()
+    return (Price("total", "over", point, over["price"]), Price("total", "under", point, under["price"]))
+
+
+def _extra_prices(markets: list, home: str, away: str) -> tuple[Price, ...]:
+    found: list[Price] = []
+    for market in markets:
+        if not isinstance(market, dict):
+            continue
+        if market.get("key") == "spreads":
+            found.extend(_spread_prices(market, home, away))
+        elif market.get("key") == "totals":
+            found.extend(_total_prices(market))
+    return tuple(found)
+
+
 def _book(item: Any, home: str, away: str) -> Book | None:
     if not isinstance(item, dict):
         return None
@@ -103,7 +170,13 @@ def _book(item: Any, home: str, away: str) -> Book | None:
             continue
         prices = {o.get("name"): o.get("price") for o in outcomes if isinstance(o.get("name"), str)}
         if len(prices) == 2 and set(prices) == {home, away} and all(_price(p) for p in prices.values()):
-            return Book(key, updated, float(prices[home]), float(prices[away]))
+            moneyline = (
+                Price("moneyline", "home", None, float(prices[home])),
+                Price("moneyline", "away", None, float(prices[away])),
+            )
+            return Book(
+                key, updated, float(prices[home]), float(prices[away]), moneyline + _extra_prices(markets, home, away)
+            )
     return None
 
 
