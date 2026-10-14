@@ -46,3 +46,4 @@ Integrator review on `455da03`: FAIL, two findings, both fixed and nothing else 
 - V5: `config._HIDDEN_REPR_FIELDS` adds `odds_api_key` and `database_url` (config.py grant widened to that tuple by god). Test: repr of Settings shows neither.
 - Not done here (carried): Dwight's V4, per-market last update and alternate lines, a precondition for switching spreads and totals on.
 - Evidence: `test_value.py` + `test_live.py` + `test_hardening.py` 400 passed; ruff check and format clean on changed files; mutation sweep 42/42 killed (new mutations for skew, its size, the drop count, the name check and each hidden field).
+- Critic (ecc:python-reviewer, fresh) on `67be3fc`: **PASS**; spread convention checked against `betting/snapshot.py` and `betting/settle.py`; savepoint and V1, V2, V3, V5 confirmed; four LOW notes, none acted on (broad except, skew refusal logged as a warning, duplicate names caught by the length check, no exact 2-minute boundary test).
