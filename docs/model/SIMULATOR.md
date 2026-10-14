@@ -39,13 +39,15 @@ Existing code, two variants, always reported separately:
 | name | idea | learned |
 |---|---|---|
 | `poisson` | two independent Poisson counts. Baseline. | nothing |
-| `paired_residual` | stochastically rounded expected points plus a past (A residual, B residual) pair, residual = regulation score minus rounded expected points | the residual pairs |
+| `paired_residual` | stochastically rounded expected points plus a past (A residual, B residual) pair, residual = regulation score minus rounded expected points, centred per side (below) | the residual pairs |
 | `bivariate_normal` | rounded two-variable normal, sd = sqrt(phi x expected points) | phi per side, correlation |
 | `shared_gamma_poisson` | Poisson counts whose rate is multiplied by gamma factors that share a common part: overdispersed, and the two scores can move together | total and shared relative variance |
 
 ## Learned parameters, and how future data is kept out
 
 `learn_params` is a pure function of the rows it is given. The bench gives it only the seasons `max(2004, S-10)` to `S-1` when testing season S, with expected points that were themselves produced walk-forward. Tests change every result from season S on and check the parameters do not move.
+
+**Centred pool (step 18k double-count fix, 2026-10-14).** The training rows' expected points come from older walk-forward models, but the target season's model is fit on those same seasons, so their mean error is already inside the target's expected points. Left in the pool it counted twice (2019 and 2020 home margins, about -0.5 points of margin). `learn_params` now subtracts each side's mean final-score residual, mean(score - rint(expected points)), from its pool. The pool stays integer: floor(offset) comes off every row and 1 more off k = round(fraction x n) evenly spaced rows of the sorted pool, so the pool mean is exact to 1/(2n) and its shape is a shift, not a reshape. What is left is the mean overtime adds on top of regulation (pool mean = mean(regulation - final)), which the overtime step adds back, so the simulated mean equals the inputs. Bench and mean-check numbers: `docs/gauntlet/logs/step-18k.md` "Simulator double-count fix". The 18c confirm numbers below were made before this fix.
 
 ## Overtime, ties, season rules
 

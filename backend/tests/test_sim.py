@@ -220,6 +220,30 @@ def test_learn_params_is_invariant_to_row_order():
             np.testing.assert_allclose(x, y, rtol=1e-12, err_msg=field.name)
 
 
+def test_learn_params_centres_the_pool_on_the_final_score_so_a_biased_mu_is_not_counted_twice():
+    mu_a, mu_b, sa, sb, ot, seasons = _training(n=3001)
+    biased_a, biased_b = mu_a - 1.7, mu_b + 0.4  # the past model under- and over-predicted: a mean error to remove
+    p = learn_params(biased_a, biased_b, sa, sb, ot, seasons, target_season=2009)
+    reg_a, reg_b = regulation_scores(sa, sb, ot)
+    n = len(sa)
+    # the pool keeps only what overtime adds on top of regulation, to within 1/(2n) of an integer pool
+    assert abs(p.residual_a.mean() - (reg_a - sa).mean()) <= 1 / (2 * n) + 1e-12
+    assert abs(p.residual_b.mean() - (reg_b - sb).mean()) <= 1 / (2 * n) + 1e-12
+    assert p.residual_a.dtype == np.int64 and p.residual_b.dtype == np.int64
+    assert np.all(np.diff(p.residual_a) >= 0)  # still sorted pairs
+    uncentred = np.sort(reg_a - np.rint(biased_a).astype(np.int64))
+    shift = p.residual_a.mean() - uncentred.mean()
+    assert np.abs(np.sort(p.residual_a) - (uncentred + shift)).max() <= 1  # a shift, not a reshape
+
+
+def test_simulated_mean_matches_the_inputs_when_the_past_model_was_biased():
+    mu_a, mu_b, sa, sb, ot, seasons = _training(n=3000)
+    p = learn_params(mu_a - 2.0, mu_b + 1.0, sa, sb, ot, seasons, target_season=2009)
+    res = simulate_game(TeamFeatures(24.3), TeamFeatures(20.6), 200_000, params=p, seed=5)
+    assert res.expected_margin == pytest.approx(24.3 - 20.6, abs=5 * res.sampling_error["expected_margin"] + 0.05)
+    assert res.expected_total == pytest.approx(24.3 + 20.6, abs=5 * res.sampling_error["expected_total"] + 0.05)
+
+
 def test_learn_params_refuses_too_few_games_or_no_overtime():
     cols = _training(n=100)
     with pytest.raises(ValueError, match="200"):
