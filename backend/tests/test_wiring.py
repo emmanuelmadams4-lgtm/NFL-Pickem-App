@@ -118,7 +118,7 @@ def test_a_season_without_parameters_gets_no_simulation_when_another_season_has_
     engine.save_sim_params(loaded, CURRENT, synthetic_params())
     past = loaded.scalars(select(Game).where(Game.season == CURRENT - 1)).first().game_id
     now = upcoming(loaded)[0].game_id
-    engine.refresh_predictions(loaded, game_ids=[past, now], kind="backfill")
+    engine.refresh_predictions(loaded, game_ids=[past, now])
     assert latest(loaded, past).features["simulation"] is None
     assert latest(loaded, now).features["simulation"] is not None
 
@@ -140,11 +140,11 @@ def test_adding_parameters_inserts_one_new_row_per_game_and_never_edits_old_rows
 def test_a_games_own_result_does_not_reach_its_simulation(loaded):
     engine.save_sim_params(loaded, CURRENT, synthetic_params())
     game = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 3)).first()
-    engine.refresh_predictions(loaded, game_ids=[game.game_id], kind="backfill")
+    engine.refresh_predictions(loaded, game_ids=[game.game_id])
     first = latest(loaded, game.game_id)
     game.home_score, game.away_score = game.away_score + 40, 0
     loaded.commit()
-    engine.refresh_predictions(loaded, game_ids=[game.game_id], kind="backfill")
+    engine.refresh_predictions(loaded, game_ids=[game.game_id])
     assert latest(loaded, game.game_id).id == first.id and first.features["simulation"] is not None
 
 
@@ -177,6 +177,8 @@ def test_train_learns_and_saves_simulator_parameters_for_the_season_it_predicts(
     params = engine.load_sim_params(session, CURRENT)
     assert params is not None and params.n_train > 10 and params.ot_era == "modified_10"
     assert engine.load_sim_params(session, CURRENT - 1) is None
+    # this test is about learning the parameters: the Python mean check is not the subject (it blocks these fixtures)
+    monkeypatch.setattr("nflpi.ai.run_checker.python_block", lambda report: None)
     engine.refresh_predictions(session)
     assert all(latest(session, g.game_id).features["simulation"] for g in upcoming(session))
 

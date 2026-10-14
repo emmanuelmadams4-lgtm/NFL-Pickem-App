@@ -345,6 +345,10 @@ def _check_run(
     """
     if not any(simulations.values()):
         return simulations, {}
+    if kind == "backfill":  # one request for a whole season is too large; its simulations are stored as missing
+        note = "A backfill run is not sent to the run check, so it has no simulation."
+        return ({gid: None for gid in simulations},
+                {gid: {"status": "not_checked", "note": note} for gid, sim in simulations.items() if sim})
     final_later = (frame["status"] == "final") & (pd.to_datetime(frame["kickoff_utc"], utc=True) > now)
     results_ok = None if kind != "live" else not bool(final_later.any())  # a backfill is labeled after-the-fact
     entries, per_game = {}, {}

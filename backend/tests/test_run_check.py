@@ -8,17 +8,21 @@ import json
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from nflpi.ai import run_checker
 from nflpi.ai.providers import AIError
 from nflpi.analytics import run_check
 from nflpi.analytics.manifest import run_record
+from nflpi.config import get_settings
 from nflpi.models import AppSetting, MarketSnapshot, Prediction
 from nflpi.predictions import engine
 from tests.test_wiring import CURRENT, N, latest, synthetic_params, upcoming
 
-NOW = datetime(2026, 10, 14, 12, 0, tzinfo=UTC)
+
+def now():
+    """The fixture's market lines are stamped with the real clock, so a run 'at' a fixed past date fails the cutoff."""
+    return datetime.now(UTC)
 
 
 class FakeClaude:
@@ -169,7 +173,8 @@ def change_run(session):
         last = session.scalars(select(MarketSnapshot).where(MarketSnapshot.game_id == g.game_id)
                                .order_by(MarketSnapshot.id.desc())).first()
         session.add(MarketSnapshot(
-            game_id=g.game_id, observed_at=last.observed_at + timedelta(minutes=1), source=last.source, kind=last.kind,
+            game_id=g.game_id, observed_at=last.observed_at + timedelta(microseconds=1), source=last.source,
+            kind=last.kind,
             home_moneyline=last.home_moneyline, away_moneyline=last.away_moneyline, spread_line=last.spread_line,
             total_line=last.total_line + 1, home_prob_novig=last.home_prob_novig))
     session.commit()
@@ -201,7 +206,7 @@ def test_the_request_holds_the_record_and_report_and_nothing_secret(loaded, clau
 
 def test_an_unchanged_run_reuses_the_stored_verdict(loaded, claude):
     simulate(loaded)
-    engine.refresh_predictions(loaded, now=NOW + timedelta(days=1))
+    engine.refresh_predictions(loaded, now=now() + timedelta(days=1))
     assert len(claude.calls) == 1
 
 
@@ -259,10 +264,10 @@ def test_without_a_claude_setup_the_simulation_is_not_used(loaded, monkeypatch):
 
 def test_no_verdict_is_retried_after_a_pause_not_on_every_run(loaded, claude):
     claude.reply = AIError("down")
-    simulate(loaded, now=NOW)
-    engine.refresh_predictions(loaded, now=NOW + timedelta(minutes=5))
+    simulate(loaded, now=now())
+    engine.refresh_predictions(loaded, now=now() + timedelta(minutes=5))
     assert len(claude.calls) == 1
-    engine.refresh_predictions(loaded, now=NOW + run_checker.RETRY_AFTER + timedelta(minutes=1))
+    engine.refresh_predictions(loaded, now=now() + run_checker.RETRY_AFTER + timedelta(minutes=1))
     assert len(claude.calls) == 2
 
 
@@ -304,3 +309,76 @@ def test_the_check_report_is_deterministic():
         {"r": 1}, a, {"g1": good_sim()})
     assert run_check.content_hash({"r": 1}, a, {"g1": good_sim()}) != run_check.content_hash(
         {"r": 1}, a, {"g1": good_sim(home_win=0.61)})
+
+
+# 5 critic fixes (M1-M4) ---------------------------------------------------------------------------------------------
+
+
+def test_a_python_failed_report_blocks_the_run_without_asking_claude(loaded, claude, monkeypatch):
+    real = run_check.check_game
+    monkeypatch.setattr(run_check, "check_game", lambda gid, sim, inputs, line: real(
+        gid, dict(sim, n_simulations=9_999) if sim else sim, inputs, line))
+    engine.save_sim_params(loaded, CURRENT, synthetic_params())
+    engine.refresh_predictions(loaded)  # Claude would say PASS; Python blocked first
+    assert claude.calls == []
+    p = latest(loaded, upcoming(loaded)[0].game_id)
+    assert p.features["simulation"] is None and p.features["simulation_check"]["status"] == "failed"
+    assert "n_simulations" in p.features["simulation_check"]["note"]
+
+
+def test_a_database_error_in_the_budget_step_leaves_the_session_usable(loaded, claude, monkeypatch):
+    def boom(session):
+        session.execute(text("select * from table_that_does_not_exist"))
+
+    monkeypatch.setattr(run_checker, "_reserve_check_call", boom)
+    simulate(loaded)  # would raise "transaction is aborted" later without the rollback
+    p = latest(loaded, upcoming(loaded)[0].game_id)
+    assert p.features["simulation"] is None and p.features["simulation_check"]["status"] == "no_verdict"
+    assert loaded.scalars(select(Prediction)).first()
+
+
+def test_a_backfill_run_is_not_sent_to_claude_and_says_why(loaded, claude):
+    engine.save_sim_params(loaded, CURRENT, synthetic_params())
+    engine.refresh_predictions(loaded, kind="backfill")
+    assert claude.calls == []
+    p = latest(loaded, upcoming(loaded)[0].game_id)
+    assert p.features["simulation"] is None
+    assert p.features["simulation_check"]["status"] == "not_checked"
+    assert "backfill" in p.features["simulation_check"]["note"]
+
+
+def test_the_check_has_its_own_daily_budget_apart_from_reports(loaded, claude, monkeypatch):
+    monkeypatch.setenv("AI_RUN_CHECK_DAILY_LIMIT", "1")
+    get_settings.cache_clear()
+    try:
+        simulate(loaded)
+        change_run(loaded)
+        engine.refresh_predictions(loaded)  # second changed run: the check budget is spent
+        assert len(claude.calls) == 1
+        p = latest(loaded, upcoming(loaded)[0].game_id)
+        assert p.features["simulation_check"]["status"] == "no_verdict"
+        monkeypatch.setenv("AI_DAILY_CALL_LIMIT", "0")  # and a spent report budget does not touch the check
+        get_settings.cache_clear()
+        monkeypatch.setenv("AI_RUN_CHECK_DAILY_LIMIT", "5")
+        get_settings.cache_clear()
+        engine.refresh_predictions(loaded, now=now() + timedelta(hours=7))
+        assert len(claude.calls) == 2
+    finally:
+        get_settings.cache_clear()
+
+
+def test_a_check_does_not_use_the_report_counter(loaded, claude):
+    simulate(loaded)
+    keys = [r.key for r in loaded.scalars(select(AppSetting)) if "attempts" in r.key]
+    assert keys and all(not k.startswith("ai_attempts_") for k in keys)
+
+
+def test_repeated_failures_back_off_longer_each_time(loaded, claude):
+    claude.reply = AIError("down")
+    simulate(loaded, now=now())
+    engine.refresh_predictions(loaded, now=now() + run_checker.RETRY_AFTER + timedelta(minutes=1))
+    assert len(claude.calls) == 2  # first retry after the base pause
+    engine.refresh_predictions(loaded, now=now() + 2 * run_checker.RETRY_AFTER + timedelta(minutes=2))
+    assert len(claude.calls) == 2  # second failure doubles the pause
+    engine.refresh_predictions(loaded, now=now() + 5 * run_checker.RETRY_AFTER)
+    assert len(claude.calls) == 3
