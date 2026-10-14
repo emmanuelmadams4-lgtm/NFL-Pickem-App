@@ -176,3 +176,7 @@ WO6 (`wo-6.md`, Ryan, try 1): shared `endStoredPasskeySession` in `lib/api.tsx` 
 it), the exact notice on failure unless the caller has its own words, a bad toast in Settings when the old session
 could not be ended; `PasskeyBrowserError` marks non-cancel errors from the browser step only (fetch failures stay
 outside it). Commit `5f82d94`. Proof: typecheck 0; `s10-green-5` fresh build **17 passed, 0 failed**.
+Sync with main (god 7b856b): PR #38 (wire18h) merged as `400677b`; `origin/main` merged into `lane/web` as `73337a1`
+(no conflicts, under `res:git-integrate`). `npm run gen:api` rerun: no change (the merged `openapi.json`/`api-types.ts`
+already carry `HealthOut.passkeys`). On `73337a1`: typecheck 0; `test_health_passkeys.py` 7 passed (port 15436); ruff
+clean; `s10-green-6` fresh build **17 passed, 0 failed**.
