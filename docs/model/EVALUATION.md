@@ -56,3 +56,4 @@ Writes to `<out_dir>`: `report.json`, `report.txt`, `run-records.json`, `predict
 * The closing line is a benchmark, not what was on offer at decision time (AUDIT A6); every closing-line number is labelled so.
 * A blend probability of exactly 0.5 counts as an away pick in the confidence bands and in `blend_pick` (a home pick needs more than 0.5).
 * The bench has been scored many times on 2022 to 2025 (AUDIT A11). This report is a read, not a new test; it ships nothing and tunes nothing.
+* `matches_stored_confirm` (R12) compares the default distribution's variants only; other stored distributions are not recomputed.
