@@ -137,6 +137,8 @@ def test_quarterback_games_sum_epa_and_dropbacks_for_quarterbacks_only():
         stat("q2", "g0", pe="NA"),
         stat("q3", "g0", att="0", sk="0", car="0"),
         stat("q4", "g0", re=""),
+        stat("q5", "g0", pe="nan"),
+        stat("q6", "g0", pe="inf"),
     ]
     got = b.qb_games(rows)
     assert list(got.columns) == ["game_id", "player_id", "epa", "plays"]
@@ -354,7 +356,8 @@ def test_pythagorean_preds_are_six_variants_on_the_bench_games_fitted_on_the_win
     assert all(got[c].between(0, 1).all() for c in cols) and not any(np.allclose(got[c], got["p_blend"]) for c in cols)
     used = {tuple(f) for f, _ in seen}
     assert (*BLEND_FEATURES, "pyth_diff") in used and (*BASE_FEATURES, "pyth_diff") in used
-    assert all(max(s) < 2022 for f, s in seen if "pyth_diff" in f)
+    windows = ({2018, 2019, 2020}, {2019, 2020, 2021})  # exactly the three seasons before each test season
+    assert all(s in windows for f, s in seen if "pyth_diff" in f)
 
 
 def test_pythagorean_preds_never_use_a_result_from_the_test_week_or_later():
@@ -467,6 +470,21 @@ def test_matchup_as_a_blend_input_adds_nothing_the_blend_does_not_already_have()
     pytest.importorskip("nflpi.data.matchup")
     gap = b.matchup_input_gap(lines_frame(), SEASONS, window=3)
     assert isinstance(gap, float) and 0 <= gap < 0.02
+
+
+def test_the_matchup_input_gap_counts_a_refit_that_is_lower_as_well_as_higher(monkeypatch):
+    pytest.importorskip("nflpi.data.matchup")
+    real = LogitModel.fit.__func__
+
+    class Zero:
+        def predict(self, x):
+            return np.zeros(len(x))
+
+    def fit(cls, train, features, weights=None):
+        return Zero() if "match_logit" in features else real(cls, train, features)
+
+    monkeypatch.setattr(LogitModel, "fit", classmethod(fit))
+    assert b.matchup_input_gap(lines_frame(), [2022], window=3) > 0.2  # |0 - p_blend|, never a negative number
 
 
 # ---- E: judging ----
