@@ -8,7 +8,7 @@ Step 18a, lane `audit`, 2026-10-13. Code audited: main at `b4d42d0` (the audit b
 2. **It is not broken.** No result leaks into a feature, the bench and the live path compute the same numbers, and every fit uses earlier seasons only. Ten planted defects were each caught by the new tests (A2, A3, A5, A6).
 3. **It is well calibrated** (A4), and it clearly beats "always the home team" and "ratings only". It does **not** beat the market alone: 66.46% against 66.57%, a difference inside the noise (A9).
 4. **The bench and real life differ in two inputs, and that may make the bench kinder; whether it does, and by how much, is not shown and cannot be sized from history.** Shown: the bench is scored on the closing line while a live pick is made from an earlier line (A6), and the bench has a quarterback name for every game while a live pick has one for the coming week only (A8). Not shown (two hypotheses, each with the test that would settle it): that either difference costs accuracy.
-5. **The 2022 to 2025 check seasons have been scored nine times.** The only untouched games are the 2026 games not yet played (A11).
+5. **The 2022 to 2025 check seasons have been scored twenty-three times.** The only untouched games are the 2026 games not yet played (A11).
 
 So the measured reason the model "is not good enough" is not a defect: its stats inputs add nothing measurable to the closing line (A9, A10). Nothing measured so far shows a way past the market; `docs/model/PLAN.md` says what will be tested next and how it will be judged.
 
@@ -105,16 +105,18 @@ Blend, 2012 to 2025, 3,649 games, sorted by the home team's stated chance (`audi
 
 **Realistic cutoffs: only in part.** Results: yes (A3, VERIFIED). The line: no, the bench has the close (A6, VERIFIED). The quarterback: not known (A8). Whether the bench's 66.5% overstates what a mid-week pick earns is the HYPOTHESIS of A6 and A8, not a measured fact; history cannot settle it, and the 2026 live log can.
 
-**A11. VERIFIED from the step logs. The 2022 to 2025 check seasons have been scored nine times for the win model; they are no longer an untouched period.**
+**A11. VERIFIED from the step logs. The 2022 to 2025 check seasons have been scored twenty-three times for the win model (nine when this audit was written, six in step 14c, eight in step 18g); they are no longer an untouched period.**
 
 | Step | Looks at 2022 to 2025 | Source |
 |---|---|---|
 | 14 | 2 (in-season refit, EPA rating) | `docs/gauntlet/logs/step-14.md:153-154` |
 | 14b | 5 (margin removal, spread and total inputs, calibration, recency, offence/defence split), plus a re-score of step 14's two under a second interval | `docs/gauntlet/logs/step-14b.md:162-167` |
 | 8b | 2 (stars out, with and without reserve lists) | `docs/gauntlet/logs/step-8b.md:159-160` |
+| 14c | 6 (step 14c's challengers, counted in `step-18g.md:36`) | `docs/gauntlet/logs/step-14c.md` |
+| 18g | 8 (Pythagorean, quarterback, travel, matchup score; each football-only and with the market) | `docs/gauntlet/logs/step-18g.md:86` |
 
-* None of the nine passed the ship rule. The logs say so themselves: step 14b counted its five looks (`step-14b.md:112`), step 8b its two (`step-8b.md:119`).
-* Also seen, though not as win-model candidates: the blend's and the market's own numbers on those seasons are printed by every run; step 9 scored two score models there; step 4 read the pick labels' hit rates there (`docs/gauntlet/logs/step-4.md:39`). Step 14c is running now and will add more looks; it is not counted here because it has not landed.
+* None of the twenty-three passed the ship rule (2026-10-14). The logs say so themselves: step 14b counted its five looks (`step-14b.md:112`), step 8b its two (`step-8b.md:119`).
+* Also seen, though not as win-model candidates: the blend's and the market's own numbers on those seasons are printed by every run; step 9 scored two score models there; step 4 read the pick labels' hit rates there (`docs/gauntlet/logs/step-4.md:39`). Steps 14c and 18g have since landed and are counted in the table above.
 * **Still untouched:** the 2026 games not yet played, 193 of 272 as of 2026-10-13 (weeks 6 to 18; `feeds-extra.txt`). For those, a prediction logged live before kickoff (`Prediction.kind = 'live'`) can be told apart from one rebuilt afterwards (`'backfill'`). The 79 games already played in 2026 were not used to choose anything in the step logs read for this audit; whether anyone has looked at them informally is not known.
 
 **A14. VERIFIED. What the bench leaves out:** of 3,663 finished regular-season games in 2012 to 2025, 13 ties (no winner to predict; `features.py:130-136`) and 1 game with no moneyline (`backtest.py:326`) (`audit-numbers.json`, `sample`). No pool tie rule is modelled.

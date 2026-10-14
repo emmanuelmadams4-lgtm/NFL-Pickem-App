@@ -134,3 +134,11 @@ Implementation critic PASS WITH FIXES, no critical or high (`reviews/impl-1.md`,
 **Security review (Dwight):** PASS at `6296c54`, nothing critical or high; seven findings, each decided in `reviews/security-1.md`. Code unchanged since, apart from the test-only fix above.
 
 **Lane-guard:** `python3 ~/.claude/bin/lane-guard.py check ~/.claude/plans/nfl-pickem-lanes/lanes.md web main --repo .` → `OK`.
+
+## 6. LANDING
+
+**Landed by the integrator (god), 2026-10-14.** Critic-1 PASS on the final head (`reviews/critic-1.md`, committed by the integrator in `f6966f8`). Pull request #34 from `lane/web` at `f6966f8`: CI 9 of 9 checks green (backend, docker, e2e, web, each on push and pull request, plus CodeRabbit), the full gate under D71. Merged as `5029001`.
+
+**Deployed:** to the owner's PC on his standing yes D73, deploy 10 at main `d1a0609` (with steps 18f and 18i part 1), 14:43 UTC: backup first, alembic at `0009`, row counts unchanged, `/api/health` 200, `/api/live` present (answers 401 without the token). **Not yet shown:** live scores during a real game; first check during the 2026-10-15 games (PENDING).
+
+**Branch:** `lane/web` and its worktree stay; lane web carries step 10 web half next (HAG-64).
