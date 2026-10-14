@@ -28,7 +28,7 @@ M = [
     ("V5", "nflpi/ingestion/live/oddsapi.py", "    except OverflowError:\n        return False\n\n\ndef _pair", "    except ZeroDivisionError:\n        return False\n\n\ndef _pair"),
     ("V5", "nflpi/ingestion/live/oddsapi.py", "(_point(point) and _point(under.get(\"point\")))", "_point(point)"),
     ("V5", "nflpi/ingestion/live/oddsapi.py", "return [first, second] if _price(first.get(\"price\")) and _price(second.get(\"price\")) else None", "return [first, second]"),
-    ("V5", "nflpi/ingestion/live/oddsapi.py", "Price(\"spread\", \"away\", ap, a[\"price\"])", "Price(\"spread\", \"away\", hp, a[\"price\"])"),
+    ("V5", "nflpi/ingestion/live/oddsapi.py", "Price(\"spread\", \"away\", hp, a[\"price\"])", "Price(\"spread\", \"away\", ap, a[\"price\"])"),
     ("V5", "nflpi/ingestion/live/oddsapi.py", "elif market.get(\"key\") == \"totals\":", "elif market.get(\"key\") == \"total\":"),
     ("V6", "nflpi/config.py", "Field(default=30, gt=0)", "Field(default=30, ge=0)"),
     ("V6", "nflpi/value/store.py", "timedelta(minutes=get_settings()", "timedelta(seconds=get_settings()"),
@@ -41,7 +41,9 @@ M = [
     ("V11", "nflpi/ingestion/live/run.py", '"line": -p.line if flip', '"line": p.line if flip'),
     ("V11", "nflpi/ingestion/live/run.py", "FLIP[p.selection] if flip else p.selection", "p.selection"),
     ("V11", "nflpi/ingestion/live/run.py", "min(book.updated, now)", "book.updated"),
-    ("V11", "nflpi/ingestion/live/run.py", "            _save_book_prices(session, event, book, game, now)\n", ""),
+    ("V11", "nflpi/ingestion/live/run.py", "                    _save_book_prices(session, event, book, game, now)\n", "                    pass\n"),
+    ("V11", "nflpi/ingestion/live/run.py", "                with session.begin_nested():\n                    _save", "                if True:\n                    _save"),
+    ("V11", "nflpi/ingestion/live/run.py", "            except Exception as exc:", "            except ZeroDivisionError as exc:"),
 ]
 
 

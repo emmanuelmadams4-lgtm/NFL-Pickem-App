@@ -429,7 +429,11 @@ def _odds_job(
         for book in event.books:
             if _save_odds(session, event, book, game, now):
                 inserted += 1
-            _save_book_prices(session, event, book, game, now)
+            try:
+                with session.begin_nested():
+                    _save_book_prices(session, event, book, game, now)
+            except Exception as exc:  # never lose the win-market quotes over a book price
+                log.warning("oddsapi book prices skipped for %s: %s", book.key, safe_error(exc))
     if len(events) >= 3 and matched == 0:
         raise ValueError("no match")
     return inserted, skipped, None

@@ -129,7 +129,8 @@ def _spread_prices(market: dict, home: str, away: str) -> tuple[Price, ...]:
     hp, ap = h.get("point"), a.get("point")
     if not (_point(hp) and _point(ap)) or hp != -ap or abs(hp) > MAX_SPREAD:
         return ()
-    return (Price("spread", "home", hp, h["price"]), Price("spread", "away", ap, a["price"]))
+    # the HOME spread on both selections, as betting.MarketSnapshot keeps it
+    return (Price("spread", "home", hp, h["price"]), Price("spread", "away", hp, a["price"]))
 
 
 def _total_prices(market: dict) -> tuple[Price, ...]:

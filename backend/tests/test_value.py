@@ -3,7 +3,7 @@
 import ast
 import copy
 import json
-from dataclasses import fields
+from dataclasses import fields, replace
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -55,7 +55,7 @@ ALL = [
     q("moneyline", "home", None, -180),
     q("moneyline", "away", None, 155),
     q("spread", "home", -3.5, -110),
-    q("spread", "away", 3.5, -110),
+    q("spread", "away", -3.5, -110),  # spread line is the HOME spread on both selections
     q("total", "over", 47.5, -105),
     q("total", "under", 47.5, -115),
 ]
@@ -191,7 +191,7 @@ def test_v3_filters_market_and_keeps_line(session):
     g = game(session)
     value.save_prices(session, g, "bookone", T0, T0, ALL)
     spreads = value.load_snapshots(session, g, "spread", as_of=T0)
-    assert sorted((s.selection, s.line) for s in spreads) == [("away", 3.5), ("home", -3.5)]
+    assert sorted((s.selection, s.line) for s in spreads) == [("away", -3.5), ("home", -3.5)]
     assert {s.market_type for s in spreads} == {"spread"}
 
 
@@ -227,7 +227,7 @@ def test_v5_all_markets_parsed():
         [
             ("moneyline", "away", None, 155),
             ("moneyline", "home", None, -180),
-            ("spread", "away", 3.5, -110),
+            ("spread", "away", -3.5, -110),
             ("spread", "home", -3.5, -110),
             ("total", "over", 47.5, -105),
             ("total", "under", 47.5, -115),
@@ -475,8 +475,79 @@ def test_v11_odds_job_saves_book_prices_with_our_sides(session):
     assert ("2026_07_MIA_BUF", "bookone", "spread", "home", -3.5, -110, T0) in got
     assert ("2026_07_MIA_BUF", "bookone", "total", "under", 47.5, -115, T0) in got
     assert ("2026_07_MIA_BUF", "booktwo", "moneyline", "home", None, -190, now) in got  # book time 15:05 capped at now
-    assert ("2026_07_KC_LV", "bookone", "spread", "away", 9.5, -110, T0) in got  # their home KC is our away
-    assert ("2026_07_KC_LV", "bookone", "spread", "home", -9.5, -110, T0) in got
+    assert ("2026_07_KC_LV", "bookone", "spread", "away", 9.5, -110, T0) in got  # their home KC is our away; LV +9.5
+    assert ("2026_07_KC_LV", "bookone", "spread", "home", 9.5, -110, T0) in got
     assert ("2026_07_KC_LV", "bookone", "moneyline", "away", None, -400, T0) in got
     assert len(got) == 6 + 2 + 4
     assert all(r.fetched_at == now for r in rows(session))
+
+
+# Integrator fix: spread line is the HOME spread on both stored selections (betting.snapshot)
+def test_v5_stored_away_spread_settles_on_home_line(session):
+    from nflpi.betting.settle import settle
+    from nflpi.betting.snapshot import no_vig_probabilities
+
+    g = game(session)
+    one = by_key(oddsapi.parse_events(recorded())[0][0])["bookone"]
+    value.save_prices(session, g, "bookone", T0, T0, [p._asdict() for p in one.prices])
+    pair = {s.selection: s for s in value.load_snapshots(session, g, "spread", as_of=T0)}
+    assert pair["away"].line == pair["home"].line == -3.5
+    assert settle(pair["away"], 20, 17) == "win"  # home wins by 3 at -3.5: away covers
+    assert settle(pair["home"], 20, 17) == "loss"
+    assert set(no_vig_probabilities(list(pair.values()))) == {"home", "away"}
+
+
+def kc_lv(session) -> None:
+    session.add(
+        Game(
+            game_id="2026_07_KC_LV", season=2026, week=7, game_type="REG",
+            kickoff_utc=datetime(2026, 10, 18, 20, 25, tzinfo=UTC), weekday="Sunday",
+            away_team="KC", home_team="LV", status="scheduled", source="test",
+        )
+    )  # fmt: skip
+    session.commit()
+
+
+def odds_get(url: str):
+    from nflpi.ingestion.live import fetch
+
+    return fetch.JsonResult(200, recorded(), {"x-requests-remaining": "480"})
+
+
+def test_v11_flipped_book_spread_pair_settles_on_our_home_line(session):
+    from nflpi.betting.settle import settle
+    from nflpi.betting.snapshot import no_vig_probabilities
+    from nflpi.ingestion.live import run
+
+    kc_lv(session)
+    assert run.refresh_odds_quotes(session, get=odds_get, now=T0, api_key=KEY).status == "ok"
+    pair = {s.selection: s for s in value.load_snapshots(session, "2026_07_KC_LV", "spread", as_of=T0)}
+    assert pair["away"].line == pair["home"].line == 9.5  # our home LV +9.5
+    assert settle(pair["home"], 10, 19) == "win"  # KC (our away) wins by 9: LV +9.5 covers
+    assert settle(pair["away"], 10, 19) == "loss"
+    assert set(no_vig_probabilities(list(pair.values()))) == {"home", "away"}
+
+
+@pytest.mark.parametrize("db_error", [False, True])
+def test_v11_bad_book_price_keeps_moneyline_quote_and_job_ok(session, monkeypatch, db_error):
+    from sqlalchemy import text
+
+    from nflpi.ingestion.live import run
+    from nflpi.models import MarketQuote
+
+    kc_lv(session)
+    parse = oddsapi.parse_events
+    if db_error:  # a failed statement must not poison the odds run's transaction
+        monkeypatch.setattr(run, "save_prices", lambda s, *a: s.execute(text("select 1/0")))
+
+    def bad_prices(data):
+        events, skipped = parse(data)
+        for event in events:
+            event.books[:] = [replace(b, prices=(oddsapi.Price("spread", "home", None, -110),)) for b in event.books]
+        return events, skipped
+
+    if not db_error:
+        monkeypatch.setattr(oddsapi, "parse_events", bad_prices)
+    assert run.refresh_odds_quotes(session, get=odds_get, now=T0, api_key=KEY).status == "ok"
+    assert session.scalar(select(MarketQuote.id).where(MarketQuote.game_id == "2026_07_KC_LV").limit(1)) is not None
+    assert rows(session) == []
