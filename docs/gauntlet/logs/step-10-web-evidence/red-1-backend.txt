@@ -1,0 +1,8 @@
+FAILED tests/test_health_passkeys.py::test_health_says_whether_passkeys_are_configured[mac.example.ts.net-https://mac.example.ts.net-True] - KeyError: 'passkeys'
+FAILED tests/test_health_passkeys.py::test_health_says_whether_passkeys_are_configured[localhost-http://localhost:8123-True] - KeyError: 'passkeys'
+FAILED tests/test_health_passkeys.py::test_health_says_whether_passkeys_are_configured[--False] - KeyError: 'passkeys'
+FAILED tests/test_health_passkeys.py::test_health_says_whether_passkeys_are_configured[mac.example.ts.net--False] - KeyError: 'passkeys'
+FAILED tests/test_health_passkeys.py::test_health_says_whether_passkeys_are_configured[mac.example.ts.net-http://mac.example.ts.net-False] - KeyError: 'passkeys'
+FAILED tests/test_health_passkeys.py::test_health_says_whether_passkeys_are_configured[mac.example.ts.net-https://other.example.ts.net-False] - KeyError: 'passkeys'
+FAILED tests/test_health_passkeys.py::test_health_passkeys_flag_is_a_plain_boolean_and_nothing_else_leaks - KeyError: 'passkeys'
+7 failed in 2.63s
