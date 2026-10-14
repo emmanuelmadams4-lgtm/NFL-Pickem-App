@@ -16,7 +16,7 @@ from nflpi.betting.odds import BettingError
 from nflpi.betting.snapshot import MarketSnapshot
 from nflpi.config import Settings, get_settings
 from nflpi.ingestion.live import oddsapi
-from nflpi.models import BookPrice, Game, MarketQuote, SourceStatus
+from nflpi.models import BookPrice, Game, IngestionRun, MarketQuote, SourceStatus
 
 FIXTURES = Path(__file__).parent / "fixtures" / "value"
 KEY = "a" * 32
@@ -1076,9 +1076,11 @@ def test_critic_m5_no_key_value_reaches_a_run_detail_or_a_status_row(session, re
     result, _ = _keys_seen(session, replies)
     texts = [result.detail or ""]
     for row in session.scalars(select(SourceStatus).where(SourceStatus.source.like("oddsapi%"))):
-        texts += [row.last_error or "", str(row.detail) if hasattr(row, "detail") else ""]
+        texts.append(row.last_error or "")
+    texts += [r.error or "" for r in session.scalars(select(IngestionRun).where(IngestionRun.source == "oddsapi"))]
     assert all(KEY not in t and KEY2 not in t for t in texts)
-    if len(replies) == 2 and result.status == "failed":
+    if isinstance(replies[-1], Exception):  # both refused
+        assert result.status == "failed"
         for name in ("primary", "fallback"):
             assert _slot(session, name).last_error == "refused (401)"
 

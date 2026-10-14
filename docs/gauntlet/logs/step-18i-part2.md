@@ -60,3 +60,15 @@ Unchanged and re-tested: both stored selections carry the HOME spread; a book wh
 | W6 raw header in log | Log carries `_credits_header` (parsed count or None). | `6f9704b`, `457995f` |
 
 Tests: new or changed in `test_value.py`, committed red first (`6f9704b`; the first run failed on the old code), then green. Fresh critic (ecc:python-reviewer, no transcript) first said FAIL with 3 MEDIUM logic bugs, all fixed with tests: a legacy single-key count is copied to the primary slot; the stop ends when the earliest low slot is due; slot counts are committed so a later failure keeps them. Left as is: slot state is also shown only on the slot rows and the returned detail (LOW). `test_value.py`, `test_live.py`, `test_hardening.py`: 446 passed; ruff check clean. No real Odds API call, no key value anywhere.
+
+## Critic fixes (PR #37, head 7641cf8 onward)
+
+| Finding | Fix | Commit |
+|---|---|---|
+| M3 `_stop_until` could return a past time (primary low day 0, refused on day 36, fallback answers 20) | Only due times later than now are kept; test `test_critic_m3_a_stop_never_ends_in_the_past` | see git log |
+| M1 stop not asserted | After the last usable slot goes under 50 the `oddsapi` row must have `last_error == "credits low"` and `blocked_until` = earliest due (mutation check: removing `mark_stopped` fails it) | |
+| M2 legacy copy branch never reached | Test seeds `oddsapi` (20 left) with no `oddsapi:primary` row and asserts the copy and the skip | |
+| M5 key leak | Parametrised over ok, switch, both-refused, zero-credit: no key value in run detail, `oddsapi*` rows or `IngestionRun.error`; both-refused also checks each slot's `last_error` | |
+| LOW `_answer_note` | Uses `REFUSED` | |
+
+Gate: test_value, test_live, test_hardening 453 passed; ruff clean (throwaway Postgres on port 15999, removed). Fresh critic (ecc:python-reviewer): items 1, 2, 3, 5 PASS; item 4 PASS WITH CAVEATS (vacuous `detail` clause, run log unchecked, conditional assert), all three fixed afterwards in test code only. Carried: other LOWs; `ruff format` nit at an older test.
