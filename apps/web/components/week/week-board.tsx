@@ -114,7 +114,6 @@ export function WeekBoard() {
           </Link>
         }
       />
-      {data && <p className="text-xs text-subtle">{data.pick_mode.label}</p>}
 
       {/* Filter chips directly under the title, before any summary (design.md § 0); one scrolling row on the phone. */}
       <div data-testid="filter-chips" className="no-scrollbar -mx-4 flex min-w-0 items-center gap-2 overflow-x-auto pl-4 pr-12 max-lg:[mask-image:linear-gradient(to_right,black_85%,transparent)] lg:mx-0 lg:flex-wrap lg:px-0">
@@ -199,6 +198,7 @@ export function WeekBoard() {
                 </ul>
               )}
               <p className="mt-2 text-xs text-subtle">Select a game for the full matchup. Picks lock at kickoff.</p>
+              <p className="text-xs text-subtle">{data.pick_mode.label}</p>
             </section>
           )}
         </>
