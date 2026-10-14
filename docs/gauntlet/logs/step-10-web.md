@@ -139,8 +139,14 @@ On HEAD (this commit, code as `363bb7f`):
 - Browser: `s10-green-4` 14/14 (above). Backend: `tests/test_health_passkeys.py` 7/7 (on the test database, port
   15436); ruff clean (after WO2); typecheck 0. Under ruling D71 the full pytest and browser suite run in the pull
   request's CI on this head; not run locally.
-- Security (Dwight, front door): requested on `363bb7f`; result in `reviews/security-1.md`.
-- Fresh critic: result in `reviews/critic-1.md`.
+- Security (Dwight, front door) on `363bb7f`: **PASS**, no CRITICAL, no HIGH; 2 MEDIUM (a failed server sign-out
+  leaves the passkey session valid; browser errors shown as "Could not reach the API"), 5 LOW. Carried to god as
+  follow-ups, not fixed here. `reviews/security-1.md`.
+- Fresh critic (no transcript) on `9eae754`: **PASS**, no CRITICAL/HIGH. Its reruns: typecheck 0; health tests 7
+  passed; ruff clean; `e2e/passkey.spec.ts` fresh build 14 passed, 0 failed (run `critic-1`). MEDIUM: the K8
+  failed-sign-out path is untested; LOW: no timeout on the sign-out call during a 401, K4/K11/K5-422 not tested.
+  `reviews/critic-1.md`.
+- Jev Job 4 (review truly passed): Jev unavailable, route `advisor`; the call goes to god with the done message.
 - lane-guard: below.
 - lane-guard (`lane-guard.py check … web main`): 1 problem, `backend/nflpi/api/schemas.py: owned by lane wire18h`.
   This is the granted seam (god 9f6599, 2026-10-14): exactly one field `passkeys: bool` on `HealthOut`
