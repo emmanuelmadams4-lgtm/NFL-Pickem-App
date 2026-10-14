@@ -44,7 +44,10 @@ First failing test: commit `dd71b65`, `ModuleNotFoundError: No module named 'nfl
 ## 5. VERIFICATION
 - Mutation sweep (stdlib `mutate.py`, 128 mutation sites, 142 s, lock `res:gate-c`): 122 killed, 6 survivors. 4 equivalent (strict zip, `margin > 0` after a zero check, `a > 0` after the |A|>=100 check, twice). 2 real gaps killed by new tests `test_one_point_margin_decides_a_moneyline` and `test_edge_result_is_immutable` (`6ad76fa`, confirmed by hand mutation). See `step-18b-evidence/mutation-summary.md`.
 - lane-guard: `OK` (output below).
-- GATE_PLACEHOLDER
+- Gate (owner-side ruling D71, god, 2026-10-14): the Mac cannot finish a full test run tonight (out of memory). The FULL GATE on the final head is the CI of the lane's pull request (alembic upgrade and check, whole pytest suite, ruff, web build and types, browser suite, docker build, on the merge with main); god merges only if green. This lane ran no full local pytest on the final head. An earlier full run on the pre-rebase head passed (1586 passed) and was discarded as stale.
+- Own-file numbers on head `efee521` (base main `1078dbb`): the three betting test files, 248 passed, three runs in a row (1.8 s, 12.7 s, 3.0 s); `ruff check nflpi/betting tests/test_betting_*.py` clean.
+- Critic (new, no transcript, ecc:python-reviewer) on `efee521`: PASS. Non-blocking notes: (1) `evaluate` raises for an all-push distribution though EV would be 0; (2) `finite_number` rejects numpy ints, and a huge Python int raises OverflowError not BettingError; (3) the spread-line-is-home-line assumption is recorded only in docstrings.
+- Spread sign: the package uses the owner brief's convention only (home spread h negative for a favourite; home covers when margin + h > 0) and reads no nflverse field (audit finding A13: nflverse spread_line has the opposite sign; conversion belongs to step 18d).
 
 ## 6. LANDING
 Not done by this lane: god lands it. No push, no PR.
