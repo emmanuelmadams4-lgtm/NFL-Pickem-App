@@ -58,6 +58,7 @@ class SimulationOut(BaseModel):
 class SimulationCheckOut(BaseModel):
     status: Literal["failed", "no_verdict", "not_checked"]
     note: str
+    cause: str | None = None  # why there was no verdict: cap, provider, unparsed or error
 
 
 class PredictionOut(BaseModel):

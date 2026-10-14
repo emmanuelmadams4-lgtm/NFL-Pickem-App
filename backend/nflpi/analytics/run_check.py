@@ -32,6 +32,8 @@ CUTOFF_RULE = "a value may be used only if observed_at <= the moment the predict
 class Verdict:
     status: str | None  # "PASS", "FAIL" or None (no verdict)
     reasons: tuple[str, ...] = ()
+    cause: str | None = None  # why there is no verdict: cap, provider, unparsed or error
+    games: tuple[str, ...] = ()  # the games a FAIL names
 
 
 def _finite(v: object) -> bool:
@@ -143,6 +145,7 @@ def game_inputs(row: Mapping, cutoff: datetime, results_ok: bool | None) -> dict
 
 def content_hash(record: Mapping, report: Mapping, simulations: Mapping) -> str:
     """Same record, report and simulations give the same hash: Claude is asked only when this changes."""
+    record = {k: v for k, v in record.items() if k != "git_dirty"}  # a dirty tree must not cost a call
     payload = json.dumps({"record": record, "report": report, "simulations": simulations}, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode()).hexdigest()
 
@@ -151,9 +154,9 @@ def parse_verdict(text: str) -> Verdict:
     """The first line must be exactly PASS or FAIL; everything after it is reasons. Anything else is no verdict."""
     lines = (text or "").strip().splitlines()
     if not lines or lines[0].strip() not in ("PASS", "FAIL"):
-        return Verdict(None)
+        return Verdict(None, cause="unparsed")
     status, rest = lines[0].strip(), [ln.strip() for ln in lines[1:] if ln.strip()]
-    if status == "PASS" and any(ln.startswith("FAIL") for ln in rest):
-        return Verdict(None)  # a reply that argues with itself is not a clean PASS
+    if status == "PASS" and rest:
+        return Verdict(None, cause="unparsed")  # a PASS must be the only line: anything after it is no verdict
     reasons = " ".join(rest)[:REASON_MAX]
     return Verdict(status, (reasons,) if reasons else ())

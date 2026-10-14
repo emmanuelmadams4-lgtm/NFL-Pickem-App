@@ -327,11 +327,11 @@ def _simulations(session: Session, targets: pd.DataFrame) -> dict[str, dict | No
 
 
 def _last_simulation(session: Session, game_id: str) -> dict | None:
-    """The simulation on the game's newest stored prediction: by construction the last one that passed the check."""
+    """The simulation on the game's newest stored prediction, only if it carries the checked stamp (a PASS)."""
     prev = session.scalars(
         select(Prediction).where(Prediction.game_id == game_id).order_by(Prediction.id.desc()).limit(1)
     ).first()
-    return prev.features.get("simulation") if prev else None
+    return prev.features.get("simulation") if prev and prev.features.get("simulation_checked") else None
 
 
 def _check_run(
@@ -370,16 +370,26 @@ def _check_run(
     verdict = run_checker.verdict_for(session, record, run_check.build_report(entries), simulations, now)
     if verdict.status == "PASS":
         return simulations, {}
-    status = "failed" if verdict.status == "FAIL" else "no_verdict"
-    why = " ".join(verdict.reasons)
+    return _blocked(session, simulations, verdict.status, verdict.games, verdict.cause)
+
+
+def _blocked(
+    session: Session, simulations: dict[str, dict | None], status: str | None, games: tuple[str, ...] = (),
+    cause: str | None = None,
+) -> tuple[dict[str, dict | None], dict[str, dict]]:
+    """A FAIL or no verdict: every game keeps its last checked simulation and gets a fixed-text note."""
     kept = {gid: _last_simulation(session, gid) for gid in simulations}
+    failed = status == "FAIL"
+    head = "The run check failed" if failed else f"The run check gave no verdict ({cause or 'error'})"
+    if failed and games:
+        head += f" for {', '.join(games)}"
     marks = {}
     for gid in simulations:
         if simulations[gid] is None and kept[gid] is None:
             continue
-        head = "The run check failed" if status == "failed" else "The run check gave no verdict"
         tail = "showing the last checked simulation" if kept[gid] else "no checked simulation yet"
-        marks[gid] = {"status": status, "note": f"{head}{': ' + why if why else ''}. This run is not used; {tail}."}
+        marks[gid] = {"status": "failed" if failed else "no_verdict", "note": f"{head}. This run is not used; {tail}.",
+                      **({} if failed else {"cause": cause or "error"})}
     return kept, marks
 
 
@@ -408,7 +418,13 @@ def refresh_predictions(
     if kind != "live":
         stale = []
     events: list[ChangeEvent] = []
-    simulations, sim_marks = _check_run(session, targets, f, _simulations(session, targets), now, kind)
+    simulations = _simulations(session, targets)
+    try:
+        simulations, sim_marks = _check_run(session, targets, f, simulations, now, kind)
+    except Exception:  # noqa: BLE001 - the check must never stop the win model, picks and points from being written
+        log.exception("run check failed; predictions are written without the new simulations")
+        session.rollback()
+        simulations, sim_marks = _blocked(session, simulations, None, cause="error")
     for _, row in targets.iterrows():
         base_p = base.predict_one(row)
         has_market = not pd.isna(row["market_logit"])
@@ -453,6 +469,8 @@ def refresh_predictions(
         if row["game_id"] in sim_marks:  # absent means the run passed its check
             features["simulation_check"] = sim_marks[row["game_id"]]
         h = _hash({"mv": mv.id, "f": features, "u": reasons})
+        if features["simulation"] is not None:
+            features["simulation_checked"] = True  # after the hash: a stamp alone never writes a new row
 
         prev = session.scalars(
             select(Prediction).where(Prediction.game_id == row["game_id"]).order_by(Prediction.id.desc()).limit(1)

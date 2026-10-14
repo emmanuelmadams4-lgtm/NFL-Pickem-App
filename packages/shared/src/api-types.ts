@@ -1505,6 +1505,8 @@ export interface components {
             status: "failed" | "no_verdict" | "not_checked";
             /** Note */
             note: string;
+            /** Cause */
+            cause?: string | null;
         };
         /** SimulationOut */
         SimulationOut: {

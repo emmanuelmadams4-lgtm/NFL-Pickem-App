@@ -130,7 +130,7 @@ def test_a_game_without_a_simulation_is_listed_and_does_not_fail_the_run():
 # 2 the reply is parsed strictly ------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("text, status", [
-    ("PASS", "PASS"), ("PASS\nAll 12 games are consistent.", "PASS"), ("  PASS \n", "PASS"),
+    ("PASS", "PASS"), ("  PASS \n", "PASS"), ("PASS\n\n", "PASS"),
     ("FAIL\n- g1: spread sign flipped", "FAIL"), ("FAIL", "FAIL"),
 ])
 def test_a_verdict_is_read_from_the_first_line(text, status):
@@ -139,7 +139,8 @@ def test_a_verdict_is_read_from_the_first_line(text, status):
 
 @pytest.mark.parametrize("text", [
     "", "pass", "Pass", "PASSED", "PASS.", "The run looks fine. PASS", "I think PASS", "```PASS```", "FAILED",
-    "PASS\nFAIL: g1 is wrong", "maybe", '{"verdict": "PASS"}',
+    "PASS\nFAIL: g1 is wrong", "PASS\nAll 12 games are consistent.", "PASS\nbut g1 looks odd",
+    "maybe", '{"verdict": "PASS"}',
 ])
 def test_anything_else_is_no_verdict(text):
     assert run_check.parse_verdict(text).status is None
@@ -222,14 +223,15 @@ def test_a_fail_keeps_the_last_checked_run_and_says_so(loaded, claude):
     kept = sims(loaded)
     wins = {g.game_id: (latest(loaded, g.game_id).pick, latest(loaded, g.game_id).home_win_prob)
             for g in upcoming(loaded)}
-    claude.reply = "FAIL\n- g1: spread sign flipped"
+    claude.reply = "FAIL\n- " + "; ".join(g.game_id for g in upcoming(loaded)) + ": spread sign flipped"
     change_run(loaded)
     engine.refresh_predictions(loaded)
     for g in upcoming(loaded):
         p = latest(loaded, g.game_id)
         assert p.features["simulation"] == kept[g.game_id]  # the last checked run, not the failed one
         assert p.features["simulation_check"]["status"] == "failed"
-        assert "spread sign flipped" in p.features["simulation_check"]["note"]
+        assert g.game_id in p.features["simulation_check"]["note"]  # fixed text plus game ids, never Claude's words
+        assert "spread sign flipped" not in p.features["simulation_check"]["note"]
         assert (p.pick, p.home_win_prob) == wins[g.game_id]  # the check never touches the picks
 
 
@@ -323,7 +325,7 @@ def test_a_python_failed_report_blocks_the_run_without_asking_claude(loaded, cla
     assert claude.calls == []
     p = latest(loaded, upcoming(loaded)[0].game_id)
     assert p.features["simulation"] is None and p.features["simulation_check"]["status"] == "failed"
-    assert "n_simulations" in p.features["simulation_check"]["note"]
+    assert p.features["simulation_check"]["note"].startswith("The run check failed")
 
 
 def test_a_database_error_in_the_budget_step_leaves_the_session_usable(loaded, claude, monkeypatch):
@@ -390,3 +392,77 @@ def test_the_api_serves_a_backfill_run_that_was_not_checked(loaded, claude, clie
     game = upcoming(loaded)[0]
     pred = client.get(f"/api/games/{game.game_id}").json()["prediction"]
     assert pred["simulation"] is None and pred["simulation_check"]["status"] == "not_checked"
+
+
+# 6 security review fixes (S1-S4, L1-L5) -----------------------------------------------------------------------------
+
+
+def test_an_error_inside_the_check_still_writes_every_prediction(loaded, claude, monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("stored row is malformed")
+
+    monkeypatch.setattr(run_checker, "verdict_for", boom)
+    before = loaded.scalars(select(Prediction)).all()
+    simulate(loaded)
+    p = latest(loaded, upcoming(loaded)[0].game_id)
+    assert p.features["simulation"] is None and p.features["simulation_check"]["status"] == "no_verdict"
+    assert p.features["simulation_check"]["cause"] == "error"
+    assert p.pick and 0 < p.home_win_prob < 1 and len(loaded.scalars(select(Prediction)).all()) > len(before)
+
+
+def test_a_never_checked_simulation_is_not_carried_forward_as_last_checked(loaded, claude):
+    simulate(loaded)
+    for g in upcoming(loaded):  # a row stored before the check existed carries no checked stamp
+        row = latest(loaded, g.game_id)
+        row.features = {k: v for k, v in row.features.items() if k != "simulation_checked"}
+    loaded.commit()
+    claude.reply = "FAIL\n- bad"
+    change_run(loaded)
+    engine.refresh_predictions(loaded)
+    p = latest(loaded, upcoming(loaded)[0].game_id)
+    assert p.features["simulation"] is None and "no checked simulation yet" in p.features["simulation_check"]["note"]
+
+
+def test_a_checked_simulation_is_stamped_and_carried_forward(loaded, claude):
+    simulate(loaded)
+    assert all(latest(loaded, g.game_id).features["simulation_checked"] for g in upcoming(loaded))
+
+
+@pytest.mark.parametrize("reply, cause", [
+    (AIError("Claude is not configured"), "provider"), ("maybe?", "unparsed"), (RuntimeError("x"), "error"),
+])
+def test_a_no_verdict_says_why(loaded, claude, reply, cause):
+    claude.reply = reply
+    simulate(loaded)
+    check = latest(loaded, upcoming(loaded)[0].game_id).features["simulation_check"]
+    assert check["cause"] == cause and cause in check["note"]
+
+
+def test_a_spent_check_budget_is_named_as_a_cap(loaded, claude, monkeypatch):
+    monkeypatch.setenv("AI_RUN_CHECK_DAILY_LIMIT", "0")
+    get_settings.cache_clear()
+    try:
+        simulate(loaded)
+    finally:
+        get_settings.cache_clear()
+    assert claude.calls == []
+    assert latest(loaded, upcoming(loaded)[0].game_id).features["simulation_check"]["cause"] == "cap"
+
+
+def test_a_dirty_tree_does_not_change_the_cache_hash():
+    rec = {"code_revision": "abc", "git_dirty": False}
+    assert run_check.content_hash(rec, {}, {}) == run_check.content_hash(rec | {"git_dirty": True}, {}, {})
+
+
+def test_the_provider_error_text_is_not_logged(loaded, claude, caplog):
+    claude.reply = AIError("secret-looking-text")
+    simulate(loaded)
+    assert "secret-looking-text" not in caplog.text and "AIError" in caplog.text
+
+
+def test_a_nan_in_the_report_is_never_sent(loaded, claude, monkeypatch):
+    real = run_check.build_report
+    monkeypatch.setattr(run_check, "build_report", lambda e: real(e) | {"n_games": float("nan")})
+    simulate(loaded)
+    assert claude.calls == []
+    assert latest(loaded, upcoming(loaded)[0].game_id).features["simulation_check"]["cause"] == "error"

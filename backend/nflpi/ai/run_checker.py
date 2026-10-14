@@ -2,6 +2,7 @@
 
 import json
 import logging
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import text
@@ -30,6 +31,10 @@ SYSTEM = (
 )
 
 
+class CapReached(AIError):
+    """The run check's own daily budget is spent."""
+
+
 def _reserve_check_call(session: Session) -> None:
     """Count a check attempt against its own daily budget (AI_RUN_CHECK_DAILY_LIMIT), apart from the reports'."""
     key = f"run_check_attempts_{datetime.now(UTC).date().isoformat()}"
@@ -38,7 +43,7 @@ def _reserve_check_call(session: Session) -> None:
     count = row.value["v"] if row else 0
     if count >= get_settings().ai_run_check_daily_limit:
         session.rollback()
-        raise AIError("Daily run-check limit reached (AI_RUN_CHECK_DAILY_LIMIT)")
+        raise CapReached("Daily run-check limit reached (AI_RUN_CHECK_DAILY_LIMIT)")
     if row is None:
         session.add(AppSetting(key=key, value={"v": 1}))
     else:
@@ -51,23 +56,26 @@ def python_block(report: dict) -> Verdict | None:
     if report["all_ok"]:
         return None
     why = " ".join(f"{g['game_id']}: {'; '.join(g['problems'])}." for g in report["games"] if not g["ok"])
-    return Verdict("FAIL", (why[:REASON_MAX],))
+    return Verdict("FAIL", (why[:REASON_MAX],), games=tuple(g["game_id"] for g in report["games"] if not g["ok"]))
 
 
 def _ask(session: Session, record: dict, report: dict, provider: AIProvider | None) -> Verdict:
+    cause = "error"
     try:
         provider = provider or get_provider("claude")
         _reserve_check_call(session)  # counts even when the call fails
         user = ("Run record and check report (JSON data):\n"
-                + json.dumps({"record": record, "report": report}, default=str, sort_keys=True))
+                + json.dumps({"record": record, "report": report}, default=str, sort_keys=True, allow_nan=False))
+        cause = "provider"
         return parse_verdict(provider.complete(SYSTEM, user, max_tokens=1000))
-    except AIError as exc:
-        session.rollback()
-        log.warning("run check got no verdict: %s", str(exc)[:200])
     except Exception as exc:  # noqa: BLE001 - the check is a gate: any failure means no verdict, never a crash
         session.rollback()  # a database error must not leave the caller's session unusable
-        log.warning("run check got no verdict: %s", type(exc).__name__)
-    return Verdict(None, ("the check could not be run",))
+        if isinstance(exc, CapReached):
+            cause = "cap"
+        elif not isinstance(exc, AIError) and cause == "provider":
+            cause = "error"
+        log.warning("run check got no verdict (%s): %s", cause, type(exc).__name__)  # type only: text may hold secrets
+    return Verdict(None, ("the check could not be run",), cause=cause)
 
 
 def verdict_for(session: Session, record: dict, report: dict, simulations: dict, now: datetime,
@@ -79,16 +87,20 @@ def verdict_for(session: Session, record: dict, report: dict, simulations: dict,
     digest = content_hash(record, report, simulations)
     row = session.get(AppSetting, SETTING_KEY)
     stored = row.value if row else None
-    fails = stored.get("fails", 0) if stored else 0
+    fails = stored.get("fails", 0) if stored and stored.get("hash") == digest else 0  # new content: fresh count
     if stored and stored.get("hash") == digest:
         if stored["verdict"] in ("PASS", "FAIL"):
-            return Verdict(stored["verdict"], tuple(stored["reasons"]))
-        wait = min(RETRY_AFTER * 2 ** max(fails - 1, 0), MAX_BACKOFF)  # back off after each failed call
+            return Verdict(stored["verdict"], tuple(stored["reasons"]), games=tuple(stored.get("games", ())))
+        wait = min(RETRY_AFTER * 2 ** min(max(fails - 1, 0), 10), MAX_BACKOFF)  # back off after each failed call
         if now - datetime.fromisoformat(stored["at"]) < wait:
-            return Verdict(None, tuple(stored["reasons"]))
+            return Verdict(None, tuple(stored["reasons"]), stored.get("cause"))
     verdict = _ask(session, record, report, provider)
+    if verdict.status == "FAIL":
+        said = " ".join(verdict.reasons)
+        verdict = replace(verdict, games=tuple(g["game_id"] for g in report["games"] if g["game_id"] in said))
     value = {"hash": digest, "verdict": verdict.status, "reasons": list(verdict.reasons), "at": now.isoformat(),
-             "fails": 0 if verdict.status else fails + 1}
+             "fails": 0 if verdict.status else fails + 1, "cause": verdict.cause,
+             "games": list(verdict.games)}
     if row is None:
         session.add(AppSetting(key=SETTING_KEY, value=value))
     else:

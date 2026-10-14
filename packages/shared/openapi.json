@@ -4667,6 +4667,17 @@
      "note": {
       "type": "string",
       "title": "Note"
+     },
+     "cause": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cause"
      }
     },
     "type": "object",
