@@ -176,3 +176,18 @@ Setting: each week of the 3,649 scored games (243 weeks, about 15 games a week; 
 | Perfect hindsight (right picks first) | 84.84 (not a real order) | 103.84 | 105.42 | -16.97 |
 
 What the owner can conclude: ordering by win chance is worth about 6 points a week over ordering by kickoff, and the gap's interval is well above zero. Sorting by the market's chance instead of ours is a statistical tie (-0.16, interval spans zero). The AI tie-break can give up at most **0.017 expected points a week** (the "swap ceiling": every neighbouring pair closer than one point swapped) and it cannot be replayed in the past because no AI evidence was stored for past seasons, so its actual effect is unmeasured and small by construction. What the owner cannot conclude: whether going against the crowd (pick shares) pays in his group; that needs his group's pick shares, which this bench does not have. Hindsight at 103.84 is the ceiling no order can reach; the sort sits at 83% of it.
+
+## 5. VERIFICATION
+
+**Gate ruling (god, decision D71, 2026-10-14):** the Mac cannot finish a full test run in useful time tonight (out of memory). The FULL GATE on the final head is the CI of the lane's pull request, which god opens: alembic upgrade and check, the whole pytest suite, ruff, the web build and types, the browser suite and the docker build, on the merge with main. God merges only if it is green. This lane ran only its own test files locally.
+
+- **Gate 1 (earlier, on head b476ebb, base a028f2a):** 1483 passed in 679.54 s; ruff clean; alembic "no new upgrade operations"; generated API types: no drift. Raw logs were not committed beyond the small ones kept in `step-14c-evidence/`; the empty gate 2 log was deleted. Gate 2 never finished locally (memory); CI replaces it.
+- **Mutation sweeps** (`mutate-sweep1.log`, `mutate.log`): sweep 1 caught 33 of 43; 9 tests added; sweep 2 caught 43 of 43.
+- **Own test files, once, 2026-10-14** (database `nflpi-lane-modelb-db` on 127.0.0.1:15448): `tests/test_model_c.py` + `tests/test_model.py`: 61 passed in 339.8 s.
+- **Critic (ecc:mle-reviewer, new, no transcript), on head b476ebb: PASS.** It checked every verdict and variant row against `run-*.json` (all match), the ship rule (no candidate has a game-level interval wholly above zero; all `ships` flags false), walk-forward fitting in `model_c.py` lines 1 to 230, and the confirm-look count (2+5+2+6 = 15 earlier looks stated). It reran `test_model_c.py`: 27 passed. Unchecked by it: `model_c.py` after line 230. Findings, none changing a verdict: the "eighth or later" wording (fixed above); "coincidences" for equal columns is unevidenced (at most 19 of 3,649 games); `p_m_stats` uses no line and the log now says so in the notes.
+- **Lane-guard** (`lane-guard.py check lanes.md modelc main`): OK.
+- **Public names:** none changed; the diff against the base only adds files.
+
+## 6. LANDING
+
+Nothing ships: no seam. The live model does not change. Branch `lane/modelc`, base `a028f2a`; main is now `6c2846a` (docs and `test_model_audit.py` only); no conflict, so no rebase. God opens the PR and merges on green CI.
