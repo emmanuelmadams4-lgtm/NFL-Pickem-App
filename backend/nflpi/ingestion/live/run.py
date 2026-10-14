@@ -449,9 +449,8 @@ def _odds_job(
     credits: list[int | None],
     extra: bool,
 ) -> tuple[int, int, None]:
-    result, slot = _get_odds(get, keys, extra)
+    result, _slot = _get_odds(get, keys, extra)
     credits[0] = _credits_header(result)
-    credits[1] = slot
     events, skipped = oddsapi.parse_events(result.data)
     games = _quote_candidates(session, now)
     inserted, matched, saved, dropped = 0, 0, 0, 0
@@ -508,7 +507,10 @@ def refresh_odds_quotes(
             log.warning("oddsapi stopped: credits low")
             return RefreshResult("oddsapi", "skipped", detail="credits low")
         # with a second key the first one's 401 is the signal to switch: no 35 day stop on a low count
-    credits: list = [None, None]
+        if status.last_error == "credits low" and status.blocked_until is not None:
+            status.blocked_until = None  # a stop set before the second key was added
+            session.commit()
+    credits: list[int | None] = [None]
     result = run_source(
         session,
         status_key="oddsapi",

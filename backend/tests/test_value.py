@@ -908,3 +908,11 @@ def test_p2_a_second_h2h_market_is_ignored():
     one = by_key(oddsapi.parse_events(data)[0][0])["bookone"]
     assert (one.home_ml, one.away_ml) == (-180, 155)
     assert [p.price for p in one.prices if p.market_type == "moneyline"] == [-180, 155]
+
+
+def test_p2_adding_a_fallback_lifts_an_earlier_credits_low_stop(session):
+    kc_lv(session)
+    result, _ = _keys_seen(session, [_ok("0")], fallback="")  # single key: stopped for 35 days
+    assert result.status == "ok"
+    result, seen = _keys_seen(session, [fetch.Blocked("status 401"), _ok("300")], now=T0 + timedelta(hours=7))
+    assert result.status == "ok" and len(seen) == 2

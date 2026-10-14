@@ -32,7 +32,7 @@ Unchanged and re-tested: both stored selections carry the HOME spread; a book wh
 - Granted by the lane note: `config.py` (2 settings, one hidden tuple entry), `models.py` (the key), `.env.example` (one line), migration `0010`, the `test_hardening.py` list line (the formatter wraps the list to one name per line).
 
 ## Evidence
-- `tests/test_value.py` + `test_live.py` + `test_hardening.py`: see the final line of this section after the last run.
+- `test_value.py`, `test_live.py`, `test_hardening.py`, `test_live_worker.py`, `test_live_api.py`, `test_picks.py`, `test_betting_odds.py`: 772 passed on `2a40aca`; after the critic fix, value + live + live_worker: 440 passed. Ruff clean on changed files.
 - Mutation sweep `step-18i-part2-evidence/mutate.py`, log `mutation-sweep.log`: 39/39 killed, one or more per clause P1 to P6 (a first run had six survivors; tests were added for each and the sweep re-run).
 - Migration on a scratch database: `step-18i-part2-evidence/migration.txt` (upgrade, duplicate refused including a null line, downgrade dedupes, upgrade again).
 - Zero real Odds API calls: every test uses the recorded-shape fixture `fixtures/value/odds_api_all_markets.json` (now with market-level `last_update`, one market 30 s older than its book) or a fake `get`.
@@ -46,5 +46,5 @@ Unchanged and re-tested: both stored selections carry the HOME spread; a book wh
 | 2 | Red first, then green | tests rewritten against the old code failed (key, pairing, URL, `Price` shape), then passed |
 | 3 | One mutation per rule clause | 39/39 killed |
 | 4 | Own tests and lint | ruff check and format clean on changed files |
-| 5 | Fresh critic, no transcript | see below |
-| 6 | Lane-guard | see below |
+| 5 | Fresh critic, no transcript | ecc:python-reviewer on `2a40aca`: **PASS**, 0 HIGH, 2 MEDIUM, 3 LOW. Fixed: a 35 day credits-low stop set before a fallback key was added is now lifted (test added); dead `credits[1]` removed. Not changed: per-slot credit tracking (MEDIUM 2, intended: the 401 is the switch signal); the migration test is a text check, the real up/down run is in `migration.txt`. |
+| 6 | Lane-guard | flags only the granted seams (`.env.example`, `config.py`, `models.py`, `test_hardening.py`, migration `0010`) and `tests/test_live.py` (not granted; see Seams) |
