@@ -172,3 +172,7 @@ Carried LOWs (not fixed): Add shown to a passkey session (fails with the 403 wor
 sign-out handler; no `pks_` check on the sign-in reply; a failed health check reads as "switched off"; two older 401
 paths say "token rejected" for a passkey session; no timeout or guard on concurrent sign-out calls; K4 (no credential
 id shown), K11 keyboard reach and the K5 422 words not tested.
+WO6 (`wo-6.md`, Ryan, try 1): shared `endStoredPasskeySession` in `lib/api.tsx` (sign-out and the token change both use
+it), the exact notice on failure unless the caller has its own words, a bad toast in Settings when the old session
+could not be ended; `PasskeyBrowserError` marks non-cancel errors from the browser step only (fetch failures stay
+outside it). Commit `5f82d94`. Proof: typecheck 0; `s10-green-5` fresh build **17 passed, 0 failed**.
