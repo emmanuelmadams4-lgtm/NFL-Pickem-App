@@ -106,10 +106,48 @@ and `res:e2e` held for each browser run).
 | WO1b (`wo-1.md` §1b) | K7: health flag came from the saved offline cache | shared `usePasskeysEnabled` hook, fresh fetch on every open; `s10-green-2` 11/11; health 7/7 | `a67a065` |
 | WO2 (`wo-2.md`) | `s10-red-2b`: raw browser text for a second passkey on one device; ruff E501 in `main.py` | plain words; line wrapped; ruff clean | `821db49` |
 | WO3 (`wo-3.md`) | `s10-red-3`: both K12 tests fail for the intended reason | Cancel, split errors, texts, date; `s10-green-3` 13/14: its K12 test passed through Cancel and the date, then failed at line 266 on a real defect | `75c4060` |
-| WO4 (`wo-4.md`) | `s10-green-3` line 266: a deleted passkey still listed after reopening Settings (saved cache + 60 s staleTime, no refetch; server log shows no `GET /api/passkey`) | list query refetches on every open; typecheck 0; browser proof in the run after WO5 | see next commit |
+| WO4 (`wo-4.md`) | `s10-green-3` line 266: a deleted passkey still listed after reopening Settings (saved cache + 60 s staleTime, no refetch; server log shows no `GET /api/passkey`) | list query refetches on every open; typecheck 0; browser proof in the run after WO5 | `158d7b1` |
 
 Coordinator edits to production code: one `ruff check --fix` on `backend/nflpi/api/main.py` (import order only, after
 WO1). `packages/shared/openapi.json` and `api-types.ts` regenerated with `npm run gen:api` (SEAM god 9f6599), never hand
 edited. Design Gauntlet: before/after screenshots and the read-only design critic report `reviews/design-1.md`;
 triage: accepted 1, 3, 6, 7 (WO3) and 2 (WO2, found by the screenshots); not taken 4 (optional intro line), 5 (the
 40 px button gap is app wide, carried), 8 (name hint; the placeholder already says it).
+
+After screenshots (`~/.claude/plans/nfl-pickem-lanes-logs/step-10-web/s10-after-*.png`, 393 and 1280, run
+`s10-shots-after2`): card with the passkey button under the token form; Settings rows with "Added Oct 14, 2026 · Never
+used", one armed row with "Confirm remove" + Cancel. The screenshot script now uses a second virtual authenticator for
+the second passkey (one device holds one passkey for this app, which the app now refuses in plain words). Durable
+`design.md` change: none (existing tokens and components only).
+
+## 4. CLEANUP
+
+Scope-locked `/refactor` pass on the touched code, done as work order 5 (`wo-5.md`, Ryan), commit `363bb7f`:
+1. `browser.ts`: one exported `passkeyUnsupported` constant instead of a private constant plus an alias.
+2. `browser.ts`: the repeated "no credential or no `toJSON` → refuse, else `toJSON()`" tail of `createPasskey` and
+   `getPasskey` moved into one private `credentialJson`.
+3. `sign-in.tsx`: the "Could not reach the API …" text built once (`unreachableApi`) for the token and passkey paths.
+No change needed: `use-passkeys-enabled.ts` (15 lines, one job); `passkeys-section.tsx` (112 lines, one component;
+the long `className` strings match the rest of Settings); `client.ts` (seven one-line calls in the file's own style);
+`api.tsx` / `providers.tsx` (a few lines each). Texts and behaviour unchanged; typecheck 0.
+Proof after cleanup: `s10-green-4` on `363bb7f`, fresh build: **14 passed, 0 failed** (`e2e/passkey.spec.ts`, which
+also proves WO4: K12 line 266 now passes).
+
+## 5. VERIFICATION
+
+On HEAD (this commit, code as `363bb7f`):
+- Browser: `s10-green-4` 14/14 (above). Backend: `tests/test_health_passkeys.py` 7/7 (on the test database, port
+  15436); ruff clean (after WO2); typecheck 0. Under ruling D71 the full pytest and browser suite run in the pull
+  request's CI on this head; not run locally.
+- Security (Dwight, front door): requested on `363bb7f`; result in `reviews/security-1.md`.
+- Fresh critic: result in `reviews/critic-1.md`.
+- lane-guard: below.
+- lane-guard (`lane-guard.py check … web main`): 1 problem, `backend/nflpi/api/schemas.py: owned by lane wire18h`.
+  This is the granted seam (god 9f6599, 2026-10-14): exactly one field `passkeys: bool` on `HealthOut`
+  (`git diff b5ee53f -- backend/nflpi/api/schemas.py` is one line). Whoever lands second of web and wire18h reruns
+  `npm run gen:api`. No other file outside the lane.
+
+## 6. LANDING
+
+God opens the pull request and lands it (D71: its CI is the full gate on this head). PENDING after landing: the
+iPhone check and the two PC settings (`PASSKEY_RP_ID`, `PASSKEY_ORIGINS`), owner and god.
