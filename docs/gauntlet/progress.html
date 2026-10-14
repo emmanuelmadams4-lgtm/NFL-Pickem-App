@@ -91,7 +91,7 @@ footer { color: var(--muted); font-size: 13px; }
   <div class="headline">
     <div class="big">12<small> / 18 steps landed</small></div>
     <div class="now">
-      <p><b>Since 13 October morning:</b> 33 pieces of work merged into main and 11 deploys to your PC, each with a database backup first. Three more steps are partly landed and still in build, and the model rebuild (step 18) is more than half landed.</p>
+      <p><b>Since 13 October morning:</b> 34 pieces of work merged into main and 12 deploys to your PC, each with a database backup first. Two more steps are partly landed and still in build, and the model rebuild (step 18) is more than half landed.</p>
       <p><b>Live on your PC now:</b> star players and who is out on the game card, star alerts with a morning summary, the news worker, news inside the AI report, the data-timing log, live game data in the background, and the grading of win chances during games. Claude runs through your subscription sign-in with the API key as backup.</p>
       <p><b>In build right now:</b> wiring the game simulator and the pick rules into the app (this also removes the AI tie-break, per your rule), spread and total prices from The Odds API with your second key as a backup when the first runs out of credits, and the passkey sign-in screen. <b>Landed 14 October:</b> the live scores screen (on your PC now), the data layer, the pick rules, the evaluation report, a bench of eight more ideas (none beats the live model) and stored book prices.</p>
       <p><b>Passkey sign-in:</b> the server half landed after your sign-off and is on your PC, switched off. The sign-in screen is next. Until it is built you keep signing in with the app token.</p>
@@ -108,7 +108,7 @@ footer { color: var(--muted); font-size: 13px; }
     <div class="yd done" role="listitem"><span class="n">7</span><span class="t">Alerts</span></div>
     <div class="yd part" role="listitem"><span class="n">8</span><span class="t">Stars + news</span></div>
     <div class="yd done" role="listitem"><span class="n">9</span><span class="t">Tiebreaker scores</span></div>
-    <div class="yd part" role="listitem"><span class="n">10</span><span class="t">Passkey sign-in</span></div>
+    <div class="yd done" role="listitem"><span class="n">10</span><span class="t">Passkey sign-in</span></div>
     <div class="yd yours" role="listitem"><span class="n">11</span><span class="t">Go-live checks</span></div>
     <div class="yd done" role="listitem"><span class="n">12</span><span class="t">Trends</span></div>
     <div class="yd part" role="listitem"><span class="n">13</span><span class="t">Cleanup + timing</span></div>
@@ -147,7 +147,7 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td class="num">7</td><td>Alerts end to end<span class="sub">Flips, quarterback news, "no pick yet", test-alert button</span></td><td>Landed (PR #8). Your test alert on the iPhone is still open</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">8</td><td>Star players and news<span class="sub">5 stars per team, who is out, news from public feeds</span></td><td>Landed and live: the star list and who is out, on the game card and the game screen (PRs #6, #20); news from ESPN and CBS feeds, the news worker and its route (PRs #12, #19); news inside the AI report as quoted data (PR #22); star alerts in the last 90 minutes before kickoff and one morning summary at 8 AM Eastern (PR #24). Tested and not shipped: "star out" as a model input (PR #17). Left: news on the game page</td><td><span class="pill prog">In build</span></td></tr>
           <tr><td class="num">9</td><td>Tiebreaker scores<span class="sub">Predicted score for the two Yahoo tiebreak games</span></td><td>Landed (PR #11). Result: the score the betting line implies stays the answer; our stats model and a blend did not beat it on 2022 to 2025</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">10</td><td>Passkey sign-in<span class="sub">Face ID / Touch ID; the app token stays as backup</span></td><td>Server half landed after your sign-off (PR #25) and is deployed, switched off until the screen exists and two settings are set. Left: the sign-in screen with its browser test, then your check on the iPhone</td><td><span class="pill prog">In build</span></td></tr>
+          <tr><td class="num">10</td><td>Passkey sign-in<span class="sub">Face ID / Touch ID; the app token stays as backup</span></td><td>Server half (PR #25) and the sign-in screen with its browser tests (PR #39) landed and are on your PC: passkey sign-in is switched on (deploy 12, 14 October). A failed sign-out now tells you so, and a browser refusal gets its own message. Left: your check on the iPhone (sign in with Face ID, add and remove a passkey in Settings)</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">11</td><td>Go-live: AI and keys<span class="sub">Your keys, your server, your iPhone</span></td><td>Done so far: the PC is live, and Claude answers through your sign-in with the key as backup (both live test calls passed). Open: your iPhone alert test</td><td><span class="pill todo">Yours</span></td></tr>
           <tr><td class="num">12</td><td>Trends<span class="sub">Team, quarterback, coach and venue records with sample size</span></td><td>Landed (PR #4)</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">13</td><td>Backend cleanup + data timing<span class="sub">How fresh lines and quarterback news are; a faster Week board</span></td><td>Landed and live: the data-timing log (PR #21), collecting since 15:03 UTC today. The week 6 report can be read after 19 October. Not started: the code cleanup</td><td><span class="pill prog">Part landed</span></td></tr>
@@ -196,5 +196,5 @@ footer { color: var(--muted); font-size: 13px; }
     </div>
   </div>
 
-  <footer>Updated 2026-10-14 15:38 UTC · 13 of 18 steps landed, 3 more partly landed, step 18 more than half landed · 33 landings and 11 deploys since 13 October morning (PRs #6 to #38)</footer>
+  <footer>Updated 2026-10-14 16:12 UTC · 14 of 18 steps landed, 2 more partly landed, step 18 more than half landed · 34 landings and 12 deploys since 13 October morning (PRs #6 to #39)</footer>
 </div>

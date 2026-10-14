@@ -193,3 +193,9 @@ coordinator: the token button is located exactly (`{ name: "Sign in", exact: tru
 asked for every such locator). Full browser suite on a fresh build of `da823a3` (`s10-full-1`): 244 passed, 2 failed
 (the two `group.spec.ts` locators, then still loose), 2 skipped; after the `group.spec.ts` change the four touched files
 (`s10-full-1b`): 94 passed, 0 failed.
+
+## LANDING (integrator, 2026-10-14)
+
+Pull request #39 from `lane/web`. First CI on `da823a3`: e2e 2 failed, 244 passed (older `Sign in` locators also matched the new passkey button, Playwright strict mode). Fixed test-only at `8f0c4c2` (exact locator in four spec files, `group.spec.ts` granted to lane web for it); CI 9 of 9 green on `8f0c4c2` (D71). Merged as `60833f4` at 16:08 UTC.
+
+**Deployed:** deploy 12 to the owner's PC at `60833f4`, 16:10 UTC (D73): backup first, no migration, row counts unchanged, `/api/health` 200 with `passkeys: true`. `PASSKEY_RP_ID` and `PASSKEY_ORIGINS` were set in the PC `.env` from the PC's own Tailscale name; the host name is not written in this repository. **PENDING:** the owner's iPhone check (sign in with Face ID, add and remove a passkey).
