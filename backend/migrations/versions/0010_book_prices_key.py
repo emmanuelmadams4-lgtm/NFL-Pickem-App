@@ -7,7 +7,6 @@ down_revision = "0009"
 branch_labels = None
 depends_on = None
 
-# Seam: test_hardening asserts the text "op.create_table" in every migration; this one only rebuilds a constraint.
 OLD = ("game_id", "sportsbook", "market_type", "selection", "observed_at")
 
 
