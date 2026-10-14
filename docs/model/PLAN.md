@@ -189,3 +189,30 @@ Checked from the public nflverse release files on 2026-10-13 at about 18:50 UTC 
 | **Odds** | `market_snapshots`: the moneyline, spread and total in the nflverse schedule file, a new row when they change, with our download time. `market_quotes` (step 15): Kalshi and The Odds API, win market only | nflverse carries lines for the 28 games of weeks 6 and 7 and no later week; all 79 finished games have a line. The file also has spread and total **prices** (`home_spread_odds`, `over_odds`) that the app does not read. The Odds API and Kalshi: not checked, zero calls made | Any history of what the line was before a past game's close. Prices by book. Spread and total prices in our own tables. See section 3.5 |
 
 **Features that cannot be built for 2026 today:** anything from play-by-play (no loader), a quarterback rating (no player-game table), travel and time zone (nothing computes them), and weather as a tested input (no forecast history).
+
+## 5. Who decides: maths picks, Claude checks (owner decision D74)
+
+The owner, 2026-10-14: picks come from Python code and maths built on the techniques of the GitHub review; an AI model only checks that each 10,000-game run was done correctly with all the information it needs.
+
+**Python and maths decide.** Every pick, probability and confidence point comes from code in this repository: the win model (`predictions/`), the simulator (`nflpi.sim`), the odds maths (`nflpi.betting`), the pick rules (`nflpi.picks`). No AI model chooses, changes or ranks a pick. One exception exists today and step 18h removes it: when two games' win chances are within 1 point, the pick sheet lets an AI ("Jev", through OpenRouter, only when its key is set) swap their confidence points (`predictions/sheet.py`, `order` and `refresh_tiebreaks`). Step 14c measured the most any such swap can gain at 0.017 points a week, so ties go to the maths order (win chance, then game id). The written AI game report (`nflpi.ai.research`) is text only and feeds no number.
+
+**The GitHub techniques, and where each one is tested.**
+
+| Source (REPOS.md) | Technique | Where | Result so far |
+|---|---|---|---|
+| jamesjholee, ethan-dinh (ideas only) | Boosted trees, a stacked blend, held-out calibration | Steps 14b, 14c (PR #13, #29) | None beat the live model |
+| BlairCurrey/nfl-analytics (ideas only) | Margin model; run manifest; graded ledger | 14c (PR #29); 18f | Margin model: no gain. Manifest and ledger: in build |
+| varnsen-net/nfl-modeling (ideas only, written from scratch) | Pythagorean head-to-head chance; the quarterback's own rating | 18g | In build |
+| Owner brief | Travel and time zone; the matchup score (18e) | 18g | In build |
+| nflverse/nflreadpy | Data loader | Deferred until play-by-play is loaded | — |
+| 23ccozad (rejected) | Fourth-down calls | Not used: no pregame signal | — |
+
+A technique reaches the live model only by meeting section 3 on the bench (D18, D70). Games from 2026-10-15 on are not scored before the season ends (D72).
+
+**Claude checks each run (step 18k, after 18f and 18h).** After every simulation run:
+
+1. Python writes a run record (step 18f: code revision, lock-file hash, data hashes, seed, cutoff) and a check report. The check report is maths only and records, per game: simulations run (must be 10,000); every input listed in `docs/model/FEATURES.md` present or marked missing; every input observed before the cutoff (the as-of rule of `nflpi.data`); win + tie + loss, cover + push + no cover, over + push + under each equal 1; the simulated mean margin and total within sampling error of the inputs; the spread sign converted in the one named place (A13).
+2. Claude reads the run record and the check report and returns PASS or FAIL with reasons, through the owner's Claude sign-in (step 17; API key as backup).
+3. Claude can only block a run. It never edits a number. A FAIL, or no verdict, means the run is not used: the app keeps the last checked run and says so.
+4. Tests use a fake Claude. No real Claude call is made by a lane.
+
