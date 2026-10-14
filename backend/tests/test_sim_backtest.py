@@ -159,22 +159,26 @@ def test_eligible_games_are_regular_season_finals_with_lines_and_finite_expected
 
 # --- B6 spread sign -----------------------------------------------------------------------------------
 
-def test_quoted_home_spread_is_the_negative_of_the_nflverse_line():
-    assert bench.quoted_home_spread(3.0) == -3.0  # home favoured by 3: home covers when margin - 3 > 0
-    assert bench.quoted_home_spread(-2.5) == 2.5
+def test_bench_spread_is_the_negative_of_the_nflverse_line():
+    assert bench.home_spread_from_nflverse(3.0) == -3.0  # home favoured by 3: home covers when margin - 3 > 0
+    assert bench.home_spread_from_nflverse(-2.5) == 2.5
     margin, line = 7, 3.0
-    assert margin + bench.quoted_home_spread(line) > 0
+    assert margin + bench.home_spread_from_nflverse(line) > 0
 
 
-def test_spread_sign_is_converted_only_in_quoted_home_spread():
-    # AUDIT A13: one named conversion; no other place negates spread_line.
+def test_bench_uses_the_one_data_layer_spread_conversion():
+    # AUDIT A13 and step 18h: one named conversion, nflpi.data.asof.home_spread_from_nflverse; the bench negates nothing.
     import inspect
     import re
 
+    from nflpi.data import asof
+
+    assert bench.home_spread_from_nflverse is asof.home_spread_from_nflverse
+    assert not hasattr(bench, "quoted_home_spread")
     src = inspect.getsource(bench)
-    body = src.replace(inspect.getsource(bench.quoted_home_spread), "")
-    assert not re.search(r"-\s*\w+\[\"spread_line\"\]|-\s*spread_line", body)
-    assert "quoted_home_spread(" in inspect.getsource(bench._variant)
+    assert not re.search(r"-\s*\w+\[\"spread_line\"\]|-\s*spread_line|-\s*\w+\.spread_line", src)
+    assert "home_spread_from_nflverse(" in inspect.getsource(bench._variant)
+    assert "home_spread_from_nflverse(" in inspect.getsource(bench._game_row)
 
 
 # --- B7 metric helpers --------------------------------------------------------------------------------

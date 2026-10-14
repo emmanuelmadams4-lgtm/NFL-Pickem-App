@@ -5,6 +5,7 @@ points. A game that has kicked off keeps what it had. Frozen criteria: docs/gaun
 """
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -356,135 +357,32 @@ def test_rank_entry_refuses_bad_numbers(loaded, client, body):
     assert client.put(f"/api/ranks/{CURRENT}/{WEEK}", json=body).status_code == 422
 
 
-# S6 Jev breaks near-ties (D43) ------------------------------------------------------------------------------------
+# S6 confidence order is maths only (D74 replaces the D43 Jev tie-break) ---------------------------------------------
 
 
-def test_order_is_by_win_chance_and_jev_only_swaps_neighbours_that_are_nearly_equal():
-    close = [sheet.Ranked("a", 0.704), sheet.Ranked("b", 0.700), sheet.Ranked("c", 0.600)]
-    assert sheet.order(close, {}) == ["a", "b", "c"]  # no Jev answer: win chance decides
-
-    strong_b = {"a": sheet.Evidence(score=1.0, confidence=0.9), "b": sheet.Evidence(score=2.0, confidence=0.9)}
-    assert sheet.order(close, strong_b) == ["b", "a", "c"]  # 0.4 points apart and b's evidence is a level stronger
-
-    unsure = {"a": sheet.Evidence(score=1.0, confidence=0.9), "b": sheet.Evidence(score=2.0, confidence=0.5)}
-    assert sheet.order(close, unsure) == ["a", "b", "c"]  # Jev was not sure: no change
-
-    strong_c = {"b": sheet.Evidence(score=0.0, confidence=0.9), "c": sheet.Evidence(score=3.0, confidence=0.9)}
-    assert sheet.order(close, strong_c) == ["a", "b", "c"]  # ten points apart is not a near-tie
+def test_order_is_by_win_chance_then_game_id_and_near_ties_are_not_reordered():
+    close = [sheet.Ranked("b", 0.700), sheet.Ranked("c", 0.600), sheet.Ranked("a", 0.704), sheet.Ranked("d", 0.700)]
+    assert sheet.order(close) == ["a", "b", "d", "c"]  # 0.4 points apart keeps win-chance order; an exact tie goes by id
 
 
-def test_jev_is_asked_once_per_change_and_never_blocks_the_sheet(loaded, client, monkeypatch):
-    calls = []
-
-    def decide(state, questions):
-        calls.append(questions)
-        return {key: {"type": "score", "score": 1.0, "confidence": 0.9} for key in questions}
-
-    monkeypatch.setattr(sheet, "TIE_BAND", 1.0)  # every game counts as a near-tie in this test
-    monkeypatch.setattr("nflpi.ai.jev.configured", lambda: True)
-    monkeypatch.setattr("nflpi.ai.jev.decide", decide)
-    before = by_points(client)
-
-    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
-    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
-
-    assert len(calls) == 1  # nothing changed between the two runs
-    assert set(calls[0]) == set(before)  # one question per game, keyed by game id
-    assert all(q["type"] == "score" and len(q["criteria"]) >= 3 for q in calls[0].values())
-    assert by_points(client) == before  # equal evidence: order unchanged
-
-    def down(state, questions):
-        raise RuntimeError("Jev unavailable")
-
-    monkeypatch.setattr("nflpi.ai.jev.decide", down)
-    engine.refresh_predictions(loaded, now=datetime.now(UTC) + timedelta(minutes=1))
-    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)  # must not raise
-    assert sorted(r["my_points"] for r in sheets(client).values()) == [1, 2, 3]
-
-
-def test_jev_is_not_asked_when_no_two_games_are_nearly_equal(loaded, client, monkeypatch):
-    monkeypatch.setattr(sheet, "TIE_BAND", 0.0)
-    monkeypatch.setattr("nflpi.ai.jev.decide", lambda state, questions: pytest.fail("Jev was asked"))
-    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
-
-
-# Amendment A5 (objective critic round 1): bad replies, the daily cap, evidence on the real sheet ----------------------
-
-
-def near_ties(monkeypatch, decide) -> list:
-    """Every game counts as a near-tie and Jev answers with `decide`. Returns the list of calls made."""
-    calls = []
-
-    def asked(state, questions):
-        calls.append(questions)
-        return decide(questions)
+def test_no_ai_is_asked_about_the_order_and_old_ai_answers_are_ignored(loaded, client, monkeypatch):
+    def refuse(*args, **kwargs):
+        raise AssertionError("an AI was asked about the pick order")
 
     monkeypatch.setattr(sheet, "TIE_BAND", 1.0)
     monkeypatch.setattr("nflpi.ai.jev.configured", lambda: True)
-    monkeypatch.setattr("nflpi.ai.jev.decide", asked)
-    return calls
-
-
-def test_a_malformed_jev_answer_is_ignored_and_the_sheet_still_loads(loaded, client, monkeypatch):
-    before = by_points(client)
-    bad = [{"score": None, "confidence": 0.9}, {"score": "n/a", "confidence": 0.9}, {"confidence": 0.9}]
-    near_ties(monkeypatch, lambda questions: dict(zip(questions, bad, strict=True)))
-
-    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
-
-    assert client.get(f"/api/weeks/{CURRENT}/{WEEK}").status_code == 200
-    assert by_points(client) == before
-
-
-def test_jev_does_not_use_up_the_daily_ai_cap_when_it_is_not_configured(loaded, monkeypatch):
-    monkeypatch.setattr(sheet, "TIE_BAND", 1.0)  # the test environment has no OpenRouter key
-
-    for _ in range(3):
-        sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
-
-    assert loaded.scalars(select(AppSetting).where(AppSetting.key.like("ai_attempts_%"))).all() == []
-
-
-def test_games_jev_left_out_of_its_answer_are_not_asked_again(loaded, client, monkeypatch):
-    def first_only(questions):
-        return {next(iter(questions)): {"score": 1.0, "confidence": 0.9}}
-
-    calls = near_ties(monkeypatch, first_only)
-
-    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
-    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
-
-    assert len(calls) == 1
-
-
-def test_jev_evidence_reorders_near_ties_on_the_sheet_until_the_prediction_changes(loaded, client, monkeypatch):
+    monkeypatch.setattr("nflpi.ai.jev.decide", refuse)
     high, mid, low = by_points(client)
-    scores = {high: 0.0, mid: 3.0, low: 0.0}
-    near_ties(monkeypatch, lambda questions: {gid: {"score": scores[gid], "confidence": 0.9} for gid in questions})
-
-    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
-
-    assert by_points(client) == [mid, high, low]  # clearly stronger evidence lifts the near-tied neighbour
-    assert sheets(client)[mid]["app_points"] == 3
-
-    row = loaded.get(AppSetting, f"jev_tiebreak_{CURRENT}_{WEEK}")
-    row.value = {gid: answer | {"hash": "an earlier prediction"} for gid, answer in row.value.items()}
+    loaded.add(AppSetting(key=f"jev_tiebreak_{CURRENT}_{WEEK}", value={
+        gid: {"hash": loaded.scalars(select(Prediction).where(Prediction.game_id == gid)
+                                    .order_by(Prediction.id.desc())).first().inputs_hash,
+              "score": score, "confidence": 0.9} for gid, score in ((high, 0.0), (mid, 3.0), (low, 0.0))}))
     loaded.commit()
-    assert by_points(client) == [high, mid, low]  # evidence about an older prediction is not used
 
+    jobs.predict(loaded)
 
-def test_jev_evidence_for_the_models_side_is_not_used_where_he_picked_the_other_side(loaded, client, monkeypatch):
-    high, mid, low = by_points(client)
-    game = week(client)[high]
-    underdog = game["home"]["abbr"] if game["sheet"]["app_pick"] == game["away"]["abbr"] else game["away"]["abbr"]
-    client.put(f"/api/picks/{high}", json={"team": underdog})
-    assert by_points(client) == [mid, low, high]
-    scores = {high: 3.0, mid: 0.0, low: 0.0}  # strong evidence, but for the side he did not pick
-    near_ties(monkeypatch, lambda questions: {gid: {"score": scores[gid], "confidence": 0.9} for gid in questions})
-
-    sheet.refresh_tiebreaks(loaded, CURRENT, WEEK)
-
-    assert by_points(client) == [mid, low, high]
+    assert by_points(client) == [high, mid, low]
+    assert "nflpi.ai" not in Path(sheet.__file__).read_text() and not hasattr(sheet, "refresh_tiebreaks")
 
 
 def test_best_possible_points_for_a_week_in_progress_count_only_finished_games(loaded, client, schedule):
