@@ -244,6 +244,41 @@ test("K5 a second passkey from the same device is refused in plain words, not th
   expect(await rows(page)).toHaveLength(1);
 });
 
+test("K12 design fixes: empty list says what to do, remove can be cancelled, the date is unambiguous", async ({ context, page }) => {
+  await authenticator(context, page);
+  await passkeys(page, true);
+  await signedIn(page);
+  await page.goto(`${ORIGIN}/settings`);
+  await expect(section(page)).toContainText("No passkeys yet. Add one below and it will appear here.", { timeout: 15_000 });
+  await addFromSettings(page, "Cancel me");
+  const row = section(page).getByRole("listitem").filter({ hasText: "Cancel me" });
+  await expect(row).toContainText(/Added [A-Z][a-z]{2} \d{1,2}, \d{4}/);
+  await row.getByRole("button", { name: "Remove" }).click();
+  await row.getByRole("button", { name: "Cancel" }).click();
+  await expect(row.getByRole("button", { name: "Remove" })).toBeVisible();
+  await expect(row.getByRole("button", { name: "Confirm remove" })).toHaveCount(0);
+  expect(await rows(page)).toHaveLength(1);
+
+  for (const r of await rows(page)) await page.request.delete(`${ORIGIN}/api/passkey/${r.id}`, { headers: AUTH });
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await passkeys(page, false);
+  await page.goto(`${ORIGIN}/settings`);
+  await expect(section(page)).toContainText("Passkey sign-in is switched off on the server.", { timeout: 15_000 });
+});
+
+test("K12 a passkey error shows under the passkey button and does not mark the token field wrong", async ({ page }) => {
+  await passkeys(page, true);
+  await page.route("**/api/passkey/signin/begin", (route) => route.fulfill({ status: 503, json: { detail: "Passkey sign-in is not configured" } }));
+  await page.goto(`${ORIGIN}/`);
+  const button = card(page).getByRole("button", { name: "Sign in with a passkey" });
+  await button.click();
+  const alert = card(page).getByRole("alert");
+  await expect(alert).toContainText("Passkey sign-in is not configured");
+  const below = await alert.evaluate((a, b) => !!(b && b.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING), await button.elementHandle());
+  expect(below, "the error follows the passkey button").toBe(true);
+  await expect(card(page).getByLabel("Access token")).not.toHaveAttribute("aria-invalid", "true");
+});
+
 test("K7 passkeys off: Settings still lists passkeys (so one can be removed) and offers no add", async ({ context, page }) => {
   await authenticator(context, page);
   await passkeys(page, true);
