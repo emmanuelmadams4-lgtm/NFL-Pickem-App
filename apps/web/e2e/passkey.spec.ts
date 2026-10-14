@@ -174,9 +174,15 @@ test("K6 removing a passkey with the token: two steps, the row goes, the app sta
 });
 
 test("K3 sign-in refusals are words on the card and the token form keeps working", async ({ context, page }) => {
-  const a = await authenticator(context, page, false); // the prompt is not passed: Face ID refused or cancelled
+  // a passkey on this device first (with the token), so the server refusals below are reached after the prompt
+  const a = await authenticator(context, page);
   await passkeys(page, true);
-  await page.goto(`${ORIGIN}/`);
+  await signedIn(page);
+  await addFromSettings(page, "Refusals");
+  await page.getByRole("button", { name: "Sign out" }).first().click();
+  await expect(card(page)).toBeVisible({ timeout: 15_000 });
+
+  await a.cdp.send("WebAuthn.setUserVerified", { authenticatorId: a.id, isUserVerified: false }); // Face ID refused or cancelled
   await card(page).getByRole("button", { name: "Sign in with a passkey" }).click();
   await expect(card(page).getByRole("alert")).toContainText("No passkey was used.", { timeout: 15_000 });
 

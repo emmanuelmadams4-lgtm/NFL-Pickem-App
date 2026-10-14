@@ -28,3 +28,11 @@ REQUIRED
 PROOF (the coordinator reruns it): `npm run typecheck`; then the browser file `e2e/passkey.spec.ts` against a fresh build.
 
 CONSTRAINTS: /ponytail (smallest working diff, no speculative abstraction). No test edits; if a test looks wrong, say which and why in your reply. Run `npm run typecheck` only: no build, no server, no browser, no pytest (the machine is short of memory; the coordinator runs those). Do not commit. Report per item: done, or "no change needed" with the reason, and anything you would simplify but did not.
+
+## Work order 1b (try 2 of 2) — after the coordinator's run `s10-green-1` (9 passed, 2 failed)
+
+Same allowed files. Two items, nothing else:
+1. Lint: `uvx ruff check nflpi tests` → `nflpi/api/main.py:60:121 E501 Line too long (140 > 120)` (the degraded `HealthOut(...)` line). Wrap it. (The coordinator already let ruff sort the new import line: `ruff check --fix`, import order only.)
+2. K7 fails: with passkeys switched off, Settings still shows "Add a passkey". Cause: the `["health"]` query is restored from the saved offline cache (`lib/persist.ts` saves every successful query except `live`), so the last "on" answer is used without asking the server. Required: whether passkeys are on always comes from a fresh `GET /api/health` each time the sign-in card or the Passkeys section opens, never from the saved cache; while it is unknown the passkey controls are hidden. Use one small shared hook (for example in `components/passkey/`) for the card and the section, its key in `keys`. Do not change `persist.ts` beyond what this needs.
+Failing evidence: `e2e/passkey.spec.ts:231` "K7 … offers no add": expected 0 "Add a passkey" buttons, received 1. (K3 at line 176 was the coordinator's test defect, fixed in the test.)
+Proof: `npm run typecheck`; the coordinator reruns ruff and `e2e/passkey.spec.ts`.
