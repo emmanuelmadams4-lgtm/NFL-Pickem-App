@@ -55,7 +55,7 @@ Distributions give the score after regulation. A regulation tie goes to overtime
 
 ## Results
 
-All numbers from ONE confirm run on seasons 2022 to 2025, 1,087 regular-season games with a closing line, 10,000 simulations each, every variant (file `docs/gauntlet/logs/step-18c-evidence/confirm-result.json`, written once by `python -m nflpi.analytics.sim_backtest confirm`). The default distribution was picked before that look, on 2012 to 2021 only (`tune-result.json`, 2,576 games): pooled CRPS (margin plus total, lower is better) poisson 16.136, **paired_residual 15.047**, bivariate_normal 15.059, shared_gamma_poisson 15.061. The three learned distributions differ by 0.014 points; the choice among them is a near tie. Poisson is clearly worse.
+All numbers from ONE confirm run on seasons 2022 to 2025, 1,087 regular-season games with a closing line, 10,000 simulations each, every variant (file `docs/gauntlet/logs/step-18c-evidence/confirm-result-pre18k.json`, renamed from `confirm-result.json` when the 18k fix regenerated that file; written once by `python -m nflpi.analytics.sim_backtest confirm`). The default distribution was picked before that look, on 2012 to 2021 only (`tune-result.json`, 2,576 games): pooled CRPS (margin plus total, lower is better) poisson 16.136, **paired_residual 15.047**, bivariate_normal 15.059, shared_gamma_poisson 15.061. The three learned distributions differ by 0.014 points; the choice among them is a near tie. Poisson is clearly worse.
 
 **Short answer: no edge is shown.** The simulator reproduces the spread of real scores well enough to be useful for ranges and tie rates; it does not beat the betting market or the live blend at picking winners, covers or overs.
 
