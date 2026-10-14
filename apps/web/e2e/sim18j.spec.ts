@@ -138,6 +138,19 @@ test("S5 the week board names the pick mode the API reports", async ({ page, req
   await expect(page.getByText(week.pick_mode.label, { exact: true })).toBeVisible({ timeout: 15_000 });
 });
 
+test("S5b a saved week reply from before pick_mode existed still shows the board", async ({ page }) => {
+  // the phone keeps its query cache for days, so a week reply without pick_mode can be shown after a deploy
+  await page.addInitScript((t) => localStorage.setItem("nflpi_token", t), TOKEN);
+  await page.route("**/api/weeks/**", async (route) => {
+    const res = await route.fetch();
+    const body = await res.json();
+    delete body.pick_mode;
+    await route.fulfill({ response: res, json: body });
+  });
+  await page.goto("/");
+  await expect(page.getByTestId("game-card").first()).toBeVisible({ timeout: 15_000 });
+});
+
 for (const width of [393, 320]) {
   test(`S6 at ${width} px: no serious axe finding and no sideways scroll with a simulation`, async ({ page, request }) => {
     await page.setViewportSize({ width, height: 852 });

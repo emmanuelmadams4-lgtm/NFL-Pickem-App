@@ -133,3 +133,11 @@ Runs (logs in `~/.claude/plans/nfl-pickem-lanes/logs/step-15-web/<name>.log`):
   slow loads; the full suite runs on PR CI.
 - typecheck 0 on `907f6fa`. Security: Dwight PASS on `b4ba105` (`evidence/reviews/security-1.md`). The only later
   code change is WO3's one-line move.
+- god's check (23:14 UTC): does the board now wait on a new query? **No.** `git diff origin/main...HEAD` on
+  `week-board.tsx` is one `<p>` after the card list, reading `data.pick_mode.label` from the week reply the board
+  already loads. `simulation.tsx` has no hooks and no fetch; it reads the `game` prop. `game-view.tsx` adds only a tab
+  and the section. No new request runs before the cards render. R1 and E3 are left to PR CI (D71).
+
+**Fresh critic 1 on `5a91a18`: PASS + 1 MEDIUM** (`evidence/reviews/critic-1.md`). **Amendment 3:** S1 lists the
+home team first (design finding 6, WO2). S5b (new): a week reply without `pick_mode` (an old reply from the offline
+cache) still shows the board's cards. Red: `s18j-red-3` (no game card in 15 s). Fix: WO4.
