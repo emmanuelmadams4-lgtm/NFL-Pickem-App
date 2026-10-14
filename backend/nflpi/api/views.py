@@ -30,6 +30,8 @@ from nflpi.models import (
 from nflpi.picks import make_picks
 from nflpi.predictions import sheet
 
+PICK_ORDER_NOTE = "Both pick modes use the same order: win chance, then game id"
+
 
 def _clean_star_text(value: str | None) -> str | None:
     if value is None:
@@ -297,7 +299,7 @@ def week_view(session: Session, season: int, week: int) -> s.WeekOut:
     return s.WeekOut(
         season=season,
         week=week,
-        pick_mode=s.PickModeOut(mode=picks.mode, assumed=picks.mode_assumed, label=picks.label),
+        pick_mode=s.PickModeOut(mode=picks.mode, assumed=picks.mode_assumed, label=f"{picks.label}. {PICK_ORDER_NOTE}"),
         summary=summary,
         games=items,
         freshness=[s.DatasetFreshness(**f) for f in freshness(session, now)],

@@ -7,18 +7,21 @@ when the inputs change; earlier rows are never edited.
 
 import hashlib
 import json
+import logging
 import zlib
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pandas as pd
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from nflpi.analytics.backtest import _elo_frames, run_backtest, tune_elo
 from nflpi.analytics.metrics import EARLY_WEEK_END, UPSET_GAP, pick_label, uncertainty_grade, upset_watch
 from nflpi.analytics.sim_backtest import BASE_SEED, N_SIMULATIONS, WINDOW
+from nflpi.api.schemas import SimulationOut
 from nflpi.config import get_settings
 from nflpi.ingestion.service import freshness
 from nflpi.models import AppSetting, BacktestRun, Game, MarketSnapshot, ModelVersion, Prediction
@@ -30,6 +33,7 @@ from nflpi.predictions.scores import STATS_FEATURES, ScoreModel, add_score_featu
 from nflpi.sim import DEFAULT_DISTRIBUTION, SimParams, TeamFeatures, simulate_game
 
 MODEL_KIND = "blend-elo-qb"
+log = logging.getLogger(__name__)
 SIM_LABEL = "Score simulator, football-only inputs: not shown to beat the betting market or the win model"
 MAX_EXPECTED_POINTS = 100
 _SIM_ARRAYS = ("residual_a", "residual_b", "ot_increments")
@@ -235,7 +239,11 @@ def load_sim_params(session: Session, season: int) -> SimParams | None:
     row = session.get(AppSetting, f"sim_params_{season}")
     if row is None:
         return None
-    return SimParams(**{k: np.array(v, dtype=np.int64) if k in _SIM_ARRAYS else v for k, v in row.value.items()})
+    try:
+        return SimParams(**{k: np.array(v, dtype=np.int64) if k in _SIM_ARRAYS else v for k, v in row.value.items()})
+    except Exception:  # the simulator is optional: a bad stored row means no simulation, never no predictions
+        log.exception("stored simulator parameters for season %s are unusable", season)
+        return None
 
 
 def _finite(v: object) -> bool:
@@ -247,6 +255,9 @@ def _score_model(frame: pd.DataFrame, season: int) -> ScoreModel | None:
     try:
         return ScoreModel.fit(frame[frame["season"].between(season - WINDOW, season - 1)], STATS_FEATURES)
     except ValueError:
+        return None
+    except Exception:  # the simulator is optional
+        log.exception("score model fit failed for season %s", season)
         return None
 
 
@@ -273,7 +284,21 @@ def _simulation(row: pd.Series, params: SimParams, model: ScoreModel | None, fra
         "spread_push": res.p_spread_push, "over": res.p_over, "under": res.p_under, "total_push": res.p_total_push,
     }
     out = {k: [_clean(x) for x in v] if isinstance(v, list) else _clean(v) for k, v in out.items()}
-    return out | {"label": SIM_LABEL}
+    out |= {"label": SIM_LABEL}
+    try:  # what the API cannot serve (a NaN turned null) is never stored: it would 500 the week
+        SimulationOut.model_validate(out)
+    except ValidationError:
+        log.error("simulation for %s fails the API contract; stored as missing", row["game_id"])
+        return None
+    return out
+
+
+def _safe_simulation(row: pd.Series, params: SimParams, model: ScoreModel | None, frame: pd.DataFrame) -> dict | None:
+    try:
+        return _simulation(row, params, model, frame)
+    except Exception:  # the simulator is optional: one game's failure must not stop any prediction
+        log.exception("simulation failed for %s; stored as missing", row["game_id"])
+        return None
 
 
 def _simulations(session: Session, targets: pd.DataFrame) -> dict[str, dict | None]:
@@ -286,7 +311,7 @@ def _simulations(session: Session, targets: pd.DataFrame) -> dict[str, dict | No
     frame = add_score_features(load_frame(session), EloParams())
     models = {s: _score_model(frame, s) for s, p in params.items() if p is not None}
     return {
-        row["game_id"]: _simulation(row, params[int(row["season"])], models.get(int(row["season"])), frame)
+        row["game_id"]: _safe_simulation(row, params[int(row["season"])], models.get(int(row["season"])), frame)
         for _, row in targets.iterrows()
     }
 
