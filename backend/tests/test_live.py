@@ -1052,6 +1052,18 @@ ODDS_PATH = "/v4/sports/americanfootball_nfl/odds"
 ODDS_NOW = datetime(2026, 10, 13, 7, 0, tzinfo=UTC)
 
 
+@pytest.fixture(autouse=True)
+def _h2h_only_odds_url(monkeypatch):
+    """These tests pin the h2h-only request; the spread and total request is tested in test_value.py."""
+    from nflpi.config import get_settings
+
+    monkeypatch.setenv("ODDS_EXTRA_MARKETS", "false")
+    get_settings.cache_clear()
+    yield
+    monkeypatch.delenv("ODDS_EXTRA_MARKETS")
+    get_settings.cache_clear()
+
+
 def odds_routes(data=None, headers: dict | None = None) -> dict:
     return {
         oddsapi.odds_url(KEY): (data if data is not None else recorded("odds_api_h2h.json")),
