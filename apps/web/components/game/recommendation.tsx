@@ -6,7 +6,8 @@ import { Refresh } from "@/components/icons";
 import { TeamLogo } from "@/components/team";
 import { PickButtons } from "@/components/pick-buttons";
 import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-bits";
-import { useLocked } from "@/lib/clock";
+import { useLocked, useNow } from "@/lib/clock";
+import { startedGame } from "@/lib/queries";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { pctOr } from "@/lib/fmt";
 
@@ -27,6 +28,7 @@ function Figure({ label, value, emphasis, hint }: { label: string; value: string
 export function Recommendation({ game }: { game: GameDetail }) {
   const p: Prediction | null = game.prediction;
   const locked = useLocked(game);
+  const started = startedGame(game, useNow());
   const pickTeam: Team | null = p ? (p.pick === game.home.abbr ? game.home : game.away) : null;
   const pickIsHome = p ? p.pick === game.home.abbr : false;
   const forPick = (home: number | null) => (home === null ? null : pickIsHome ? home : 1 - home);
@@ -62,7 +64,7 @@ export function Recommendation({ game }: { game: GameDetail }) {
         <>
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-heading">Model pick</h2>
-            {p.kind === "backfill" ? <BackfillChip /> : <Chip>Live</Chip>}
+            {p.kind === "backfill" ? <BackfillChip /> : !started && <Chip>Live</Chip>}
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-3">

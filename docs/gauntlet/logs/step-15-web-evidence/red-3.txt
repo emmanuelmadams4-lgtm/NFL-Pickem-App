@@ -1,0 +1,10 @@
+Red run 3 (for work order 3), work order 2's code on a1916b9, load 10.37 12.57 15.07: 76 passed, 4 failed. Raw log: ~/.claude/plans/nfl-pickem-lanes/logs/step-15-web/red-3.log
+   1   ✘  12 e2e/live.spec.ts:214:11 › phone › L3 L4 L10 card: S4 one minute is singular (6.7s)
+   1   ✘  37 e2e/live.spec.ts:301:9 › phone › L4 a phone whose clock is five minutes behind the server still says Live: the age of a reply is measured on one clock (15.8s)
+   1   ✘  48 e2e/live.spec.ts:214:11 › desktop › L3 L4 L10 card: S4 one minute is singular (5.7s)
+   1   ✘  73 e2e/live.spec.ts:301:9 › desktop › L4 a phone whose clock is five minutes behind the server still says Live: the age of a reply is measured on one clock (16.3s)
+   2     Error: expect(locator).toContainText(expected) failed
+   2     Error: one sentence for a screen reader
+   2     Expected pattern: /Live\s*·\s*Q3\s*4:12/
+   2     Expected: 1
+   2     Received string:  "NENENE Team1-3VSKCKCKC Team3-0Not updating · Q3 4:12Score may be out of date, last update 1 minutes ago: NE 14, KC 21.NE14–21KCPregame model pickKC87%Easy pickUncertainty HighHigh uncertaintyHow reliable this estimate

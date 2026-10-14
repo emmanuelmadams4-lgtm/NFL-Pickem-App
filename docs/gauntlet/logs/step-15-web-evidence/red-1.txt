@@ -1,0 +1,48 @@
+Red run 1, HEAD 9162fbb (tests only, no production change), build of main d8276a2. Stopped by the coordinator after 46 results to free the shared test slot: 46 failed, 0 passed (phone project whole, 40 of 40; desktop 6). Raw log: ~/.claude/plans/nfl-pickem-lanes/logs/step-15-web/red-1.log (304 KB). Playwright prints failure detail at the end of a run, so the stopped run has names only.
+HEAD 696b395 load: load averages: 11.49 10.35 10.29
+  ✘   1 e2e/live.spec.ts:69:7 › phone › L1 no started game on screen: the web never asks for live scores (2.1s)
+  ✘   2 e2e/live.spec.ts:80:7 › phone › L2 polling: at once, then every 30 seconds; a failed poll is followed by the next; nothing live goes into the 
+  ✘   3 e2e/live.spec.ts:101:7 › phone › L2 polling stops while the page is hidden (6.2s)
+  ✘   4 e2e/live.spec.ts:113:7 › phone › L2 every started game has ended: one call every 120 seconds, so a reversal is still seen (5.7s)
+  ✘   5 e2e/live.spec.ts:123:7 › phone › L2 a board left open across a kickoff starts asking without a reload (5.5s)
+  ✘   6 e2e/live.spec.ts:134:7 › phone › L7 it ends: when the week says final the live block is gone and the asking stops (5.7s)
+  ✘   7 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: S5 live (17.8s)
+  ✘   8 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: S2 ended (17.1s)
+  ✘   9 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: S2 ended, no score (15.8s)
+  ✘  10 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: S3 lost (16.0s)
+  ✘  11 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: S4 not updating (17.7s)
+  ✘  12 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: S4 not updating, never confirmed (15.7s)
+  ✘  13 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: S6 no row for the game (15.8s)
+  ✘  14 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: S6 the request fails from the start (503) (15.7s)
+  ✘  15 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: S6 the request is refused (401) (15.7s)
+  ✘  16 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: one score missing: no score at all (16.2s)
+  ✘  17 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: no ESPN number (15.8s)
+  ✘  18 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: no Kalshi price (16.4s)
+  ✘  19 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: neither number (15.7s)
+  ✘  20 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: no period: no period text, no clock (15.7s)
+  ✘  21 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: no clock (15.8s)
+  ✘  22 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: halftime (16.3s)
+  ✘  23 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: end of a quarter (15.7s)
+  ✘  24 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: end of the fourth (15.8s)
+  ✘  25 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: overtime (16.5s)
+  ✘  26 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: second overtime (15.7s)
+  ✘  27 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: a clock the app does not know is shown as it arrives (15.7s)
+  ✘  28 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: almost certain is never 100% (15.9s)
+  ✘  29 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: almost lost is never 0% (15.7s)
+  ✘  30 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: no prediction: the chance is stated for my pick, as 100 minus the home figure (15.7s)
+  ✘  31 e2e/live.spec.ts:198:11 › phone › L3 L4 L10 card: no prediction and no pick: the home club (15.7s)
+  ✘  32 e2e/live.spec.ts:210:9 › phone › L3 the chance line sits after the uncertainty row, away from the model's bar; the score is where the kickoff 
+  ✘  33 e2e/live.spec.ts:221:9 › phone › L4 not updating by age: one failed poll changes nothing; after 120 seconds without a good reply the card says
+  ✘  34 e2e/live.spec.ts:238:9 › phone › S2 held: an ended game that leaves the live reply keeps 'Ended' and its score until the week says final (15.6
+  ✘  35 e2e/live.spec.ts:252:9 › phone › L5 the game screen: label above the score, reasons for a missing number, when it was checked, what Kalshi is 
+  ✘  36 e2e/live.spec.ts:278:9 › phone › L5 the game screen with no live reply says the game has started, not its kickoff as if it were to come (15.5s
+  ✘  37 e2e/live.spec.ts:287:9 › phone › L6 never moves a pick: with and without live numbers the model's pick, its chance, the label, the points and 
+  ✘  38 e2e/live.spec.ts:309:9 › phone › L11 text from the feed is text: a clock full of markup is shown as letters and reaches no attribute (15.6s)
+  ✘  39 e2e/live.spec.ts:321:11 › phone › L9 accessibility (dark): no serious or critical axe issue with a live game on the board and on the game scre
+  ✘  40 e2e/live.spec.ts:321:11 › phone › L9 accessibility (light): no serious or critical axe issue with a live game on the board and on the game scr
+  ✘  41 e2e/live.spec.ts:198:11 › desktop › L3 L4 L10 card: S5 live (15.7s)
+  ✘  42 e2e/live.spec.ts:198:11 › desktop › L3 L4 L10 card: S2 ended (15.7s)
+  ✘  43 e2e/live.spec.ts:198:11 › desktop › L3 L4 L10 card: S2 ended, no score (16.3s)
+  ✘  44 e2e/live.spec.ts:198:11 › desktop › L3 L4 L10 card: S3 lost (15.8s)
+  ✘  45 e2e/live.spec.ts:198:11 › desktop › L3 L4 L10 card: S4 not updating (15.9s)
+  ✘  46 e2e/live.spec.ts:198:11 › desktop › L3 L4 L10 card: S4 not updating, never confirmed (16.2s)

@@ -28,7 +28,7 @@ export function restoreCache(client: QueryClient): void {
 
 function save(client: QueryClient): void {
   try {
-    const state = dehydrate(client, { shouldDehydrateQuery: (q) => q.state.status === "success" });
+    const state = dehydrate(client, { shouldDehydrateQuery: (q) => q.state.status === "success" && q.queryKey[0] !== "live" });
     // newest first, then keep as many as fit
     state.queries.sort((a, b) => b.state.dataUpdatedAt - a.state.dataUpdatedAt);
     let size = 0;

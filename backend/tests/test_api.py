@@ -168,6 +168,40 @@ def _seed_stars(session, game) -> None:
     session.commit()
 
 
+def test_week_board_is_silent_about_stars_only_when_the_report_is_in_and_no_star_is_out(loaded, client):
+    from nflpi.models import InjuryReport, TeamStar
+
+    game = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json()).games[0]
+
+    def star(team, pid, player):
+        return TeamStar(
+            season=game.season, week=game.week, team=team, slot="qb", rank=1, player_id=pid, player=player,
+            position="QB", snaps=1, production=1.0, score=1.0, source="test", computed_at=game.kickoff_utc,
+        )  # fmt: skip
+
+    def report(team, pid, player, status):
+        return InjuryReport(
+            season=game.season, week=game.week, team=team, player_id=pid, player=player, position=None,
+            report_status=status, practice_status=None, injury="Knee", source="nflverse",
+            observed_at=game.kickoff_utc - timedelta(hours=5),
+        )  # fmt: skip
+
+    loaded.add_all(
+        [
+            star(game.home.abbr, "00-001", "Pat Passer"),
+            star(game.away.abbr, "00-041", "Stay Put"),
+            report(game.home.abbr, "00-001", "Pat Passer", "Questionable"),  # a star, but not out or doubtful
+            report(game.away.abbr, "00-777", "Not A Star", "Out"),  # out, but not a star
+        ]
+    )
+    loaded.commit()
+
+    row = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json()).games[0]
+    # The one state in which the card says nothing: both lists exist, the report is in, no star is out.
+    assert (row.stars_out.out, row.stars_out.no_list) == ([], [])
+    assert row.stars_out.reports_seen == 2
+
+
 def test_week_board_says_which_stars_are_out_and_the_game_view_lists_all_of_them(loaded, client):
     before = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json())
     game = before.games[0]

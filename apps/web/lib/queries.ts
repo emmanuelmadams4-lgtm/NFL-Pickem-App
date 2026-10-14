@@ -1,13 +1,56 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, keys, type GameDetail, type Provider, type Week } from "@nflpi/shared";
+import { ApiError, keys, type GameDetail, type GameSummary, type LiveGameOut, type LiveOut, type Provider, type Week } from "@nflpi/shared";
 import { useApi } from "@/lib/api";
+import { useNow } from "@/lib/clock";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { isNetworkError, isServerReachable, lastQueueWriteDroppedStored, orderedPickSend, queuePick, queuedPick, unqueueIfCurrent } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
+const LIVE_POLL_MS = 30_000;
+const LIVE_ENDED_POLL_MS = 120_000;
+
+// ponytail: at most one ended row per game seen this session; reload clears the map.
+const heldPosts = new Map<string, LiveGameOut>();
+
+export function startedGame(game: GameSummary, now: number): boolean {
+  if (game.status === "final" || game.status === "postponed") return false;
+  return game.status === "in_progress" || (!game.time_tbd && now >= Date.parse(game.kickoff_utc));
+}
+
+export function useLive(games: GameSummary[]) {
+  const api = useApi();
+  const meta = useMeta();
+  const now = useNow();
+  const started = games.filter((game) => startedGame(game, now));
+  const query = useQuery({
+    queryKey: keys.live,
+    queryFn: async () => {
+      const data = await api.live();
+      for (const row of data.games) {
+        if (row.state === "post") heldPosts.set(row.game_id, row);
+        else heldPosts.delete(row.game_id);
+      }
+      return data;
+    },
+    enabled: started.length > 0,
+    // useNow rebuilds this callback each tick; the query compares its computed interval before resetting the timer.
+    refetchInterval: (q) => {
+      const data = q.state.data as LiveOut | undefined;
+      const allEnded = started.every((game) => {
+        const row = data?.games.find((item) => item.game_id === game.game_id);
+        return row?.state === "post" || (!row && heldPosts.has(game.game_id));
+      });
+      return allEnded ? LIVE_ENDED_POLL_MS : LIVE_POLL_MS;
+    },
+    refetchIntervalInBackground: false,
+    retry: false,
+  });
+  const correction = meta.data ? Date.parse(meta.data.server_time) - meta.dataUpdatedAt : 0;
+  return { ...query, heldPosts, checkedAt: query.dataUpdatedAt ? query.dataUpdatedAt + correction : 0 };
+}
 
 export function useMeta() {
   const api = useApi();

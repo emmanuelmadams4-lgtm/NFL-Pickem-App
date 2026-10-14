@@ -1,0 +1,27 @@
+dedb762 PASS g1 pytest exit=0 :: 1340 passed in 491.82s (0:08:11) 
+dedb762 PASS g1 ruff exit=0 :: All checks passed! 
+dedb762 PASS g1 genapi exit=0 :: no drift 
+dedb762 PASS g1 typecheck exit=0 :: 
+dedb762 PASS g1 e2e exit=0 ::   ✓  155 e2e/restyle.spec.ts:379:7 › G4 stale weather with no logged error never claims the source is down (953ms)   205 passed (7.2m) 
+dedb762 PASS g2 pytest exit=0 :: 1340 passed in 391.24s (0:06:31) 
+dedb762 PASS g2 ruff exit=0 :: All checks passed! 
+dedb762 PASS g2 genapi exit=0 :: no drift 
+dedb762 PASS g2 typecheck exit=0 :: 
+dedb762 FAIL g2 e2e exit=1 :: npm error command failed npm error command sh -c playwright test 
+1e2cbad PASS g3 pytest exit=0 :: 1340 passed in 369.52s (0:06:09) 
+1e2cbad PASS g3 ruff exit=0 :: All checks passed! 
+1e2cbad PASS g3 genapi exit=0 :: no drift 
+1e2cbad PASS g3 typecheck exit=0 :: 
+cut short by another lane's stop signal (hive 1d8260): g3 e2e, g4
+1e2cbad PASS g5 pytest exit=0 :: 1340 passed in 475.09s (0:07:55) 
+1e2cbad PASS g5 ruff exit=0 :: All checks passed! 
+1e2cbad PASS g5 genapi exit=0 :: no drift 
+1e2cbad PASS g5 typecheck exit=0 :: 
+1e2cbad PASS g5 e2e exit=0 ::   ✓  155 e2e/restyle.spec.ts:379:7 › G4 stale weather with no logged error never claims the source is down (1.0s)   205 passed (9.1m) 
+1e2cbad PASS g6 pytest exit=0 :: 1340 passed in 626.69s (0:10:26) 
+1e2cbad PASS g6 ruff exit=0 :: All checks passed! 
+1e2cbad PASS g6 genapi exit=0 :: no drift 
+1e2cbad PASS g6 typecheck exit=0 :: 
+1e2cbad PASS g6 e2e exit=0 ::   ✓  155 e2e/restyle.spec.ts:379:7 › G4 stale weather with no logged error never claims the source is down (1.5s)   205 passed (6.9m) 
+e6bc37e STOPPED g7 pytest at 74% after 3 h 31 min: machine out of memory (load 76), stopped by process id on god's word (hive c10df0); not counted
+e6bc37e STOPPED g8 during pytest on god's ruling D71 (hive b7e15d): no full local run; the pull request's CI is the full gate

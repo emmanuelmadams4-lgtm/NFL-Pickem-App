@@ -1,0 +1,11 @@
+  ✘   90 e2e/live.spec.ts:386:7 › L8 phone fit at 393 px: going live adds no height to the worst card, nothing in the live block is cut, no sideways scroll (636ms)
+  ✓  110 e2e/pwa.spec.ts:218:5 › P12 a queued pick the server refuses with an error: he is told, the pick stays queued, and it is sent again (15.6s)
+  ✓  155 e2e/restyle.spec.ts:379:7 › G4 stale weather with no logged error never claims the source is down (774ms)
+    Error: "route.fetch: Target page, context or browser has been closed
+npm error Lifecycle script `e2e` failed with error:
+npm error code 1
+npm error path /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web
+npm error workspace @nflpi/web@0.1.0
+npm error location /Users/emmanueladams/Projects/NFL-Pickem-App/.claude/worktrees/lane-web/apps/web
+npm error command failed
+npm error command sh -c playwright test

@@ -1,0 +1,11 @@
+Red run 4 (for work order 4), ae073e9 plus the new tests, load 10.17 12.10 13.64: 78 passed, 4 failed. Raw log: ~/.claude/plans/nfl-pickem-lanes/logs/step-15-web/red-4.log
+   1   ✘  32 e2e/live.spec.ts:226:9 › phone › polish: a screen reader gets the missing-chance words, 'Not updating' is in the warning ink, pregame star news is gone once a game has started (5.6s)
+   1   ✘  37 e2e/live.spec.ts:286:9 › phone › L5 the game screen: label above the score, reasons for a missing number, when it was checked, what Kalshi is (5.8s)
+   1   ✘  69 e2e/live.spec.ts:226:9 › desktop › polish: a screen reader gets the missing-chance words, 'Not updating' is in the warning ink, pregame star news is gone once a game has started (5.7s)
+   1   ✘  74 e2e/live.spec.ts:286:9 › desktop › L5 the game screen: label above the score, reasons for a missing number, when it was checked, what Kalshi is (6.3s)
+   2     Error: expect(locator).toHaveCount(expected) failed
+   2     Error: the pick panel's 'Live' chip (a pregame prediction that is not backfilled) is not shown beside live scores
+   2     Expected: 0
+   2     Expected: 1
+   2     Received: 0
+   2     Received: 2

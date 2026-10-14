@@ -1,5 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import type { components } from "@nflpi/shared";
 
 /**
  * Step 8a2 gate (docs/gauntlet/logs/step-8a2.md): star players and who is out, on the week board and the game
@@ -31,7 +32,7 @@ const card = (page: Page, g: Game) =>
   page.getByRole("listitem").filter({ has: page.getByRole("link", { name: `Open matchup: ${g.away.name} at ${g.home.name}` }) });
 
 /** The week as the API sends it, with one game's stars block replaced: the states the fixture has no game for. */
-async function withStars(page: Page, gameId: string, starsOut: object) {
+async function withStars(page: Page, gameId: string, starsOut: components["schemas"]["StarsOut"]) {
   await page.route("**/api/weeks/**", async (route) => {
     const res = await route.fetch();
     const week = await res.json();
