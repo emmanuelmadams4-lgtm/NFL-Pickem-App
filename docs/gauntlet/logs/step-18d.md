@@ -20,3 +20,6 @@ Owner brief `docs/model/OWNER_BRIEF_2026-10-13.md` sections 3 and 9; decisions D
 - Value stars: `UNRATED` unless a `validated` rubric is passed (D70); `NO_BET` for a stale price or nonpositive expected value; a missing quarterback caps at `UNRATED`.
 - Gate (D71): own test file plus ruff locally; the full gate is the CI of the pull request.
 - Sandbox: `uv` and `git fetch` needed the sandbox off; the `.git/config` update for the branch rename was denied (the branch ref itself is renamed).
+
+## Critic (checkpoint 6)
+Fresh `ecc:python-reviewer`, no transcript, on head `93fe57b`, ran only `tests/test_picks.py` (152 passed) and ruff (clean). **Verdict: PASS**, no CRITICAL, HIGH or MEDIUM. LOW, left as is and recorded: `make_picks(games, "ats", close_band=...)` raises `TypeError` (the ATS and totals functions take no band options); `home_spread_from_nflverse` does not validate its input (a non-number raises `TypeError`, NaN is rejected later by `GameInputs`, `0.0` gives `-0.0`); numpy integer weights are refused; `zip(strict=False)` in the rubric check is intentional.
