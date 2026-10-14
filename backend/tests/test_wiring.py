@@ -12,7 +12,7 @@ from nflpi.analytics.sim_backtest import BASE_SEED
 from nflpi.api import schemas as s
 from nflpi.config import Settings, get_settings
 from nflpi.ingestion import nflverse, service
-from nflpi.models import Game, MarketSnapshot, Prediction
+from nflpi.models import AppSetting, Game, MarketSnapshot, Prediction
 from nflpi.picks.rules import ASSUMED_LABEL
 from nflpi.predictions import engine
 from nflpi.predictions.elo import EloParams
@@ -214,7 +214,8 @@ def test_api_exposes_the_stored_simulation(loaded, client):
 
 def test_pick_mode_is_straight_up_and_labelled_assumed_by_default(loaded, client):
     week = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json())
-    assert week.pick_mode == s.PickModeOut(mode="straight_up", assumed=True, label=ASSUMED_LABEL)
+    assert week.pick_mode.mode == "straight_up" and week.pick_mode.assumed
+    assert week.pick_mode.label.startswith(ASSUMED_LABEL)
 
 
 def test_a_configured_pick_mode_is_shown_and_not_labelled_assumed(loaded, client, monkeypatch):
@@ -225,9 +226,73 @@ def test_a_configured_pick_mode_is_shown_and_not_labelled_assumed(loaded, client
     finally:
         monkeypatch.delenv("PICK_MODE")
         get_settings.cache_clear()
-    assert week.pick_mode == s.PickModeOut(mode="confidence_pool", assumed=False, label="Confidence pool")
+    assert (week.pick_mode.mode, week.pick_mode.assumed) == ("confidence_pool", False)
+    assert week.pick_mode.label.startswith("Confidence pool")
+
+
+# X5 the label says both modes use one order ---------------------------------------------------------------------------
+
+def test_pick_mode_label_says_both_modes_use_the_same_order(loaded, client):
+    week = s.WeekOut.model_validate(client.get(f"/api/weeks/{CURRENT}/4").json())
+    assert "same order" in week.pick_mode.label and "win chance, then game id" in week.pick_mode.label
 
 
 def test_pick_modes_the_sheet_cannot_show_are_refused():
     with pytest.raises(ValueError):
         Settings(pick_mode="ats")
+
+
+# X1 the simulator is optional: no simulator fault stops prediction rows --------------------------------------------
+
+def all_games_have_rows(session) -> bool:
+    return all(latest(session, g.game_id) is not None for g in upcoming(session))
+
+
+def test_a_malformed_stored_parameter_row_gives_no_simulation_but_all_predictions(loaded):
+    loaded.add(AppSetting(key=f"sim_params_{CURRENT}", value={"unexpected": 1}))
+    loaded.commit()
+    assert engine.load_sim_params(loaded, CURRENT) is None
+    engine.refresh_predictions(loaded)
+    assert all_games_have_rows(loaded)
+    assert all(latest(loaded, g.game_id).features["simulation"] is None for g in upcoming(loaded))
+
+
+def test_one_game_whose_simulation_raises_is_stored_as_none_and_the_rest_survive(loaded, monkeypatch):
+    engine.save_sim_params(loaded, CURRENT, synthetic_params())
+    bad = upcoming(loaded)[0].game_id
+    real = engine.simulate_game
+
+    def flaky(*a, seed=None, **kw):
+        if seed == zlib.crc32(bad.encode()) ^ BASE_SEED:
+            raise RuntimeError("boom")
+        return real(*a, seed=seed, **kw)
+
+    monkeypatch.setattr(engine, "simulate_game", flaky)
+    engine.refresh_predictions(loaded)
+    assert all_games_have_rows(loaded)
+    assert latest(loaded, bad).features["simulation"] is None
+    assert all(latest(loaded, g.game_id).features["simulation"] is not None for g in upcoming(loaded)[1:])
+
+
+def test_a_score_model_fit_that_raises_still_writes_every_prediction(loaded, monkeypatch):
+    engine.save_sim_params(loaded, CURRENT, synthetic_params())
+
+    def broken(*a, **kw):
+        raise RuntimeError("fit failed")
+
+    monkeypatch.setattr(engine.ScoreModel, "fit", broken)
+    engine.refresh_predictions(loaded)
+    assert all_games_have_rows(loaded)
+    assert all(latest(loaded, g.game_id).features["simulation"] is None for g in upcoming(loaded))
+
+
+# X4 a simulation the API could not serve is never stored ---------------------------------------------------------
+
+def test_a_nan_simulation_is_stored_as_none_and_the_week_still_answers(loaded, client, monkeypatch):
+    engine.save_sim_params(loaded, CURRENT, synthetic_params())
+    real = engine.simulate_game
+    monkeypatch.setattr(engine, "simulate_game",
+                        lambda *a, **kw: replace(real(*a, **kw), p_a_win=float("nan")))
+    engine.refresh_predictions(loaded)
+    assert all(latest(loaded, g.game_id).features["simulation"] is None for g in upcoming(loaded))
+    assert client.get(f"/api/weeks/{CURRENT}/4").status_code == 200
