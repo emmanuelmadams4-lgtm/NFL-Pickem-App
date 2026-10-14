@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ApiError, ago, createClient, keys, type Meta } from "@nflpi/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { useApi, useSession } from "@/lib/api";
+import { endStoredPasskeySession, PASSKEY_SIGNOUT_FAILED_NOTICE, useApi, useSession } from "@/lib/api";
 import { useFreshness, useMeta } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
 import { useToast } from "@/components/toast";
@@ -13,6 +13,7 @@ import { safeGet, safeSet } from "@/lib/fmt";
 import { useOnline } from "@/lib/sync";
 import { useStorageStatus } from "@/lib/persist";
 import { AlertsSection } from "@/components/settings/alerts";
+import { PasskeysSection } from "@/components/passkey/passkeys-section";
 
 function Row({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -46,9 +47,10 @@ function AccessSection() {
         setError(err instanceof ApiError && err.status === 401 ? "Wrong token" : errorMessage(err));
         return;
       }
+      const ended = await endStoredPasskeySession();
       signIn(next.trim());
       setNext("");
-      toast("Token updated.", "good");
+      toast(ended ? "Token updated." : PASSKEY_SIGNOUT_FAILED_NOTICE, ended ? "good" : "bad");
     } finally {
       setBusy(false);
     }
@@ -408,6 +410,7 @@ export function SettingsView() {
           <LeaderSection meta={meta} />
           <CsvSection meta={meta} />
           <ModelSection meta={meta} />
+          <PasskeysSection />
           <AccessSection />
         </>
       )}

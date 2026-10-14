@@ -1,0 +1,22 @@
+[WebServer] ingestion open-meteo/weather failed
+  ✓   1 e2e/passkey.spec.ts:82:5 › K1 passkeys off: the sign-in card has no passkey button, with the flag false or missing (835ms)
+  ✘   2 e2e/passkey.spec.ts:92:5 › K2 K4 K5 K8 K10 add with the token, sign out, sign in with the passkey, it is sent and listed, sign out ends it (15.6s)
+  ✘   3 e2e/passkey.spec.ts:130:5 › K5 a passkey session cannot add a passkey: the 403 is explained and nothing is added (15.7s)
+  ✘   4 e2e/passkey.spec.ts:145:5 › K6 K9 removing the passkey this device signed in with ends its session and returns to the sign-in card (15.5s)
+  ✘   5 e2e/passkey.spec.ts:162:5 › K6 removing a passkey with the token: two steps, the row goes, the app stays signed in (15.5s)
+  ✘   6 e2e/passkey.spec.ts:176:5 › K3 sign-in refusals are words on the card and the token form keeps working (30.7s)
+  ✘   7 e2e/passkey.spec.ts:199:5 › K3 a browser without the passkey JSON helpers says so and keeps the token form (30.5s)
+  ✘   8 e2e/passkey.spec.ts:210:5 › K5 the name stops at 64 characters; refusals while adding are words (30.5s)
+  ✘   9 e2e/passkey.spec.ts:231:5 › K7 passkeys off: Settings still lists passkeys (so one can be removed) and offers no add (15.7s)
+  ✘  10 e2e/passkey.spec.ts:245:7 › K11 at 393 px: no serious axe finding and no sideways scroll on the card and the Passkeys section (15.5s)
+  ✘  11 e2e/passkey.spec.ts:245:7 › K11 at 320 px: no serious axe finding and no sideways scroll on the card and the Passkeys section (15.5s)
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+    Error: expect(locator).toBeVisible() failed
+  10 failed
+  1 passed (3.6m)
+(K1 passes before the build on purpose: today's card has no passkey button.)

@@ -8,6 +8,9 @@ export type GameSummary = S["GameSummary"];
 export type GameDetail = S["GameDetail"];
 export type LiveOut = S["LiveOut"];
 export type LiveGameOut = S["LiveGameOut"];
+export type PasskeyList = S["PasskeyListOut"];
+export type RegisteredPasskey = S["RegisteredOut"];
+export type PasskeySession = S["SessionOut"];
 export type Prediction = S["PredictionOut"];
 export type Factor = S["Factor"];
 export type Team = S["TeamOut"];
@@ -90,6 +93,15 @@ export function createClient(config: ClientConfig) {
 
   return {
     health: () => call<S["HealthOut"]>("/health"),
+    passkeyRegisterBegin: () => call<Record<string, unknown>>("/passkey/register/begin", { method: "POST" }),
+    passkeyRegisterFinish: (credential: unknown, label: string | null) =>
+      call<RegisteredPasskey>("/passkey/register/finish", { method: "POST", body: JSON.stringify({ credential, label }) }),
+    passkeySigninBegin: () => call<Record<string, unknown>>("/passkey/signin/begin", { method: "POST" }),
+    passkeySigninFinish: (credential: unknown) =>
+      call<PasskeySession>("/passkey/signin/finish", { method: "POST", body: JSON.stringify(credential) }),
+    passkeys: () => call<PasskeyList>("/passkey"),
+    removePasskey: (id: number) => call<void>(`/passkey/${id}`, { method: "DELETE" }),
+    passkeySignout: () => call<void>("/passkey/signout", { method: "POST" }),
     meta: () => call<Meta>("/meta"),
     week: (season: number, week: number) => call<Week>(`/weeks/${season}/${week}`),
     game: (gameId: string) => call<GameDetail>(`/games/${gameId}`),
@@ -132,6 +144,8 @@ export type Api = ReturnType<typeof createClient>;
 
 /** Query keys shared by web so caches line up. */
 export const keys = {
+  passkeys: ["passkeys"] as const,
+  passkeyHealth: ["passkey-health"] as const,
   meta: ["meta"] as const,
   week: (season: number, week: number) => ["week", season, week] as const,
   game: (gameId: string) => ["game", gameId] as const,

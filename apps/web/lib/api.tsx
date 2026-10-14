@@ -6,13 +6,14 @@ import { trackedFetch } from "@/lib/sync";
 
 export const TOKEN_KEY = "nflpi_token";
 export const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+export const PASSKEY_SIGNOUT_FAILED_NOTICE = "Signed out on this device, but the server could not end the passkey sign-in. Remove that passkey in Settings to end it now.";
 
 interface Session {
   token: string | null;
   baseUrl: string;
   api: Api | null;
   signIn: (token: string) => void;
-  signOut: (notice?: string) => void;
+  signOut: (notice?: string) => Promise<void>;
   notice: string | null;
   ready: boolean;
 }
@@ -39,6 +40,19 @@ const notifyToken = () => tokenListeners.forEach((l) => l());
 function tokenSnapshot(): string | null {
   return memoryTouched ? memoryToken : readToken();
 }
+
+/** Ends the current passkey session before its local value is replaced or removed. */
+export async function endStoredPasskeySession(): Promise<boolean> {
+  const current = tokenSnapshot();
+  if (!current?.startsWith("pks_")) return true;
+  try {
+    await createClient({ baseUrl: BASE_URL, token: current }).passkeySignout();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function subscribeToken(cb: () => void) {
   tokenListeners.add(cb);
   window.addEventListener("storage", cb);
@@ -65,7 +79,8 @@ export function SessionProvider({ children, onSignOut }: { children: ReactNode; 
   }, []);
 
   const signOut = useCallback(
-    (message?: string) => {
+    async (message?: string) => {
+      const ended = await endStoredPasskeySession();
       memoryToken = null;
       memoryTouched = true;
       try {
@@ -73,7 +88,7 @@ export function SessionProvider({ children, onSignOut }: { children: ReactNode; 
       } catch {
         /* ignore */
       }
-      setNotice(message ?? null);
+      setNotice(message ?? (ended ? null : PASSKEY_SIGNOUT_FAILED_NOTICE));
       notifyToken();
       onSignOut?.();
     },

@@ -64,10 +64,14 @@ export function Providers({ children }: { children: ReactNode }) {
 
 /** Any 401 from any request drops the stored token and returns to the sign-in card. */
 function AuthFailureBridge({ handler }: { handler: React.MutableRefObject<() => void> }) {
-  const { signOut } = useSession();
+  const { signOut, token } = useSession();
   useEffect(() => {
-    handler.current = () => signOut("Your token was rejected by the server. Sign in again.");
-  }, [handler, signOut]);
+    handler.current = () => {
+      void signOut(token?.startsWith("pks_")
+        ? "Your passkey sign-in has ended. Sign in again."
+        : "Your token was rejected by the server. Sign in again.");
+    };
+  }, [handler, signOut, token]);
   return null;
 }
 

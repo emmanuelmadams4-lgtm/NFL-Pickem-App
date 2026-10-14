@@ -262,7 +262,7 @@ test("E4 a rejected token signs the owner out, on an upload and on a read", asyn
   await chooser(page).setInputFiles(csvFile("a.csv", "x"));
   await sendButton(page).click();
   await expect(page.getByText("Your token was rejected by the server. Sign in again.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
 });
 
 test("E4b a rejected token on a group read signs the owner out too", async ({ page }) => {
@@ -270,7 +270,7 @@ test("E4b a rejected token on a group read signs the owner out too", async ({ pa
   await page.route("**/api/group/standings*", (route) => route.fulfill({ status: 401, json: { detail: "Invalid token" } }));
   await page.goto(`/group/?season=${SEASON}&week=3`);
   await expect(page.getByText("Your token was rejected by the server. Sign in again.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
 });
 
 test("E5 an error with no body, or with text that is not ours to show, gets a fixed message", async ({ page }) => {

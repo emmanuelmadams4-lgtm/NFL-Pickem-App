@@ -944,6 +944,8 @@ export interface components {
             stale_datasets: string[];
             /** Worker Heartbeat */
             worker_heartbeat?: string | null;
+            /** Passkeys */
+            passkeys: boolean;
         };
         /** ImportOut */
         ImportOut: {

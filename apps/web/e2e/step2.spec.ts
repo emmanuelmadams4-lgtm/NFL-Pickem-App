@@ -57,10 +57,10 @@ test("E1 sign in: a wrong token is refused, the right one opens the current week
   const { meta } = await board(request);
   await page.goto("/");
   await page.getByLabel("Access token").fill("wrong");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.locator("#token-error")).toHaveText("Wrong token");
   await page.getByLabel("Access token").fill(TOKEN);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: `Week ${meta.current_week}` })).toBeVisible();
 });
 

@@ -732,7 +732,7 @@ test.describe(() => {
     const token = page.getByLabel(/token/i);
     await expect(token).toBeVisible();
     await token.fill(TOKEN);
-    await page.getByRole("button", { name: /sign in/i }).click();
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await boardLoaded(page);
     await expect(page.getByText("Install on your iPhone")).toHaveCount(0);
   });
