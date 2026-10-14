@@ -1,0 +1,13 @@
+M1 order ties by id: KILLED
+M2 simulation inside the hash: KILLED
+M3 bench seed: KILLED
+M4 spread sign: KILLED
+M5 playoff never ties: KILLED
+M6 walk-forward window: KILLED
+M7 no params, no simulation: SURVIVED
+M8 load_frame spread: KILLED
+Traceback (most recent call last):
+  File [35m"/Users/emmanueladams/HarnessAgents/worktrees/worker-wire18h/docs/gauntlet/logs/step-18h-evidence/mutate.py"[0m, line [35m43[0m, in [35m<module>[0m
+    assert [1;31msrc.count(old) == 1[0m, (name, src.count(old))
+           [1;31m^^^^^^^^^^^^^^^^^^^[0m
+[1;35mAssertionError[0m: [35m('M9 train survives a failed fetch', 7)[0m

@@ -1,11 +1,20 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _HIDDEN_REPR_FIELDS = frozenset(
-    {"anthropic_api_key", "openrouter_api_key", "app_access_token", "vapid_private_key", "odds_api_key", "database_url"}
+    {
+        "anthropic_api_key",
+        "openrouter_api_key",
+        "app_access_token",
+        "vapid_private_key",
+        "odds_api_key",
+        "odds_api_key_fallback",
+        "database_url",
+    }
 )
 
 
@@ -13,6 +22,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     odds_api_key: str = ""  # The Odds API key (server .env only)
+    odds_api_key_fallback: str = ""  # second key, used once per run when the first is out of credits
+    odds_extra_markets: bool = True  # ask for spreads and totals too: 3 credits per request instead of 1
     database_url: str = "postgresql+psycopg://nflpi:nflpi@localhost:5432/nflpi"
     # Single-user access token. Every /api route except /api/health requires it.
     app_access_token: str = ""
@@ -37,6 +48,8 @@ class Settings(BaseSettings):
     # Model
     train_window_seasons: int = 10
     first_season: int = 2002
+    # How the owner's pool scores picks (env PICK_MODE). Both modes pick the straight-up winner; ats/totals are refused.
+    pick_mode: Literal["straight_up", "confidence_pool"] | None = None
 
     # AI (keys stay on the server)
     anthropic_api_key: str = ""

@@ -1,0 +1,11 @@
+OUT OF LANE: backend/nflpi/analytics/sim_backtest.py: owned by lane sim
+OUT OF LANE: backend/nflpi/config.py: owned by lane web
+OUT OF LANE: backend/nflpi/picks/rules.py: owned by lane picks
+OUT OF LANE: backend/nflpi/predictions/sheet.py: a seam (ask the integrator)
+OUT OF LANE: backend/tests/test_model_c.py: owned by lane modelc
+OUT OF LANE: backend/tests/test_picks.py: owned by lane picks
+OUT OF LANE: backend/tests/test_sheet.py: owned by no lane
+OUT OF LANE: backend/tests/test_sim_backtest.py: owned by lane sim
+OUT OF LANE: packages/shared/openapi.json: owned by lane web
+OUT OF LANE: packages/shared/src/api-types.ts: owned by lane web
+10 problem(s)

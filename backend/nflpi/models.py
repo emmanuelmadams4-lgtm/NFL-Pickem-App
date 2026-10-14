@@ -444,5 +444,16 @@ class BookPrice(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("game_id", "sportsbook", "market_type", "selection", "observed_at", name="uq_book_prices_key"),
+        # line and price are in the key: an alternate line or a changed price under an unchanged time is a new row
+        UniqueConstraint(
+            "game_id",
+            "sportsbook",
+            "market_type",
+            "selection",
+            "observed_at",
+            "line",
+            "price",
+            name="uq_book_prices_key",
+            postgresql_nulls_not_distinct=True,  # moneyline has no line
+        ),
     )

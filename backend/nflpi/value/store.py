@@ -4,13 +4,15 @@ from collections.abc import Iterable, Mapping
 from datetime import datetime, timedelta
 
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import distinct_on, insert
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from nflpi.betting.odds import BettingError
 from nflpi.betting.snapshot import MarketSnapshot
 from nflpi.config import get_settings
 from nflpi.models import BookPrice
+
+SIDES = {"moneyline": ("home", "away"), "spread": ("home", "away"), "total": ("over", "under")}
 
 
 def max_price_age() -> timedelta:
@@ -68,15 +70,32 @@ def save_prices(
     return len(inserted)
 
 
+def _snapshot(r: BookPrice) -> MarketSnapshot:
+    return MarketSnapshot(
+        r.game_id, r.sportsbook, r.observed_at, r.market_type, r.selection, r.line, "american", r.price
+    )
+
+
 def load_snapshots(session: Session, game_id: str, market_type: str, *, as_of: datetime) -> list[MarketSnapshot]:
-    """Newest price per book and selection observed at or before as_of."""
+    """Per book, the newest complete pair (both sides, one observed time, one line) at or before as_of.
+
+    A side seen at a different time or line than its partner is never paired, and a lone side is never returned.
+    Among pairs at the newest time (alternate lines) the most recently fetched one wins.
+    """
     stmt = (
         select(BookPrice)
-        .ext(distinct_on(BookPrice.sportsbook, BookPrice.selection))
         .where(BookPrice.game_id == game_id, BookPrice.market_type == market_type, BookPrice.observed_at <= as_of)
-        .order_by(BookPrice.sportsbook, BookPrice.selection, BookPrice.observed_at.desc(), BookPrice.id.desc())
+        .order_by(BookPrice.fetched_at.desc(), BookPrice.id.desc())
     )
-    return [
-        MarketSnapshot(r.game_id, r.sportsbook, r.observed_at, r.market_type, r.selection, r.line, "american", r.price)
-        for r in session.scalars(stmt)
-    ]
+    sides = SIDES[market_type] if market_type in SIDES else ()
+    pairs: dict[tuple, dict[str, BookPrice]] = {}  # (book, observed_at, line) -> newest row per selection
+    for r in session.scalars(stmt):
+        pairs.setdefault((r.sportsbook, r.observed_at, r.line), {}).setdefault(r.selection, r)
+    best: dict[str, tuple] = {}
+    for (book, observed_at, _), rows in pairs.items():
+        if set(rows) != set(sides):
+            continue
+        rank = (observed_at, max(r.fetched_at for r in rows.values()), max(r.id for r in rows.values()))
+        if book not in best or rank > best[book][0]:
+            best[book] = (rank, rows)
+    return [_snapshot(best[book][1][side]) for book in sorted(best) for side in sides]

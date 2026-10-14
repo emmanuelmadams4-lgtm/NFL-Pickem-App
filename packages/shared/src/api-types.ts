@@ -1256,6 +1256,18 @@ export interface components {
             /** Team */
             team: string;
         };
+        /** PickModeOut */
+        PickModeOut: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "straight_up" | "confidence_pool";
+            /** Assumed */
+            assumed: boolean;
+            /** Label */
+            label: string;
+        };
         /** PickOut */
         PickOut: {
             /** Game Id */
@@ -1318,6 +1330,7 @@ export interface components {
             data_freshness: {
                 [key: string]: string | null;
             };
+            simulation?: components["schemas"]["SimulationOut"] | null;
         };
         /** PushKeys */
         PushKeys: {
@@ -1483,6 +1496,51 @@ export interface components {
             share: number | null;
             /** Avg Confidence */
             avg_confidence: number | null;
+        };
+        /** SimulationOut */
+        SimulationOut: {
+            /** Source */
+            source: string;
+            /** Distribution */
+            distribution: string;
+            /** N Simulations */
+            n_simulations: number;
+            /** Home Points */
+            home_points: number;
+            /** Away Points */
+            away_points: number;
+            /** Home Win */
+            home_win: number;
+            /** Away Win */
+            away_win: number;
+            /** Tie */
+            tie: number;
+            /** Expected Margin */
+            expected_margin: number;
+            /** Expected Total */
+            expected_total: number;
+            /** Margin 80 */
+            margin_80: number[];
+            /** Total 80 */
+            total_80: number[];
+            /** Home Spread */
+            home_spread: number | null;
+            /** Total */
+            total: number | null;
+            /** Home Cover */
+            home_cover: number | null;
+            /** Away Cover */
+            away_cover: number | null;
+            /** Spread Push */
+            spread_push: number | null;
+            /** Over */
+            over: number | null;
+            /** Under */
+            under: number | null;
+            /** Total Push */
+            total_push: number | null;
+            /** Label */
+            label: string;
         };
         /** StandingOut */
         StandingOut: {
@@ -1676,6 +1734,7 @@ export interface components {
             season: number;
             /** Week */
             week: number;
+            pick_mode: components["schemas"]["PickModeOut"];
             summary: components["schemas"]["WeekSummary"];
             /** Games */
             games: components["schemas"]["GameSummary"][];

@@ -1,0 +1,6 @@
+scratch database nflpi_value_mig (never a live stack)
+alembic downgrade 0009; insert game + one moneyline row; alembic upgrade 0010: OK
+insert a second row, same key but price -120: accepted (count 2)
+insert a copy of the first row (null line): ERROR duplicate key uq_book_prices_key (NULLS NOT DISTINCT works)
+alembic downgrade 0009: dedupes to the first stored row (count 1, price -110), constraint back to the old key
+alembic upgrade head: 0010 (head)
