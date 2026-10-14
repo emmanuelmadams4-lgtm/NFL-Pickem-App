@@ -998,7 +998,8 @@ def test_w3_the_key_choice_rests_on_the_header_not_on_a_status_code(session):
 def test_w5_a_book_with_no_h2h_time_stores_no_market_quote(session):
     kc_lv(session)
     data = recorded()
-    del data[0]["bookmakers"][0]["markets"][0]["last_update"]
+    for event in data:
+        del event["bookmakers"][0]["markets"][0]["last_update"]
     result = run.refresh_odds_quotes(
         session, get=lambda url: fetch.JsonResult(200, data, {}), now=T0, api_key=KEY, fallback_key=""
     )

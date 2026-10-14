@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -418,26 +418,73 @@ def _credits_header(result: fetch.JsonResult) -> int | None:
     return None
 
 
-def _out_of_credits(exc: Exception) -> bool:
-    # The Odds API answers 401 (error_code OUT_OF_USAGE_CREDITS) once the monthly credits are gone. A 429 is
-    # EXCEEDED_FREQ_LIMIT, a burst limit that a second key does not cure, so it never switches keys.
-    return isinstance(exc, fetch.Blocked) and str(exc) == "status 401"
+LOW_CREDITS = 50
+CREDITS_RESET = timedelta(days=35)  # credits reset monthly: a skipped key is asked again after this
+REFUSED = "refused (401)"
+
+
+def _slot_source(slot: str) -> str:
+    return f"oddsapi:{slot}"  # one source_status row per key slot: last count seen (credits_left) and when (last_ok_at)
+
+
+def _slot_usable(session: Session, slot: str, now: datetime, legacy: SourceStatus | None) -> bool:
+    """False while the slot's last remaining count was under 50 and seen less than 35 days ago."""
+    row = session.get(SourceStatus, _slot_source(slot), populate_existing=True)
+    if row is None and slot == "primary":
+        row = legacy  # a count stored before per-slot counts existed was the first key's
+    if row is None or row.credits_left is None or row.credits_left >= LOW_CREDITS:
+        return True
+    return row.last_ok_at is not None and now >= row.last_ok_at + CREDITS_RESET
+
+
+def _record_slot(session: Session, slot: str, now: datetime, credits: int | None, error: str | None) -> None:
+    source = _slot_source(slot)
+    row = session.get(SourceStatus, source)
+    if row is None:
+        session.add(row := SourceStatus(source=source, consecutive_failures=0, updated_at=now))
+    row.updated_at, row.last_error = now, error
+    if error is None and credits is not None:  # a reply without a count leaves the last known count in place
+        row.credits_left, row.last_ok_at = credits, now
+
+
+@dataclass
+class OddsOutcome:
+    slot: str = ""
+    credits: int | None = None
+    refused: tuple[str, ...] = ()
 
 
 def _get_odds(
-    get: Callable[[str], fetch.JsonResult], keys: list[tuple[str, str]], extra: bool
-) -> tuple[fetch.JsonResult, str]:
-    """Ask with the first key; when it is out of credits, retry once with the next. Returns (reply, slot)."""
-    for index, (slot, key) in enumerate(keys):
+    session: Session,
+    get: Callable[[str], fetch.JsonResult],
+    keys: list[tuple[str, str]],
+    extra: bool,
+    now: datetime,
+    outcome: OddsOutcome,
+) -> fetch.JsonResult:
+    """Ask each usable key in turn; a 401 is a second signal that moves on to the next. Counts come from the header."""
+    refused: list[str] = []
+    for slot, key in keys:
         try:
             result = get(oddsapi.odds_url(key, extra_markets=extra))
         except fetch.Blocked as exc:
-            if not _out_of_credits(exc) or index + 1 == len(keys):
+            if str(exc) != "status 401":  # a 429 is a burst limit that another key does not cure
                 raise
-            log.warning("oddsapi key slot %s is out of credits (remaining: not given); retrying with the next", slot)
+            refused.append(slot)
+            _record_slot(session, slot, now, None, REFUSED)
+            log.warning("oddsapi key slot %s %s", slot, REFUSED)
+            if len(refused) == len(keys) and len(keys) > 1:
+                outcome.refused = tuple(refused)
+                raise fetch.Blocked("both keys refused (401)") from exc
+            if slot == keys[-1][0]:
+                outcome.refused = tuple(refused)
+                raise
             continue
-        log.info("oddsapi key slot %s used, credits remaining: %s", slot, result.headers.get("x-requests-remaining"))
-        return result, slot
+        count = _credits_header(result)
+        log.info("oddsapi key slot %s used, credits remaining: %s", slot, count)
+        _record_slot(session, slot, now, count, None)
+        outcome.slot, outcome.credits, outcome.refused = slot, count, tuple(refused)
+        return result
     raise AssertionError("no key")  # pragma: no cover
 
 
@@ -446,11 +493,10 @@ def _odds_job(
     get: Callable[[str], fetch.JsonResult],
     now: datetime,
     keys: list[tuple[str, str]],
-    credits: list[int | None],
+    outcome: OddsOutcome,
     extra: bool,
 ) -> tuple[int, int, None]:
-    result, _slot = _get_odds(get, keys, extra)
-    credits[0] = _credits_header(result)
+    result = _get_odds(session, get, keys, extra, now, outcome)
     events, skipped = oddsapi.parse_events(result.data)
     games = _quote_candidates(session, now)
     inserted, matched, saved, dropped = 0, 0, 0, 0
@@ -479,6 +525,13 @@ def _odds_job(
     return inserted, skipped, None
 
 
+def _answer_note(outcome: OddsOutcome) -> str:
+    left = f"{outcome.credits} credits left" if outcome.credits is not None else "credits left not given"
+    if outcome.refused:
+        return f"{' and '.join(outcome.refused)} refused (401), on {outcome.slot}; {left}"
+    return f"{outcome.slot} answered; {left}"
+
+
 def refresh_odds_quotes(
     session: Session,
     *,
@@ -497,20 +550,14 @@ def refresh_odds_quotes(
         keys.append(("fallback", spare))
     now = datetime.now(UTC) if now is None else now.astimezone(UTC)
     status = session.get(SourceStatus, "oddsapi", populate_existing=True)
-    if (
-        status is not None
-        and status.credits_left is not None
-        and status.credits_left < 50
-        and (status.last_ok_at is None or now < status.last_ok_at + timedelta(days=35))
-    ):
-        if len(keys) == 1:
-            log.warning("oddsapi stopped: credits low")
-            return RefreshResult("oddsapi", "skipped", detail="credits low")
-        # with a second key the first one's 401 is the signal to switch: no 35 day stop on a low count
-        if status.last_error == "credits low" and status.blocked_until is not None:
-            status.blocked_until = None  # a stop set before the second key was added
-            session.commit()
-    credits: list[int | None] = [None]
+    usable = [(slot, k) for slot, k in keys if _slot_usable(session, slot, now, status)]
+    if not usable:
+        log.warning("oddsapi stopped: credits low")
+        return RefreshResult("oddsapi", "skipped", detail="credits low")
+    if status is not None and status.last_error == "credits low" and status.blocked_until is not None:
+        status.blocked_until = None  # an earlier stop on a key that is usable again (a second key, or 35 days on)
+        session.commit()
+    outcome = OddsOutcome()
     result = run_source(
         session,
         status_key="oddsapi",
@@ -519,18 +566,23 @@ def refresh_odds_quotes(
         now=now,
         min_interval=ODDS_MIN_INTERVAL,
         floor=ODDS_MIN_INTERVAL,
-        job=lambda: _odds_job(session, get, now, keys, credits, settings.odds_extra_markets),
+        job=lambda: _odds_job(session, get, now, usable, outcome, settings.odds_extra_markets),
     )
     if result.status == "ok":
+        note = _answer_note(outcome)
         store.mark_ok(
             session,
             "oddsapi",
             now,
             ODDS_MIN_INTERVAL,
-            credits_left=credits[0] if credits[0] is not None else store.UNSET,
+            credits_left=outcome.credits if outcome.credits is not None else store.UNSET,
         )
-        if credits[0] is not None and credits[0] < 50 and len(keys) == 1:
-            store.mark_stopped(session, "oddsapi", now, now + timedelta(days=35), credits[0])
+        if outcome.refused:
+            session.get(SourceStatus, "oddsapi").last_error = note.split(";")[0]
+        spare = [slot for slot, _ in usable if slot != outcome.slot and slot not in outcome.refused]
+        if outcome.credits is not None and outcome.credits < LOW_CREDITS and not spare:
+            store.mark_stopped(session, "oddsapi", now, now + CREDITS_RESET, outcome.credits)
             log.warning("oddsapi stopped: credits low")
         session.commit()
+        result = replace(result, detail=note)
     return result

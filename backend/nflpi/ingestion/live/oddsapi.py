@@ -170,14 +170,13 @@ def _book(item: Any, home: str, away: str) -> Book | None:
         name, seen = market.get("key"), _time(market.get("last_update"))
         if name == "h2h":
             found = _moneyline(market, home, away)
-            if found is None or ml is not None:
-                continue  # a second h2h market is ignored, the first good one stays
+            if found is None or ml is not None or seen is None:
+                continue  # a second h2h market is ignored; no market time, no price: the book's time is no stand-in
             ml = found
-            if seen is not None:  # no market time, no stored price: the book's time is not a stand-in
-                prices += [
-                    Price("moneyline", "home", None, found[0], seen),
-                    Price("moneyline", "away", None, found[1], seen),
-                ]
+            prices += [
+                Price("moneyline", "home", None, found[0], seen),
+                Price("moneyline", "away", None, found[1], seen),
+            ]
         elif seen is None:
             continue
         elif name == "spreads":
