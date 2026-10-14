@@ -73,16 +73,23 @@ export function PasskeysSection() {
                 <div className="min-w-0 break-words">
                   <p className="text-sm font-medium text-text">{row.label || "Unnamed passkey"}</p>
                   <p className="text-xs text-subtle">
-                    Added {new Date(row.created_at).toLocaleDateString()} · {row.last_used_at ? `Last used ${ago(row.last_used_at)}` : "Never used"}
+                    Added {new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {row.last_used_at ? `Last used ${ago(row.last_used_at)}` : "Never used"}
                   </p>
                 </div>
-                <Button type="button" variant="danger" size="sm" loading={removing === row.id} disabled={removing !== null && removing !== row.id} onClick={() => remove(row.id)}>
-                  {confirmId === row.id ? "Confirm remove" : "Remove"}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" variant="danger" size="sm" loading={removing === row.id} disabled={removing !== null && removing !== row.id} onClick={() => remove(row.id)}>
+                    {confirmId === row.id ? "Confirm remove" : "Remove"}
+                  </Button>
+                  {confirmId === row.id && (
+                    <Button type="button" variant="ghost" size="sm" disabled={removing !== null} onClick={() => setConfirmId(null)}>
+                      Cancel
+                    </Button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
-        ) : <p className="text-sm text-text-2">No passkeys added yet.</p>)}
+        ) : <p className="text-sm text-text-2">{enabled ? "No passkeys yet. Add one below and it will appear here." : "Passkey sign-in is switched off on the server."}</p>)}
         {enabled && (
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-0 flex-1">

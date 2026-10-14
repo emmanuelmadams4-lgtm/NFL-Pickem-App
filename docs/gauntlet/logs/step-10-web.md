@@ -85,3 +85,30 @@ Quality:
 Gate: `docs/gauntlet/logs/step-10-web-evidence/gate.sh` (as step 15: pytest, ruff, `gen:api` no drift, typecheck,
 whole browser suite); under D71 run only `e2e/passkey.spec.ts` (and touched specs) locally with a 15-minute limit;
 the pull request's CI is the full gate.
+
+K12 (added after the design critic, frozen before WO3; `reviews/design-1.md`): Remove arms one row with a Cancel
+beside "Confirm remove"; passkey errors in their own alert under the passkey button, the token input marked invalid
+only for token errors; empty list "No passkeys yet. Add one below and it will appear here." (on) or "Passkey sign-in
+is switched off on the server." (off); dates as "Added Oct 14, 2026". K5 addition: a second passkey on the same
+device is refused in plain words "This device already has a passkey for this app."
+
+## 3. IMPLEMENTATION
+
+Builder Ryan (Codex, default model), one work order at a time; the coordinator read every diff, kept it to the
+allowed files, and reran the proof. Runs are under `~/.claude/plans/nfl-pickem-lanes/logs/step-15-web/` (`res:gate`
+and `res:e2e` held for each browser run).
+
+| Work order | Red evidence | Result | Commit |
+|---|---|---|---|
+| Red tests | `s10-red-1` (browser, all fail: no button, no section), `red-1-backend.txt` (health 7 fail) | spec + tests | `ad3dc37` |
+| WO1 (`wo-1.md`) | as above | `s10-green-1`: 9 passed, 2 failed (K3 = coordinator's test defect, no passkey on the authenticator; K7 = real defect) | — |
+| K3 test fix | — | test registers a passkey before the refusal cases | `6dc1051` |
+| WO1b (`wo-1.md` §1b) | K7: health flag came from the saved offline cache | shared `usePasskeysEnabled` hook, fresh fetch on every open; `s10-green-2` 11/11; health 7/7 | `a67a065` |
+| WO2 (`wo-2.md`) | `s10-red-2b`: raw browser text for a second passkey on one device; ruff E501 in `main.py` | plain words; line wrapped; ruff clean | `821db49` |
+| WO3 (`wo-3.md`) | `s10-red-3`: both K12 tests fail for the intended reason | Cancel, split errors, texts, date | see below |
+
+Coordinator edits to production code: one `ruff check --fix` on `backend/nflpi/api/main.py` (import order only, after
+WO1). `packages/shared/openapi.json` and `api-types.ts` regenerated with `npm run gen:api` (SEAM god 9f6599), never hand
+edited. Design Gauntlet: before/after screenshots and the read-only design critic report `reviews/design-1.md`;
+triage: accepted 1, 3, 6, 7 (WO3) and 2 (WO2, found by the screenshots); not taken 4 (optional intro line), 5 (the
+40 px button gap is app wide, carried), 8 (name hint; the placeholder already says it).

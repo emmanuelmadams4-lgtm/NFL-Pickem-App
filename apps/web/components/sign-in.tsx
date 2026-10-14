@@ -12,16 +12,18 @@ export function SignIn({ notice }: { notice?: string | null }) {
   const { signIn } = useSession();
   const qc = useQueryClient();
   const [value, setValue] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const publicApi = createClient({ baseUrl: BASE_URL, token: "" });
   const passkeysOn = usePasskeysEnabled(publicApi);
 
   async function signInWithPasskey() {
-    setError(null);
+    setTokenError(null);
+    setPasskeyError(null);
     if (!passkeyReady("get")) {
-      setError(passkeyUnsupported);
+      setPasskeyError(passkeyUnsupported);
       return;
     }
     setPasskeyBusy(true);
@@ -31,11 +33,11 @@ export function SignIn({ notice }: { notice?: string | null }) {
       const session = await publicApi.passkeySigninFinish(credential);
       signIn(session.session);
     } catch (err) {
-      if (passkeyCancelled(err)) setError("No passkey was used.");
-      else if (err instanceof ApiError && err.status === 401) setError("Passkey sign-in failed.");
-      else if (err instanceof ApiError) setError(err.message);
-      else if (err instanceof Error && err.message === passkeyUnsupported) setError(passkeyUnsupported);
-      else setError(`Could not reach the API${BASE_URL ? ` at ${BASE_URL}` : ""}. Check that the server is running.`);
+      if (passkeyCancelled(err)) setPasskeyError("No passkey was used.");
+      else if (err instanceof ApiError && err.status === 401) setPasskeyError("Passkey sign-in failed.");
+      else if (err instanceof ApiError) setPasskeyError(err.message);
+      else if (err instanceof Error && err.message === passkeyUnsupported) setPasskeyError(passkeyUnsupported);
+      else setPasskeyError(`Could not reach the API${BASE_URL ? ` at ${BASE_URL}` : ""}. Check that the server is running.`);
     } finally {
       setPasskeyBusy(false);
     }
@@ -43,20 +45,21 @@ export function SignIn({ notice }: { notice?: string | null }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setPasskeyError(null);
     const token = value.trim();
     if (!token) {
-      setError("Enter your access token.");
+      setTokenError("Enter your access token.");
       return;
     }
     setBusy(true);
-    setError(null);
+    setTokenError(null);
     try {
       const meta = await createClient({ baseUrl: BASE_URL, token }).meta();
       qc.setQueryData(keys.meta, meta);
       signIn(token);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) setError("Wrong token");
-      else setError(`Could not reach the API${BASE_URL ? ` at ${BASE_URL}` : ""}. Check that the server is running.`);
+      if (err instanceof ApiError && err.status === 401) setTokenError("Wrong token");
+      else setTokenError(`Could not reach the API${BASE_URL ? ` at ${BASE_URL}` : ""}. Check that the server is running.`);
     } finally {
       setBusy(false);
     }
@@ -88,13 +91,13 @@ export function SignIn({ notice }: { notice?: string | null }) {
               autoFocus
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              aria-invalid={!!error}
-              aria-describedby={error ? "token-error" : "token-help"}
+              aria-invalid={!!tokenError}
+              aria-describedby={tokenError ? "token-error" : "token-help"}
               className="mt-1.5 h-11 w-full rounded-ctl border border-border-strong bg-elevated px-3 text-base text-text placeholder:text-text-2 hover:border-text-2"
             />
-            {error ? (
+            {tokenError ? (
               <p id="token-error" role="alert" className="mt-1.5 text-sm text-bad">
-                {error}
+                {tokenError}
               </p>
             ) : (
               <p id="token-help" className="mt-1.5 text-xs text-subtle">
@@ -107,9 +110,12 @@ export function SignIn({ notice }: { notice?: string | null }) {
             {busy ? "Checking" : "Sign in"}
           </Button>
           {passkeysOn && (
-            <Button type="button" onClick={signInWithPasskey} loading={passkeyBusy} disabled={busy} className="mt-3 w-full">
-              Sign in with a passkey
-            </Button>
+            <>
+              <Button type="button" onClick={signInWithPasskey} loading={passkeyBusy} disabled={busy} className="mt-3 w-full">
+                Sign in with a passkey
+              </Button>
+              {passkeyError && <p role="alert" className="mt-1.5 text-sm text-bad">{passkeyError}</p>}
+            </>
           )}
         </form>
       </Bezel>
