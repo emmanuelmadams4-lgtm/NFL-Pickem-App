@@ -448,12 +448,13 @@ def _slot_usable(session: Session, slot: str, now: datetime, legacy: SourceStatu
 
 
 def _stop_until(session: Session, keys: list[tuple[str, str]], now: datetime) -> datetime:
-    """The earliest moment any low slot is due a retry (35 days after its own low count)."""
+    """The earliest moment after now that any low slot is due a retry (35 days after its own low count)."""
     due = [now + CREDITS_RESET]
     for slot, _ in keys:
         row = session.get(SourceStatus, _slot_source(slot), populate_existing=True)
         if row is not None and row.credits_left is not None and row.credits_left < LOW_CREDITS and row.last_ok_at:
             due.append(row.last_ok_at + CREDITS_RESET)
+    due = [d for d in due if d > now]  # a slot already due again but refused today must not end the stop in the past
     return min(due)
 
 
@@ -549,7 +550,7 @@ def _odds_job(
 def _answer_note(outcome: OddsOutcome) -> str:
     left = f"{outcome.credits} credits left" if outcome.credits is not None else "credits left not given"
     if outcome.refused:
-        return f"{' and '.join(outcome.refused)} refused (401), on {outcome.slot}; {left}"
+        return f"{' and '.join(outcome.refused)} {REFUSED}, on {outcome.slot}; {left}"
     return f"{outcome.slot} answered; {left}"
 
 

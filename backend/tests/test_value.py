@@ -931,6 +931,8 @@ def test_w1_the_last_usable_slot_under_50_sets_the_35_day_stop(session):
     _keys_seen(session, [_ok("30")])  # primary low
     result, _ = _keys_seen(session, [_ok("40")], now=T0 + timedelta(hours=7))  # fallback low too
     assert result.status == "ok"
+    main = session.get(SourceStatus, "oddsapi", populate_existing=True)
+    assert main.last_error == "credits low" and main.blocked_until == T0 + timedelta(days=35)
     result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(days=34))
     assert result.status == "skipped" and seen == [] and result.detail == "credits low"
     result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(days=35, hours=8))
@@ -1037,3 +1039,50 @@ def test_critic_a_failure_after_the_fetch_keeps_the_slot_count(session):
     bad = fetch.JsonResult(200, {"not": "a list"}, {"x-requests-remaining": "20"})
     result, _ = _keys_seen(session, [bad])
     assert result.status == "failed" and _slot(session, "primary").credits_left == 20
+
+
+def test_critic_m3_a_stop_never_ends_in_the_past(session):
+    kc_lv(session)
+    _keys_seen(session, [_ok("30")])  # primary low on day 0
+    now = T0 + timedelta(days=36)  # primary is due again, is refused, and the fallback answers low
+    result, _ = _keys_seen(session, [fetch.Blocked("status 401"), _ok("20")], now=now)
+    assert result.status == "ok"
+    blocked = session.get(SourceStatus, "oddsapi", populate_existing=True).blocked_until
+    assert blocked is not None and blocked > now
+
+
+def test_critic_m2_an_old_count_on_the_main_row_is_copied_to_the_primary_slot(session):
+    kc_lv(session)
+    session.add(SourceStatus(source="oddsapi", consecutive_failures=0, credits_left=20, last_ok_at=T0, updated_at=T0))
+    session.commit()
+    assert _slot(session, "primary") is None
+    result, seen = _keys_seen(session, [_ok("300")], now=T0 + timedelta(hours=7))
+    assert len(seen) == 1 and f"apiKey={KEY2}" in seen[0]  # the copied low count skipped the primary
+    primary = _slot(session, "primary")
+    assert primary.credits_left == 20 and primary.last_ok_at == T0
+
+
+@pytest.mark.parametrize(
+    "replies",
+    [
+        [_ok("480")],
+        [fetch.Blocked("status 401"), _ok("333")],
+        [fetch.Blocked("status 401"), fetch.Blocked("status 401")],
+        [_ok("0")],
+    ],
+)
+def test_critic_m5_no_key_value_reaches_a_run_detail_or_a_status_row(session, replies):
+    kc_lv(session)
+    result, _ = _keys_seen(session, replies)
+    texts = [result.detail or ""]
+    for row in session.scalars(select(SourceStatus).where(SourceStatus.source.like("oddsapi%"))):
+        texts += [row.last_error or "", str(row.detail) if hasattr(row, "detail") else ""]
+    assert all(KEY not in t and KEY2 not in t for t in texts)
+    if len(replies) == 2 and result.status == "failed":
+        for name in ("primary", "fallback"):
+            assert _slot(session, name).last_error == "refused (401)"
+
+
+def test_critic_low_the_refused_note_uses_the_constant():
+    note = run._answer_note(run.OddsOutcome(slot="fallback", credits=5, refused=("primary",)))
+    assert note == f"primary {run.REFUSED}, on fallback; 5 credits left"
