@@ -20,9 +20,9 @@ Branch lane/wire18h, base origin/main b5ee53f. Test DB: DATABASE_URL=postgresql+
    engine imports it through nflpi.picks.
 
 ## Checkpoints
-- [ ] 1 spec + red tests committed
-- [ ] 2 build green
-- [ ] 3 gen:api
-- [ ] 4 mutation sweep
-- [ ] 5 critic PASS
-- [ ] 6 lane-guard + done
+- [x] 1 spec + red tests committed
+- [x] 2 build green
+- [x] 3 gen:api
+- [x] 4 mutation sweep
+- [x] 5 critic PASS
+- [x] 6 lane-guard + done
