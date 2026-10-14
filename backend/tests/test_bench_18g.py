@@ -20,11 +20,21 @@ BASE0 = datetime(2022, 9, 8, 17, tzinfo=UTC)
 
 def games(rows: list[tuple]) -> pd.DataFrame:
     """rows: (home, away, home_score, away_score); one game a week, kickoff ordered."""
-    return pd.DataFrame([
-        {"game_id": f"g{i}", "season": 2022, "week": i + 1, "kickoff_utc": BASE0 + timedelta(days=7 * i),
-         "home_team": h, "away_team": a, "home_score": hs, "away_score": as_}
-        for i, (h, a, hs, as_) in enumerate(rows)
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "game_id": f"g{i}",
+                "season": 2022,
+                "week": i + 1,
+                "kickoff_utc": BASE0 + timedelta(days=7 * i),
+                "home_team": h,
+                "away_team": a,
+                "home_score": hs,
+                "away_score": as_,
+            }
+            for i, (h, a, hs, as_) in enumerate(rows)
+        ]
+    )
 
 
 # ---- P: points-based (Pythagorean) head-to-head ----
@@ -52,10 +62,11 @@ def test_earlier_games_are_decayed_by_half_life_games_of_that_team():
 
 
 def test_swapping_home_and_away_negates_the_value():
-    base = games([("A", "B", 30, 10), ("C", "A", 20, 13)])
+    base = games([("A", "B", 30, 10), ("C", "D", 17, 20), ("C", "A", 20, 13)])
     swapped = base.copy()
-    swapped.loc[1, ["home_team", "away_team", "home_score", "away_score"]] = ["A", "C", 13, 20]
-    assert b.pythag_diff(base, 8).iloc[1] == pytest.approx(-b.pythag_diff(swapped, 8).iloc[1])
+    swapped.loc[2, ["home_team", "away_team", "home_score", "away_score"]] = ["A", "C", 13, 20]
+    assert b.pythag_diff(base, 8).iloc[2] == pytest.approx(-b.pythag_diff(swapped, 8).iloc[2])
+    assert b.pythag_diff(base, 8).iloc[2] != 0
 
 
 def test_a_games_own_score_and_later_games_never_move_its_value():
@@ -92,7 +103,10 @@ def test_kickoffs_out_of_order_are_refused():
 def test_column_names_and_labels_are_frozen():
     assert b.pythag_column("blend", 8) == "p_pyth_blend_8" and b.pythag_column("base", 4) == "p_pyth_base_4"
     assert b.qb_column("blend", 16) == "p_qb_blend_16" and b.qb_column("base", 32) == "p_qb_base_32"
-    assert b.travel_column("blend", "tz") == "p_travel_blend_tz" and b.travel_column("base", "both") == "p_travel_base_both"
+    assert (
+        b.travel_column("blend", "tz") == "p_travel_blend_tz"
+        and b.travel_column("base", "both") == "p_travel_base_both"
+    )
     assert b.label("p_pyth_blend_8") == "market-informed" and b.label("p_pyth_base_8") == "football-only"
     assert b.label("p_qb_blend_16") == "market-informed" and b.label("p_travel_base_tz") == "football-only"
     assert b.label("p_match_football") == "football-only" and b.label("p_match_market") == "market-informed"
@@ -104,13 +118,26 @@ def test_column_names_and_labels_are_frozen():
 
 
 def stat(player, game, pos="QB", pe="2.0", re="0.5", att="20", sk="2", car="3"):
-    return {"player_id": player, "game_id": game, "position": pos, "passing_epa": pe, "rushing_epa": re,
-            "attempts": att, "sacks_suffered": sk, "carries": car}
+    return {
+        "player_id": player,
+        "game_id": game,
+        "position": pos,
+        "passing_epa": pe,
+        "rushing_epa": re,
+        "attempts": att,
+        "sacks_suffered": sk,
+        "carries": car,
+    }
 
 
 def test_quarterback_games_sum_epa_and_dropbacks_for_quarterbacks_only():
-    rows = [stat("q1", "g0"), stat("w1", "g0", pos="WR"), stat("q2", "g0", pe="NA"), stat("q3", "g0", att="0", sk="0", car="0"),
-            stat("q4", "g0", re="")]
+    rows = [
+        stat("q1", "g0"),
+        stat("w1", "g0", pos="WR"),
+        stat("q2", "g0", pe="NA"),
+        stat("q3", "g0", att="0", sk="0", car="0"),
+        stat("q4", "g0", re=""),
+    ]
     got = b.qb_games(rows)
     assert list(got.columns) == ["game_id", "player_id", "epa", "plays"]
     assert got.to_dict("records") == [{"game_id": "g0", "player_id": "q1", "epa": 2.5, "plays": 25.0}]
@@ -177,17 +204,31 @@ def test_quarterback_ratings_need_ordered_kickoffs():
 # ---- T: travel and time zone ----
 
 COORDS = {"SEA00": (47.60, -122.33), "MIA00": (25.96, -80.24), "PHO00": (33.53, -112.26), "LON00": (51.56, -0.28)}
-ZONES = {"SEA00": "America/Los_Angeles", "MIA00": "America/New_York", "PHO00": "America/Phoenix",
-         "LON00": "Europe/London"}
+ZONES = {
+    "SEA00": "America/Los_Angeles",
+    "MIA00": "America/New_York",
+    "PHO00": "America/Phoenix",
+    "LON00": "Europe/London",
+}
 
 
 def trip_frame(rows: list[tuple]) -> pd.DataFrame:
     """rows: (home, away, stadium_id, neutral, kickoff)."""
-    return pd.DataFrame([
-        {"game_id": f"t{i}", "season": 2022, "week": i + 1, "kickoff_utc": k, "home_team": h, "away_team": a,
-         "stadium_id": s, "neutral_site": n}
-        for i, (h, a, s, n, k) in enumerate(rows)
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "game_id": f"t{i}",
+                "season": 2022,
+                "week": i + 1,
+                "kickoff_utc": k,
+                "home_team": h,
+                "away_team": a,
+                "stadium_id": s,
+                "neutral_site": n,
+            }
+            for i, (h, a, s, n, k) in enumerate(rows)
+        ]
+    )
 
 
 def test_great_circle_distance_matches_a_known_pair():
@@ -197,24 +238,34 @@ def test_great_circle_distance_matches_a_known_pair():
 
 def test_the_away_side_travels_from_its_own_home_stadium_and_the_hosts_do_not():
     sep, dec = datetime(2022, 9, 25, 17, tzinfo=UTC), datetime(2022, 12, 4, 18, tzinfo=UTC)
-    df = trip_frame([("MIA", "SEA", "MIA00", False, sep - timedelta(days=14)),
-                     ("SEA", "MIA", "SEA00", False, sep),
-                     ("PHO", "SEA", "PHO00", False, sep + timedelta(days=1)),
-                     ("SEA", "PHO", "SEA00", False, dec)])
+    df = trip_frame(
+        [
+            ("MIA", "SEA", "MIA00", False, sep - timedelta(days=14)),
+            ("SEA", "MIA", "SEA00", False, sep),
+            ("PHO", "SEA", "PHO00", False, sep + timedelta(days=1)),
+            ("SEA", "PHO", "SEA00", False, dec),
+        ]
+    )
     got = b.travel_features(df, COORDS, ZONES)
     km = b.great_circle_km(COORDS["MIA00"], COORDS["SEA00"]) / 1000
     assert got["travel_km_diff"].iloc[1] == pytest.approx(km)
     assert got["tz_diff"].iloc[1] == pytest.approx(-3.0)  # the visitor lives three hours east: it travelled west
     assert got["tz_diff"].iloc[0] == pytest.approx(3.0)  # Miami hosting Seattle: Seattle travelled east
     assert got["tz_diff"].iloc[2] == pytest.approx(0.0)  # Phoenix keeps standard time, Seattle is on daylight time
-    assert got["tz_diff"].iloc[3] == pytest.approx(-1.0)  # in December Seattle is an hour behind Phoenix: Phoenix went west
+    assert got["tz_diff"].iloc[3] == pytest.approx(
+        -1.0
+    )  # in December Seattle is an hour behind Phoenix: Phoenix went west
 
 
 def test_a_neutral_site_makes_both_teams_travel():
     k = datetime(2022, 10, 2, 13, 30, tzinfo=UTC)
-    df = trip_frame([("MIA", "SEA", "MIA00", False, k - timedelta(days=14)),
-                     ("SEA", "MIA", "SEA00", False, k - timedelta(days=7)),
-                     ("MIA", "SEA", "LON00", True, k)])
+    df = trip_frame(
+        [
+            ("MIA", "SEA", "MIA00", False, k - timedelta(days=14)),
+            ("SEA", "MIA", "SEA00", False, k - timedelta(days=7)),
+            ("MIA", "SEA", "LON00", True, k),
+        ]
+    )
     got = b.travel_features(df, COORDS, ZONES)
     d_mia = b.great_circle_km(COORDS["MIA00"], COORDS["LON00"])
     d_sea = b.great_circle_km(COORDS["SEA00"], COORDS["LON00"])
@@ -224,10 +275,14 @@ def test_a_neutral_site_makes_both_teams_travel():
 
 def test_a_stadium_or_home_venue_that_is_unknown_gives_missing_values_not_zero():
     k = datetime(2022, 9, 25, 17, tzinfo=UTC)
-    df = trip_frame([("MIA", "SEA", "MIA00", False, k - timedelta(days=7)),
-                     ("SEA", "MIA", "SEA00", False, k),  # SEA has no home game earlier in the frame? it does: this one
-                     ("SEA", "PHO", "SEA00", False, k + timedelta(days=1)),  # PHO has no home game: no home venue
-                     ("MIA", "SEA", "ZZZ99", False, k + timedelta(days=2))])  # stadium not in the table
+    df = trip_frame(
+        [
+            ("MIA", "SEA", "MIA00", False, k - timedelta(days=7)),
+            ("SEA", "MIA", "SEA00", False, k),  # SEA has no home game earlier in the frame? it does: this one
+            ("SEA", "PHO", "SEA00", False, k + timedelta(days=1)),  # PHO has no home game: no home venue
+            ("MIA", "SEA", "ZZZ99", False, k + timedelta(days=2)),
+        ]
+    )  # stadium not in the table
     got = b.travel_features(df, COORDS, ZONES)
     assert got.iloc[1].notna().all()
     assert got.iloc[2].isna().all() and got.iloc[3].isna().all()
@@ -235,12 +290,17 @@ def test_a_stadium_or_home_venue_that_is_unknown_gives_missing_values_not_zero()
 
 def test_the_home_venue_is_the_stadium_a_team_uses_most_at_home_that_season():
     k = datetime(2022, 9, 25, 17, tzinfo=UTC)
-    df = trip_frame([("SEA", "MIA", "SEA00", False, k), ("SEA", "MIA", "SEA00", False, k + timedelta(days=7)),
-                     ("SEA", "MIA", "PHO00", False, k + timedelta(days=14)),
-                     ("MIA", "SEA", "MIA00", False, k + timedelta(days=21))])
+    df = trip_frame(
+        [
+            ("SEA", "MIA", "SEA00", False, k),
+            ("SEA", "MIA", "SEA00", False, k + timedelta(days=7)),
+            ("SEA", "MIA", "PHO00", False, k + timedelta(days=14)),
+            ("MIA", "SEA", "MIA00", False, k + timedelta(days=21)),
+        ]
+    )
     got = b.travel_features(df, COORDS, ZONES)
     # row 3: SEA travels to MIA from SEA00 (its usual home), not from PHO00
-    assert got["travel_km_diff"].iloc[3] == pytest.approx(-b.great_circle_km(COORDS["SEA00"], COORDS["MIA00"]) / 1000)
+    assert got["travel_km_diff"].iloc[3] == pytest.approx(b.great_circle_km(COORDS["SEA00"], COORDS["MIA00"]) / 1000)
 
 
 def test_every_listed_stadium_has_a_coordinate_and_a_time_zone():
@@ -331,7 +391,11 @@ def test_quarterback_preds_replace_the_change_flags_and_fit_on_the_window_only(m
     cols = [b.qb_column(k, h) for k in ("blend", "base") for h in b.QB_HALF_LIVES]
     assert all(got[c].between(0, 1).all() for c in cols)
     used = {tuple(f) for f, _ in seen}
-    assert ("market_logit", "elo_diff", "home_field", "qb_diff") in used and ("elo_diff", "home_field", "qb_diff") in used
+    assert ("market_logit", "elo_diff", "home_field", "qb_diff") in used and (
+        "elo_diff",
+        "home_field",
+        "qb_diff",
+    ) in used
     assert all(max(s) < 2022 for f, s in seen if "qb_diff" in f)
 
 
@@ -414,9 +478,20 @@ def judged_frame() -> pd.DataFrame:
     for season in range(2012, 2026):
         p = rng.uniform(0.2, 0.8, 120)
         y = (rng.uniform(size=120) < p).astype(float)
-        rows.append(pd.DataFrame({"season": season, "week": np.arange(120) % 17 + 1, "home_win": y,
-                                  "p_blend": np.clip(p + rng.normal(0, 0.08, 120), 0.02, 0.98),
-                                  "p_logistic": np.full(120, 0.55), "good": p, "bad": 1 - p, "meh": p * 0.5 + 0.25}))
+        rows.append(
+            pd.DataFrame(
+                {
+                    "season": season,
+                    "week": np.arange(120) % 17 + 1,
+                    "home_win": y,
+                    "p_blend": np.clip(p + rng.normal(0, 0.08, 120), 0.02, 0.98),
+                    "p_logistic": np.full(120, 0.55),
+                    "good": p,
+                    "bad": 1 - p,
+                    "meh": p * 0.5 + 0.25,
+                }
+            )
+        )
     return pd.concat(rows, ignore_index=True)
 
 
