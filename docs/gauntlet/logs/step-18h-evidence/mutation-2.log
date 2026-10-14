@@ -1,0 +1,9 @@
+M7 no params, no simulation: SURVIVED
+M9 train survives a failed fetch: KILLED
+M10 train learns the predicted season: KILLED
+M11 configured pick mode: KILLED
+M12 refuse ats: KILLED
+M13 one bench conversion: KILLED
+M14 api maps simulation: KILLED
+M15 save upsert: KILLED
+M7 no params, no simulation: KILLED

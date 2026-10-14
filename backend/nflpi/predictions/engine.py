@@ -250,9 +250,9 @@ def _score_model(frame: pd.DataFrame, season: int) -> ScoreModel | None:
         return None
 
 
-def _simulation(row: pd.Series, params: SimParams | None, model: ScoreModel | None, frame: pd.DataFrame) -> dict | None:
+def _simulation(row: pd.Series, params: SimParams, model: ScoreModel | None, frame: pd.DataFrame) -> dict | None:
     """The score simulation for one game, or None when the inputs are missing (never guessed)."""
-    if params is None or model is None:
+    if model is None:  # no score model also covers a season without parameters: none is fitted for it
         return None
     home, away = (float(x[0]) for x in model.predict(frame[frame["game_id"] == row["game_id"]]))
     if not all(_finite(x) and 0 < x <= MAX_EXPECTED_POINTS for x in (home, away)):

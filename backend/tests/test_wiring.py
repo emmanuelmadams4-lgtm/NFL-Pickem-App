@@ -1,6 +1,7 @@
 """Step 18h: the simulator and the pick mode in the live path (docs/model/PLAN.md row 18h, owner decision D74)."""
 
 import zlib
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -113,6 +114,15 @@ def test_a_game_without_a_line_gets_win_chances_but_no_cover_or_total_chances(lo
     assert [sim[k] for k in ("home_cover", "away_cover", "spread_push", "over", "under", "total_push")] == [None] * 6
 
 
+def test_a_season_without_parameters_gets_no_simulation_when_another_season_has_them(loaded):
+    engine.save_sim_params(loaded, CURRENT, synthetic_params())
+    past = loaded.scalars(select(Game).where(Game.season == CURRENT - 1)).first().game_id
+    now = upcoming(loaded)[0].game_id
+    engine.refresh_predictions(loaded, game_ids=[past, now], kind="backfill")
+    assert latest(loaded, past).features["simulation"] is None
+    assert latest(loaded, now).features["simulation"] is not None
+
+
 # W4 insert-only ------------------------------------------------------------------------------------------------------
 
 def test_adding_parameters_inserts_one_new_row_per_game_and_never_edits_old_rows(loaded):
@@ -184,7 +194,8 @@ def test_train_still_trains_the_win_model_when_the_simulator_cannot_learn(sessio
 
 def test_saved_parameters_round_trip_exactly(session):
     params = synthetic_params()
-    engine.save_sim_params(session, CURRENT, params)
+    engine.save_sim_params(session, CURRENT, replace(params, n_train=1, ot_era="older"))
+    engine.save_sim_params(session, CURRENT, params)  # a retrain replaces the season's parameters
     back = engine.load_sim_params(session, CURRENT)
     for field in ("residual_a", "residual_b", "ot_increments"):
         assert np.array_equal(getattr(back, field), getattr(params, field))
