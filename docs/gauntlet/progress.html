@@ -91,7 +91,7 @@ footer { color: var(--muted); font-size: 13px; }
   <div class="headline">
     <div class="big">12<small> / 18 steps landed</small></div>
     <div class="now">
-      <p><b>Today, 13 October:</b> 21 pieces of work merged into main and 9 deploys to your PC, each with a database backup first. Four more steps are partly landed and still in build.</p>
+      <p><b>Today, 13 October:</b> 22 pieces of work merged into main and 9 deploys to your PC, each with a database backup first. Four more steps are partly landed and still in build.</p>
       <p><b>Live on your PC now:</b> star players and who is out on the game card, star alerts with a morning summary, the news worker, news inside the AI report, the data-timing log, live game data in the background, and the grading of win chances during games. Claude runs through your subscription sign-in with the API key as backup.</p>
       <p><b>In build right now:</b> the live scores screen, a third round of model tests, and the model rebuild from your brief (step 18): the audit of the current model, the odds maths and the game simulator are running.</p>
       <p><b>Passkey sign-in:</b> the server half landed after your sign-off and is on your PC, switched off. The sign-in screen is next. Until it is built you keep signing in with the app token.</p>
@@ -126,6 +126,7 @@ footer { color: var(--muted); font-size: 13px; }
       <li>On your iPhone: turn alerts on in Settings and tap "Send test alert".</li>
       <li>Thursday 15 October: open the app during the first game and look at the live score.</li>
       <li>Group screen: open Group in the app and upload your Yahoo picks file and weekly performance file. The tables are empty until you do.</li>
+      <li>One model question on the ASK ME board (HAG-72): should the rest of the 2026 season be the model's untouched final exam? My pick is yes.</li>
       <li>Passkey sign-in: signed off and landed, switched off. Your iPhone check comes when the sign-in screen is built.</li>
       <li>Restart Angela (reviewer) from the app. She has not answered since about 08:00 UTC. Nothing waits on her.</li>
       <li>Your yes to deploy after each landing covers today only. From tomorrow I ask again.</li>
@@ -155,7 +156,7 @@ footer { color: var(--muted); font-size: 13px; }
           <tr><td class="num">15</td><td>Live scores<span class="sub">Score, clock and win chance while games are on</span></td><td>Landed and live: live game data and market prices (PR #14), the live worker and route (PR #15), grading of win chances during games (PR #23). In build: the screen. First check against a real game: Thursday 15 October</td><td><span class="pill prog">In build</span></td></tr>
           <tr><td class="num">16</td><td>Group picks<span class="sub">Your Yahoo group files: standings and how the group picked</span></td><td>Landed and live: tables and import (PR #10), upload and read routes (PR #16), the Group screen with the upload form, standings and how the group picked (PR #26). No real member name is in the code repository. Your part: upload your Yahoo files on the Group screen</td><td><span class="pill done">Done</span></td></tr>
           <tr><td class="num">17</td><td>Claude through your sign-in<span class="sub">Your Claude subscription first, the API key as backup</span></td><td>Landed (PR #18) and proven live on the PC with two test calls</td><td><span class="pill done">Done</span></td></tr>
-          <tr><td class="num">18</td><td>Model rebuild from your brief<span class="sub">Audit, spread and totals picks, game simulator, betting value</span></td><td>Opened 13 October from your 13-section brief, kept word for word in the repo. First wave: an audit of the current model with a checked table of six public repositories (started); odds, settlement and expected-value maths (queued); the game-score simulator (queued). The second wave is cut from the audit's plan: pick rules for straight-up, against-the-spread, totals and confidence pools, data checks, the evaluation report, and the screens. The live model changes only on a measured win</td><td><span class="pill prog">In build</span></td></tr>
+          <tr><td class="num">18</td><td>Model rebuild from your brief<span class="sub">Audit, spread and totals picks, game simulator, betting value</span></td><td>Opened 13 October from your 13-section brief, kept word for word in the repo. <b>The audit landed (PR #27).</b> What it found: your model is in practice the closing betting line. Its pick differs from the market favourite in 72 of 3,649 games, and it got 34 of those right. It has no leak, the test bench matches the live path, and its percentages are honest (well calibrated). It beats "always home" and "ratings only" clearly but not the market alone (66.46% against 66.57%). Of your six repositories, none holds a method shown to beat it: one is worth adding later as a data loader, two give ideas, three are rejected (two of them leak the result into their inputs). Still building: odds, settlement and expected-value maths; the game-score simulator. Next, cut from the audit's plan: pick rules for straight-up, against-the-spread, totals and confidence pools; a point-in-time data layer with a feature dictionary; one evaluation report; value ratings; the screens. The live model changes only on a measured win</td><td><span class="pill prog">In build</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -182,18 +183,18 @@ footer { color: var(--muted); font-size: 13px; }
       <div class="stat"><span>Last deploy</span><span>19:51 UTC</span></div>
       <div class="stat"><span>Health</span><span>OK</span></div>
       <div class="stat"><span>Your picks</span><span>93</span></div>
-      <p class="note">Runs everything through PR #26. A database backup is taken before every deploy, and the row counts are compared before and after: unchanged every time.</p>
+      <p class="note">Runs everything through PR #26. PR #27 is documents and one test file, so it needed no deploy. A database backup is taken before every deploy, and the row counts are compared before and after: unchanged every time.</p>
     </div>
     <div class="card">
       <h3>In build now</h3>
       <div class="stat"><span>Live scores screen</span><span>Jim</span></div>
       <div class="stat"><span>Passkey sign-in screen</span><span>Next for Jim</span></div>
       <div class="stat"><span>Model round three</span><span>Running</span></div>
-      <div class="stat"><span>Model rebuild: audit</span><span>Started</span></div>
+      <div class="stat"><span>Model rebuild: audit</span><span>Landed</span></div>
       <div class="stat"><span>Odds maths, simulator</span><span>Building</span></div>
-      <p class="note">Each piece runs in its own copy of the code and passes a security review where needed, a fresh reviewer and a final check before it lands. The Claude usage limit paused the build three times today; work restarted from saved state each time.</p>
+      <p class="note">Each piece runs in its own copy of the code and passes a security review where needed, a fresh reviewer and a final check before it lands. The Claude usage limit paused the build four times today; work restarted from saved state each time. In the evening the Mac also ran out of memory with four full test runs at once, which cost about three hours; test runs now take turns.</p>
     </div>
   </div>
 
-  <footer>Updated 2026-10-13 19:52 UTC · 12 of 18 steps landed, 4 more partly landed, step 18 opened · 21 landings and 9 deploys today (PRs #6 to #26)</footer>
+  <footer>Updated 2026-10-13 23:45 UTC · 12 of 18 steps landed, 4 more partly landed, step 18 audit landed · 22 landings and 9 deploys today (PRs #6 to #27)</footer>
 </div>

@@ -108,7 +108,7 @@ All on the lane's own database (`nflpi-lane-model-db`, port 15442). Raw logs are
 | Planted-defect sweep, coordinator's run under `res:gate-b` | **10 of 10 KILLED**, no file left changed | `step-18a-evidence/mutation.log` |
 | **Full gate, one run on `639f430` (named `dc5bd7b` since the last branch move)** under `res:gate-b` | **PASS**: `pytest` 1,462 passed in 614 s, 0 failed, 0 skipped; `ruff` all checks passed; `alembic upgrade head` then `check` on a fresh scratch database: no new upgrade operations; `npm run gen:api`: no drift | `step-18a-final2.out`, `step-18a-final2-*.log` |
 | Bench numbers reproduce the stored ones | 3,649 games, market 0.6094, blend 0.6107 (equal to step 14) | `step-18a-evidence/audit-numbers.json` |
-| **Full gate again after the last branch move** (main went from `589aa3b` to `b4d42d0`: the Group screen landed) | GATE3_PLACEHOLDER | `step-18a-final3.out`, `step-18a-final3-*.log` |
+| **Full gate again after the last branch move** (main went from `589aa3b` to `b4d42d0`: the Group screen landed) | Not finished by the lane: the Mac ran out of memory while four full gate runs ran at once and the worker was torn down; the integrator stopped the run. The gate on the current main is the CI of pull request #27 (backend, web, e2e, docker: all pass, twice) and the CI on main after the merge (`1078dbb`: success) | `step-18a-final3.out`, `step-18a-final3-*.log` |
 | Lane guard | `OK` | `python3 ~/.claude/bin/lane-guard.py check …/lanes.md audit main` |
 
 An earlier full-gate run on the previous candidate was stopped by the coordinator after 15 minutes without a result, because the test file was about to change and the run was holding a machine lock others were waiting for; it proves nothing and is not counted.
