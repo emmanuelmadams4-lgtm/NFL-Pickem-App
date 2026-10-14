@@ -1,4 +1,4 @@
-const unsupported = "This browser cannot use a passkey here. Use your access token.";
+export const passkeyUnsupported = "This browser cannot use a passkey here. Use your access token.";
 
 type JsonPasskey = PublicKeyCredential & { toJSON: () => unknown };
 type JsonPasskeyConstructor = typeof PublicKeyCredential & {
@@ -13,22 +13,23 @@ export function passkeyReady(kind: "create" | "get"): boolean {
   return typeof parser === "function" && typeof (ctor.prototype as JsonPasskey).toJSON === "function";
 }
 
-export const passkeyUnsupported = unsupported;
+function credentialJson(credential: Credential | null): unknown {
+  if (!credential || typeof (credential as JsonPasskey).toJSON !== "function") throw new Error(passkeyUnsupported);
+  return (credential as JsonPasskey).toJSON();
+}
 
 export async function createPasskey(options: Record<string, unknown>): Promise<unknown> {
   const ctor = PublicKeyCredential as JsonPasskeyConstructor;
   const publicKey = ctor.parseCreationOptionsFromJSON!(options);
   const credential = await navigator.credentials.create({ publicKey });
-  if (!credential || typeof (credential as JsonPasskey).toJSON !== "function") throw new Error(unsupported);
-  return (credential as JsonPasskey).toJSON();
+  return credentialJson(credential);
 }
 
 export async function getPasskey(options: Record<string, unknown>): Promise<unknown> {
   const ctor = PublicKeyCredential as JsonPasskeyConstructor;
   const publicKey = ctor.parseRequestOptionsFromJSON!(options);
   const credential = await navigator.credentials.get({ publicKey });
-  if (!credential || typeof (credential as JsonPasskey).toJSON !== "function") throw new Error(unsupported);
-  return (credential as JsonPasskey).toJSON();
+  return credentialJson(credential);
 }
 
 export function passkeyCancelled(error: unknown): boolean {

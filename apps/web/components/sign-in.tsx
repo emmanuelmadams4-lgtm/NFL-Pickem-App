@@ -8,6 +8,8 @@ import { Bezel, Button, Notice } from "@/components/ui";
 import { getPasskey, passkeyCancelled, passkeyReady, passkeyUnsupported } from "@/components/passkey/browser";
 import { usePasskeysEnabled } from "@/components/passkey/use-passkeys-enabled";
 
+const unreachableApi = `Could not reach the API${BASE_URL ? ` at ${BASE_URL}` : ""}. Check that the server is running.`;
+
 export function SignIn({ notice }: { notice?: string | null }) {
   const { signIn } = useSession();
   const qc = useQueryClient();
@@ -37,7 +39,7 @@ export function SignIn({ notice }: { notice?: string | null }) {
       else if (err instanceof ApiError && err.status === 401) setPasskeyError("Passkey sign-in failed.");
       else if (err instanceof ApiError) setPasskeyError(err.message);
       else if (err instanceof Error && err.message === passkeyUnsupported) setPasskeyError(passkeyUnsupported);
-      else setPasskeyError(`Could not reach the API${BASE_URL ? ` at ${BASE_URL}` : ""}. Check that the server is running.`);
+      else setPasskeyError(unreachableApi);
     } finally {
       setPasskeyBusy(false);
     }
@@ -59,7 +61,7 @@ export function SignIn({ notice }: { notice?: string | null }) {
       signIn(token);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) setTokenError("Wrong token");
-      else setTokenError(`Could not reach the API${BASE_URL ? ` at ${BASE_URL}` : ""}. Check that the server is running.`);
+      else setTokenError(unreachableApi);
     } finally {
       setBusy(false);
     }
