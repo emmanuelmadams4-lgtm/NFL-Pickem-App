@@ -30,7 +30,7 @@ Lead: Toby (temp worker-wire18h). Base origin/main `b5ee53f`. Branch `lane/wire1
 ## Security fixes
 | Finding | Fix | Commits |
 |---|---|---|
-| X1 (medium) one bad stored row or one failing game stopped all predictions | `load_sim_params` returns None and logs on any error; each game's simulation and the score-model fit run guarded, log the game id, store None | red `998e09f`, fix `f4b7796` |
+| X1 (medium) one bad stored row or one failing game stopped all predictions | `load_sim_params` returns None and logs on any error; each game's simulation and the score-model fit run guarded, log the game id, store None | red `998e09f`, fix `f4b7796`; first critic found the score-frame build unguarded: guarded with a test in `13ef0ce` |
 | X4 (low) a NaN could make the week endpoint answer 500 | each simulation is validated with the API's `SimulationOut` before storing; stored as None if it fails | `998e09f`, `f4b7796` |
 | X5 (low) pick-mode label implied two orders | label ends with "Both pick modes use the same order: win chance, then game id" | `998e09f`, `f4b7796` |
 
@@ -45,4 +45,4 @@ X2, X3, X6 stay as they are (carried to the integrator).
 3. LOW: `refresh_predictions` rebuilds the score frame each call (cost); the bench never simulates playoffs, the live path sets `playoff`; the first refresh after parameters are saved writes one new row per upcoming game (insert-only, as designed; alerts only on pick, move or label change).
 4. LOW: the no-leak test checks the game's own score, not later games' scores (the season window excludes them).
 * Also: `analytics/` and `jobs.py` may not contain `nflpi.data` (`test_data_layer`), so `sim_backtest.py` imports the asof function through `nflpi.picks`, as the engine does. Old `jev_tiebreak_*` rows in `app_settings` are now unused.
-
+* Final critic (fresh, on `13ef0ce`): PASS, 0 critical, 0 high. Advisory MEDIUM: the guard around `load_frame` in `_simulations` could hide a failed database read (aborted transaction); that read is also made unguarded elsewhere in `refresh_predictions`, so a real database fault still surfaces there.
