@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ApiError, createClient, keys } from "@nflpi/shared";
 import { BASE_URL, useSession } from "@/lib/api";
 import { Bezel, Button, Notice } from "@/components/ui";
-import { getPasskey, passkeyCancelled, passkeyReady, passkeyUnsupported } from "@/components/passkey/browser";
+import { getPasskey, PasskeyBrowserError, passkeyCancelled, passkeyReady, passkeyUnsupported } from "@/components/passkey/browser";
 import { usePasskeysEnabled } from "@/components/passkey/use-passkeys-enabled";
 
 const unreachableApi = `Could not reach the API${BASE_URL ? ` at ${BASE_URL}` : ""}. Check that the server is running.`;
@@ -36,6 +36,7 @@ export function SignIn({ notice }: { notice?: string | null }) {
       signIn(session.session);
     } catch (err) {
       if (passkeyCancelled(err)) setPasskeyError("No passkey was used.");
+      else if (err instanceof PasskeyBrowserError) setPasskeyError(err.message);
       else if (err instanceof ApiError && err.status === 401) setPasskeyError("Passkey sign-in failed.");
       else if (err instanceof ApiError) setPasskeyError(err.message);
       else if (err instanceof Error && err.message === passkeyUnsupported) setPasskeyError(passkeyUnsupported);

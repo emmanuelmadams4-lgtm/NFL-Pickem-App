@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, ago, keys } from "@nflpi/shared";
 import { useApi } from "@/lib/api";
 import { Button, Notice, Section, errorMessage } from "@/components/ui";
-import { createPasskey, passkeyCancelled, passkeyReady, passkeyUnsupported } from "@/components/passkey/browser";
+import { createPasskey, PasskeyBrowserError, passkeyCancelled, passkeyReady, passkeyUnsupported } from "@/components/passkey/browser";
 import { usePasskeysEnabled } from "@/components/passkey/use-passkeys-enabled";
 
 export function PasskeysSection() {
@@ -36,6 +36,7 @@ export function PasskeysSection() {
     } catch (err) {
       if (passkeyCancelled(err)) setError("No passkey was added.");
       else if (err instanceof DOMException && err.name === "InvalidStateError") setError("This device already has a passkey for this app.");
+      else if (err instanceof PasskeyBrowserError) setError(err.message);
       else if (err instanceof ApiError && err.status === 403) setError("Adding a passkey needs the access token. Sign in with the token, then add it here.");
       else setError(errorMessage(err));
     } finally {

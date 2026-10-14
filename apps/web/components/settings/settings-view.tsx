@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ApiError, ago, createClient, keys, type Meta } from "@nflpi/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { useApi, useSession } from "@/lib/api";
+import { endStoredPasskeySession, PASSKEY_SIGNOUT_FAILED_NOTICE, useApi, useSession } from "@/lib/api";
 import { useFreshness, useMeta } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
 import { useToast } from "@/components/toast";
@@ -47,9 +47,10 @@ function AccessSection() {
         setError(err instanceof ApiError && err.status === 401 ? "Wrong token" : errorMessage(err));
         return;
       }
+      const ended = await endStoredPasskeySession();
       signIn(next.trim());
       setNext("");
-      toast("Token updated.", "good");
+      toast(ended ? "Token updated." : PASSKEY_SIGNOUT_FAILED_NOTICE, ended ? "good" : "bad");
     } finally {
       setBusy(false);
     }
