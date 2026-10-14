@@ -25,6 +25,16 @@ Lead: Toby (temp worker-wire18h). Base origin/main `b5ee53f`. Branch `lane/wire1
 | 4 | Mutation sweep, one per rule clause (`3bb62d6`) | `mutate.py`, `mutation.log`, `mutation-2.log` | 15/15 killed (M7 and M15 first survived; tests added, one redundant guard removed) |
 | 5 | Full backend run (res:gate-b) + critic ecc:python-reviewer, no transcript, on `3bb62d6` | `full-pytest.log` | 2207 passed, 1 skipped; critic PASS (0 critical, 0 high) |
 | 6 | Lane-guard vs origin/main | `lane-guard.log` | 10 files flagged, every one inside the written grants (below) |
+| 7 | Security fixes after Dwight's review (see below) | `tests/test_wiring.py` | red first (5 failing), then green: `test_wiring` + `test_sheet` + `test_api` 68 passed |
+
+## Security fixes
+| Finding | Fix | Commits |
+|---|---|---|
+| X1 (medium) one bad stored row or one failing game stopped all predictions | `load_sim_params` returns None and logs on any error; each game's simulation and the score-model fit run guarded, log the game id, store None | red `998e09f`, fix `f4b7796` |
+| X4 (low) a NaN could make the week endpoint answer 500 | each simulation is validated with the API's `SimulationOut` before storing; stored as None if it fails | `998e09f`, `f4b7796` |
+| X5 (low) pick-mode label implied two orders | label ends with "Both pick modes use the same order: win chance, then game id" | `998e09f`, `f4b7796` |
+
+X2, X3, X6 stay as they are (carried to the integrator).
 
 ## Lane-guard flags, each inside the lanes.md grant
 `predictions/sheet.py` (seam grant, D74); `config.py` (add-only, one setting); `picks/rules.py` and `analytics/sim_backtest.py` (the one spread function each); `packages/shared/openapi.json`, `api-types.ts` (generated); `tests/test_sheet.py`, `test_picks.py`, `test_sim_backtest.py`, `test_model_c.py` (tests of the Jev tie-break or the spread functions; `test_model_c.py` only drops the removed evidence argument from one `order` call). The guard reads only the OWNS line.
