@@ -4,7 +4,7 @@ import ast
 import copy
 import json
 from dataclasses import fields
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -407,6 +407,12 @@ def test_v9_rating_carries_time_and_age():
     assert (r.sportsbook, r.market_type, r.selection, r.line, r.price) == ("bookone", "moneyline", "home", None, 150)
     assert r.observed_at == T0 and r.age == timedelta(minutes=12)
     assert "2026-10-17 15:00 UTC" in r.note and "bookone" in r.note and "may no longer be offered" in r.note
+
+
+def test_v9_note_time_is_utc_whatever_the_zone():
+    eastern = timezone(timedelta(hours=-4))
+    r = value.rate_price(snap(observed_at=T0.astimezone(eastern)), EVEN, now=T0, max_age=timedelta(minutes=30))
+    assert "2026-10-17 15:00 UTC" in r.note and r.age == timedelta(0)
 
 
 @pytest.mark.parametrize("minutes", [0, 12, 31])
