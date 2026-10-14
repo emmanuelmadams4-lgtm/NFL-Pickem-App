@@ -15,9 +15,9 @@ Evidence folder: `docs/gauntlet/logs/step-18g-evidence/`.
 | CP | Name | State |
 |---|---|---|
 | 1 | Planning | done (this file, section 1) |
-| 2 | Specification and first failing tests | |
-| 3 | Implementation | |
-| 4 | Verification (tests, mutation sweep, real data) | |
+| 2 | Specification and first failing tests | done: section 2; red run `step-18g-evidence/red-1.log` (ImportError); commit `9ed7ce7` |
+| 3 | Implementation | done: section 3 |
+| 4 | Verification (tests, mutation sweep, real data) | done: sections 3 and 4 |
 | 5 | Review (new critic on the final head) | |
 | 6 | Landing record (lane-guard, done message) | |
 
@@ -90,3 +90,36 @@ User-facing layer: N/A (no screen). The owner-facing output is this log's verdic
 ### First failing tests
 
 `backend/tests/test_bench_18g.py`, written by the lead before any production code. The matchup tests skip until `nflpi.data` is in the tree (they run after the rebase on PR #31).
+
+## 3. IMPLEMENTATION
+
+Provider: `codex exec` was tried once and refused (`The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account`, `step-18g-evidence/codex-try.log`). One bounded work order went to a Sonnet subagent (never Opus, never the critic) with the spec, the tests and the 14c pattern; it wrote `bench_18g.py` (492 lines) and reported 35 of 37 tests green. The two failures were **errors in my own tests**, not in the code: (1) a swap test whose second game had a team with no past (the value is correctly missing); (2) a travel test with the wrong sign for the away side. I corrected the tests. After the rebase on PR #31 (`nflpi.data` present) all matchup tests ran: 37 passed, ruff clean. D74 (no AI in any feature or verdict) holds: every number is arithmetic on past results; no model call exists in the file.
+
+Mutation sweep (`mutate.py`, gate lock held): the first run caught 49 of 54. Of the five survivors, one was a no-op edit I wrote (dropped), one is equivalent (blend variants fit on `train` with or without dropping rows that lack a line: `LogitModel.fit` drops rows with a missing input itself; dropped from the list), and three exposed real test gaps, each closed by a stronger test: the training window must be exactly the seasons before the test season; a quarterback line with a non-finite number is left out; the matchup gap counts a refit that is lower as well as higher. Second run: **52 of 52 caught** (`mutate.log`). Tests: `tests/test_bench_18g.py` 38 passed.
+
+## 4. What the real data says
+
+Run: `bash step-18g-evidence/locked-stage.sh <stage>` (gate lock), then `summ.py`. Live nflverse files, 2026-10-14, one stage once, in the order pythag, qb, travel, matchup. Walk-forward, window 10, 3,649 games with a closing line (2012 to 2025), tune 2012 to 2021 (2,565 games), confirm 2022 to 2025 (1,084 games, 72 season-weeks). **Baseline check passed on every run** (market 66.57% and log loss 0.6094; blend 66.46% and 0.6107; confirm blend 67.53% and 0.6095): the runner stops otherwise. No 2026 game is read (D72). One travel run stopped on a call bug in the runner (a missing argument) before printing any score; it was fixed and rerun; no look was taken from the failed run. Raw files: `run-<stage>.json`, `verdicts.txt`.
+
+Gain = how much lower the idea's log loss is than the baseline's (positive is better). Interval = paired bootstrap 95%, game by game (the rule); the week-clustered interval is beside it. Football-only ideas were chosen against the stats-only model `p_logistic` and also scored against the live blend. **Power limit: 1,084 games cannot show a gain under about 0.001 log loss.**
+
+| Idea | Label | Chosen on tune | Baseline | Confirm gain (95% interval) | Accuracy change | Verdict |
+|---|---|---|---|---|---|---|
+| Pythagorean, in the blend | market-informed | half-life 8 games | blend | -0.00056 (-0.00107 to -0.00001) | -0.09 pts | does not ship |
+| Pythagorean, in the stats model | football-only | half-life 8 | stats model | -0.00023 (-0.00343 to +0.00303) | +0.46 pts | does not ship (no gain this test can see); vs the blend -0.02382 (-0.03399 to -0.01259) |
+| Quarterback rating replacing the change flags, in the blend | market-informed | half-life 32 games | blend | -0.00187 (-0.00533 to +0.00183) | +0.37 pts | does not ship |
+| Quarterback rating, in the stats model | football-only | half-life 32 | stats model | -0.00029 (-0.00947 to +0.00945) | +1.11 pts | does not ship; vs the blend -0.02389 (-0.03432 to -0.01346) |
+| Travel and time zone, in the blend | market-informed | time-zone shift only | blend | -0.00067 (-0.00133 to -0.00003) | -0.09 pts | does not ship |
+| Travel and time zone, in the stats model | football-only | time-zone shift only | stats model | -0.00109 (-0.00226 to +0.00006) | -0.28 pts | does not ship; vs the blend -0.02468 |
+| Matchup score (football) | football-only | the one formula | stats model | -0.00829 (-0.01687 to +0.00008) | +0.83 pts | does not ship; vs the blend -0.03188 |
+| Matchup score (with the line) | market-informed | the one formula | blend | -0.00863 (-0.01503 to -0.00221) | -0.65 pts | does not ship |
+
+Reading it plainly:
+
+* **All eight lose. Nothing ships; no change to the model is proposed.** None of the eight confirm intervals has a low end above zero. Four of the market-informed or blend-baseline intervals lie wholly below zero (Pythagorean in the blend, travel in the blend, matchup with the line, and matchup against the blend), meaning the idea made the live model measurably worse on 2022 to 2025.
+* **Tune gains did not survive.** Both football-only quarterback and Pythagorean variants had positive tune gains (+0.0057 quarterback, +0.0014 Pythagorean) that turned to about zero on confirm (gap +0.006 and +0.002): the pattern of a gain that was fitted noise. The half-life-8 Pythagorean variant that looked best on tune is the one that failed; the half-life-4 one scored +0.00085 on confirm, but confirm chooses nothing (descriptive).
+* **Quarterback rating:** the gap between the quarterback rating and the old flag is not distinguishable from zero in either direction (intervals about +-0.005 in the blend, +-0.009 without the line). 179 of the games had no starter id and keep the baseline's number. The bench has the starter of every past game while a live pick has it for the coming week only (AUDIT A8), so even a gain here would have been an upper bound.
+* **Travel:** all 3,649 scored games had a distance and a time-zone shift (no unknown stadium). The distance variant is slightly positive on confirm (+0.00013 in the blend) but was not chosen on tune, and is far inside the noise.
+* **Matchup score:** a fixed formula of the Elo gap (and the line) cannot beat the fitted model it is a rescaled copy of; as a blend input it changes predictions by at most 0.0022 in probability (`input_gap`), so a test of it as an input could not have told anything new.
+* **Looks used:** eight new, so 23 at 2022 to 2025 for the win model (AUDIT A11's nine, step 14c's six, these eight). With no real effect, about one look in two passes by chance somewhere across 23 looks at 95%; none did. A11 should now read twenty-three looks; the register is updated here, not in `AUDIT.md` (not this lane's file).
+* **What this does not show:** it does not show that these ideas are worthless in general, only that none adds to a model that already reads the closing line, on the games this test can see. Football-only versions were never going to beat the market-informed blend (0.024 log loss behind); the stats-model comparison asks only whether the idea helps a model with no line, and it does not.

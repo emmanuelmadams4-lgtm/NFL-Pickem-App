@@ -105,7 +105,7 @@ def main(stage: str) -> dict:
         out["games_missing_a_starter_id"] = int(frame[["home_qb_id", "away_qb_id"]].isna().any(axis=1).sum())
     elif stage == "travel":
         preds = b.travel_preds(frame, seasons)
-        features = b.travel_features(frame)
+        features = b.travel_features(frame, b.STADIUM_COORDS, b.STADIUM_ZONES)
         scored = frame[frame["season"].isin(seasons) & (frame["game_type"] == "REG")]
         out["games_without_travel_features"] = int(features.loc[scored.index].isna().any(axis=1).sum())
         out["games_scored_frame"] = int(len(scored))
