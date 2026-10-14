@@ -59,14 +59,15 @@ class Price(NamedTuple):
     selection: str
     line: float | None
     price: float
+    observed_at: datetime  # the market's own last_update, never the book's
 
 
 @dataclass(frozen=True)
 class Book:
     key: str
     updated: datetime
-    home_ml: float
-    away_ml: float
+    home_ml: float | None  # None when the book has no usable win-market price; its other prices are kept
+    away_ml: float | None
     prices: tuple[Price, ...] = ()
 
 
@@ -121,7 +122,7 @@ def _pair(market: dict, names: tuple[str, str]) -> list[dict] | None:
     return [first, second] if _price(first.get("price")) and _price(second.get("price")) else None
 
 
-def _spread_prices(market: dict, home: str, away: str) -> tuple[Price, ...]:
+def _spread_prices(market: dict, home: str, away: str, seen: datetime) -> tuple[Price, ...]:
     pair = _pair(market, (home, away))
     if pair is None:
         return ()
@@ -130,10 +131,10 @@ def _spread_prices(market: dict, home: str, away: str) -> tuple[Price, ...]:
     if not (_point(hp) and _point(ap)) or hp != -ap or abs(hp) > MAX_SPREAD:
         return ()
     # the HOME spread on both selections, as betting.MarketSnapshot keeps it
-    return (Price("spread", "home", hp, h["price"]), Price("spread", "away", hp, a["price"]))
+    return (Price("spread", "home", hp, h["price"], seen), Price("spread", "away", hp, a["price"], seen))
 
 
-def _total_prices(market: dict) -> tuple[Price, ...]:
+def _total_prices(market: dict, seen: datetime) -> tuple[Price, ...]:
     pair = _pair(market, ("Over", "Under"))
     if pair is None:
         return ()
@@ -141,43 +142,58 @@ def _total_prices(market: dict) -> tuple[Price, ...]:
     point = over.get("point")
     if not (_point(point) and _point(under.get("point"))) or under.get("point") != point or not 0 < point <= MAX_TOTAL:
         return ()
-    return (Price("total", "over", point, over["price"]), Price("total", "under", point, under["price"]))
+    return (Price("total", "over", point, over["price"], seen), Price("total", "under", point, under["price"], seen))
 
 
-def _extra_prices(markets: list, home: str, away: str) -> tuple[Price, ...]:
-    found: list[Price] = []
-    for market in markets:
-        if not isinstance(market, dict):
-            continue
-        if market.get("key") == "spreads":
-            found.extend(_spread_prices(market, home, away))
-        elif market.get("key") == "totals":
-            found.extend(_total_prices(market))
-    return tuple(found)
+def _moneyline(market: dict, home: str, away: str) -> tuple[float, float] | None:
+    outcomes = market.get("outcomes")
+    if not isinstance(outcomes, list) or len(outcomes) != 2 or not all(isinstance(o, dict) for o in outcomes):
+        return None
+    prices = {o.get("name"): o.get("price") for o in outcomes if isinstance(o.get("name"), str)}
+    if len(prices) == 2 and set(prices) == {home, away} and all(_price(p) for p in prices.values()):
+        return float(prices[home]), float(prices[away])
+    return None
 
 
 def _book(item: Any, home: str, away: str) -> Book | None:
     if not isinstance(item, dict):
         return None
-    key, updated, markets = item.get("key"), _time(item.get("last_update")), item.get("markets")
-    if not isinstance(key, str) or BOOK_KEY.fullmatch(key) is None or updated is None or not isinstance(markets, list):
+    key, markets = item.get("key"), item.get("markets")
+    if not isinstance(key, str) or BOOK_KEY.fullmatch(key) is None or not isinstance(markets, list):
         return None
+    ml: tuple[float, float] | None = None
+    prices: list[Price] = []
+    seen_times: list[datetime] = []
     for market in markets:
-        if not isinstance(market, dict) or market.get("key") != "h2h":
+        if not isinstance(market, dict):
             continue
-        outcomes = market.get("outcomes")
-        if not isinstance(outcomes, list) or len(outcomes) != 2 or not all(isinstance(o, dict) for o in outcomes):
+        name, seen = market.get("key"), _time(market.get("last_update"))
+        if name == "h2h":
+            found = _moneyline(market, home, away)
+            if found is None or ml is not None:
+                continue  # a second h2h market is ignored, the first good one stays
+            ml = found
+            if seen is not None:  # no market time, no stored price: the book's time is not a stand-in
+                prices += [
+                    Price("moneyline", "home", None, found[0], seen),
+                    Price("moneyline", "away", None, found[1], seen),
+                ]
+        elif seen is None:
             continue
-        prices = {o.get("name"): o.get("price") for o in outcomes if isinstance(o.get("name"), str)}
-        if len(prices) == 2 and set(prices) == {home, away} and all(_price(p) for p in prices.values()):
-            moneyline = (
-                Price("moneyline", "home", None, float(prices[home])),
-                Price("moneyline", "away", None, float(prices[away])),
-            )
-            return Book(
-                key, updated, float(prices[home]), float(prices[away]), moneyline + _extra_prices(markets, home, away)
-            )
-    return None
+        elif name == "spreads":
+            prices += _spread_prices(market, home, away, seen)
+        elif name == "totals":
+            prices += _total_prices(market, seen)
+        else:
+            continue
+        if seen is not None:
+            seen_times.append(seen)
+    # the book's own time is deprecated by the API: fall back to the newest market time
+    raw = item.get("last_update")
+    updated = max(seen_times, default=None) if raw is None else _time(raw)  # a malformed book time stays a skip
+    if updated is None or (ml is None and not prices):
+        return None
+    return Book(key, updated, ml[0] if ml else None, ml[1] if ml else None, tuple(prices))
 
 
 def _event(item: Any) -> tuple[Event | None, int]:

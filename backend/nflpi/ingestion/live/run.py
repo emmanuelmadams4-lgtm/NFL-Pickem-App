@@ -361,6 +361,8 @@ def refresh_kalshi_quotes(
 
 
 def _save_odds(session: Session, event: oddsapi.Event, book: oddsapi.Book, game: Game, now: datetime) -> bool:
+    if book.home_ml is None or book.away_ml is None:
+        return False  # no usable win-market price; the book's spread and total prices are saved apart
     home_ml, away_ml = (
         (book.home_ml, book.away_ml)
         if oddsapi.TEAM_NAMES[event.home] == game.home_team
@@ -389,33 +391,67 @@ FLIP = {"home": "away", "away": "home", "over": "over", "under": "under"}
 
 
 def _save_book_prices(session: Session, event: oddsapi.Event, book: oddsapi.Book, game: Game, now: datetime) -> int:
-    """Every parsed price of one book into book_prices, sides as our game has them (insert-only)."""
-    if book.updated > now + BOOK_CLOCK_SKEW:
-        raise ValueError("book clock ahead of ours")
+    """Every parsed price of one book into book_prices, sides as our game has them (insert-only).
+
+    Each price keeps its own market's time (capped at now); a market whose clock is too far ahead is refused.
+    """
     flip = oddsapi.TEAM_NAMES[event.home] != game.home_team
-    quotes = [
-        {
-            "market_type": p.market_type,
-            "selection": FLIP[p.selection] if flip else p.selection,
-            "line": -p.line if flip and p.market_type == "spread" else p.line,
-            "price": p.price,
-        }
-        for p in book.prices
-    ]
-    return save_prices(session, game.game_id, book.key, min(book.updated, now), now, quotes)
+    by_time: dict[datetime, list[dict]] = {}
+    for p in book.prices:
+        if p.observed_at > now + BOOK_CLOCK_SKEW:
+            raise ValueError("book clock ahead of ours")
+        by_time.setdefault(min(p.observed_at, now), []).append(
+            {
+                "market_type": p.market_type,
+                "selection": FLIP[p.selection] if flip else p.selection,
+                "line": -p.line if flip and p.market_type == "spread" else p.line,
+                "price": p.price,
+            }
+        )
+    return sum(save_prices(session, game.game_id, book.key, seen, now, quotes) for seen, quotes in by_time.items())
+
+
+def _credits_header(result: fetch.JsonResult) -> int | None:
+    header = result.headers.get("x-requests-remaining")
+    if isinstance(header, str) and oddsapi.CREDIT.fullmatch(header) is not None and int(header) <= 1_000_000:
+        return int(header)
+    return None
+
+
+def _out_of_credits(exc: Exception) -> bool:
+    # The Odds API answers 401 (error_code OUT_OF_USAGE_CREDITS) once the monthly credits are gone. A 429 is
+    # EXCEEDED_FREQ_LIMIT, a burst limit that a second key does not cure, so it never switches keys.
+    return isinstance(exc, fetch.Blocked) and str(exc) == "status 401"
+
+
+def _get_odds(
+    get: Callable[[str], fetch.JsonResult], keys: list[tuple[str, str]], extra: bool
+) -> tuple[fetch.JsonResult, str]:
+    """Ask with the first key; when it is out of credits, retry once with the next. Returns (reply, slot)."""
+    for index, (slot, key) in enumerate(keys):
+        try:
+            result = get(oddsapi.odds_url(key, extra_markets=extra))
+        except fetch.Blocked as exc:
+            if not _out_of_credits(exc) or index + 1 == len(keys):
+                raise
+            log.warning("oddsapi key slot %s is out of credits (remaining: not given); retrying with the next", slot)
+            continue
+        log.info("oddsapi key slot %s used, credits remaining: %s", slot, result.headers.get("x-requests-remaining"))
+        return result, slot
+    raise AssertionError("no key")  # pragma: no cover
 
 
 def _odds_job(
     session: Session,
     get: Callable[[str], fetch.JsonResult],
     now: datetime,
-    key: str,
+    keys: list[tuple[str, str]],
     credits: list[int | None],
+    extra: bool,
 ) -> tuple[int, int, None]:
-    result = get(oddsapi.odds_url(key))
-    header = result.headers.get("x-requests-remaining")
-    if isinstance(header, str) and oddsapi.CREDIT.fullmatch(header) is not None and int(header) <= 1_000_000:
-        credits[0] = int(header)
+    result, slot = _get_odds(get, keys, extra)
+    credits[0] = _credits_header(result)
+    credits[1] = slot
     events, skipped = oddsapi.parse_events(result.data)
     games = _quote_candidates(session, now)
     inserted, matched, saved, dropped = 0, 0, 0, 0
@@ -450,10 +486,16 @@ def refresh_odds_quotes(
     get: Callable[[str], fetch.JsonResult] = fetch.fetch_json,
     now: datetime | None = None,
     api_key: str | None = None,
+    fallback_key: str | None = None,
 ) -> RefreshResult:
-    key = api_key if api_key is not None else get_settings().odds_api_key
+    settings = get_settings()
+    key = api_key if api_key is not None else settings.odds_api_key
     if not isinstance(key, str) or oddsapi.KEY.fullmatch(key) is None:
         return RefreshResult("oddsapi", "skipped", detail="ODDS_API_KEY is not set")
+    spare = fallback_key if fallback_key is not None else settings.odds_api_key_fallback
+    keys = [("primary", key)]
+    if isinstance(spare, str) and oddsapi.KEY.fullmatch(spare) is not None and spare != key:
+        keys.append(("fallback", spare))
     now = datetime.now(UTC) if now is None else now.astimezone(UTC)
     status = session.get(SourceStatus, "oddsapi", populate_existing=True)
     if (
@@ -462,9 +504,11 @@ def refresh_odds_quotes(
         and status.credits_left < 50
         and (status.last_ok_at is None or now < status.last_ok_at + timedelta(days=35))
     ):
-        log.warning("oddsapi stopped: credits low")
-        return RefreshResult("oddsapi", "skipped", detail="credits low")
-    credits: list[int | None] = [None]
+        if len(keys) == 1:
+            log.warning("oddsapi stopped: credits low")
+            return RefreshResult("oddsapi", "skipped", detail="credits low")
+        # with a second key the first one's 401 is the signal to switch: no 35 day stop on a low count
+    credits: list = [None, None]
     result = run_source(
         session,
         status_key="oddsapi",
@@ -473,7 +517,7 @@ def refresh_odds_quotes(
         now=now,
         min_interval=ODDS_MIN_INTERVAL,
         floor=ODDS_MIN_INTERVAL,
-        job=lambda: _odds_job(session, get, now, key, credits),
+        job=lambda: _odds_job(session, get, now, keys, credits, settings.odds_extra_markets),
     )
     if result.status == "ok":
         store.mark_ok(
@@ -483,7 +527,7 @@ def refresh_odds_quotes(
             ODDS_MIN_INTERVAL,
             credits_left=credits[0] if credits[0] is not None else store.UNSET,
         )
-        if credits[0] is not None and credits[0] < 50:
+        if credits[0] is not None and credits[0] < 50 and len(keys) == 1:
             store.mark_stopped(session, "oddsapi", now, now + timedelta(days=35), credits[0])
             log.warning("oddsapi stopped: credits low")
         session.commit()
