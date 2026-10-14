@@ -561,7 +561,8 @@ def test_p16_ties_sit_inside_the_share_ordering_and_runs_are_identical():
              game(game_id="c", p_home_win=0.3)]  # fmt: skip
     first = confidence_pool(games)
     weights = {p.game_id: p.weight for p in first.picks}
-    assert weights["z"] == 4 and weights["c"] == 1 and (weights["a"], weights["b"]) == (3, 2)
+    # c is home 0.3 so its chosen side (away) holds 0.7: above the 0.6 tie, below z
+    assert weights == {"z": 4, "c": 3, "a": 2, "b": 1}
     assert confidence_pool(games) == first
     assert confidence_pool(list(games)).picks == first.picks
 
