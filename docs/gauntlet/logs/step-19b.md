@@ -183,3 +183,6 @@ Scope-locked `/refactor` read of `points_bench.py` (310 lines) at `4b0d0f1`:
 - Everything else (pure functions with tests) reads cleanly: no change.
 Proof for WO5: the five evidence JSONs (baseline, c1-c4) rebuilt after the split must be byte-identical to the
 committed ones (a reproduction, not a new scoring: the same frozen code paths on the same files).
+- WO5 (Ryan, try 1) `fdc71b3`: `_load_games`, `_read_injuries`, `_read_plays`, `_add_candidate`, `_report`; longest
+  function 35 lines. Coordinator rerun: 17 passed, ruff 0; baseline, c1, c2, c3, c4 rebuilt into the scratchpad and
+  `cmp` byte-identical to the committed evidence. Cleanup done.
