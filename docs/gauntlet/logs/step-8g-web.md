@@ -64,3 +64,8 @@ N4 the real server checks before the page passed (`/api/news` 200, `items: []`).
 `f12bb90` is the 18j `after2-game-*` set (same main; no change since), `~/.claude/plans/nfl-pickem-lanes-logs/step-18j/`.
 
 ## 3. IMPLEMENTATION
+- WO1 (`evidence/wo-1.md`, try 1): Ryan reported at 03:57 UTC. The diff kept to the 4 allowed files and
+  matched the order. Typecheck 0. `s8g-green-1` (fresh build of news8g and phone-layout): **18 passed**. Committed `91da4a9`.
+- Design Gauntlet: after-screenshots at 393 and 1280 (`~/.claude/plans/nfl-pickem-lanes-logs/step-8g-web/after-*`). A fresh
+  design critic reviewed them; report and triage in `evidence/reviews/design-1.md`. 1 MUST (link colour) and 2 SHOULDs
+  taken. Tests first: `s8g-red-2`, N1 fails on the link class. WO2.

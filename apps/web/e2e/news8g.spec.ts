@@ -72,6 +72,10 @@ test("N1 N2 N3 each item: title as text, safe link only, source, age and tags", 
   await expect(link).toHaveAttribute("href", "https://www.espn.com/nfl/story/_/id/1");
   await expect(link).toHaveAttribute("target", "_blank");
   await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  // design critic 1: links look like every other link (accent colour) and say they open a new tab
+  await expect(link).toHaveClass(/\btext-accent-text\b/);
+  await expect(link).toHaveAccessibleName("Starting quarterback limited in practice (opens in new tab)");
+  await expect(rows.nth(0)).toContainText(/ESPN\s*·\s*3h ago/);
   await expect(rows.nth(1).getByRole("link")).toHaveCount(0);
   await expect(rows.nth(2).getByRole("link")).toHaveCount(0);
   expect(await s.locator('a[href^="javascript"]').count()).toBe(0);
