@@ -117,3 +117,37 @@ def test_b6_a_returning_starter_is_told_apart_from_a_backup_coming_in():
     assert list(out["away_qb_back"]) == [0.0, 0.0, 1.0, 0.0]
     assert list(out["away_qb_in"]) == [0.0, 0.0, 0.0, 0.0]
     assert list(out["home_qb_back"]) == [0.0, 0.0, 0.0, 0.0]
+
+
+# --- B8 c2 fitted mix (stack on earlier seasons' out-of-sample chances) -------------------------------
+
+def _oos(seed=0):
+    rng = np.random.default_rng(seed)
+    rows = []
+    for season in (2012, 2013, 2014):
+        for i in range(120):
+            m = rng.uniform(0.2, 0.8)
+            rows.append({"season": season, "game_id": f"{season}_{i}", "p_market": m,
+                         "p_logistic": float(np.clip(m + rng.normal(0, 0.1), 0.05, 0.95)),
+                         "p_blend": 0.5, "home_win": float(rng.uniform() < m)})
+    return pd.DataFrame(rows)
+
+
+def test_b8_the_mix_for_a_season_is_fitted_only_on_earlier_seasons():
+    pb = _pb()
+    preds = _oos()
+    first = pb.mix_c2(preds)
+    assert (first[preds["season"] == 2012] == preds.loc[preds["season"] == 2012, "p_blend"]).all()  # nothing earlier
+    changed = preds.copy()
+    changed.loc[changed["season"] == 2014, "home_win"] = 1 - changed.loc[changed["season"] == 2014, "home_win"]
+    again = pb.mix_c2(changed)
+    assert np.allclose(first[preds["season"] == 2014], again[preds["season"] == 2014])  # its own results unused
+    assert not np.allclose(first[preds["season"] == 2013], 0.5)  # a fitted mix, not the blend
+    assert ((first > 0) & (first < 1)).all()
+
+
+def test_b8b_games_without_a_market_keep_the_blend():
+    pb = _pb()
+    preds = _oos()
+    preds.loc[preds.index[-1], "p_market"] = np.nan
+    assert pb.mix_c2(preds).iloc[-1] == preds["p_blend"].iloc[-1]

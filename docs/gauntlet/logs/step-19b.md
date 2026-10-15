@@ -77,3 +77,39 @@ each is scored. "Fresher line timing" is untestable on history (only closing lin
 Gate: `uv run pytest --noconftest -q tests/test_points_bench.py`; `uvx ruff check nflpi tests`; the B7 run on the
 public `games.csv` (rows before 2026-10-15) with its JSON in `step-19b-evidence/`. PR CI runs the full suite (D71).
 **Red (local):** 13 failed: `ImportError` (no `points_bench`); B5 fails on the same import.
+
+## 3. IMPLEMENTATION
+
+- WO1 (Ryan, try 1) `c4c1d5a`: `points_bench.py` (B1-B7, c1). Committed by the coordinator (builder `.git` read-only).
+  Coordinator rerun: 13 passed, ruff 0. Alignment check on the real file (not a scoring run): in every Elo frame,
+  `*_qb_in + *_qb_back == *_qb_change` on every row and game ids match the games order (867 "backup in", 364 "starter
+  back").
+- Data: nflverse `games.csv`, rows before 2026-10-15 (sha256 `08a09c145930747d…`, the 18m file).
+
+**Baseline** (`step-19b-evidence/baseline.json`; tied games left out):
+
+| window | model | weeks | points/week | accuracy |
+|---|---|---|---|---|
+| 2022-2025 | market | 72 | 88.01 | 67.53% |
+| 2022-2025 | blend (live) | 72 | 87.71 | 67.53% |
+| 2022-2025 | stats | 72 | 83.36 | 63.65% |
+| 2012-2021 | market | 171 | 86.70 | 66.08% |
+| 2012-2021 | blend | 171 | 86.61 | 66.02% |
+| 2012-2021 | stats | 171 | 84.08 | 64.89% |
+
+Market vs blend: +0.31 pts/week [-0.28, +0.89] (2022-2025), +0.18 [-0.26, +0.60] (2012-2021): no significant
+difference. Stats vs blend: -4.35 [-5.78, -2.92]. Note: AUDIT A9 has market accuracy 67.80% on 2022-2025; here 67.53%
+(this bench picks home at exactly 0.5, as `choose_su` does, and leaves ties out). Carried; it does not touch the
+candidate comparisons (each is vs the blend on the same rows).
+
+**c1 signed QB change: scored once** (`step-19b-evidence/c1.json`). 2022-2025: c1 87.81 pts/week; gain vs blend
+**+0.10 [-0.18, +0.39]**, accuracy diff 0.0000, log-loss gain -0.00008 (1,084 games). 2012-2021: +0.03 [-0.16, +0.22],
+accuracy -0.0004, log-loss gain -0.00046. **Decision: does not ship** (CI lower bound not above 0; log-loss worse).
+
+**Pre-registered c2 (fitted model + market mix), defined before it is built or scored.** Inputs: the walk-forward
+out-of-sample chances `p_market` and `p_logistic` (stats) of every season. For season s, fit a logistic regression of
+`home_win` on `[logit(p_market), logit(p_logistic)]` (chances clipped to [0.01, 0.99]) using only the rows of seasons
+2012..s-1 with a market; predict season s. Season 2012 (no earlier out-of-sample season) and any game without a market
+keep `p_blend`. Candidate column `p_c2`, scored once against `p_blend` with `decide`. Spec B8: `mix_c2(preds) ->
+Series` aligned to `preds`; a season's own results never enter its fit; B8b no market → blend. Red: 2 failed
+(`AttributeError: no mix_c2`), 13 passed.

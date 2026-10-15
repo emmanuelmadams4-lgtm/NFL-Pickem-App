@@ -1,0 +1,138 @@
+{
+  "windows": {
+    "test": {
+      "seasons": [
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "models": {
+        "market": {
+          "n_games": 1084,
+          "n_weeks": 72,
+          "mean_points_per_week": 88.01388888888889,
+          "points_ci": [
+            82.97187500000001,
+            92.26458333333332
+          ],
+          "accuracy": 0.6752767527675276
+        },
+        "blend": {
+          "n_games": 1084,
+          "n_weeks": 72,
+          "mean_points_per_week": 87.70833333333333,
+          "points_ci": [
+            82.80381944444444,
+            92.11145833333333
+          ],
+          "accuracy": 0.6752767527675276
+        },
+        "logistic": {
+          "n_games": 1084,
+          "n_weeks": 72,
+          "mean_points_per_week": 83.36111111111111,
+          "points_ci": [
+            78.84687500000001,
+            87.47256944444445
+          ],
+          "accuracy": 0.6365313653136532
+        }
+      },
+      "comparisons": {
+        "market_vs_blend": {
+          "n_weeks": 72,
+          "n_games": 1084,
+          "points_gain": 0.3055555555555556,
+          "points_gain_ci": [
+            -0.2777777777777778,
+            0.8888888888888888
+          ],
+          "accuracy_diff": 0.0,
+          "log_loss_gain": 0.0013359675496418756
+        },
+        "stats_vs_blend": {
+          "n_weeks": 72,
+          "n_games": 1084,
+          "points_gain": -4.347222222222222,
+          "points_gain_ci": [
+            -5.777777777777778,
+            -2.9166666666666665
+          ],
+          "accuracy_diff": -0.03874538745387454,
+          "log_loss_gain": -0.02359462494844013
+        }
+      }
+    },
+    "guard": {
+      "seasons": [
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021
+      ],
+      "models": {
+        "market": {
+          "n_games": 2565,
+          "n_weeks": 171,
+          "mean_points_per_week": 86.69590643274854,
+          "points_ci": [
+            83.68991228070176,
+            89.8143274853801
+          ],
+          "accuracy": 0.6608187134502924
+        },
+        "blend": {
+          "n_games": 2566,
+          "n_weeks": 171,
+          "mean_points_per_week": 86.6140350877193,
+          "points_ci": [
+            83.58450292397661,
+            89.71359649122807
+          ],
+          "accuracy": 0.6601714731098987
+        },
+        "logistic": {
+          "n_games": 2566,
+          "n_weeks": 171,
+          "mean_points_per_week": 84.07602339181287,
+          "points_ci": [
+            81.25716374269005,
+            87.12295321637427
+          ],
+          "accuracy": 0.6488698363211224
+        }
+      },
+      "comparisons": {
+        "market_vs_blend": {
+          "n_weeks": 171,
+          "n_games": 2565,
+          "points_gain": 0.17543859649122806,
+          "points_gain_ci": [
+            -0.2631578947368421,
+            0.5964912280701754
+          ],
+          "accuracy_diff": 0.0007797270955165692,
+          "log_loss_gain": 0.001242295136741875
+        },
+        "stats_vs_blend": {
+          "n_weeks": 171,
+          "n_games": 2566,
+          "points_gain": -2.538011695906433,
+          "points_gain_ci": [
+            -3.79546783625731,
+            -1.2514619883040936
+          ],
+          "accuracy_diff": -0.011301636788776305,
+          "log_loss_gain": -0.016524696251760857
+        }
+      }
+    }
+  }
+}
