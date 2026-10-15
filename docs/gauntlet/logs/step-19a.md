@@ -158,3 +158,14 @@ the line-only path).
 - H1: WO3 dropped `prev.pick != pick` from the non-line alert branch. A non-line change (stats, Elo, model version)
   that flips a near-50% pick with a move under the threshold keeps the same label and now sends no alert. No test
   covered it. → spec D3e: such a flip is alerted. Fix → WO4. M1, M2 closed.
+
+### WO4 (Ryan, try 1) `77cfc9e`
+`prev.pick != pick` back at the front of the non-line `elif`; nothing else. Committed by the coordinator. Rerun: 21 pure
+passed, ruff 0. Dwight delta `2dd1b53..77cfc9e`: **PASS**, H1 closed; no open CRITICAL/HIGH/MEDIUM (inbox c76377).
+
+### PR #47 CI (full suite, D71)
+- `0297dfb` (run 38767021819): all four jobs green (D3 test fix confirmed).
+- `2dd1b53` (run 38768056937): backend 2,413 passed, 1 skipped; all jobs green (D3c, D3d green).
+- `710aaae` red (run 38768328175, backend job 116537282923): 1 failed, 2,413 passed: D3e `assert [] == ['2023_04_MIA_LV']`
+  after its precondition held (the pick flipped, no alert): the intended reason.
+- `77cfc9e` (run 38768491544, backend job 116537844486): **2,414 passed, 1 skipped**; backend, web, e2e, docker green.
