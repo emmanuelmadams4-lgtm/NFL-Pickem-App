@@ -58,3 +58,9 @@ Game page, a "News" section `id="news"`, tab "News" in the Sections row after "I
 - N6 No serious or critical axe finding in `#news`; no sideways scroll at 393 px and 320 px with five long titles.
 
 Gate: `apps/web/e2e/news8g.spec.ts` (new) on a fresh build, typecheck 0; PR CI runs the full suite (D71).
+
+**Red (`s8g-red-1`, fresh build of `9981e74`): 5/5 fail for the intended reason**: `locator('#news')` not found. In
+N4 the real server checks before the page passed (`/api/news` 200, `items: []`). Before-screenshots: the game page on
+`f12bb90` is the 18j `after2-game-*` set (same main; no change since), `~/.claude/plans/nfl-pickem-lanes-logs/step-18j/`.
+
+## 3. IMPLEMENTATION
