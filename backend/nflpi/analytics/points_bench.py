@@ -108,6 +108,24 @@ def qb_direction(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(values, index=df.index)
 
 
+def injury_counts(games: pd.DataFrame, injuries: pd.DataFrame) -> pd.DataFrame:
+    """Count listed out non-QB players for each game's two teams and week."""
+    counts: dict[tuple[int, int, str], int] = {}
+    for row in injuries.itertuples(index=False):
+        if str(row.report_status).strip().lower() != "out" or str(row.position).strip().upper() == "QB":
+            continue
+        key = (int(row.season), int(row.week), row.team)
+        counts[key] = counts.get(key, 0) + 1
+    home, away = [], []
+    for row in games.itertuples(index=False):
+        home.append(counts.get((int(row.season), int(row.week), row.home_team), 0))
+        away.append(counts.get((int(row.season), int(row.week), row.away_team), 0))
+    return pd.DataFrame({
+        "home_out_nonqb": home, "away_out_nonqb": away,
+        "inj_diff": [(h - a) / 5 for h, a in zip(home, away, strict=True)],
+    }, index=games.index)
+
+
 def _c1_features(features: list[str]) -> list[str]:
     return [
         column for feature in features
@@ -116,14 +134,14 @@ def _c1_features(features: list[str]) -> list[str]:
     ]
 
 
-def _c1_season(frames: dict, season: int) -> pd.Series:
+def _feature_season(frames: dict, season: int, features: dict[str, list[str]]) -> pd.Series:
     params, train = backtest._train_rows(frames, season, WINDOW)
     frame = frames[params]
     test = frame[(frame["season"] == season) & (frame["game_type"] == "REG") & frame["home_win"].notna()]
-    stats = LogitModel.fit(train, _c1_features(BASE_FEATURES)).predict(test)
+    stats = LogitModel.fit(train, features["stats"]).predict(test)
     result = pd.Series(stats, index=test.index)
     has_market = test["market_logit"].notna()
-    blend = LogitModel.fit(train.dropna(subset=["market_logit"]), _c1_features(BLEND_FEATURES))
+    blend = LogitModel.fit(train.dropna(subset=["market_logit"]), features["blend"])
     result.loc[has_market] = blend.predict(test[has_market])
     return result
 
@@ -167,7 +185,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("games_csv", type=Path)
     parser.add_argument("out_json", type=Path)
-    parser.add_argument("candidate", nargs="?", choices=["c1", "c2"])
+    parser.add_argument("candidate", nargs="?", choices=["c1", "c2", "c3"])
+    parser.add_argument("--injuries", type=Path, help="directory of nflverse injuries_*.csv files (required for c3)")
     args = parser.parse_args()
 
     with args.games_csv.open(newline="", encoding="utf-8") as handle:
@@ -178,12 +197,33 @@ def main() -> None:
     if args.candidate == "c1":
         direction = qb_direction(games)
         frames = {params: frame.assign(**direction) for params, frame in frames.items()}
+    elif args.candidate == "c3":
+        if args.injuries is None:
+            parser.error("c3 requires --injuries DIR")
+        files = sorted(args.injuries.glob("injuries_*.csv"))
+        if not files:
+            parser.error("--injuries contains no injuries_*.csv files")
+        injuries = []
+        for path in files:
+            with path.open(newline="", encoding="utf-8") as handle:
+                injuries.extend({
+                    "season": int(row["season"]), "week": int(row["week"]),
+                    "team": nflverse.franchise(row["team"]), "position": row["position"],
+                    "report_status": row["report_status"],
+                } for row in csv.DictReader(handle))
+        counts = injury_counts(games, pd.DataFrame(injuries))
+        frames = {params: frame.assign(inj_diff=counts["inj_diff"]) for params, frame in frames.items()}
     predictions = pd.concat(
         [backtest.predict_season(frames, season, WINDOW) for season in ALL_SEASONS], ignore_index=True
     )
-    if args.candidate == "c1":
-        c1 = pd.concat([_c1_season(frames, season) for season in ALL_SEASONS])
-        predictions["p_c1"] = c1.to_numpy()
+    if args.candidate in ("c1", "c3"):
+        features = (
+            {"stats": _c1_features(BASE_FEATURES), "blend": _c1_features(BLEND_FEATURES)}
+            if args.candidate == "c1" else
+            {"stats": [*BASE_FEATURES, "inj_diff"], "blend": [*BLEND_FEATURES, "inj_diff"]}
+        )
+        candidate = pd.concat([_feature_season(frames, season, features) for season in ALL_SEASONS])
+        predictions[f"p_{args.candidate}"] = candidate.to_numpy()
     elif args.candidate == "c2":
         predictions["p_c2"] = mix_c2(predictions)
 
