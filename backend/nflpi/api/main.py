@@ -22,8 +22,8 @@ from nflpi.api import group as group_api
 from nflpi.api import live as live_api
 from nflpi.api import news as news_api
 from nflpi.api import passkey as passkey_api
+from nflpi.api import readmodels as views
 from nflpi.api import schemas as s
-from nflpi.api import views
 from nflpi.auth import passkeys
 from nflpi.config import get_settings
 from nflpi.db import acquire_refresh_lock, get_session, release_refresh_lock, session_factory

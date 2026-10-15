@@ -108,7 +108,7 @@ def _star(session: Session, report: InjuryReport, game: Game) -> TeamStar | None
         .where(TeamStar.season == game.season, TeamStar.week == week, TeamStar.team == report.team)
         .order_by(TeamStar.slot, TeamStar.rank)
     ).all()
-    return next((row for row in rows if stars._star_report(row, [report]) is not None), None)
+    return next((row for row in rows if stars.star_report(row, [report]) is not None), None)
 
 
 def _changes(session: Session, baseline: int, now: datetime) -> list[Change]:
@@ -147,13 +147,13 @@ def _send_immediate(session: Session, change: Change, now: datetime) -> int:
     injury = _plain(report.injury or "", INJURY_LIMIT)
     if injury:
         body += f" {injury}."
-    delivered = push._send(
+    delivered = push.send(
         session, title, body, push.game_url(game.game_id),
         ttl=max(1, int((kickoff - now).total_seconds())), headers={"Urgency": "high"},
     )
     if not delivered:
         return 0
-    push._record(session, "star", game.game_id, f"star:{report.id}", {"title": title, "body": body})
+    push.record(session, "star", game.game_id, f"star:{report.id}", {"title": title, "body": body})
     session.commit()
     return 1
 
@@ -191,11 +191,11 @@ def _summary(session: Session, changes: list[Change], now: datetime) -> int:
         shown.append(f"+{len(lines) - SUMMARY_LINES} more")
     title = f"Star report: {len(lines)} change{'s' if len(lines) != 1 else ''} today"
     body = "\n".join(shown)
-    if not push._send(session, title, body, "/"):
+    if not push.send(session, title, body, "/"):
         return 0
-    push._record(session, "starsum", None, key, {"title": title, "body": body})
+    push.record(session, "starsum", None, key, {"title": title, "body": body})
     for change in pending:
-        push._record(session, "star", change.game.game_id, f"star:{change.report.id}", {"title": title, "body": body})
+        push.record(session, "star", change.game.game_id, f"star:{change.report.id}", {"title": title, "body": body})
     session.commit()
     return 1
 

@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from nflpi.config import get_settings
 from nflpi.models import AppSetting, Game, InjuryReport, Notification, PushSubscription
-from nflpi.predictions.engine import ChangeEvent
+from nflpi.predictions.events import ChangeEvent
 
 log = logging.getLogger(__name__)
 ALERT_STATUSES = {"Out", "Doubtful", "Questionable"}
@@ -48,7 +48,7 @@ def configured() -> bool:
     return bool(s.vapid_public_key and s.vapid_private_key and s.vapid_subject)
 
 
-def _record(session: Session, kind: str, game_id: str | None, key: str, payload: dict) -> bool:
+def record(session: Session, kind: str, game_id: str | None, key: str, payload: dict) -> bool:
     """Store the alert; False if it was already sent."""
     try:
         with session.begin_nested():
@@ -58,7 +58,7 @@ def _record(session: Session, kind: str, game_id: str | None, key: str, payload:
         return False
 
 
-def _send(
+def send(
     session: Session, title: str, body: str, url: str, ttl: int = 6 * 3600, headers: dict[str, str] | None = None,
     results: list[dict] | None = None,
 ) -> int:
@@ -110,7 +110,7 @@ def send_test_alert(session: Session) -> dict:
     if not configured():
         return {"configured": False, "devices": devices, "delivered": 0, "results": []}
     results: list[dict] = []
-    delivered = _send(
+    delivered = send(
         session, "Test alert", "Alerts work on this device.", "/settings/",
         ttl=60, headers={"Urgency": "high"}, results=results,
     )
@@ -158,10 +158,10 @@ def alert_prediction_changes(session: Session, events: list[ChangeEvent], now: d
         key = f"pred:{e.game_id}:{kind}:{digest}"
         if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
             continue
-        delivered = _send(session, title, body, game_url(e.game_id))
+        delivered = send(session, title, body, game_url(e.game_id))
         if not delivered:
             log.warning("alert %s reached 0 devices", key)
-        elif _record(session, "prediction", e.game_id, key, {"title": title, "body": body}):
+        elif record(session, "prediction", e.game_id, key, {"title": title, "body": body}):
             sent += delivered
     session.commit()
     return sent
@@ -186,10 +186,10 @@ def alert_injuries(session: Session, changed: list[InjuryReport], season: int, w
         key = f"inj:{r.season}:{r.week}:{r.player_id or r.player}:{r.report_status}"
         if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
             continue
-        delivered = _send(session, title, body, game_url(gid))
+        delivered = send(session, title, body, game_url(gid))
         if not delivered:
             log.warning("alert %s reached 0 devices", key)
-        elif _record(session, "injury", gid, key, {"title": title, "body": body}):
+        elif record(session, "injury", gid, key, {"title": title, "body": body}):
             sent += delivered
     session.commit()
     return sent
@@ -229,7 +229,7 @@ def send_kickoff_reminders(session: Session, now: datetime) -> int:
         key = f"remind:{day}:{kickoff.isoformat()}"
         if session.scalar(select(Notification.id).where(Notification.dedupe_key == key)) is not None:
             continue
-        delivered = _send(
+        delivered = send(
             session,
             title,
             body,
@@ -237,7 +237,7 @@ def send_kickoff_reminders(session: Session, now: datetime) -> int:
             ttl=int((kickoff - now).total_seconds()),
             headers={"Urgency": "high"},
         )
-        if delivered and _record(session, "reminder", first.game_id, key, {"title": title, "body": body}):
+        if delivered and record(session, "reminder", first.game_id, key, {"title": title, "body": body}):
             sent += delivered
     session.commit()
     return sent

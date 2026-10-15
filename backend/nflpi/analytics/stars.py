@@ -182,7 +182,7 @@ def _current_reports(session: Session, game: Game) -> list[InjuryReport]:
     return list(current.values())
 
 
-def _star_report(star: TeamStar, reports: list[InjuryReport]) -> InjuryReport | None:
+def star_report(star: TeamStar, reports: list[InjuryReport]) -> InjuryReport | None:
     club = [report for report in reports if report.team == star.team]
     ids = [report for report in club if star.player_id and report.player_id == star.player_id]
     named = [
@@ -261,7 +261,7 @@ def game_stars(session: Session, game_id: str, now: datetime | None = None) -> d
     for team, week, stars in lists:
         rows = []
         for star in stars:
-            report = _star_report(star, reports)
+            report = star_report(star, reports)
             status = report.report_status if report and report.report_status else None
             rows.append(dict(
                 team=team, player=star.player, position=star.position, slot=star.slot, rank=star.rank,
@@ -295,7 +295,7 @@ def stars_out(session: Session, game_id: str, now: datetime | None = None) -> di
     )
     for _, _, stars in lists:
         for star in stars:
-            report = _star_report(star, reports)
+            report = star_report(star, reports)
             if report is not None and (report.report_status or "").lower() in OUT_STATUSES:
                 result["out"].append(_listed_star(star, report, now))
     return result

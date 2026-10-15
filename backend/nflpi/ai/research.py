@@ -17,7 +17,7 @@ from nflpi.ai import news_pack
 from nflpi.ai.providers import AIError, AIProvider, get_provider
 from nflpi.analytics.trends import MIN_GAMES, game_trends
 from nflpi.api import schemas as s
-from nflpi.api.views import ai_report_out, game_detail
+from nflpi.api.readmodels import ai_report_out, game_detail
 from nflpi.config import get_settings
 from nflpi.models import AIReport, AppSetting, BacktestRun
 

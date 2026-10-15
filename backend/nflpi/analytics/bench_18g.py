@@ -184,7 +184,7 @@ def _walk(
     cols: dict[str, pd.Series],
     variants: Callable[[], list[Variant]],
 ) -> pd.DataFrame:
-    frames = {params: frame.assign(**cols) for params, frame in backtest._elo_frames(df).items()}
+    frames = {params: frame.assign(**cols) for params, frame in backtest.elo_frames(df).items()}
     by_season = []
     for season in seasons:
         test = backtest.predict_season(frames, season, window)
@@ -383,7 +383,7 @@ def matchup_preds(df: pd.DataFrame, seasons: list[int], window: int = 10) -> pd.
     """Score held-out seasons with the fixed matchup formula, with and without the market; nothing is fitted."""
     from nflpi.data.matchup import matchup_score
 
-    frames = backtest._elo_frames(df)
+    frames = backtest.elo_frames(df)
     by_season = []
     for season in seasons:
         test = backtest.predict_season(frames, season, window)
@@ -402,7 +402,7 @@ def matchup_input_gap(df: pd.DataFrame, seasons: list[int], window: int = 10) ->
         p = np.clip(p, MATCHUP_CLIP, 1 - MATCHUP_CLIP)
         return pd.Series(np.log(p / (1 - p)), index=frame.index)
 
-    frames = backtest._elo_frames(df)
+    frames = backtest.elo_frames(df)
     gap = 0.0
     for season in seasons:
         test = backtest.predict_season(frames, season, window)

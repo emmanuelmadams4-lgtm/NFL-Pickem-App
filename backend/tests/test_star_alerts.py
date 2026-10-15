@@ -385,7 +385,7 @@ def test_a9_a_failed_summary_is_retried_inside_its_window(world, pushes):  # noq
 def test_m4_an_error_inside_the_module_logs_its_class_only_never_its_text(world, pushes, monkeypatch, caplog):  # noqa: F811
     report(world, "W1", "Jaylen Waddle", "MIA", "Out")
     secret = "https://push.example.test/iphone p256dh=" + "B" * 87
-    monkeypatch.setattr(push, "_send", lambda *a, **k: (_ for _ in ()).throw(RuntimeError(secret)))
+    monkeypatch.setattr(push, "send", lambda *a, **k: (_ for _ in ()).throw(RuntimeError(secret)))
     caplog.set_level(logging.DEBUG)
     assert star_alerts.run(world, KICKOFF - timedelta(minutes=60)) == {"immediate": 0, "summary": 0}
     assert "RuntimeError" in caplog.text and "push.example.test" not in caplog.text and "B" * 20 not in caplog.text
