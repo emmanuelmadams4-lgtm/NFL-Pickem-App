@@ -40,3 +40,7 @@ Lane `cleanup13`, branch `lane/cleanup13`, base `d1b8a07`, tier T1, One-Shot. Te
 
 ## 6. LANDING
 Hand-off to god; no push.
+
+## LANDING (integrator, 2026-10-15)
+
+Pull request #44 from `lane/cleanup13`, pinned at `28df356`. landscan: merge with main clean, lane-guard OK (grants 04:30 and 04:36 UTC for the rename call sites), no name, secret or env-value hits. CI green on every job, full e2e included (D71). Main had moved to `126cd38` (web and docs only); merge-tree still clean. Merged as `21eeabd` at 04:47 UTC. Worker worktree reclaimed. **Not deployed:** goes out with 18k, 8g web and 18k web on the owner's next deploy yes (HAG-75). **Carried:** the `train()` move (not a pure move); the ai -> api.readmodels import; the duplicate recommendations read in summaries (needs a `sheet.compute_week` signature change); the layering gate does not see relative imports or getattr.
