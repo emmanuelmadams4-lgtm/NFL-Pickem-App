@@ -189,7 +189,7 @@ def test_d3_a_line_only_change_alerts_only_on_a_flip_or_a_points_rank_change(loa
     again = engine.refresh_predictions(loaded, now=now + timedelta(minutes=1), game_ids=[game.game_id])
     assert again == [] and _newest(loaded, game.game_id).id == first.id  # same quote: no new row
     monkeypatch.setattr(fresh_line, "rank_changed", lambda old, new, game_id: True)
-    _, _, _, later = _setup_quote(loaded, shift=0.04)
+    _, _, _, later = _setup_quote(loaded, shift=0.04, age=3)  # newer than the first quote, so it wins
     events = engine.refresh_predictions(loaded, now=later, game_ids=[game.game_id])
     assert [e.game_id for e in events] == [game.game_id]  # a points-rank change is alerted
 
