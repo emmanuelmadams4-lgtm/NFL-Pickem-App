@@ -86,3 +86,26 @@ before the build because they assert today's behaviour (nflverse kept).
   features keep). F3 now also requires `choose_line` to return the refused quote itself (second value), so the engine
   logs it without re-deriving it (the cleanup finding). D3b sets `SANITY_GAP = 1.0` (F3 covers the gap) and uses a
   decisive 0.03/0.97 quote so the pick flips. Red locally: F1b and F3 fail; 17 pure tests pass. → WO2.
+- WO2 (Ryan, try 1) `759c455`: quote probabilities rounded to 4 places; `choose_line` returns `(line, refused quote)`;
+  the engine logs the returned quote. Coordinator rerun: 19 pure tests passed, ruff 0.
+- **CI on `759c455`** (run 38766072714, backend job 116529470545): 1 failed, 2,388 passed, 1 skipped. D3b now green
+  (the decisive line flips the pick and is alerted). D3 failed on a test defect: its second quote had the same source
+  and the same `fetched_at` as the first, so the newest-then-source tie kept the first quote and nothing changed. Test
+  fix `c3d9775` (second quote 3 minutes old, so it is newer). No production change.
+- Moved onto origin/main `62ecf35` (18m landed) under `res:git-integrate`: clean, 7 commits, HEAD `0297dfb`. Pure
+  tests 19 passed (`--noconftest`; the DB clauses run in PR CI), ruff 0. Pushed to draft PR #47.
+
+## 4. CLEANUP
+
+Scope-locked `/refactor` read of `git diff origin/main HEAD -- backend/nflpi` (jobs.py, engine.py, fresh_line.py):
+- `fresh_line.py` (105 lines): pure functions, frozen dataclasses, named constants; the refused quote already comes back
+  from `choose_line` (the earlier cleanup finding, done in WO2). No change.
+- `engine.load_frame`: the row dict keeps its old 16-space indent inside the new `row = {`; ruff accepts it, and
+  reindenting 20 lines would add noise to the diff. No change.
+- `engine.refresh_predictions`: `line_keys` is rebuilt per row; a module constant would read slightly better but it is
+  7 strings in one place. The `latest_week_prediction` subquery groups every stored prediction before the week filter
+  (a max per game; the table holds a few rows per game). Both LOW, carried. No change.
+- `jobs.next_interval`: `<` became `<=` 6 hours, matching the kickoff query's `<= now + 6h`. No change.
+- Tie note: two quotes with the same source and the same time keep the first one read (stable sort). Real feeds do not
+  repeat a timestamp within one source; LOW, carried.
+Result: no change needed; proof unchanged.
