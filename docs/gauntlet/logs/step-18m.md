@@ -144,3 +144,19 @@ the one spread conversion: no change. `game.py`/`params.py` hooks are two lines 
 - Spec additions (Dwight, frozen before the fix): K9 `key_weighted` with no ratio or alpha 0 reports `distribution =
   "paired_residual"`. K10 a tilt that does not converge within `keys.TILT_STEPS` logs a warning containing "did not
   converge" and returns the draws unchanged. Red: both fail (label `key_weighted`; no `TILT_STEPS`).
+- WO5 + WO5b (Ryan) `f86e87f`: K9 label, K10 `TILT_STEPS` with warning and unweighted draws. Rerun: 89 passed, ruff 0,
+  lane-guard OK. Dwight on the delta: **PASS** (M1, M2 closed; N1 a corrupt stored ratio now gives unweighted draws
+  still labelled key_weighted, N2 one warning per game, effective-sample-size check not added: LOW, carried).
+- Fresh critic 2 (ecc:code-reviewer, Sonnet) on `fd24b98..f86e87f`: **PASS** (`reviews/critic-2.md`): 89 passed, ruff 0,
+  converged path unchanged so the tune and confirm numbers stand. LOW: K10 forces the branch with `TILT_STEPS = 0`.
+- Review-passed check (Jev Job 4): `decide.sh` returned "advisor, jev unavailable"; the call goes to god.
+- Local gate note: the simulator tests ran with `--noconftest` because the Mac test database is down (Docker off, left
+  off so the live containers are not touched); they use no database. PR CI runs the full suite with its database.
+
+## 6. LANDING
+
+Not landed by lane web. Done report to god with HEAD; god pushes, opens the PR, CI runs the full suite, god merges. Deploy
+needs the owner's yes; after deploy, `jobs train` stores the new key ratio, and until then stored parameters simulate
+as `paired_residual` and are labelled so. Carried: critic 1 MEDIUM (the alpha rule is lenient: it picked 1.0 with a
+borderline tune cover interval; confirm cover difference 0.0000), Dwight L1 (no load-time check of a stored ratio),
+L3 (keys-tune overwrites its record), L4 (`key_ratio` loads as a list), N1/N2, ESS check, critic 2 LOW (K10 trigger).
