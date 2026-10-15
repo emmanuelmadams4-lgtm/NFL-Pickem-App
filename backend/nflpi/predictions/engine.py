@@ -126,20 +126,13 @@ def load_frame(session: Session, now: datetime | None = None) -> pd.DataFrame:
                 old_features.get("market_prob"), old_features.get("market_source", "nflverse"),
                 datetime.fromisoformat(old_seen) if old_seen else None,
             ) if old else None
-            chosen, reason = fresh_line.choose_line(
+            chosen, refused = fresh_line.choose_line(
                 nflverse, quotes.get(g.game_id, []), prior, now=now, kickoff=g.kickoff_utc,
             )
-            if reason == "sanity":
-                eligible = [
-                    quote for quote in quotes.get(g.game_id, [])
-                    if quote.seen_at < g.kickoff_utc
-                    and (nflverse.seen_at is None or quote.seen_at > nflverse.seen_at)
-                    and 0 < quote.home_prob < 1
-                ]
-                rejected = sorted(eligible, key=lambda quote: (-quote.seen_at.timestamp(), quote.source))[0]
+            if refused is not None:
                 log.warning(
                     "fresh line sanity refusal for %s: nflverse=%s quote=%s source=%s",
-                    g.game_id, nflverse.prob, rejected.home_prob, rejected.source,
+                    g.game_id, nflverse.prob, refused.home_prob, refused.source,
                 )
             if chosen.source != "nflverse" and chosen.prob is not None:
                 row["home_ml"], row["away_ml"] = fresh_line.fair_moneylines(chosen.prob)

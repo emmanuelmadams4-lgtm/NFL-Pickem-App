@@ -32,7 +32,7 @@ class Quote:
 
 def choose_line(
     nflverse: Line, quotes: list[Quote], previous: Line | None, *, now: datetime, kickoff: datetime,
-) -> tuple[Line, str | None]:
+) -> tuple[Line, Quote | None]:
     """Use the newest eligible quote, with sanity and small-move guards."""
     chosen = nflverse
     if now < kickoff:
@@ -43,16 +43,18 @@ def choose_line(
             and now - quote.seen_at <= FRESH_MAX_AGE
             and math.isfinite(quote.home_prob)
             and 0 < quote.home_prob < 1
+            and 0 < round(quote.home_prob, 4) < 1
             and (nflverse.seen_at is None or quote.seen_at > nflverse.seen_at)
         ]
         if eligible:
             quote = sorted(eligible, key=lambda item: (-item.seen_at.timestamp(), item.source))[0]
+            quote_prob = round(quote.home_prob, 4)
             if nflverse.prob is not None and (
-                abs(quote.home_prob - nflverse.prob) > SANITY_GAP
-                or math.isclose(abs(quote.home_prob - nflverse.prob), SANITY_GAP, abs_tol=1e-12)
+                abs(quote_prob - nflverse.prob) > SANITY_GAP
+                or math.isclose(abs(quote_prob - nflverse.prob), SANITY_GAP, abs_tol=1e-12)
             ):
-                return nflverse, "sanity"
-            chosen = Line(quote.home_prob, quote.source, quote.seen_at)
+                return nflverse, quote
+            chosen = Line(quote_prob, quote.source, quote.seen_at)
     if (
         previous is not None
         and previous.prob is not None
