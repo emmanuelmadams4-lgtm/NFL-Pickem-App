@@ -42,6 +42,7 @@ Existing code, two variants, always reported separately:
 | `paired_residual` | stochastically rounded expected points plus a past (A residual, B residual) pair, residual = regulation score minus rounded expected points, centred per side (below) | the residual pairs |
 | `bivariate_normal` | rounded two-variable normal, sd = sqrt(phi x expected points) | phi per side, correlation |
 | `shared_gamma_poisson` | Poisson counts whose rate is multiplied by gamma factors that share a common part: overdispersed, and the two scores can move together | total and shared relative variance |
+| `key_weighted` (default since step 18m) | `paired_residual` final scores, resampled with weight r(\|margin\|)^alpha and re-tilted so the mean margin and total do not move (see Key numbers) | the ratio r per exact \|margin\| 0..60; alpha 1.0 chosen on 2012-2021 |
 
 ## Learned parameters, and how future data is kept out
 
@@ -75,9 +76,28 @@ All numbers from ONE confirm run on seasons 2022 to 2025, 1,087 regular-season g
 * **Independent Poisson is too narrow.** Its 50/80/95 percent intervals hold only about 35/57/75 percent of real margins. The three learned distributions come close to their nominal levels (a little wide at 50 percent for paired_residual).
 * **Cover and over calibration (Brier; a flat 0.5 scores 0.25).** football_only: cover 0.2600 to 0.2615 and over 0.2574 to 0.2586 for the learned distributions, i.e. worse than a coin, so the football-only simulator has no cover or over edge against the closing line. market_informed: 0.2499 to 0.2507, i.e. about 0.25 by construction. Reliability tables (10 bins) are in the result file.
 * **Ties.** Simulated final-tie rate 0.20 to 0.31 percent for the variants against a real 0.28 percent (3 of 1,087 games): consistent, but 3 games cannot validate it tightly.
-* **Football key numbers (|margin| = 3 and 7).** Real games: 14.8 and 8.0 percent. Simulated: poisson 11.1 and 6.5, the learned distributions 7.1 to 7.8 and 4.9 to 5.3. **Every variant under-represents 3 and 7**, the learned ones by about half. The simulator smooths football's lumpy scoring; do not read exact-margin or middling-spread-push probabilities near 3 and 7 from it.
+* **Football key numbers (|margin| = 3 and 7).** Real games: 14.8 and 8.0 percent. Simulated: poisson 11.1 and 6.5, the learned distributions 7.1 to 7.8 and 4.9 to 5.3. **Every 18c variant under-represents 3 and 7**, the learned ones by about half. Fixed by `key_weighted` in step 18m (next section).
 * **Win probability against the live blend** (`p_a_win + p_tie/2` for the home side, decided games only, 1,084 games; blend log loss 0.6095, market 0.6082): football_only paired_residual 0.6304, log-loss gain over the blend -0.0209 (95% -0.0317 to -0.0099, the simulator is worse) and accuracy 65.7 percent against the blend's 67.5; market_informed paired_residual 0.6068, gain +0.0027 (95% -0.0011 to +0.0065), accuracy 67.7 against 67.5. **The interval includes zero, so under the D18 ship rule nothing here beats the blend**; it is a tie by construction because the expected points are the market's.
 * **Gap to the blend (cross-check).** football_only paired_residual: mean absolute gap 0.066, 242 of 1,087 games above 0.10, largest 0.36. market_informed: mean 0.023, largest 0.116, 1 game above 0.10. The largest football-only gaps are games the market knew more about than the stats model (checked by name, not by data: 2023 week 18 PIT at BAL, a game where Baltimore was expected to rest starters; 2022 week 1 DEN at SEA, the first game after a quarterback trade; 2025 week 6 LA at BAL). The simulator is consistent with its inputs; it is not independent of them.
+
+## Key numbers (step 18m)
+
+Evidence: `docs/gauntlet/logs/step-18m.md`, `step-18m-evidence/keys-tune.json` and `keys-confirm.json`.
+
+* **Why 18c missed them.** `paired_residual` adds a past game's residual to a rounded mean. Football's lumpiness is in the final margin, not in a residual around a mean, so the sum smears 3 and 7 to their neighbours.
+* **The fix.** `key_weighted` keeps the `paired_residual` draws and resamples them with weight r(|margin|)^alpha, where r is the real count of each exact final |margin| over the count the `paired_residual` sampler gives on the same training rows (`learn_params`, training window only; (real + 0.5) / (simulated + 0.5), |margin| capped at 60). An exponential tilt on margin and total then puts the weighted means back where the draws had them, so expected margin and total do not move. A tilted pool of real score pairs was tried first and rejected: it fixed 3 and 7 but widened the margins (`step-18m-evidence/spike-tilted-pool.json`).
+* **Strength.** alpha = 1.0, picked on 2012-2021 only by a rule frozen before the run: the largest of 1.0, 0.9, 0.8, 0.75, 0.5 whose cover-Brier, over-Brier and CRPS paired-bootstrap intervals against `paired_residual` all have a lower end at or below zero for both sources. On those seasons the football-only cover-Brier interval only just includes zero (+0.0007, -0.0002 to +0.0015).
+* **Check on 2022-2025** (1,087 games; seasons already seen in 18c, so a check and not a fresh holdout). Real 3 / 7: 14.8 / 8.0 percent.
+
+| source | variant | 3 / 7 | cover Brier | over Brier | CRPS | 80% coverage |
+|---|---|---|---|---|---|---|
+| football_only | paired_residual | 7.6 / 5.1 | 0.2613 | 0.2573 | 14.586 | 81.8 |
+| football_only | key_weighted | 14.4 / 8.6 | 0.2613 | 0.2572 | 14.567 | 82.2 |
+| market_informed | paired_residual | 7.7 / 5.3 | 0.2498 | 0.2503 | 14.178 | 81.7 |
+| market_informed | key_weighted | 14.5 / 8.6 | 0.2498 | 0.2503 | 14.167 | 82.8 |
+
+  Cover and over Brier: no change (every interval straddles zero). CRPS: better on both sources (football -0.018, 95% -0.028 to -0.009; market -0.011, -0.022 to -0.001). **Still no edge against the market**: cover and over stay at a coin's 0.25 or worse; the change makes exact-margin and push chances near 3 and 7 usable, nothing more.
+* **Stored parameters.** `SimParams.key_ratio` and `key_alpha` default to empty and 0, so parameters saved before 18m still load and simulate as plain `paired_residual` until `jobs train` stores new ones.
 
 ## Limits
 
@@ -85,6 +105,7 @@ All numbers from ONE confirm run on seasons 2022 to 2025, 1,087 regular-season g
 * Overtime winner is 50/50 and the overtime scoring pool is not tilted by team strength.
 * Expected points are only as good as `ScoreModel` and the line; the simulator adds a shape, not information.
 * `paired_residual` residuals are not scaled by the game's expected points.
+* Key-number weights depend on |margin| only: the same ratio for a 1-point and a 10-point favourite, and totals get no key-number weighting.
 * Score dependence is a single learned correlation for the whole league.
 * Closing lines are used as a benchmark and as the market-informed input; they are not a fair pre-kickoff input for a pick made earlier in the week.
 
