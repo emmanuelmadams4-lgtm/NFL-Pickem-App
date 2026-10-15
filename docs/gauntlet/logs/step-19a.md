@@ -133,3 +133,15 @@ Spec additions (frozen before WO3):
 - D3c: in one run, every rank check compares the week before the run with the week after it: `old` holds each game's
   chance before the run, `new` each game's chance written by the run.
 Local: 21 pure passed (F4c, F2b, F8+ hold on today's code: test gaps, not defects), ruff 0. D3c is red in CI.
+
+### Dwight on `2b8100c`: PASS, 2 MEDIUM (inbox d64b28)
+- M1: the line-only rule also catches an nflverse-only line move (no quote on either row), dropping today's move and
+  label alerts; breaks F4b/D3 "non-quote changes keep today's behaviour". → spec D3d: an nflverse-only line move with
+  `alert_move_threshold = 0` is alerted. Fix in WO3: the line-only rule applies only when `market_source` is on the new
+  row or the previous one.
+- M2: same as critic 1's rank finding → D3c / WO3. His "minimum gap before a rank swap alerts" is not in the owner's
+  guard 3; carried to god as an option.
+- LOW carried: L1 churn may keep a previous quote older than 30 min (labelled with its time, move < 0.01); L2 sanity
+  only on the newest quote; L3 a sub-0.01 move near 50% keeps the old pick (F4 by design); L4 a `pregame_quotes` DB
+  error fails the run (worker retries); L5 the last target is kickoff - 20 min, so the lock row's quote can be up to
+  ~49 min old at kickoff; L6 NaN nflverse prob (= critic's); L7 unguarded `fromisoformat` on our own value.

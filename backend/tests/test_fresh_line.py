@@ -276,3 +276,26 @@ def test_d3c_the_points_rank_check_sees_every_new_chance_of_the_run(loaded, monk
     for old, new in calls:  # the week before the run against the week after it, not a half-updated week
         assert {gid: old[gid] for gid in before} == before
         assert {gid: new[gid] for gid in after} == after
+
+
+def test_d3d_an_nflverse_only_line_move_keeps_todays_alert_rules(loaded, monkeypatch):
+    from sqlalchemy import select
+
+    from nflpi.config import get_settings
+    from nflpi.models import Game, MarketSnapshot
+    from nflpi.predictions import engine, fresh_line
+    from tests.conftest import CURRENT
+
+    monkeypatch.setattr(get_settings(), "alert_move_threshold", 0.0)  # today's rule: any move alerts
+    monkeypatch.setattr(fresh_line, "rank_changed", lambda old, new, game_id: False)
+    game = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 4)).first()
+    snap = loaded.scalars(select(MarketSnapshot).where(MarketSnapshot.game_id == game.game_id)
+                          .order_by(MarketSnapshot.id.desc())).first()
+    before = _newest(loaded, game.game_id)
+    shift = 0.03 if before.pick == game.home_team else -0.03  # toward the current pick, so it cannot flip
+    snap.home_moneyline, snap.away_moneyline = fresh_line.fair_moneylines(snap.home_prob_novig + shift)  # no quote
+    loaded.commit()
+    events = engine.refresh_predictions(loaded, now=game.kickoff_utc - timedelta(hours=3), game_ids=[game.game_id])
+    after = _newest(loaded, game.game_id)
+    assert after.id != before.id and after.pick == before.pick and "market_source" not in after.features
+    assert [e.game_id for e in events] == [game.game_id]  # F4b: nflverse-only moves behave as today
