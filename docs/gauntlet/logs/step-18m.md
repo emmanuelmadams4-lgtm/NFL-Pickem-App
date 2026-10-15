@@ -171,3 +171,8 @@ unchanged_win_probability` expected `paired_residual`; with a learned ratio the 
 (expectation updated; grant: test_wiring.py, 18m only). `jobs.train` logs the failure with `log.exception` and keeps
 the win model: loud, not swallowed, but the season then has no simulator. Red: K11 (float scores give the same ratio as
 ints) fails with the CI TypeError. Fix: WO6.
+- WO6 (Ryan) `3459f6a`: finite check, `np.rint` + int64 once. Rerun: 90 passed `--noconftest`, ruff 0, learned ratios on
+  real data byte-identical to before (so the tune and confirm numbers stand). Critic 3 (ecc:python-reviewer): **PASS**
+  (`reviews/critic-3.md`; LOW: float scores leave float64 residual pools, harmless). Dwight on `aae0b32..3459f6a`:
+  **PASS** (R1 LOW: a non-whole score would round silently; R2 LOW: a failed train leaves the season without simulator
+  parameters, logged). The two wiring tests need the database: PR #46 CI is their run.
