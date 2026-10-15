@@ -56,3 +56,9 @@ Inside `#simulator`, above the numbers, when `simulation_check` is present, a no
 - C5 No serious or critical axe finding in `#simulator` with a C2 notice; no sideways scroll at 320 px.
 
 Gate: `e2e/check18k.spec.ts` and `e2e/sim18j.spec.ts` on a fresh build; typecheck 0; PR CI runs the full suite.
+
+**Red (`s18kw-red-1`, fresh build of `745fee6`): 6 failed, 3 passed, as intended.** C1, C2 (all four causes) and C3
+fail on their heading ("Run check failed", "Run check gave no verdict", "Not checked"). C4 (null, absent) and C5 pass
+today: they guard what must not change.
+
+## 3. IMPLEMENTATION
