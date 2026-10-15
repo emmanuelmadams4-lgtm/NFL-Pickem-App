@@ -113,3 +113,21 @@ out-of-sample chances `p_market` and `p_logistic` (stats) of every season. For s
 keep `p_blend`. Candidate column `p_c2`, scored once against `p_blend` with `decide`. Spec B8: `mix_c2(preds) ->
 Series` aligned to `preds`; a season's own results never enter its fit; B8b no market → blend. Red: 2 failed
 (`AttributeError: no mix_c2`), 13 passed.
+
+- WO2 (Ryan, try 1) `026a0e1`: `mix_c2` and the `c2` CLI choice. Coordinator rerun: 15 passed, ruff 0.
+
+**c2 fitted mix: scored once** (`step-19b-evidence/c2.json`). 2022-2025: c2 87.97 pts/week, accuracy 67.90%; gain vs
+blend **+0.26 [-0.10, +0.67]**, accuracy +0.0037, log-loss gain +0.00091 (1,084 games). 2012-2021: +0.19
+[-0.09, +0.49], accuracy -0.0016, log-loss gain +0.00081. **Decision: does not ship** (CI lower bound not above 0; the
+three guards hold).
+
+**Pre-registered c3 (non-QB injuries), defined before it is built or scored.** Data: public nflverse
+`injuries_{season}.csv`, 2009-2025 (17 files; combined sha256 of the per-file sums `f45d18f2535cff0f…`). Each row is a
+player's status on that team's final injury report for that week, published before the game (as-of by publication;
+nflverse keeps one row per player-week; a later file revision cannot be ruled out: assumed). For each game,
+`*_out_nonqb` = the number of that team's players in that season and week with `report_status` "Out" (trimmed, any
+case) and `position` not "QB" (QBs are c1's subject; Questionable and Doubtful are not counted). Team codes go through
+`nflverse.franchise`. `inj_diff = (home_out_nonqb − away_out_nonqb) / 5`; 0 where no row exists (seasons before 2009
+included). Model c3 = the walk-forward blend with `inj_diff` added to the stats and the blend features (refit like c1,
+window 10). Column `p_c3`, scored once against `p_blend` with `decide`. Spec B9 `injury_counts(games, injuries)`.
+Red: 1 failed (`AttributeError: no injury_counts`), 15 passed.

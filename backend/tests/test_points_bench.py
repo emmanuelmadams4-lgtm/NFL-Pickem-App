@@ -151,3 +151,26 @@ def test_b8b_games_without_a_market_keep_the_blend():
     preds = _oos()
     preds.loc[preds.index[-1], "p_market"] = np.nan
     assert pb.mix_c2(preds).iloc[-1] == preds["p_blend"].iloc[-1]
+
+
+# --- B9 c3 non-QB injuries (the week's final report, published before the game) ----------------------
+
+def test_b9_counts_only_out_non_qb_players_of_that_team_and_week():
+    games = pd.DataFrame([
+        {"season": 2023, "week": 5, "home_team": "BAL", "away_team": "CLE"},
+        {"season": 2023, "week": 6, "home_team": "CLE", "away_team": "BAL"},
+    ])
+    injuries = pd.DataFrame([
+        {"season": 2023, "week": 5, "team": "BAL", "position": "WR", "report_status": "Out"},
+        {"season": 2023, "week": 5, "team": "BAL", "position": "T", "report_status": " out "},
+        {"season": 2023, "week": 5, "team": "BAL", "position": "QB", "report_status": "Out"},  # QB: c1's job
+        {"season": 2023, "week": 5, "team": "BAL", "position": "CB", "report_status": "Questionable"},
+        {"season": 2023, "week": 5, "team": "BAL", "position": "LB", "report_status": "Doubtful"},
+        {"season": 2023, "week": 5, "team": "CLE", "position": "RB", "report_status": "Out"},
+        {"season": 2023, "week": 6, "team": "BAL", "position": "S", "report_status": "Out"},
+        {"season": 2022, "week": 5, "team": "BAL", "position": "WR", "report_status": "Out"},  # other season
+    ])
+    out = _pb().injury_counts(games, injuries)
+    assert list(out["home_out_nonqb"]) == [2, 0]
+    assert list(out["away_out_nonqb"]) == [1, 1]
+    assert list(out["inj_diff"]) == pytest.approx([0.2, -0.2])  # (home - away) / 5
