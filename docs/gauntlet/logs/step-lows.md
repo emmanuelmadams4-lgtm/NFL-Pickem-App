@@ -144,3 +144,9 @@ No edits, so no proof rerun needed; CI on `0c39030` stands.
 lane-guard (`web`, origin/main): 1 problem, `backend/nflpi/predictions/market.py` owned by lane modelc (the
 L-19a-L6 one-line NaN guard god put in scope, f555db); seam for god. Not merged by the coordinator. Draft PR #49 (`lane/web-lows`, not for merge) carries the HEAD; god lands.
 Merged: pending god. Deployed: nothing.
+
+## LANDING (integrator, 2026-10-15)
+
+- Landing scan on `9cf88ef`: merge clean; lane-guard one out-of-lane file, `predictions/market.py` (lane modelc), granted by the integrator as a seam; `test_sim.py` K3 one-line unpack approved. No real names, `.env` values, host names or key patterns.
+- PR #49 marked ready; CI all green on head. Merged with `--match-head-commit`. Review call (Jev unavailable): PASS.
+- Not deployed.
