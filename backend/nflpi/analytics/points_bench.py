@@ -218,67 +218,75 @@ def _summary(frame: pd.DataFrame, column: str, seasons: range) -> dict:
     }
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("games_csv", type=Path)
-    parser.add_argument("out_json", type=Path)
-    parser.add_argument("candidate", nargs="?", choices=["c1", "c2", "c3", "c4"])
-    parser.add_argument("--injuries", type=Path, help="directory of nflverse injuries_*.csv files (required for c3)")
-    parser.add_argument("--pbp", type=Path, help="directory of play_by_play_*.csv.gz files (required for c4)")
-    args = parser.parse_args()
-
-    with args.games_csv.open(newline="", encoding="utf-8") as handle:
+def _load_games(path: Path) -> pd.DataFrame:
+    with path.open(newline="", encoding="utf-8") as handle:
         rows = nflverse.parse_games(list(csv.DictReader(handle)), 2002)
     names = {"_home_ml": "home_ml", "_away_ml": "away_ml", "_spread": "spread_line", "_total": "total_line"}
-    games = pd.DataFrame(rows).rename(columns=names).sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)
-    frames = backtest.elo_frames(games)
-    if args.candidate == "c1":
+    return pd.DataFrame(rows).rename(columns=names).sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)
+
+
+def _read_injuries(directory: Path, parser: argparse.ArgumentParser) -> pd.DataFrame:
+    files = sorted(directory.glob("injuries_*.csv"))
+    if not files:
+        parser.error("--injuries contains no injuries_*.csv files")
+    injuries = []
+    for path in files:
+        with path.open(newline="", encoding="utf-8") as handle:
+            injuries.extend({
+                "season": int(row["season"]), "week": int(row["week"]),
+                "team": nflverse.franchise(row["team"]), "position": row["position"],
+                "report_status": row["report_status"],
+            } for row in csv.DictReader(handle))
+    return pd.DataFrame(injuries)
+
+
+def _read_plays(directory: Path, parser: argparse.ArgumentParser) -> pd.DataFrame:
+    files = sorted(directory.glob("play_by_play_*.csv.gz"))
+    if not files:
+        parser.error("--pbp contains no play_by_play_*.csv.gz files")
+    columns = ["season", "week", "posteam", "defteam", "epa", "play_type"]
+    plays = pd.concat(
+        [pd.read_csv(path, usecols=columns, low_memory=False) for path in files], ignore_index=True
+    ).dropna(subset=["posteam", "defteam"])
+    for column in ("posteam", "defteam"):
+        plays[column] = plays[column].map(nflverse.franchise)
+    return plays
+
+
+def _add_candidate(
+    name: str | None, games: pd.DataFrame, frames: dict,
+    injuries_dir: Path | None, pbp_dir: Path | None, parser: argparse.ArgumentParser,
+) -> pd.DataFrame:
+    if name == "c1":
         direction = qb_direction(games)
         frames = {params: frame.assign(**direction) for params, frame in frames.items()}
-    elif args.candidate == "c3":
-        if args.injuries is None:
+    elif name == "c3":
+        if injuries_dir is None:
             parser.error("c3 requires --injuries DIR")
-        files = sorted(args.injuries.glob("injuries_*.csv"))
-        if not files:
-            parser.error("--injuries contains no injuries_*.csv files")
-        injuries = []
-        for path in files:
-            with path.open(newline="", encoding="utf-8") as handle:
-                injuries.extend({
-                    "season": int(row["season"]), "week": int(row["week"]),
-                    "team": nflverse.franchise(row["team"]), "position": row["position"],
-                    "report_status": row["report_status"],
-                } for row in csv.DictReader(handle))
-        counts = injury_counts(games, pd.DataFrame(injuries))
+        counts = injury_counts(games, _read_injuries(injuries_dir, parser))
         frames = {params: frame.assign(inj_diff=counts["inj_diff"]) for params, frame in frames.items()}
-    elif args.candidate == "c4":
-        if args.pbp is None:
+    elif name == "c4":
+        if pbp_dir is None:
             parser.error("c4 requires --pbp DIR")
-        files = sorted(args.pbp.glob("play_by_play_*.csv.gz"))
-        if not files:
-            parser.error("--pbp contains no play_by_play_*.csv.gz files")
-        columns = ["season", "week", "posteam", "defteam", "epa", "play_type"]
-        plays = pd.concat(
-            [pd.read_csv(path, usecols=columns, low_memory=False) for path in files], ignore_index=True
-        ).dropna(subset=["posteam", "defteam"])
-        for column in ("posteam", "defteam"):
-            plays[column] = plays[column].map(nflverse.franchise)
-        difference = efficiency_diff(games, plays)
+        difference = efficiency_diff(games, _read_plays(pbp_dir, parser))
         frames = {params: frame.assign(eff_diff=difference) for params, frame in frames.items()}
     predictions = pd.concat(
         [backtest.predict_season(frames, season, WINDOW) for season in ALL_SEASONS], ignore_index=True
     )
-    if args.candidate in ("c1", "c3", "c4"):
-        if args.candidate == "c1":
+    if name in ("c1", "c3", "c4"):
+        if name == "c1":
             features = {"stats": _c1_features(BASE_FEATURES), "blend": _c1_features(BLEND_FEATURES)}
         else:
-            extra = "inj_diff" if args.candidate == "c3" else "eff_diff"
+            extra = "inj_diff" if name == "c3" else "eff_diff"
             features = {"stats": [*BASE_FEATURES, extra], "blend": [*BLEND_FEATURES, extra]}
         candidate = pd.concat([_feature_season(frames, season, features) for season in ALL_SEASONS])
-        predictions[f"p_{args.candidate}"] = candidate.to_numpy()
-    elif args.candidate == "c2":
+        predictions[f"p_{name}"] = candidate.to_numpy()
+    elif name == "c2":
         predictions["p_c2"] = mix_c2(predictions)
+    return predictions
 
+
+def _report(predictions: pd.DataFrame, candidate: str | None) -> dict:
     windows = {"test": TEST_SEASONS, "guard": GUARD_SEASONS}
     output = {"windows": {}}
     for name, seasons in windows.items():
@@ -291,18 +299,33 @@ def main() -> None:
                 "stats_vs_blend": compare(predictions, "p_logistic", "p_blend", seasons),
             },
         }
-        if args.candidate:
-            result["models"][args.candidate] = _summary(predictions, f"p_{args.candidate}", seasons)
-            result["comparisons"][f"{args.candidate}_vs_blend"] = compare(
-                predictions, f"p_{args.candidate}", "p_blend", seasons,
+        if candidate:
+            result["models"][candidate] = _summary(predictions, f"p_{candidate}", seasons)
+            result["comparisons"][f"{candidate}_vs_blend"] = compare(
+                predictions, f"p_{candidate}", "p_blend", seasons,
             )
         output["windows"][name] = result
-    if args.candidate:
-        comparison = f"{args.candidate}_vs_blend"
+    if candidate:
+        comparison = f"{candidate}_vs_blend"
         output["decision"] = decide(
             output["windows"]["test"]["comparisons"][comparison],
             output["windows"]["guard"]["comparisons"][comparison],
         )
+    return output
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("games_csv", type=Path)
+    parser.add_argument("out_json", type=Path)
+    parser.add_argument("candidate", nargs="?", choices=["c1", "c2", "c3", "c4"])
+    parser.add_argument("--injuries", type=Path, help="directory of nflverse injuries_*.csv files (required for c3)")
+    parser.add_argument("--pbp", type=Path, help="directory of play_by_play_*.csv.gz files (required for c4)")
+    args = parser.parse_args()
+    games = _load_games(args.games_csv)
+    frames = backtest.elo_frames(games)
+    predictions = _add_candidate(args.candidate, games, frames, args.injuries, args.pbp, parser)
+    output = _report(predictions, args.candidate)
     args.out_json.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
 
 
