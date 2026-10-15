@@ -31,8 +31,15 @@ def choose(quotes, nflverse=None, previous=None, now=NOW, kickoff=KICKOFF):
 # --- F1-F5 choose_line ------------------------------------------------------------------------------
 
 def test_f1_a_fresh_pregame_quote_newer_than_nflverse_is_used_with_its_source_and_time():
-    line, reason = choose([q(0.64)])
-    assert (line.prob, line.source, line.seen_at, reason) == (0.64, "kalshi", NOW - timedelta(minutes=5), None)
+    line, refused = choose([q(0.64)])
+    assert (line.prob, line.source, line.seen_at, refused) == (0.64, "kalshi", NOW - timedelta(minutes=5), None)
+
+
+def test_f1b_quote_probabilities_are_used_at_the_four_places_the_features_keep():
+    # CI on aa5a7a1 (D3): an unrounded first quote and its rounded copy kept by the churn rule gave different
+    # market_logit digits, so an unchanged quote wrote a new row
+    line, _ = choose([q(0.64123456)])
+    assert line.prob == 0.6412
 
 
 @pytest.mark.parametrize("quote", [
@@ -50,13 +57,13 @@ def test_f2_unusable_quotes_leave_the_nflverse_line(quote):
 
 
 def test_f3_a_quote_far_from_the_nflverse_line_is_refused_as_a_likely_wrong_side():
-    line, reason = choose([q(0.40)])  # 0.20 away from nflverse 0.60
-    assert line == nfl() and reason == "sanity"
-    line, reason = choose([q(0.4005)])  # just inside the gap
-    assert line.source == "kalshi" and reason is None
+    line, refused = choose([q(0.40)])  # 0.20 away from nflverse 0.60
+    assert line == nfl() and refused == q(0.40)  # the refused quote comes back for the log
+    line, refused = choose([q(0.4005)])  # just inside the gap
+    assert line.source == "kalshi" and refused is None
     no_line = _fl().Line(None, "nflverse", None)
-    line, reason = choose([q(0.30)], nflverse=no_line)  # nothing to compare against: the quote is the only line
-    assert line.prob == 0.30 and reason is None
+    line, refused = choose([q(0.30)], nflverse=no_line)  # nothing to compare against: the quote is the only line
+    assert line.prob == 0.30 and refused is None
     assert _fl().SANITY_GAP == 0.20
 
 
@@ -192,10 +199,11 @@ def test_d3b_a_line_that_flips_the_pick_is_alerted(loaded, monkeypatch):
 
     from nflpi.config import get_settings
     from nflpi.models import Game, MarketQuote, MarketSnapshot
-    from nflpi.predictions import engine
+    from nflpi.predictions import engine, fresh_line
     from tests.conftest import CURRENT
 
     monkeypatch.setattr(get_settings(), "alert_move_threshold", 0.99)  # only a flip can alert
+    monkeypatch.setattr(fresh_line, "SANITY_GAP", 1.0)  # F3 tests the gap; here a decisive line must flip the pick
     games = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 4)).all()
     game = min(games, key=lambda g: abs(_newest(loaded, g.game_id).home_win_prob - 0.5))  # the closest call
     last = _newest(loaded, game.game_id)
@@ -203,8 +211,7 @@ def test_d3b_a_line_that_flips_the_pick_is_alerted(loaded, monkeypatch):
                           .order_by(MarketSnapshot.id.desc())).first()
     now = game.kickoff_utc - timedelta(minutes=30)
     snap.observed_at = now - timedelta(hours=10)
-    side = -1 if last.home_win_prob >= 0.5 else 1
-    prob = snap.home_prob_novig + side * 0.19  # inside the sanity gap, toward the other team
+    prob = 0.03 if last.home_win_prob >= 0.5 else 0.97  # the market now strongly backs the other team
     loaded.add(MarketQuote(game_id=game.game_id, source="kalshi", kind="pregame", home_prob=prob,
                            away_prob=1 - prob, fetched_at=now - timedelta(minutes=2)))
     loaded.commit()

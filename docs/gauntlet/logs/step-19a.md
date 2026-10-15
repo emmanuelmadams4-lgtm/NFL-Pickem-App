@@ -77,3 +77,12 @@ before the build because they assert today's behaviour (nflverse kept).
 - WO1 (Ryan, try 1): `fresh_line.py` (new), `engine.load_frame(session, now)` fresh-quote choice, the two feature keys,
   the line-only ChangeEvent rule, `jobs.next_interval` targets. Coordinator rerun locally: 18 pure tests passed, ruff 0.
   Database clauses: PR CI on the pushed commit (below).
+- **CI on `aa5a7a1`** (run 38764870378, backend job 116525334435): 2 failed, 2,386 passed, 1 skipped. D1, D2 (x3), D4
+  green. D3 failed for a real defect: an unchanged quote wrote a new row, because the first run used the raw quote
+  probability and the churn rule then kept the previous line rebuilt from the 4-place `market_prob`, so `market_logit`
+  differed in its 4th digit and the hash changed. D3b failed on its own precondition (a 0.19 shift did not flip the
+  fixture model's pick): a test defect.
+- Spec additions (frozen before the fix): F1b quote probabilities are used rounded to 4 places (the precision the
+  features keep). F3 now also requires `choose_line` to return the refused quote itself (second value), so the engine
+  logs it without re-deriving it (the cleanup finding). D3b sets `SANITY_GAP = 1.0` (F3 covers the gap) and uses a
+  decisive 0.03/0.97 quote so the pick flips. Red locally: F1b and F3 fail; 17 pure tests pass. → WO2.
