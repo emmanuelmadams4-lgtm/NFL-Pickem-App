@@ -531,3 +531,29 @@ def test_k8_learning_the_key_ratio_stays_fast_on_a_large_window():
     start = time.perf_counter()
     learn_params(*cols, target_season=2009)
     assert time.perf_counter() - start < 3.0
+
+
+def test_k9_key_weighted_with_nothing_to_weight_is_labelled_paired_residual():
+    # Dwight M1: parameters stored before 18m have no ratio; the result must not claim a reweighting that did not happen
+    ratio = tuple(float(x) for x in np.ones(_keys().KEY_MAX + 1))
+    for p in (make_params(), make_params(key_ratio=ratio, key_alpha=0.0)):
+        res = simulate_game(A, B, 1000, params=p, seed=2, distribution="key_weighted")
+        assert res.distribution == "paired_residual"
+    weighted = make_params(key_ratio=ratio, key_alpha=1.0)
+    res = simulate_game(A, B, 1000, params=weighted, seed=2, distribution="key_weighted")
+    assert res.distribution == "key_weighted"
+
+
+def test_k10_a_tilt_that_does_not_converge_warns_and_returns_the_draws_unchanged(monkeypatch, caplog):
+    # Dwight M2: never resample with weights whose means have drifted
+    keys = _keys()
+    monkeypatch.setattr(keys, "TILT_STEPS", 0)
+    rng = np.random.default_rng(4)
+    a, b = rng.poisson(26, 5000), rng.poisson(17, 5000)
+    ratio = np.ones(keys.KEY_MAX + 1)
+    ratio[3] = 3.0
+    with caplog.at_level("WARNING"):
+        wa, wb = keys.key_weight(a, b, np.random.default_rng(1), tuple(ratio), 1.0)
+    np.testing.assert_array_equal(wa, a)
+    np.testing.assert_array_equal(wb, b)
+    assert "did not converge" in caplog.text

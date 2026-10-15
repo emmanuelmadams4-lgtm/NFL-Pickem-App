@@ -130,3 +130,17 @@ the one spread conversion: no change. `game.py`/`params.py` hooks are two lines 
 - WO4 (Ryan): `learn_key_ratio` now calls `sample_regulation("paired_residual", ...)`; 5 inline lines removed. Proof:
   learned ratios for 2012 and 2022, both sources, on real data are byte-identical before and after (sha1 `64de969b` both);
   87 passed, ruff 0. Cleanup done; no other change.
+
+## 5. VERIFICATION
+
+- Fresh critic 1 (ecc:mle-reviewer, Sonnet, no build transcript) on `fd24b98`: **PASS** (`reviews/critic-1.md`): 87 passed,
+  ruff 0, no leakage, every log and SIMULATOR.md number matches the result files. MEDIUM: the alpha rule ("not
+  significantly worse") is lenient; it picked 1.0 with a borderline football cover interval on tune (owner-level call,
+  sent to god; confirm cover difference 0.0000). LOW: silent tilt non-convergence (same as Dwight M2).
+- Dwight on `325f541..fd24b98`: **PASS**, no CRITICAL/HIGH. M1: a pre-18m stored row simulates unweighted but is labelled
+  `key_weighted`. M2: tilt non-convergence is silent. L1 malformed stored ratio has no load-time cause; L2 KEY_ALPHA vs
+  keys-tune.json (already pinned by KB5); L3 keys-tune overwrites its record; L4 key_ratio loads as list. M1 and M2 → red
+  K9/K10 → WO5 (spec additions below); L1, L3, L4 carried.
+- Spec additions (Dwight, frozen before the fix): K9 `key_weighted` with no ratio or alpha 0 reports `distribution =
+  "paired_residual"`. K10 a tilt that does not converge within `keys.TILT_STEPS` logs a warning containing "did not
+  converge" and returns the draws unchanged. Red: both fail (label `key_weighted`; no `TILT_STEPS`).
