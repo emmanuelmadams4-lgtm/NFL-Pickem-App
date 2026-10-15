@@ -95,3 +95,17 @@ Provider: Codex (Ryan), Build Ladder rung 1; coordinator commits his diffs.
   the four allowed files; `engine.py` changes inside the sim-params load and the 19a block; L2's `count == len(sides)`
   equals the old set check because `MarketSnapshot` rejects foreign selections on save. Proof (coordinator): 14 pure
   passed; adjacent suites 111 + 21 passed; ruff clean; `git diff --check` clean. DB clauses: CI below.
+- **Green (CI, `0c39030`, runs 38778990113 / 38778983251):** backend `2452 passed, 1 skipped` (all 21 LOWs tests
+  pass; 2431 + 21), ruff clean; docker, web, e2e green.
+
+## 4. CLEANUP
+
+Scope-locked refactor pass over the WO1 + WO2 diff (`984de84..0c39030`, production files only). **No change needed:**
+- `load_sim_params` ratio check: one condition, kept inline (a helper would have one caller).
+- `summaries`: one recommendations read then per-week slices; splitting it adds a name for no reuse.
+- `load_snapshots`: three subqueries mirror the three old loop stages (newest per side, complete pair, newest pair
+  per book); the docstring still describes the behaviour exactly.
+- `_warned_ratings` / `keys._warned`: two module-level once-flags, same idiom; a shared helper is speculative.
+- `except Exception` around `pregame_quotes` matches the existing "the simulator is optional" guard style in
+  `engine.py`; kept broad on purpose (any quote failure must fall back to nflverse, never stop predictions).
+No edits, so no proof rerun needed; CI on `0c39030` stands.
