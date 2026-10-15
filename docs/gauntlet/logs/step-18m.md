@@ -61,8 +61,9 @@ Sampler (`backend/nflpi/sim/`):
 
 Bench (`analytics/sim_backtest.py`):
 - KB1 `pick_alpha`: the largest alpha in `KEY_ALPHAS = (1.0, 0.9, 0.8, 0.75, 0.5)` whose cover-Brier, over-Brier and CRPS
-  paired-bootstrap 95 percent intervals (alpha minus `paired_residual`, per game) all have an upper end at or below zero
-  for both sources; 0.0 if none.
+  paired-bootstrap 95 percent intervals (alpha minus `paired_residual`, per game) all have a lower end at or below zero
+  (not significantly worse) for both sources; 0.0 if none. (Corrected before any code, Ryan f6dd59: the first text said
+  upper end, which is not the rule the spike used.)
 - KB2 `keys_tune` refuses confirm seasons and never reads them.
 - KB3 `keys_tune` reports, per source, the real 3/7 rates and for the baseline and every alpha: key3, key7, CRPS, cover
   and over Brier (pushes out), margin sd, randomized-PIT coverage at 50/80/95, and the three intervals.

@@ -258,19 +258,22 @@ def test_the_18c_tune_run_picked_paired_residual_which_18m_builds_on():
 
 # --- step 18m: key-number strength (docs/gauntlet/logs/step-18m.md section 2, KB1-KB5) -------------
 
-def _ci(hi: float) -> list[float]:
-    return [hi - 0.001, hi - 0.002, hi]
+def _ci(lo: float) -> list[float]:
+    return [lo + 0.001, lo, lo + 0.002]  # [mean, lo, hi]
 
 
 def test_kb1_alpha_is_the_largest_whose_intervals_all_include_or_sit_below_zero():
-    def one(cover_hi, over_hi=0.0005, crps_hi=0.002):
-        return {s: {"cover_brier_ci": _ci(cover_hi), "over_brier_ci": _ci(over_hi), "crps_ci": _ci(crps_hi)}
+    def one(cover_lo, over_lo=-0.0002, crps_lo=-0.004):
+        return {s: {"cover_brier_ci": _ci(cover_lo), "over_brier_ci": _ci(over_lo), "crps_ci": _ci(crps_lo)}
                 for s in bench.SOURCES}
-    results = {"1.0": one(0.0019), "0.9": one(0.0003), "0.8": one(-0.001), "0.75": one(-0.002), "0.5": one(-0.003)}
-    assert bench.pick_alpha(results) == 0.9  # 1.0 is out: its cover interval sits above zero
-    results["0.9"]["market_informed"]["crps_ci"] = [0.004, 0.001, 0.007]  # one source, one metric fails
+    # 1.0 is significantly worse on cover (its whole interval sits above zero); 0.9 includes zero: it passes
+    results = {"1.0": one(0.0002), "0.9": one(-0.0001), "0.8": one(-0.001), "0.75": one(-0.002), "0.5": one(-0.003)}
+    assert bench.pick_alpha(results) == 0.9
+    results["0.9"]["market_informed"]["crps_ci"] = [0.004, 0.001, 0.007]  # one source, one metric worse
     assert bench.pick_alpha(results) == 0.8
-    assert bench.pick_alpha({"1.0": one(0.0019)}) == 0.0  # none passes: no reweighting
+    results["0.8"]["football_only"]["over_brier_ci"] = [0.0, 0.0, 0.0002]  # a lower end of exactly zero passes
+    assert bench.pick_alpha(results) == 0.8
+    assert bench.pick_alpha({"1.0": one(0.0002)}) == 0.0  # none passes: no reweighting
     assert set(bench.KEY_ALPHAS) == {1.0, 0.9, 0.8, 0.75, 0.5}
 
 

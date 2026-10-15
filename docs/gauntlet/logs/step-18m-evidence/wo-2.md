@@ -8,9 +8,9 @@ ALLOWED FILE: `backend/nflpi/analytics/sim_backtest.py` only. KB5 stays red (it 
 
 REQUIRED:
 - `KEY_ALPHAS = (1.0, 0.9, 0.8, 0.75, 0.5)`, `N_BOOT = 2000`, `ALPHA_RULE` (one sentence: the largest alpha whose cover-Brier,
-  over-Brier and CRPS paired-bootstrap 95% intervals, alpha minus paired_residual per game, all end at or below zero for
-  both sources; 0.0 if none).
-- `pick_alpha(by_alpha: dict[str, dict[source, dict]]) -> float` per that rule (reads the `[mean, lo, hi]` lists' `hi`).
+  over-Brier and CRPS paired-bootstrap 95% intervals, alpha minus paired_residual per game, all have a LOWER end at or
+  below zero (not significantly worse) for both sources; 0.0 if none). Corrected after Ryan f6dd59.
+- `pick_alpha(by_alpha: dict[str, dict[source, dict]]) -> float` per that rule (reads the `[mean, lo, hi]` lists' `lo`).
 - One shared per-game pass used by both commands: for each season, source: `params = learn_for_season(...)`; per game,
   seed `zlib.crc32(game_id) ^ base_seed` as `_game_row`; draws = `simulate_game(..., distribution="paired_residual",
   spread=quoted_home_spread(...), total=total_line)`; for each alpha `keys.key_weight(a, b,
