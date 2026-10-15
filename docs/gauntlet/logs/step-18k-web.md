@@ -99,3 +99,7 @@ No edit, so no proof rerun.
 god lands, as its own PR after #42. No push or PR here. PR CI is the full gate (D71). The deploy waits on the
 owner's yes, together with 18k server. Carried: the cause wording for "provider"; Dwight's A1 hardening
 (`Object.hasOwn`) if the cause set grows.
+
+## LANDING (integrator, 2026-10-15)
+
+Pull request #43 from `lane/web`, pinned at `c442958`. landscan: merge with main `d1b8a07` clean, lane-guard OK, no name, secret or env-value hits. CI: one e2e run had 267 passed and 1 failed (`passkey.spec.ts` K2/K4/K5/K8/K10, a known flake this step does not touch); the failed job was rerun and every job passed, full e2e included (D71). Merged as `23a2911` at 04:40 UTC. **Not deployed:** D73 ended at 04:00 UTC; it goes out with 18k and 8g web on the owner's next deploy yes (HAG-75). **Carried:** the cause wording for "provider"; Dwight's A1 hardening (`Object.hasOwn`) if the cause set grows.
