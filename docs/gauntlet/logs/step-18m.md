@@ -176,3 +176,11 @@ ints) fails with the CI TypeError. Fix: WO6.
   (`reviews/critic-3.md`; LOW: float scores leave float64 residual pools, harmless). Dwight on `aae0b32..3459f6a`:
   **PASS** (R1 LOW: a non-whole score would round silently; R2 LOW: a failed train leaves the season without simulator
   parameters, logged). The two wiring tests need the database: PR #46 CI is their run.
+
+
+## LANDING (integrator, 2026-10-15)
+
+- PR #46 opened at `aae0b32`; first CI run red: 2 of 2382 (`tests/test_wiring.py`): float scores from the pandas table broke `learn_key_ratio` in `jobs train`, and one stale `paired_residual` expectation. Fixed at `3459f6a` (head `8b60705`), critic 3 and Dwight PASS.
+- Integrator scan clean (merge, lane guard, names, env values, host, key patterns). CI green on `8b60705` (backend, web, e2e, docker).
+- Merged 16:07 UTC as `d8d4e9f`. Integrator decision: the frozen alpha rule stands (alpha 1.0); tightening it after the confirm would choose on the confirm seasons.
+- Not deployed. Live effect after deploy and `jobs train`: game-page simulator puts realistic weight on margins of 3 and 7.
