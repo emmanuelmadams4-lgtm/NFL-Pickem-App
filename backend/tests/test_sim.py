@@ -1,12 +1,15 @@
 """Game-score simulator: frozen clauses C1 to C15 of docs/gauntlet/logs/step-18c.md section 2.7."""
 
 import dataclasses
+import json
 import time
+from dataclasses import asdict
 
 import numpy as np
 import pytest
 
 import nflpi.sim.game as game_module
+from nflpi.predictions import engine
 from nflpi.sim import (
     DEFAULT_DISTRIBUTION,
     DISTRIBUTIONS,
@@ -412,3 +415,119 @@ def test_regulation_score_of_an_overtime_game_is_the_loser_s_score():
     ot = np.array([1, 1, 1, 0])
     reg_a, reg_b = regulation_scores(a, b, ot)
     assert reg_a.tolist() == [20, 20, 17, 30] and reg_b.tolist() == [20, 20, 17, 27]
+
+
+# --- step 18m: key numbers (docs/gauntlet/logs/step-18m.md section 2, K1-K8) --------------------------
+
+
+def _keys():
+    from nflpi.sim import keys  # imported per test so the 18c tests above still run while 18m is red
+
+    return keys
+
+
+def _lumpy_training(n=6000, seed=11):
+    """Training rows whose real margins pile up on 3 and 7, as football's do, plus the overtime rows learn needs."""
+    rng = np.random.default_rng(seed)
+    mu_a, mu_b = rng.uniform(18, 27, n), rng.uniform(18, 27, n)
+    margin = rng.choice([-7, -3, 3, 7, -10, 10, 0, 14, -14, 1, -1, 4, -4, 6, -6], n,
+                        p=[.1, .14, .14, .1, .06, .06, .02, .05, .05, .04, .04, .05, .05, .05, .05])
+    total = np.rint(mu_a + mu_b + rng.normal(0, 9, n)).astype(int)
+    sa = np.maximum((total + margin) // 2, 0)
+    sb = np.maximum(total - sa, 0)
+    oa, ob, os_ = with_overtime(300, 0.1, np.full(300, 2008))
+    return (np.r_[mu_a, np.full(300, 20.0)], np.r_[mu_b, np.full(300, 20.0)], np.r_[sa, oa], np.r_[sb, ob],
+            np.r_[np.zeros(n, int), np.ones(300, int)], np.r_[np.full(n, 2008), os_])
+
+
+def _rate(res, k):
+    return float(np.mean(np.abs(res.a_score - res.b_score) == k))
+
+
+def test_k1_key_weighted_without_a_ratio_or_with_zero_alpha_draws_exactly_as_paired_residual():
+    keys = _keys()
+    ratio = tuple(float(x) for x in np.r_[np.ones(3), 3.0, np.ones(keys.KEY_MAX - 3)])
+    for p in (make_params(), make_params(key_ratio=ratio, key_alpha=0.0)):
+        base = simulate_game(A, B, 5000, params=p, seed=5, distribution="paired_residual")
+        kw = simulate_game(A, B, 5000, params=p, seed=5, distribution="key_weighted")
+        np.testing.assert_array_equal(kw.a_score, base.a_score)
+        np.testing.assert_array_equal(kw.b_score, base.b_score)
+    assert "key_weighted" in DISTRIBUTIONS
+
+
+def test_k2_key_weighted_moves_mass_onto_3_and_7_and_keeps_the_mean_margin_and_total():
+    keys = _keys()
+    ratio = np.ones(keys.KEY_MAX + 1)
+    ratio[[3, 7]] = 2.5
+    p = make_params(key_ratio=tuple(float(x) for x in ratio), key_alpha=1.0)
+    base = simulate_game(A, B, 200_000, params=p, seed=5, distribution="paired_residual")
+    kw = simulate_game(A, B, 200_000, params=p, seed=5, distribution="key_weighted")
+    assert _rate(kw, 3) > _rate(base, 3) + 0.03
+    assert _rate(kw, 7) > _rate(base, 7) + 0.02
+    assert kw.expected_margin == pytest.approx(base.expected_margin, abs=0.15)
+    assert kw.expected_total == pytest.approx(base.expected_total, abs=0.15)
+    assert kw.n == 200_000 and kw.a_score.dtype == np.int64 and (kw.a_score >= 0).all() and (kw.b_score >= 0).all()
+
+
+def test_k3_key_weight_keeps_the_mean_margin_and_total_of_its_input_draws():
+    keys = _keys()
+    rng = np.random.default_rng(4)
+    a, b = rng.poisson(26, 200_000), rng.poisson(17, 200_000)
+    ratio = np.ones(keys.KEY_MAX + 1)
+    ratio[[3, 7, 10]] = [3.0, 2.0, 1.5]
+    wa, wb = keys.key_weight(a, b, np.random.default_rng(1), tuple(ratio), 1.0)
+    assert len(wa) == len(a)
+    assert (wa - wb).mean() == pytest.approx((a - b).mean(), abs=0.1)
+    assert (wa + wb).mean() == pytest.approx((a + b).mean(), abs=0.1)
+    assert np.mean(np.abs(wa - wb) == 3) > np.mean(np.abs(a - b) == 3) + 0.03
+
+
+def test_k4_learn_params_learns_the_key_ratio_from_its_own_rows():
+    keys = _keys()
+    p = learn_params(*_lumpy_training(), target_season=2009)
+    ratio = np.asarray(p.key_ratio)
+    assert len(ratio) == keys.KEY_MAX + 1 and np.isfinite(ratio).all() and (ratio > 0).all()
+    assert ratio[3] > 1.5 and ratio[7] > 1.2  # real margins of 3 and 7 are commoner than the smooth sampler's
+    assert ratio[2] < 1 and ratio[5] < 1  # never-seen margins are rarer
+    assert p.key_alpha == keys.KEY_ALPHA
+    assert isinstance(p.key_ratio, tuple) and all(type(x) is float for x in p.key_ratio)
+
+
+def test_k5_learned_key_ratio_is_deterministic_and_ignores_row_order():
+    cols = _lumpy_training(n=3000)
+    order = np.random.default_rng(9).permutation(len(cols[0]))
+    one = learn_params(*cols, target_season=2009)
+    two = learn_params(*(c[order] for c in cols), target_season=2009)
+    three = learn_params(*cols, target_season=2009)
+    assert one.key_ratio == two.key_ratio == three.key_ratio
+
+
+def test_k6_key_weighted_playoff_games_never_end_tied():
+    keys = _keys()
+    ratio = np.ones(keys.KEY_MAX + 1)
+    ratio[0] = 5.0  # even a ratio that favours ties cannot bring them back in a playoff game
+    p = make_params(key_ratio=tuple(float(x) for x in ratio), key_alpha=1.0, ot_tie_frac=0.9)
+    res = simulate_game(A, A, 20_000, params=p, seed=3, distribution="key_weighted", playoff=True)
+    assert res.p_tie == 0.0
+
+
+def test_k7_parameters_stored_before_18m_still_load_and_new_ones_round_trip_as_the_engine_stores_them():
+    old = {f.name: getattr(make_params(), f.name) for f in dataclasses.fields(SimParams)
+           if f.name not in ("key_ratio", "key_alpha")}
+    stored_before = SimParams(**old)  # a row saved before 18m has no key fields
+    assert stored_before.key_ratio == () and stored_before.key_alpha == 0.0
+    simulate_game(A, B, 1000, params=stored_before, seed=1, distribution="key_weighted")
+    new = learn_params(*_lumpy_training(n=3000), target_season=2009)
+    value = {k: [int(x) for x in v] if k in engine._SIM_ARRAYS else v for k, v in asdict(new).items()}
+    back = json.loads(json.dumps(value))  # what save_sim_params writes and load_sim_params reads
+    loaded = SimParams(**{k: np.array(v, dtype=np.int64) if k in engine._SIM_ARRAYS else v for k, v in back.items()})
+    a = simulate_game(A, B, 2000, params=new, seed=8, distribution="key_weighted")
+    b = simulate_game(A, B, 2000, params=loaded, seed=8, distribution="key_weighted")
+    np.testing.assert_array_equal(a.a_score, b.a_score)
+
+
+def test_k8_learning_the_key_ratio_stays_fast_on_a_large_window():
+    cols = _training()  # 40,300 rows
+    start = time.perf_counter()
+    learn_params(*cols, target_season=2009)
+    assert time.perf_counter() - start < 3.0
