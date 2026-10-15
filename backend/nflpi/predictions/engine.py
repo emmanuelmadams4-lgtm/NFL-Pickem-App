@@ -57,6 +57,10 @@ CHANGE_WORDS = {
     "home_rest": "rest days",
     "away_rest": "rest days",
 }
+LINE_KEYS = {
+    "market_prob", "market_logit", "market_source", "market_seen_at",
+    "used_market", "market_kind", "upset_flags",
+}
 
 
 def load_frame(session: Session, now: datetime | None = None) -> pd.DataFrame:
@@ -92,27 +96,27 @@ def load_frame(session: Session, now: datetime | None = None) -> pd.DataFrame:
     rows = []
     for g, m in games:
         row = {
-                "game_id": g.game_id,
-                "season": g.season,
-                "week": g.week,
-                "game_type": g.game_type,
-                "kickoff_utc": g.kickoff_utc,
-                "home_team": g.home_team,
-                "away_team": g.away_team,
-                "home_score": g.home_score,
-                "away_score": g.away_score,
-                "status": g.status,
-                "neutral_site": g.neutral_site,
-                "home_rest": g.home_rest,
-                "away_rest": g.away_rest,
-                "home_qb": g.home_qb,
-                "away_qb": g.away_qb,
-                "home_ml": m.home_moneyline if m else np.nan,
-                "away_ml": m.away_moneyline if m else np.nan,
-                "spread_line": m.spread_line if m and m.spread_line is not None else np.nan,
-                "total_line": m.total_line if m and m.total_line is not None else np.nan,
-                "market_kind": m.kind if m else None,
-                "market_observed_at": m.observed_at if m else None,
+            "game_id": g.game_id,
+            "season": g.season,
+            "week": g.week,
+            "game_type": g.game_type,
+            "kickoff_utc": g.kickoff_utc,
+            "home_team": g.home_team,
+            "away_team": g.away_team,
+            "home_score": g.home_score,
+            "away_score": g.away_score,
+            "status": g.status,
+            "neutral_site": g.neutral_site,
+            "home_rest": g.home_rest,
+            "away_rest": g.away_rest,
+            "home_qb": g.home_qb,
+            "away_qb": g.away_qb,
+            "home_ml": m.home_moneyline if m else np.nan,
+            "away_ml": m.away_moneyline if m else np.nan,
+            "spread_line": m.spread_line if m and m.spread_line is not None else np.nan,
+            "total_line": m.total_line if m and m.total_line is not None else np.nan,
+            "market_kind": m.kind if m else None,
+            "market_observed_at": m.observed_at if m else None,
         }
         if g.game_id in upcoming:
             nflverse = fresh_line.Line(
@@ -475,6 +479,8 @@ def refresh_predictions(
             key = (game.season, game.week)
             if key in weekly_old:
                 weekly_old[key][game.game_id] = prediction.home_win_prob
+    weekly_new = {key: probs.copy() for key, probs in weekly_old.items()}
+    deferred_line_events: list[tuple[tuple[int, int], ChangeEvent]] = []
     for _, row in targets.iterrows():
         base_p = base.predict_one(row)
         has_market = not pd.isna(row["market_logit"])
@@ -530,6 +536,8 @@ def refresh_predictions(
         ).first()
         if prev and prev.inputs_hash == h:
             continue
+        week_key = (int(row["season"]), int(row["week"]))
+        weekly_new[week_key][row["game_id"]] = round(prob, 4)
         note = None
         if prev:
             changed_keys = {
@@ -550,24 +558,18 @@ def refresh_predictions(
                     qb_team = team
                     qb_name = new_starter if isinstance(new_starter, str) else None
                     break
-            line_keys = {
-                "market_prob", "market_logit", "market_source", "market_seen_at",
-                "used_market", "market_kind", "upset_flags",
-            }
-            line_only = bool(changed_keys) and changed_keys <= line_keys and prev.model_version_id == mv.id
-            if line_only:
-                old_probs = weekly_old[(int(row["season"]), int(row["week"]))]
-                old_probs.setdefault(row["game_id"], prev.home_win_prob)
-                alert = prev.pick != pick or fresh_line.rank_changed(
-                    old_probs, old_probs | {row["game_id"]: prob}, row["game_id"],
-                )
-            else:
-                alert = prev.pick != pick or moved >= settings.alert_move_threshold or old_label != new_label or qb_team
-            if alert:
-                events.append(ChangeEvent(
-                    row["game_id"], prev.home_win_prob, prob, prev.pick, pick, note,
-                    old_label, new_label, qb_team, qb_name,
-                ))
+            line_only = (
+                bool(changed_keys) and changed_keys <= LINE_KEYS and prev.model_version_id == mv.id
+                and ("market_source" in features or "market_source" in prev.features)
+            )
+            event = ChangeEvent(
+                row["game_id"], prev.home_win_prob, prob, prev.pick, pick, note,
+                old_label, new_label, qb_team, qb_name,
+            )
+            if line_only and prev.pick == pick:
+                deferred_line_events.append((week_key, event))
+            elif line_only or moved >= settings.alert_move_threshold or old_label != new_label or qb_team:
+                events.append(event)
         session.add(
             Prediction(
                 game_id=row["game_id"],
@@ -588,6 +590,11 @@ def refresh_predictions(
                 change_note=note,
             )
         )
+    for week_key, event in deferred_line_events:
+        old_probs = weekly_old[week_key]
+        old_probs.setdefault(event.game_id, event.old_prob)
+        if fresh_line.rank_changed(old_probs, weekly_new[week_key], event.game_id):
+            events.append(event)
     session.commit()
     return events
 
