@@ -78,3 +78,20 @@ the full suite in draft-PR CI from `lane/web-lows` (D71).
 **Red (local, pure):** 14 failed for the intended reasons (N1 label `key_weighted`; `key_weight` returns 2 values; 3
 warnings; R1 DID NOT RAISE; pools float64; L3 DID NOT RAISE; D1 DID NOT RAISE; 19a L1 stale quote kept; L6 NaN; dead
 term present; no `private_reaches`; no `write_report`; `_summary` unguarded). 7 database tests run in CI.
+**Red (CI, run 38776999153 on `6c3f117`, backend job 116567122192):** `21 failed, 2431 passed, 1 skipped`; the 21 are
+exactly `test_lows.py`, each for its intended reason (DB ones: L1/L4 ratio not a tuple; R2 log empty; 19a-L4
+`RuntimeError: quotes table unreadable`; 19a-L7 `Invalid isoformat string`; dup 2 reads == 1; L2 11 rows == 2; D2
+6 warnings == 2). docker, web, e2e green.
+
+## 3. IMPLEMENTATION
+
+Provider: Codex (Ryan), Build Ladder rung 1; coordinator commits his diffs.
+- **WO1** (pure items) → `d09cb8d`. Proof (coordinator): 14 pure passed; `test_sim`, `test_points_bench`,
+  `test_layering`, `test_sim_backtest`, `test_fresh_line -k "not test_d"` passed; ruff clean. Real 2025 params: five
+  typical games still `key_weighted` (ESS check does not fire on real data). Note: `test_sim.py` K3 unpack changed too
+  (forced by the 3-tuple), beyond the "K10 only" limit; reported to god.
+- **WO2** (DB items: `engine.load_sim_params`, 19a quote/seen_at guards, `sheet.compute_week(preds=)`,
+  `readmodels.summaries` one read, `_warned_ratings`, `value.store.load_snapshots` aggregate + row query). Review: only
+  the four allowed files; `engine.py` changes inside the sim-params load and the 19a block; L2's `count == len(sides)`
+  equals the old set check because `MarketSnapshot` rejects foreign selections on save. Proof (coordinator): 14 pure
+  passed; adjacent suites 111 + 21 passed; ruff clean; `git diff --check` clean. DB clauses: CI below.
