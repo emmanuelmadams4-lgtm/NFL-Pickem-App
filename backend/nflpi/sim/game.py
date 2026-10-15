@@ -6,6 +6,7 @@ from math import isfinite
 import numpy as np
 
 from nflpi.sim.distributions import DEFAULT_DISTRIBUTION, DISTRIBUTIONS, sample_regulation
+from nflpi.sim.keys import key_weight
 from nflpi.sim.overtime import resolve_overtime
 from nflpi.sim.params import SimParams, TeamFeatures
 
@@ -76,6 +77,10 @@ def simulate_game(
         distribution, team_a_features.expected_points, team_b_features.expected_points, n_simulations, rng, params
     )
     a, b = resolve_overtime(reg_a, reg_b, rng, params, playoff)
+    if distribution == "key_weighted":
+        a, b = key_weight(a, b, rng, params.key_ratio, params.key_alpha)
+    label = ("paired_residual" if distribution == "key_weighted" and (not params.key_ratio or params.key_alpha == 0)
+             else distribution)
     margin, points = a - b, a + b
     n = n_simulations
 
@@ -96,7 +101,7 @@ def simulate_game(
     error["expected_total"] = float(points.std() / np.sqrt(n))
     error["label"] = SAMPLING_LABEL
     return SimResult(
-        a_score=a, b_score=b, n=n, distribution=distribution, neutral_site=neutral_site, spread=spread, total=total,
+        a_score=a, b_score=b, n=n, distribution=label, neutral_site=neutral_site, spread=spread, total=total,
         p_a_win=probs["p_a_win"], p_b_win=probs["p_b_win"], p_tie=probs["p_tie"],
         p_a_cover=probs.get("p_a_cover"), p_b_cover=probs.get("p_b_cover"), p_spread_push=probs.get("p_spread_push"),
         p_over=probs.get("p_over"), p_under=probs.get("p_under"), p_total_push=probs.get("p_total_push"),

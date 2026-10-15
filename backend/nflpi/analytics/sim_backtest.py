@@ -16,7 +16,7 @@ from nflpi.picks import home_spread_from_nflverse
 from nflpi.predictions.elo import EloParams
 from nflpi.predictions.features import games_frame
 from nflpi.predictions.scores import STATS_FEATURES, ScoreModel, add_score_features
-from nflpi.sim import DISTRIBUTIONS, SimParams, TeamFeatures, learn_params, simulate_game
+from nflpi.sim import DISTRIBUTIONS, SimParams, TeamFeatures, keys, learn_params, simulate_game
 
 MIN_TRAIN_SEASON = 2004
 WINDOW = 10
@@ -26,6 +26,10 @@ SOURCES = ("football_only", "market_informed")
 LEVELS = (0.5, 0.8, 0.95)
 BASE_SEED = 20261013
 N_SIMULATIONS = 10_000
+KEY_ALPHAS = (1.0, 0.9, 0.8, 0.75, 0.5)
+N_BOOT = 2000
+ALPHA_RULE = ("largest alpha whose cover-Brier, over-Brier and CRPS paired-bootstrap 95% intervals versus "
+              "paired_residual have a lower end at or below zero for both sources; 0.0 if none")
 PREFIX = {"football_only": "fb_", "market_informed": "mk_"}
 TABLE_COLUMNS = [
     "game_id", "season", "week", "kickoff_utc", "game_type", "home_team", "away_team", "home_score", "away_score",
@@ -292,6 +296,162 @@ def confirm(
     return report
 
 
+# --- key-number tune and confirm ------------------------------------------------------------------
+
+def pick_alpha(by_alpha: dict[str, dict[str, dict]]) -> float:
+    """Choose the strongest weight with no metric significantly worse for either source."""
+    for alpha in sorted((float(a) for a in by_alpha), reverse=True):
+        if all(by_alpha[str(alpha)][source][metric][1] <= 0
+               for source in SOURCES for metric in ("cover_brier_ci", "over_brier_ci", "crps_ci")):
+            return alpha
+    return 0.0
+
+
+def _key_game_row(game, source: str, variant: str, a: np.ndarray, b: np.ndarray, pit_u: float) -> dict:
+    margin, points = a - b, a + b
+    actual_margin, actual_total = game.home_score - game.away_score, game.home_score + game.away_score
+    spread = home_spread_from_nflverse(game.spread_line)
+    cover_edge = margin + spread
+    cover_actual = actual_margin + spread
+    total_edge = points - game.total_line
+    over_actual = actual_total - game.total_line
+    row = {
+        "game_id": game.game_id, "source": source, "variant": variant,
+        "key3": float(np.mean(np.abs(margin) == 3)), "key7": float(np.mean(np.abs(margin) == 7)),
+        "crps": crps(margin, actual_margin) + crps(points, actual_total),
+        "p_cover": _nopush(float(np.mean(cover_edge > 0)), float(np.mean(cover_edge == 0))),
+        "p_over": _nopush(float(np.mean(total_edge > 0)), float(np.mean(total_edge == 0))),
+        "y_cover": float(cover_actual > 0) if cover_actual != 0 else float("nan"),
+        "y_over": float(over_actual > 0) if over_actual != 0 else float("nan"),
+        "margin_sd": float(margin.std()),
+        "pit": float(np.mean(margin < actual_margin) + pit_u * np.mean(margin == actual_margin)),
+        "real3": float(abs(actual_margin) == 3), "real7": float(abs(actual_margin) == 7),
+    }
+    for level in LEVELS:
+        lo = np.quantile(margin, (1 - level) / 2, method="lower")
+        hi = np.quantile(margin, (1 + level) / 2, method="higher")
+        row[f"in_{level}"] = float(lo <= actual_margin <= hi)
+    return row
+
+
+def _key_rows(
+    table: pd.DataFrame, seasons: list[int], alphas: tuple[float, ...], n_simulations: int, base_seed: int,
+) -> pd.DataFrame:
+    rows = []
+    for season in seasons:
+        games = list(table[table["season"] == season].itertuples(index=False))
+        for source in SOURCES:
+            params = learn_for_season(table, season, source)
+            p = PREFIX[source]
+            for game in games:
+                seed = zlib.crc32(game.game_id.encode()) ^ base_seed
+                res = simulate_game(
+                    TeamFeatures(getattr(game, f"{p}home")), TeamFeatures(getattr(game, f"{p}away")),
+                    n_simulations=n_simulations, params=params, seed=seed,
+                    spread=home_spread_from_nflverse(game.spread_line), total=game.total_line,
+                    neutral_site=bool(game.neutral_site), distribution="paired_residual",
+                )
+                pit_u = float(np.random.default_rng([seed, 999]).random())
+                rows.append(_key_game_row(game, source, "baseline", res.a_score, res.b_score, pit_u))
+                for alpha in alphas:
+                    a, b = keys.key_weight(
+                        res.a_score, res.b_score, np.random.default_rng([seed, round(alpha * 100)]),
+                        params.key_ratio, alpha,
+                    )
+                    rows.append(_key_game_row(game, source, str(alpha), a, b, pit_u))
+    return pd.DataFrame(rows)
+
+
+def _key_block(rows: pd.DataFrame) -> dict:
+    block = {
+        "key3": float(rows["key3"].mean()), "key7": float(rows["key7"].mean()),
+        "crps": float(rows["crps"].mean()), "margin_sd": float(rows["margin_sd"].mean()),
+    }
+    for kind in ("cover", "over"):
+        good = rows[[f"p_{kind}", f"y_{kind}"]].dropna()
+        block[f"{kind}_brier"] = float(np.mean((good[f"p_{kind}"] - good[f"y_{kind}"]) ** 2))
+    block["pit_coverage"] = {str(level): float(np.mean(np.abs(rows["pit"] - 0.5) <= level / 2))
+                             for level in LEVELS}
+    block["coverage"] = {str(level): float(rows[f"in_{level}"].mean()) for level in LEVELS}
+    return block
+
+
+def _key_ci(base: pd.DataFrame, other: pd.DataFrame, kind: str, n_boot: int, base_seed: int) -> list[float]:
+    paired = base.merge(other, on="game_id", suffixes=("_base", "_other"))
+    if kind == "crps":
+        delta = paired["crps_other"].to_numpy() - paired["crps_base"].to_numpy()
+    else:
+        y = paired[f"y_{kind}_base"].to_numpy()
+        delta = ((paired[f"p_{kind}_other"].to_numpy() - y) ** 2
+                 - (paired[f"p_{kind}_base"].to_numpy() - y) ** 2)
+        delta = delta[np.isfinite(delta)]  # real or simulated pushes are not scored
+    rng = np.random.default_rng(base_seed)
+    means = delta[rng.integers(0, len(delta), size=(n_boot, len(delta)))].mean(axis=1)
+    return [float(delta.mean()), float(np.quantile(means, 0.025)), float(np.quantile(means, 0.975))]
+
+
+def _key_comparison(rows: pd.DataFrame, source: str, variant: str, n_boot: int, base_seed: int) -> dict:
+    base = rows[(rows["source"] == source) & (rows["variant"] == "baseline")]
+    other = rows[(rows["source"] == source) & (rows["variant"] == variant)]
+    block = _key_block(other)
+    block.update({f"{kind}_ci": _key_ci(base, other, kind.replace("_brier", ""), n_boot, base_seed)
+                  for kind in ("cover_brier", "over_brier", "crps")})
+    return block
+
+
+def keys_tune(
+    table: pd.DataFrame, *, seasons=TUNE_SEASONS, alphas=KEY_ALPHAS, n_simulations: int = N_SIMULATIONS,
+    base_seed: int = BASE_SEED, n_boot: int = N_BOOT,
+) -> dict:
+    if any(s >= CONFIRM_SEASONS[0] for s in seasons):
+        raise ValueError(f"keys tuning may not touch the confirm seasons ({CONFIRM_SEASONS[0]} on)")
+    table = table[table["season"] < CONFIRM_SEASONS[0]]
+    rows = _key_rows(table, list(seasons), tuple(alphas), n_simulations, base_seed)
+    baseline = {source: _key_block(rows[(rows["source"] == source) & (rows["variant"] == "baseline")])
+                for source in SOURCES}
+    by_alpha = {str(alpha): {source: _key_comparison(rows, source, str(alpha), n_boot, base_seed)
+                             for source in SOURCES} for alpha in alphas}
+    real = {
+        source: {str(k): float(rows[(rows["source"] == source) & (rows["variant"] == "baseline")][f"real{k}"].mean())
+                 for k in (3, 7)}
+        for source in SOURCES
+    }
+    return {
+        "seasons": [int(s) for s in seasons], "n_simulations": n_simulations, "n_boot": n_boot,
+        "games": int(rows["game_id"].nunique()), "real": real, "baseline": baseline, "by_alpha": by_alpha,
+        "alpha": pick_alpha(by_alpha), "rule": ALPHA_RULE,
+    }
+
+
+def keys_confirm(
+    table: pd.DataFrame, *, keys_path, out_path, seasons=CONFIRM_SEASONS,
+    n_simulations: int = N_SIMULATIONS, base_seed: int = BASE_SEED, n_boot: int = N_BOOT,
+) -> dict:
+    alpha = float(json.loads(Path(keys_path).read_text())["alpha"])
+    with open(out_path, "x") as f:
+        try:
+            rows = _key_rows(table, list(seasons), (alpha,), n_simulations, base_seed)
+            by_source = {}
+            for source in SOURCES:
+                base = rows[(rows["source"] == source) & (rows["variant"] == "baseline")]
+                weighted = _key_comparison(rows, source, str(alpha), n_boot, base_seed)
+                by_source[source] = {
+                    "real": {str(k): float(base[f"real{k}"].mean()) for k in (3, 7)},
+                    "baseline": _key_block(base),
+                    "key_weighted": {k: v for k, v in weighted.items() if not k.endswith("_ci")},
+                    **{k: v for k, v in weighted.items() if k.endswith("_ci")},
+                }
+            report = {
+                "seasons": [int(s) for s in seasons], "alpha": alpha, "games": int(rows["game_id"].nunique()),
+                "n_simulations": n_simulations, "n_boot": n_boot, "by_source": by_source,
+            }
+            json.dump(report, f, indent=1, allow_nan=False)
+        except BaseException:
+            Path(out_path).unlink(missing_ok=True)
+            raise
+    return report
+
+
 # --- command line ---------------------------------------------------------------------------------
 
 def _read(games_csv: str) -> list[dict[str, str]]:
@@ -320,8 +480,29 @@ def main(argv: list[str]) -> None:
             print(f"  {v['source']:16s} {v['distribution']:22s} margin MAE {v['margin_mae']:.3f} "
                   f"total MAE {v['total_mae']:.3f} win log-loss gain vs blend {w['log_loss_gain_vs_blend']:+.4f}")
         print(report["sources_note"])
+    elif command == "keys-tune":
+        result = keys_tune(table)
+        write_tune(Path(out_dir) / "keys-tune.json", result)
+        for source in SOURCES:
+            print(f"KEYS TUNE {source}: real 3/7 {result['real'][source]['3']:.3f}/{result['real'][source]['7']:.3f}")
+            for label, block in [("baseline", result["baseline"][source])] + [
+                (str(alpha), result["by_alpha"][str(alpha)][source]) for alpha in KEY_ALPHAS
+            ]:
+                print(f"  {label:10s} 3/7 {block['key3']:.3f}/{block['key7']:.3f} "
+                      f"cover {block['cover_brier']:.4f} over {block['over_brier']:.4f} CRPS {block['crps']:.3f}")
+        print(f"alpha: {result['alpha']} ({result['rule']})")
+    elif command == "keys-confirm":
+        report = keys_confirm(table, keys_path=Path(out_dir) / "keys-tune.json",
+                              out_path=Path(out_dir) / "keys-confirm.json")
+        for source, result in report["by_source"].items():
+            print(f"KEYS CONFIRM {source}: real 3/7 {result['real']['3']:.3f}/{result['real']['7']:.3f}")
+            for label in ("baseline", "key_weighted"):
+                block = result[label]
+                print(f"  {label:12s} 3/7 {block['key3']:.3f}/{block['key7']:.3f} "
+                      f"cover {block['cover_brier']:.4f} over {block['over_brier']:.4f} CRPS {block['crps']:.3f}")
     else:
-        raise SystemExit("usage: python -m nflpi.analytics.sim_backtest tune|confirm <games.csv> <out_dir>")
+        raise SystemExit("usage: python -m nflpi.analytics.sim_backtest "
+                         "tune|confirm|keys-tune|keys-confirm <games.csv> <out_dir>")
 
 
 if __name__ == "__main__":

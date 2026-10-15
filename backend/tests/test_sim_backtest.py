@@ -248,8 +248,79 @@ def test_confirm_reports_every_variant_with_every_requested_metric(table, tmp_pa
     assert report["sources_note"].lower().count("by construction") >= 1
 
 
-def test_default_distribution_is_the_one_recorded_by_the_tune_run():
+def test_the_18c_tune_run_picked_paired_residual_which_18m_builds_on():
+    # step 18m: the default is now set by the keys-tune record (KB5); the 18c record still names the base sampler.
     path = Path(__file__).resolve().parents[2] / "docs/gauntlet/logs/step-18c-evidence/tune-result.json"
     recorded = json.loads(path.read_text())
     assert recorded["seasons"] == bench.TUNE_SEASONS and max(recorded["seasons"]) < bench.CONFIRM_SEASONS[0]
-    assert recorded["default"] == DEFAULT_DISTRIBUTION
+    assert recorded["default"] == "paired_residual"
+
+
+# --- step 18m: key-number strength (docs/gauntlet/logs/step-18m.md section 2, KB1-KB5) -------------
+
+def _ci(lo: float) -> list[float]:
+    return [lo + 0.001, lo, lo + 0.002]  # [mean, lo, hi]
+
+
+def test_kb1_alpha_is_the_largest_whose_intervals_all_include_or_sit_below_zero():
+    def one(cover_lo, over_lo=-0.0002, crps_lo=-0.004):
+        return {s: {"cover_brier_ci": _ci(cover_lo), "over_brier_ci": _ci(over_lo), "crps_ci": _ci(crps_lo)}
+                for s in bench.SOURCES}
+    # 1.0 is significantly worse on cover (its whole interval sits above zero); 0.9 includes zero: it passes
+    results = {"1.0": one(0.0002), "0.9": one(-0.0001), "0.8": one(-0.001), "0.75": one(-0.002), "0.5": one(-0.003)}
+    assert bench.pick_alpha(results) == 0.9
+    results["0.9"]["market_informed"]["crps_ci"] = [0.004, 0.001, 0.007]  # one source, one metric worse
+    assert bench.pick_alpha(results) == 0.8
+    results["0.8"]["football_only"]["over_brier_ci"] = [0.0, 0.0, 0.0002]  # a lower end of exactly zero passes
+    assert bench.pick_alpha(results) == 0.8
+    assert bench.pick_alpha({"1.0": one(0.0002)}) == 0.0  # none passes: no reweighting
+    assert set(bench.KEY_ALPHAS) == {1.0, 0.9, 0.8, 0.75, 0.5}
+
+
+def test_kb2_keys_tune_never_reads_the_confirm_seasons(table):
+    kwargs = {"seasons": [2020, 2021], "n_simulations": 300, "n_boot": 200}
+    full = bench.keys_tune(table, **kwargs)
+    scrambled = bench.keys_tune(scrambled_from(table, 2022), **kwargs)
+    assert full == scrambled
+    with pytest.raises(ValueError, match="confirm"):
+        bench.keys_tune(table, seasons=[2021, 2022], n_simulations=100, n_boot=50)
+
+
+def test_kb3_keys_report_has_before_and_after_numbers_per_source(table):
+    r = bench.keys_tune(table, seasons=[2020], n_simulations=300, n_boot=200)
+    json.dumps(r, allow_nan=False)
+    assert r["alpha"] in (0.0, *bench.KEY_ALPHAS) and r["rule"]
+    assert set(r["by_alpha"]) == {str(a) for a in bench.KEY_ALPHAS}
+    for source in bench.SOURCES:
+        assert {"3", "7"} == set(r["real"][source])
+        for block in [r["baseline"][source]] + [r["by_alpha"][str(a)][source] for a in bench.KEY_ALPHAS]:
+            assert {"key3", "key7", "crps", "cover_brier", "over_brier", "margin_sd", "pit_coverage"} <= set(block)
+            assert set(block["pit_coverage"]) == {"0.5", "0.8", "0.95"}
+        for a in bench.KEY_ALPHAS:
+            assert {"cover_brier_ci", "over_brier_ci", "crps_ci"} <= set(r["by_alpha"][str(a)][source])
+
+
+def test_kb4_keys_confirm_needs_the_keys_tune_record_and_runs_only_once(table, tmp_path):
+    keys_path, out_path = tmp_path / "keys-tune.json", tmp_path / "keys-confirm.json"
+    kwargs = {"seasons": [2016], "n_simulations": 200, "n_boot": 100}
+    with pytest.raises(FileNotFoundError):
+        bench.keys_confirm(table, keys_path=keys_path, out_path=out_path, **kwargs)
+    keys_path.write_text(json.dumps(bench.keys_tune(table, seasons=[2014], n_simulations=200, n_boot=100)))
+    report = bench.keys_confirm(table, keys_path=keys_path, out_path=out_path, **kwargs)
+    assert json.loads(out_path.read_text()) == json.loads(json.dumps(report))
+    assert report["alpha"] == json.loads(keys_path.read_text())["alpha"]
+    for source in bench.SOURCES:
+        assert {"baseline", "key_weighted", "real", "cover_brier_ci", "over_brier_ci", "crps_ci"} <= set(
+            report["by_source"][source])
+    with pytest.raises(FileExistsError):
+        bench.keys_confirm(table, keys_path=keys_path, out_path=out_path, **kwargs)
+
+
+def test_kb5_key_alpha_and_default_follow_the_recorded_keys_tune_run():
+    from nflpi.sim import keys
+
+    path = Path(__file__).resolve().parents[2] / "docs/gauntlet/logs/step-18m-evidence/keys-tune.json"
+    recorded = json.loads(path.read_text())
+    assert recorded["seasons"] == bench.TUNE_SEASONS
+    assert keys.KEY_ALPHA == recorded["alpha"]
+    assert DEFAULT_DISTRIBUTION == ("key_weighted" if recorded["alpha"] > 0 else "paired_residual")
