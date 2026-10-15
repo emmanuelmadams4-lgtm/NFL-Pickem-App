@@ -198,6 +198,7 @@ export function WeekBoard() {
                 </ul>
               )}
               <p className="mt-2 text-xs text-subtle">Select a game for the full matchup. Picks lock at kickoff.</p>
+              {data.pick_mode && <p className="text-xs text-subtle">{data.pick_mode.label}</p>}
             </section>
           )}
         </>
