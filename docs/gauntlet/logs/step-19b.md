@@ -150,3 +150,25 @@ rating − away rating`. Model c4 = the walk-forward blend with `eff_diff` added
 like c1/c3, window 10). Column `p_c4`, scored once against `p_blend` with `decide`. Spec B10 `efficiency_diff(games,
 plays) -> Series` aligned to games (worked example in the test). Red: 1 failed (`AttributeError`), 16 passed.
 This is the fourth look: a single win among c1-c4 is weaker evidence than one pre-planned test.
+
+- Data: 24 files 2002-2025 (combined sha256 of per-file sums `8907408f7740e65b…`; 2017 needed a second download).
+- WO4 (Ryan, try 1) `14837b7`: `efficiency_diff`, `--pbp DIR`. Coordinator rerun: 17 passed, ruff 0. Read: ratings use
+  only earlier rows in kickoff order (a team plays once a week), nothing carries across seasons.
+
+**c4 play-by-play efficiency: scored once** (`step-19b-evidence/c4.json`, 13 s). 2022-2025: c4 87.94 pts/week,
+accuracy 67.25%; gain vs blend **+0.24 [-0.65, +1.07]**, accuracy -0.0028, log-loss gain +0.00183. 2012-2021: +0.15
+[-0.04, +0.35], accuracy +0.0016, log-loss gain +0.00042. **Decision: does not ship** (CI lower bound not above 0;
+accuracy lower).
+
+### Result of the four pre-registered looks
+
+| candidate | 2022-2025 pts/week gain [95% CI] | accuracy | log-loss gain | 2012-2021 gain | ship |
+|---|---|---|---|---|---|
+| c1 signed QB change | +0.10 [-0.18, +0.39] | 0.0000 | -0.00008 | +0.03 | no |
+| c2 fitted mix | +0.26 [-0.10, +0.67] | +0.0037 | +0.00091 | +0.19 | no |
+| c3 non-QB injuries | +0.17 [-0.17, +0.47] | +0.0037 | +0.00060 | +0.04 | no |
+| c4 play-by-play efficiency | +0.24 [-0.65, +1.07] | -0.0028 | +0.00183 | +0.15 | no |
+
+None ships; the live blend stays. All four point estimates are positive but small (0.1-0.3 points a week against a
+weekly total of ~88) and none clears the pre-registered bar. c2 is the closest (guards all hold; interval -0.10). Per
+D18 nothing changes after a single loss and nothing is re-scored with a tweak on 2022-2025.
