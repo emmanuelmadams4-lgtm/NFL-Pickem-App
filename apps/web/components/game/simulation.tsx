@@ -3,6 +3,19 @@
 import { pct, type GameDetail } from "@nflpi/shared";
 import { Section } from "@/components/ui";
 
+const CHECK_HEADINGS = {
+  failed: "Run check failed",
+  no_verdict: "Run check gave no verdict",
+  not_checked: "Not checked",
+};
+
+const CHECK_CAUSES: Record<string, string> = {
+  cap: "the daily check limit was reached",
+  provider: "Claude could not be reached",
+  unparsed: "the check's answer could not be read",
+  error: "the check hit an error",
+};
+
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -23,9 +36,17 @@ function spreadText(value: number): string {
 
 export function SimulationSection({ game }: { game: GameDetail }) {
   const sim = game.prediction?.simulation;
+  const check = game.prediction?.simulation_check;
 
   return (
     <Section id="simulator" title="Score simulator" note={sim?.label}>
+      {check && (
+        <div role="note" className={`min-w-0 break-words rounded-card border border-warn/40 bg-warn/10 p-3 ${sim ? "mb-4" : ""}`}>
+          <p className="text-sm font-medium text-text">{CHECK_HEADINGS[check.status]}</p>
+          <p className="mt-1 text-sm text-text-2">{check.note}</p>
+          {check.cause && <p className="mt-1 text-sm text-text-2">Cause: {CHECK_CAUSES[check.cause] ?? check.cause}</p>}
+        </div>
+      )}
       {!sim ? (
         <p className="text-sm text-text-2">No simulation for this game yet.</p>
       ) : (
