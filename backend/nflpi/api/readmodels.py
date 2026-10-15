@@ -1,5 +1,6 @@
 """Read models: turn database rows into API responses."""
 
+import logging
 from collections import defaultdict
 from datetime import UTC, datetime
 from unicodedata import category
@@ -13,6 +14,7 @@ from nflpi.analytics import stars
 from nflpi.analytics.metrics import calibration, wilson_ci
 from nflpi.api import schemas as s
 from nflpi.betting.edge import SettlementProbs
+from nflpi.betting.odds import BettingError
 from nflpi.config import get_settings
 from nflpi.ingestion.service import freshness
 from nflpi.models import (
@@ -34,6 +36,9 @@ from nflpi.predictions import sheet
 from nflpi.predictions.sheet import is_locked
 
 PICK_ORDER_NOTE = "Both pick modes use the same order: win chance, then game id"
+# Stored simulation chances are rounded to four decimal places.
+VALUE_PROB_SUM_TOLERANCE = 0.001
+log = logging.getLogger(__name__)
 
 
 def _clean_star_text(value: str | None) -> str | None:
@@ -365,7 +370,16 @@ def _value_ratings(session: Session, g: Game, last: Prediction | None, now: date
                 parts = (over, push, under) if snapshot.selection == "over" else (under, push, over)
             if any(part is None for part in parts):
                 continue
-            rating = value.rate_price(snapshot, SettlementProbs(*parts), now=now)
+            try:
+                if market != "moneyline":
+                    total = sum(parts)
+                    if abs(total - 1) > VALUE_PROB_SUM_TOLERANCE:
+                        continue
+                    parts = tuple(part / total for part in parts)
+                rating = value.rate_price(snapshot, SettlementProbs(*parts), now=now)
+            except (BettingError, ValueError, TypeError):
+                log.warning("value rating skipped for %s %s %s", g.game_id, market, snapshot.selection, exc_info=True)
+                continue
             ratings.append(s.ValueRatingOut(
                 market_type=rating.market_type, selection=rating.selection, sportsbook=rating.sportsbook,
                 line=rating.line, price=rating.price, observed_at=rating.observed_at,
