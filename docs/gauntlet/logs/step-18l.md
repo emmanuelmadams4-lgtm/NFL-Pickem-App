@@ -106,3 +106,20 @@ Scope-locked `/refactor` read of the step's diff (`git diff 521e8ad -- backend/n
   second file for two callers (ponytail). `break-words` on both `li` and the title `p` is redundant but harmless. No change.
 - Design record: `design.md` gets no durable change (the section reuses Section, Chip, divide-y rows as News does).
 Result: no change needed; proof unchanged (`v18l-g2`).
+
+## 5. VERIFICATION
+
+- Fresh critic 1 (Sonnet, no build transcript) on `f8878e1`: **PASS**, LOW only (`reviews/critic-1.md`). Its own runs:
+  pytest `test_value_api.py test_value.py` 137 passed, ruff 0, typecheck 0; read `v18l-g2` (24 passed).
+- Coordinator on `f8878e1`: pytest `test_value_api.py test_value.py test_api.py` 149 passed (on `c308fa5`, the backend
+  is unchanged since), ruff 0, typecheck 0, browser `v18l-g2` 24/24 (value18l 7, sim18j, check18k) on a fresh build,
+  lane-guard OK vs origin/main. Full suite: PR CI (D71).
+- Security: Dwight PASS on `3f6cde9` and on the WO2 delta (V1 closed).
+- Review-passed check (Jev Job 4): `decide.sh` returned "advisor, jev unavailable"; the call goes to god.
+
+## 6. LANDING
+
+Not landed by lane web. Done report to god with HEAD; god opens the PR, CI runs the full suite, god merges. Deploy is
+separate (HAG-75). Carried: Dwight L2 (`load_snapshots` reads every stored row, three times per game read), D1 (a
+non-finite expected value would pass the schema; not reachable), D2 (a bad stored run logs on every read); the win market
+counts a tie as a loss; prices at a line other than the simulator's are left out, not rated.
