@@ -2492,6 +2492,14 @@
       "type": "array",
       "title": "Market History"
      },
+     "value_ratings": {
+      "items": {
+       "$ref": "#/components/schemas/ValueRatingOut"
+      },
+      "type": "array",
+      "title": "Value Ratings",
+      "default": []
+     },
      "prediction_history": {
       "items": {
        "$ref": "#/components/schemas/PredictionOut"
@@ -5445,6 +5453,97 @@
      "type"
     ],
     "title": "ValidationError"
+   },
+   "ValueRatingOut": {
+    "properties": {
+     "market_type": {
+      "type": "string",
+      "enum": [
+       "moneyline",
+       "spread",
+       "total"
+      ],
+      "title": "Market Type"
+     },
+     "selection": {
+      "type": "string",
+      "title": "Selection"
+     },
+     "sportsbook": {
+      "type": "string",
+      "title": "Sportsbook"
+     },
+     "line": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Line"
+     },
+     "price": {
+      "type": "number",
+      "title": "Price"
+     },
+     "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Observed At"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "RATED",
+       "UNRATED",
+       "NO_BET"
+      ],
+      "title": "Status"
+     },
+     "stars": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stars"
+     },
+     "expected_value": {
+      "type": "number",
+      "title": "Expected Value"
+     },
+     "reasons": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Reasons"
+     },
+     "note": {
+      "type": "string",
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "market_type",
+     "selection",
+     "sportsbook",
+     "line",
+     "price",
+     "observed_at",
+     "status",
+     "stars",
+     "expected_value",
+     "reasons",
+     "note"
+    ],
+    "title": "ValueRatingOut"
    },
    "WeatherOut": {
     "properties": {
