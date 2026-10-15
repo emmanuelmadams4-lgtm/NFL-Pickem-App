@@ -34,7 +34,9 @@ Lane `cleanup13`, branch `lane/cleanup13`, base `d1b8a07`, tier T1, One-Shot. Te
 ## 5. VERIFICATION
 * Suite: 2350 passed, 1 skipped (2345 + 5 new). Backtest fingerprint identical. Week endpoint: 3 `SELECT predictions` statements.
 * lane-guard vs origin/main: only `tests/test_api.py` and `tests/test_star_alerts.py` outside the lane (rename strings, import path); grant requested from god.
-* Security review: Dwight (see below). Fresh critic: see below.
+* lane-guard vs origin/main: OK after god's 04:36 grant for the two test files.
+* Dwight (read-only security review, head 957835f): PASS, no finding above LOW (L1 shim skips `_` names, L2 DISTINCT ON is Postgres-only).
+* Fresh critic (separate agent): PASS, 0 HIGH. M1 label text is an API-visible string change (kept, matches ARCHITECTURE; no stored/consumer match found). M2/M3 AST gate blind spots: `from nflpi import x` and `import nflpi.x as m` now covered; relative imports and `getattr` remain uncovered (carried). M5 query-count bound is 1..3 by design (real count is 3). L6 shim has no `__all__` (kept).
 
 ## 6. LANDING
 Hand-off to god; no push.

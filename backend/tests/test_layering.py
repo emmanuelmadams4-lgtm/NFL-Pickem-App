@@ -37,6 +37,13 @@ def test_no_cross_package_private_attribute_use():
             if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("nflpi."):
                 for a in node.names:
                     imported[a.asname or a.name] = node.module.split(".")[1]
+            elif isinstance(node, ast.ImportFrom) and node.module == "nflpi":
+                for a in node.names:
+                    imported[a.asname or a.name] = a.name
+            elif isinstance(node, ast.Import):
+                for a in node.names:
+                    if a.asname and a.name.startswith("nflpi."):
+                        imported[a.asname] = a.name.split(".")[1]
         for node in ast.walk(tree):
             if (
                 isinstance(node, ast.Attribute)
