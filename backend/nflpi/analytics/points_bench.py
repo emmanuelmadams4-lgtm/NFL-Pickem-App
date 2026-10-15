@@ -126,6 +126,43 @@ def injury_counts(games: pd.DataFrame, injuries: pd.DataFrame) -> pd.DataFrame:
     }, index=games.index)
 
 
+def efficiency_diff(games: pd.DataFrame, plays: pd.DataFrame) -> pd.Series:
+    """Pregame rating difference from earlier opponent-adjusted team EPA nets."""
+    valid = plays[plays["play_type"].isin(("pass", "run")) & plays["posteam"].notna()
+                  & plays["defteam"].notna()].copy()
+    valid["epa"] = pd.to_numeric(valid["epa"], errors="coerce")
+    valid = valid[np.isfinite(valid["epa"].to_numpy(float))]
+    off = valid.groupby(["season", "week", "posteam"])["epa"].mean().to_dict()
+    defense = valid.groupby(["season", "week", "defteam"])["epa"].mean().to_dict()
+    raw: dict[tuple[int, str], list[float]] = {}
+    adjusted: dict[tuple[int, str], list[float]] = {}
+    differences = []
+    for row in games.itertuples(index=False):
+        season, week = int(row.season), int(row.week)
+        home, away = row.home_team, row.away_team
+        home_key, away_key = (season, home), (season, away)
+        home_raw, away_raw = raw.get(home_key, []), raw.get(away_key, [])
+        home_adjusted, away_adjusted = adjusted.get(home_key, []), adjusted.get(away_key, [])
+        home_strength = float(np.mean(home_raw)) if home_raw else 0.0
+        away_strength = float(np.mean(away_raw)) if away_raw else 0.0
+        differences.append(
+            (float(np.mean(home_adjusted)) if home_adjusted else 0.0)
+            - (float(np.mean(away_adjusted)) if away_adjusted else 0.0)
+        )
+        nets = {}
+        for team in (home, away):
+            game_key = (season, week, team)
+            if game_key in off and game_key in defense:
+                nets[team] = off[game_key] - defense[game_key]
+        if home in nets:
+            raw.setdefault(home_key, []).append(nets[home])
+            adjusted.setdefault(home_key, []).append(nets[home] + away_strength)
+        if away in nets:
+            raw.setdefault(away_key, []).append(nets[away])
+            adjusted.setdefault(away_key, []).append(nets[away] + home_strength)
+    return pd.Series(differences, index=games.index, name="eff_diff")
+
+
 def _c1_features(features: list[str]) -> list[str]:
     return [
         column for feature in features
@@ -185,8 +222,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("games_csv", type=Path)
     parser.add_argument("out_json", type=Path)
-    parser.add_argument("candidate", nargs="?", choices=["c1", "c2", "c3"])
+    parser.add_argument("candidate", nargs="?", choices=["c1", "c2", "c3", "c4"])
     parser.add_argument("--injuries", type=Path, help="directory of nflverse injuries_*.csv files (required for c3)")
+    parser.add_argument("--pbp", type=Path, help="directory of play_by_play_*.csv.gz files (required for c4)")
     args = parser.parse_args()
 
     with args.games_csv.open(newline="", encoding="utf-8") as handle:
@@ -213,15 +251,29 @@ def main() -> None:
                 } for row in csv.DictReader(handle))
         counts = injury_counts(games, pd.DataFrame(injuries))
         frames = {params: frame.assign(inj_diff=counts["inj_diff"]) for params, frame in frames.items()}
+    elif args.candidate == "c4":
+        if args.pbp is None:
+            parser.error("c4 requires --pbp DIR")
+        files = sorted(args.pbp.glob("play_by_play_*.csv.gz"))
+        if not files:
+            parser.error("--pbp contains no play_by_play_*.csv.gz files")
+        columns = ["season", "week", "posteam", "defteam", "epa", "play_type"]
+        plays = pd.concat(
+            [pd.read_csv(path, usecols=columns, low_memory=False) for path in files], ignore_index=True
+        ).dropna(subset=["posteam", "defteam"])
+        for column in ("posteam", "defteam"):
+            plays[column] = plays[column].map(nflverse.franchise)
+        difference = efficiency_diff(games, plays)
+        frames = {params: frame.assign(eff_diff=difference) for params, frame in frames.items()}
     predictions = pd.concat(
         [backtest.predict_season(frames, season, WINDOW) for season in ALL_SEASONS], ignore_index=True
     )
-    if args.candidate in ("c1", "c3"):
-        features = (
-            {"stats": _c1_features(BASE_FEATURES), "blend": _c1_features(BLEND_FEATURES)}
-            if args.candidate == "c1" else
-            {"stats": [*BASE_FEATURES, "inj_diff"], "blend": [*BLEND_FEATURES, "inj_diff"]}
-        )
+    if args.candidate in ("c1", "c3", "c4"):
+        if args.candidate == "c1":
+            features = {"stats": _c1_features(BASE_FEATURES), "blend": _c1_features(BLEND_FEATURES)}
+        else:
+            extra = "inj_diff" if args.candidate == "c3" else "eff_diff"
+            features = {"stats": [*BASE_FEATURES, extra], "blend": [*BLEND_FEATURES, extra]}
         candidate = pd.concat([_feature_season(frames, season, features) for season in ALL_SEASONS])
         predictions[f"p_{args.candidate}"] = candidate.to_numpy()
     elif args.candidate == "c2":
