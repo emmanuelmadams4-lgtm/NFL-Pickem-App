@@ -101,3 +101,8 @@ No edit, so no proof rerun.
 
 god lands. No push, PR or merge here. The full browser gate is PR CI (D71). Carried: the stale news badge needs
 `ingestion_runs` freshness in schemas and views. The deploy waits on the owner's yes (the D73 window ended 04:00 UTC).
+
+## LANDING (integrator, 2026-10-15)
+
+Pull request #42 from `lane/web`, pinned at `4ee29d4` (the integrator pushed that exact commit, so later lane commits are not in it). landscan: merge with main `cd9094b` clean, lane-guard OK, no name, secret or env-value hits. CI green on every job, full e2e included (D71). Merged as `0a6abda`. **Not deployed:** the standing deploy yes D73 ended at 04:00 UTC; it goes out with the next deploy the owner approves. **Carried:** the stale-news badge (needs `ingestion_runs` freshness in the API).
+
