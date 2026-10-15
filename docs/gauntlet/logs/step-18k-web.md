@@ -67,3 +67,20 @@ today: they guard what must not change.
 - Design Gauntlet: notice screenshots `after-{failed,noverdict}-{393,1280}.png`. A fresh design critic reviewed them
   (`evidence/reviews/design-1.md`): 1 MUST, the notice touches the next line when there is no simulation; 1 SHOULD,
   use the shared `Notice`. Both taken. Test first: C6 (`s18kw-red-2` fails on the class). WO2.
+- WO2 (`evidence/wo-2.md`, try 1): Ryan reported at 04:17 UTC. The diff touched only `simulation.tsx` and matched the
+  order. Typecheck 0. `s18kw-green-2` (fresh build of check18k and sim18j): **17 passed**. Committed `275c4bf`. Final
+  screenshots `final-*.png` show the warn heading, `rounded-ctl` corners and space under the notice.
+
+## 4. CLEANUP
+
+A scope-locked `/refactor` read of `simulation.tsx` on `275c4bf`. Result: **no change needed**.
+- The notice is now the shared `Notice`, which was itself a simplification: WO2 removed the hand-built box.
+- `CHECK_HEADINGS` and `CHECK_CAUSES` are two small lookups next to their single use.
+- An unknown cause falls back to its code, so missing stays visible.
+- The 18j parts of the file are untouched.
+
+No edit, so no proof rerun.
+
+## 5. VERIFICATION
+
+- Gate: typecheck 0; `s18kw-green-2` 17/17 (check18k 10, sim18j 7). The full suite runs on PR CI (D71).
