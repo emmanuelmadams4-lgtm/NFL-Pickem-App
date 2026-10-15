@@ -123,3 +123,7 @@ Not landed by lane web. Done report to god with HEAD; god opens the PR, CI runs 
 separate (HAG-75). Carried: Dwight L2 (`load_snapshots` reads every stored row, three times per game read), D1 (a
 non-finite expected value would pass the schema; not reachable), D2 (a bad stored run logs on every read); the win market
 counts a tie as a loss; prices at a line other than the simulator's are left out, not rated.
+
+## LANDING (integrator, 2026-10-15)
+
+Pull request #45 from `lane/web`, pinned at `9369203`. landscan: merge with main `521e8ad` clean, lane-guard OK (grant 04:58 UTC), no name, secret or env-value hits. Jev unavailable: integrator PASS on the critic and Dwight verdicts. Decisions 1 to 3 accepted (a tie counts as a loss for the win market, which can only understate value). CI green on every job, full e2e included (D71). Merged as `7462f47` at 05:24 UTC. **Not deployed:** goes out with the rest on the owner's next deploy yes (HAG-75). **Carried LOW:** L2 `load_snapshots` reads every stored row (3 times per game read); D1 a non-finite expected value would pass the schema (unreachable); D2 a bad stored run logs on every read.
