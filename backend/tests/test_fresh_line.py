@@ -299,3 +299,23 @@ def test_d3d_an_nflverse_only_line_move_keeps_todays_alert_rules(loaded, monkeyp
     after = _newest(loaded, game.game_id)
     assert after.id != before.id and after.pick == before.pick and "market_source" not in after.features
     assert [e.game_id for e in events] == [game.game_id]  # F4b: nflverse-only moves behave as today
+
+
+def test_d3e_a_non_line_pick_flip_with_a_small_move_is_still_alerted(loaded, monkeypatch):
+    from sqlalchemy import select
+
+    from nflpi.config import get_settings
+    from nflpi.models import Game
+    from nflpi.predictions import engine
+    from nflpi.predictions.model import LogitModel
+    from tests.conftest import CURRENT
+
+    monkeypatch.setattr(get_settings(), "alert_move_threshold", 0.99)  # the move rule cannot fire
+    games = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 4)).all()
+    game = min(games, key=lambda g: abs(_newest(loaded, g.game_id).home_win_prob - 0.5))  # the closest call
+    last = _newest(loaded, game.game_id)
+    mirrored = 1 - last.home_win_prob  # same confidence, so the same label: only the pick flips
+    monkeypatch.setattr(LogitModel, "predict_one", lambda self, row: mirrored)  # only this game is refreshed
+    events = engine.refresh_predictions(loaded, now=game.kickoff_utc - timedelta(hours=3), game_ids=[game.game_id])
+    assert _newest(loaded, game.game_id).pick != last.pick  # precondition: a stats-side change flipped the pick
+    assert [e.game_id for e in events] == [game.game_id]  # D3: non-line changes keep today's rules

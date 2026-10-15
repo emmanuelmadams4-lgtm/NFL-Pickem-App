@@ -145,3 +145,16 @@ Local: 21 pure passed (F4c, F2b, F8+ hold on today's code: test gaps, not defect
   only on the newest quote; L3 a sub-0.01 move near 50% keeps the old pick (F4 by design); L4 a `pregame_quotes` DB
   error fails the run (worker retries); L5 the last target is kickoff - 20 min, so the lock row's quote can be up to
   ~49 min old at kickoff; L6 NaN nflverse prob (= critic's); L7 unguarded `fromisoformat` on our own value.
+
+### WO3 (Ryan, try 1) `2dd1b53`
+Same-pick line-only alerts are decided after the loop (`weekly_old` before the run vs `weekly_new`, every chance the
+run writes); `line_only` also needs `market_source` on the new or previous row (M1); `LINE_KEYS` constant; `load_frame`
+row dict reindented. Committed by the coordinator (builder sandbox has a read-only `.git`). Coordinator rerun: 21 pure
+passed, sim 90 passed, ruff 0. Pushed to #47. Note: D3c and D3d were pushed with the fix, so CI never showed them red;
+their red is argued from the code read (first game's `new` held the other game's old chance; nflverse-only moves took
+the line-only path).
+
+### Dwight delta `2b8100c..2dd1b53`: FAIL, 1 HIGH (inbox fa8576)
+- H1: WO3 dropped `prev.pick != pick` from the non-line alert branch. A non-line change (stats, Elo, model version)
+  that flips a near-50% pick with a move under the threshold keeps the same label and now sends no alert. No test
+  covered it. → spec D3e: such a flip is alerted. Fix → WO4. M1, M2 closed.
