@@ -84,3 +84,18 @@ No edit, so no proof rerun.
 ## 5. VERIFICATION
 
 - Gate: typecheck 0; `s18kw-green-2` 17/17 (check18k 10, sim18j 7). The full suite runs on PR CI (D71).
+- Dwight (security) on `5d8046b`: **PASS**, no CRITICAL, HIGH or MEDIUM (`evidence/reviews/security-1.md`). It closes
+  his 18j advice A1. LOW A1 (a prototype-named cause code) and A2 (an unknown status) are not taken: both fail soft
+  and the server's values are closed.
+- **Fresh critic 1 on `5d8046b`: PASS** (`evidence/reviews/critic-1.md`): 17/17 on a fresh build, typecheck 0, no
+  CRITICAL, HIGH or MEDIUM. 4 LOWs carried (one is wording: "provider" covers any provider error).
+- Jev Job 4 (`decide.sh … review-18kw`, 04:21 UTC): "advisor, jev unavailable", so the call goes to god.
+- After PR #42 landed, origin/main `d1b8a07` was merged into lane/web as `af97fc0` (docs only; one merge base again).
+  Against origin/main: 8 files, the only code being `simulation.tsx` and `check18k.spec.ts`; lane-guard **OK**;
+  `gen:api` no drift; typecheck 0.
+
+## 6. LANDING
+
+god lands, as its own PR after #42. No push or PR here. PR CI is the full gate (D71). The deploy waits on the
+owner's yes, together with 18k server. Carried: the cause wording for "provider"; Dwight's A1 hardening
+(`Object.hasOwn`) if the cause set grows.
