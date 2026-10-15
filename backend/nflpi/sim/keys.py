@@ -1,11 +1,15 @@
 """Learn and apply final-margin key-number weights to simulated scores."""
 
+import logging
+
 import numpy as np
 
+log = logging.getLogger(__name__)
 KEY_MAX = 60
 KEY_ALPHA = 1.0  # chosen on 2012-2021 only by the keys-tune rule: step-18m-evidence/keys-tune.json
 # ponytail: cap learning draws so a large training window stays fast.
 KEY_TOTAL_DRAWS = 2_000_000
+TILT_STEPS = 50
 
 
 def key_weight(
@@ -18,7 +22,8 @@ def key_weight(
     target = np.array([margin.mean(), total.mean()])
     log_base = alpha * np.log(np.asarray(ratio)[np.minimum(np.abs(margin).astype(int), KEY_MAX)])
     tilt = np.zeros(2)
-    for _ in range(50):
+    delta = np.full(2, np.nan)
+    for _ in range(TILT_STEPS):
         z = log_base + tilt[0] * margin + tilt[1] * total
         weights = np.exp(z - z.max())
         weights /= weights.sum()
@@ -32,6 +37,10 @@ def key_weight(
             [weights @ (dm * dt), weights @ (dt * dt)],
         ])
         tilt -= np.linalg.solve(covariance + 1e-9 * np.eye(2), delta)
+    else:
+        log.warning("key weighting did not converge after %d steps (mean error %s); draws left unweighted",
+                    TILT_STEPS, delta)
+        return a, b
     idx = rng.choice(len(a), len(a), p=weights)
     return a[idx], b[idx]
 
