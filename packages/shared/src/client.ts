@@ -6,6 +6,7 @@ export type Week = S["WeekOut"];
 export type WeekSummary = S["WeekSummary"];
 export type GameSummary = S["GameSummary"];
 export type GameDetail = S["GameDetail"];
+export type News = S["NewsOut"];
 export type LiveOut = S["LiveOut"];
 export type LiveGameOut = S["LiveGameOut"];
 export type PasskeyList = S["PasskeyListOut"];
@@ -105,6 +106,7 @@ export function createClient(config: ClientConfig) {
     meta: () => call<Meta>("/meta"),
     week: (season: number, week: number) => call<Week>(`/weeks/${season}/${week}`),
     game: (gameId: string) => call<GameDetail>(`/games/${gameId}`),
+    news: (gameId: string) => call<News>(`/news?game_id=${encodeURIComponent(gameId)}`),
     live: () => call<LiveOut>("/live"),
     setPick: (gameId: string, team: string) =>
       call<Pick>(`/picks/${gameId}`, { method: "PUT", body: JSON.stringify({ team }) }),
@@ -149,6 +151,7 @@ export const keys = {
   meta: ["meta"] as const,
   week: (season: number, week: number) => ["week", season, week] as const,
   game: (gameId: string) => ["game", gameId] as const,
+  news: (gameId: string) => ["news", gameId] as const,
   live: ["live"] as const,
   performance: (season: number) => ["performance", season] as const,
   scorecard: (season: number) => ["scorecard", season] as const,

@@ -76,6 +76,15 @@ export function useGame(gameId: string | null) {
   });
 }
 
+export function useNews(gameId: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.news(gameId ?? ""),
+    queryFn: () => api.news(gameId as string),
+    enabled: !!gameId,
+  });
+}
+
 export function usePerformance(season: number) {
   const api = useApi();
   return useQuery({ queryKey: keys.performance(season), queryFn: () => api.performance(season) });
