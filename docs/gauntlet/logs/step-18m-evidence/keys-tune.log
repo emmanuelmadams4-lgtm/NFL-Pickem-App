@@ -1,0 +1,15 @@
+KEYS TUNE football_only: real 3/7 0.141/0.089
+  baseline   3/7 0.075/0.048 cover 0.2565 over 0.2568 CRPS 15.222
+  1.0        3/7 0.147/0.093 cover 0.2572 over 0.2569 CRPS 15.217
+  0.9        3/7 0.139/0.088 cover 0.2571 over 0.2568 CRPS 15.215
+  0.8        3/7 0.131/0.083 cover 0.2570 over 0.2569 CRPS 15.219
+  0.75       3/7 0.127/0.081 cover 0.2569 over 0.2570 CRPS 15.219
+  0.5        3/7 0.108/0.069 cover 0.2567 over 0.2567 CRPS 15.218
+KEYS TUNE market_informed: real 3/7 0.141/0.089
+  baseline   3/7 0.076/0.050 cover 0.2503 over 0.2502 CRPS 14.865
+  1.0        3/7 0.147/0.093 cover 0.2508 over 0.2501 CRPS 14.860
+  0.9        3/7 0.140/0.088 cover 0.2508 over 0.2502 CRPS 14.862
+  0.8        3/7 0.132/0.084 cover 0.2506 over 0.2501 CRPS 14.856
+  0.75       3/7 0.128/0.081 cover 0.2508 over 0.2503 CRPS 14.863
+  0.5        3/7 0.109/0.070 cover 0.2505 over 0.2503 CRPS 14.862
+alpha: 1.0 (largest alpha whose cover-Brier, over-Brier and CRPS paired-bootstrap 95% intervals versus paired_residual have a lower end at or below zero for both sources; 0.0 if none)

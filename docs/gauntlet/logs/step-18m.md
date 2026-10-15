@@ -77,3 +77,28 @@ keys-tune run and ONE keys-confirm run with their numbers in section 3; PR CI th
 
 **Red** (`--noconftest`, base `325f541`): 12 failed (K1-K7 ImportError / missing `key_ratio`; KB1-KB5 missing bench
 functions and record), 71 passed. K8 passes today (it guards speed once the ratio is learned).
+
+## 3. IMPLEMENTATION
+
+- WO1 (Ryan, try 1) `f439e5b`: `sim/keys.py`, `key_ratio`/`key_alpha` with defaults, `key_weighted`. Coordinator rerun:
+  82 passed (`--noconftest`), KB red as planned, ruff 0.
+- KB1 rule text corrected before any bench code (`e8d0720`, Ryan f6dd59): lower end of each interval at or below zero.
+- WO2 (Ryan, try 1 after re-issue) `a238966`: `pick_alpha`, `keys_tune`, `keys_confirm`, CLI. Rerun: 86 passed, KB5 red
+  until the tune record exists; ruff 0.
+- **Keys-tune run (ONCE, 2012-2021, 2,576 games, 10,000 simulations, 2,000 bootstrap resamples, 53 s CPU)** on public
+  nflverse `games.csv` filtered to rows before 2026-10-15 (sha256 `08a09c14…ab1cc63`): `step-18m-evidence/keys-tune.json`,
+  `keys-tune.log`. Real |margin| 3 / 7: 14.1 / 8.9 percent.
+
+  | source | variant | 3 / 7 | cover Brier | over Brier | CRPS | margin sd | 80% coverage (PIT / inclusive) |
+  |---|---|---|---|---|---|---|---|
+  | football_only | paired_residual | 7.5 / 4.8 | 0.2565 | 0.2568 | 15.222 | 13.74 | 81.7 / 82.8 |
+  | football_only | alpha 1.0 | 14.7 / 9.3 | 0.2572 | 0.2569 | 15.217 | 13.71 | 81.7 / 83.0 |
+  | market_informed | paired_residual | 7.6 / 5.0 | 0.2503 | 0.2502 | 14.865 | 13.47 | 81.8 / 83.0 |
+  | market_informed | alpha 1.0 | 14.7 / 9.3 | 0.2508 | 0.2501 | 14.860 | 13.64 | 82.5 / 83.7 |
+
+  Intervals for alpha 1.0 (difference, 95 percent): football cover +0.0007 (-0.0002..+0.0015), over +0.0001
+  (-0.0001..+0.0003), CRPS -0.005 (-0.012..+0.002); market cover +0.0005 (-0.0004..+0.0013), over -0.0001
+  (-0.0003..+0.0001), CRPS -0.005 (-0.012..+0.003). **Rule picks alpha = 1.0.** Honest reading: cover Brier is slightly
+  worse in the point estimate and the football-only interval only just includes zero (the spike, on other seeds, put it
+  just above zero); "not significantly worse", not "better". Smaller alphas trade 3/7 accuracy for a smaller cover cost
+  (0.75: 12.7 / 8.1, cover +0.0004).
