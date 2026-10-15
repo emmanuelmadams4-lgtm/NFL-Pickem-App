@@ -186,3 +186,26 @@ committed ones (a reproduction, not a new scoring: the same frozen code paths on
 - WO5 (Ryan, try 1) `fdc71b3`: `_load_games`, `_read_injuries`, `_read_plays`, `_add_candidate`, `_report`; longest
   function 35 lines. Coordinator rerun: 17 passed, ruff 0; baseline, c1, c2, c3, c4 rebuilt into the scratchpad and
   `cmp` byte-identical to the committed evidence. Cleanup done.
+
+## 5. VERIFICATION
+
+- Fresh critic (python-reviewer, no build transcript) on `6dba0c9`: **PASS**, LOW only. Its gate: 17 passed; ruff
+  blocked by its sandbox (coordinator: 0); it rebuilt baseline, c2, c3, c4 and `cmp` byte-identical to the evidence.
+  It confirmed no leakage in c1/c2/c4 (tests pin it), D72 guarded, the ship rule exact, and the pre-registration commits
+  land before each result (c2 `fc2de00`, c3 `4229522`, c4 `0310591`), noting c2-c4 were written after earlier results
+  were known (allowed; said here). LOW: `_summary` has no D72 guard (unreachable: seasons stop at 2025); c3 trains on
+  2002-2008 rows with `inj_diff` 0 (injury files start 2009), a small handicap that does not change the verdict; no
+  length assert on the candidate column assignment; c2's 2012 guard rows equal the blend; B3's points assertion
+  recomputes through `points_week`.
+- Coordinator on `6dba0c9`: 17 passed, ruff 0, five evidence JSONs reproduced byte-identical (after WO5).
+- Security: Dwight light read **PASS** (inbox b97251). LOW: B1 the JSON output overwrites an existing file (earlier
+  benches use exclusive create); B2 `allow_nan=False` missing; B3 play-by-play held in memory.
+- lane-guard `check ... web origin/main` (`cde9f14`): OK. Jev Job 4: `decide.sh` "advisor, jev unavailable": god's call.
+- Full suite: PR CI on push (D71); not run here (no DB on the Mac; the bench tests need none).
+
+## 6. LANDING
+
+Not landed by lane web. Done report to god with HEAD; god pushes `lane/web-19b`, opens the PR, CI runs the full suite,
+god merges. Bench code only: nothing in the app changes and nothing is deployed. Verdict: none of c1-c4 ships; the live
+blend stays. Carried: the LOWs above; the 14c points script still calls `bt._elo_frames` (outside this grant); AUDIT A9
+market accuracy 67.80% vs this bench's 67.53% on 2022-2025.
