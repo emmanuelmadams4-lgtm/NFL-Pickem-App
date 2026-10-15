@@ -60,6 +60,9 @@ def choose_line(
         and previous.prob is not None
         and chosen.prob is not None
         and (chosen.source != "nflverse" or previous.source != "nflverse")
+        and (previous.source == "nflverse" or (
+            previous.seen_at is not None and now - previous.seen_at <= FRESH_MAX_AGE
+        ))
         and abs(chosen.prob - previous.prob) < CHURN_GAP
     ):
         return previous, None

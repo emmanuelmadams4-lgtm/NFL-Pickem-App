@@ -475,7 +475,7 @@ def test_k3_key_weight_keeps_the_mean_margin_and_total_of_its_input_draws():
     a, b = rng.poisson(26, 200_000), rng.poisson(17, 200_000)
     ratio = np.ones(keys.KEY_MAX + 1)
     ratio[[3, 7, 10]] = [3.0, 2.0, 1.5]
-    wa, wb = keys.key_weight(a, b, np.random.default_rng(1), tuple(ratio), 1.0)
+    wa, wb, _ = keys.key_weight(a, b, np.random.default_rng(1), tuple(ratio), 1.0)
     assert len(wa) == len(a)
     assert (wa - wb).mean() == pytest.approx((a - b).mean(), abs=0.1)
     assert (wa + wb).mean() == pytest.approx((a + b).mean(), abs=0.1)
@@ -547,15 +547,16 @@ def test_k9_key_weighted_with_nothing_to_weight_is_labelled_paired_residual():
 def test_k10_a_tilt_that_does_not_converge_warns_and_returns_the_draws_unchanged(monkeypatch, caplog):
     # Dwight M2: never resample with weights whose means have drifted
     keys = _keys()
-    monkeypatch.setattr(keys, "TILT_STEPS", 0)
+    monkeypatch.setattr(keys, "_warned", False)
     rng = np.random.default_rng(4)
     a, b = rng.poisson(26, 5000), rng.poisson(17, 5000)
     ratio = np.ones(keys.KEY_MAX + 1)
-    ratio[3] = 3.0
+    ratio[3] = np.nan
     with caplog.at_level("WARNING"):
-        wa, wb = keys.key_weight(a, b, np.random.default_rng(1), tuple(ratio), 1.0)
+        wa, wb, weighted = keys.key_weight(a, b, np.random.default_rng(1), tuple(ratio), 1.0)
     np.testing.assert_array_equal(wa, a)
     np.testing.assert_array_equal(wb, b)
+    assert not weighted
     assert "did not converge" in caplog.text
 
 

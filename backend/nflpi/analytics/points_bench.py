@@ -205,6 +205,7 @@ def mix_c2(preds: pd.DataFrame) -> pd.Series:
 
 
 def _summary(frame: pd.DataFrame, column: str, seasons: range) -> dict:
+    report.guard_scored(frame, list(seasons))
     scored = frame[frame["season"].isin(seasons)].copy()
     scored = scored[np.isfinite(scored[column].to_numpy(float))]
     weeks = points_week(scored, column)
@@ -280,6 +281,7 @@ def _add_candidate(
             extra = "inj_diff" if name == "c3" else "eff_diff"
             features = {"stats": [*BASE_FEATURES, extra], "blend": [*BLEND_FEATURES, extra]}
         candidate = pd.concat([_feature_season(frames, season, features) for season in ALL_SEASONS])
+        assert len(candidate) == len(predictions)
         predictions[f"p_{name}"] = candidate.to_numpy()
     elif name == "c2":
         predictions["p_c2"] = mix_c2(predictions)
@@ -314,6 +316,12 @@ def _report(predictions: pd.DataFrame, candidate: str | None) -> dict:
     return output
 
 
+def write_report(path: Path, output: dict) -> None:
+    content = json.dumps(output, indent=2, allow_nan=False) + "\n"
+    with path.open("x", encoding="utf-8") as handle:
+        handle.write(content)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("games_csv", type=Path)
@@ -326,7 +334,7 @@ def main() -> None:
     frames = backtest.elo_frames(games)
     predictions = _add_candidate(args.candidate, games, frames, args.injuries, args.pbp, parser)
     output = _report(predictions, args.candidate)
-    args.out_json.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
+    write_report(args.out_json, output)
 
 
 if __name__ == "__main__":

@@ -38,6 +38,7 @@ from nflpi.predictions.market import novig_home_prob
 from nflpi.predictions.model import LogitModel
 from nflpi.predictions.scores import STATS_FEATURES, ScoreModel, add_score_features
 from nflpi.sim import DEFAULT_DISTRIBUTION, SimParams, TeamFeatures, simulate_game
+from nflpi.sim.keys import KEY_MAX
 
 MODEL_KIND = "blend-elo-qb"
 log = logging.getLogger(__name__)
@@ -78,7 +79,12 @@ def load_frame(session: Session, now: datetime | None = None) -> pd.DataFrame:
     )
     games = list(session.execute(q))
     upcoming = [g.game_id for g, _ in games if g.kickoff_utc > now]
-    quotes = fresh_line.pregame_quotes(session, upcoming, now)
+    try:
+        with session.begin_nested():
+            quotes = fresh_line.pregame_quotes(session, upcoming, now)
+    except Exception:
+        log.warning("pregame quotes could not be read; using nflverse lines", exc_info=True)
+        quotes = {}
     previous: dict[str, Prediction] = {}
     if upcoming:
         latest_prediction = (
@@ -126,9 +132,13 @@ def load_frame(session: Session, now: datetime | None = None) -> pd.DataFrame:
             old = previous.get(g.game_id)
             old_features = old.features if old else {}
             old_seen = old_features.get("market_seen_at")
+            try:
+                seen_at = datetime.fromisoformat(old_seen) if old_seen else None
+            except (ValueError, TypeError):
+                seen_at = None
             prior = fresh_line.Line(
                 old_features.get("market_prob"), old_features.get("market_source", "nflverse"),
-                datetime.fromisoformat(old_seen) if old_seen else None,
+                seen_at,
             ) if old else None
             chosen, refused = fresh_line.choose_line(
                 nflverse, quotes.get(g.game_id, []), prior, now=now, kickoff=g.kickoff_utc,
@@ -280,9 +290,20 @@ def save_sim_params(session: Session, season: int, params: SimParams) -> None:
 def load_sim_params(session: Session, season: int) -> SimParams | None:
     row = session.get(AppSetting, f"sim_params_{season}")
     if row is None:
+        log.warning("no stored simulator parameters for season %s", season)
         return None
     try:
-        return SimParams(**{k: np.array(v, dtype=np.int64) if k in _SIM_ARRAYS else v for k, v in row.value.items()})
+        data = {k: np.array(v, dtype=np.int64) if k in _SIM_ARRAYS else v for k, v in row.value.items()}
+        ratio = data.get("key_ratio", ())
+        if (not isinstance(ratio, (list, tuple)) or
+                (ratio and (len(ratio) != KEY_MAX + 1 or not all(
+                    isinstance(v, (int, float)) and not isinstance(v, bool) and np.isfinite(v) and v > 0
+                    for v in ratio
+                )))):
+            log.warning("stored key_ratio for season %s is invalid; weighting disabled", season)
+            ratio = ()
+        data["key_ratio"] = tuple(ratio)
+        return SimParams(**data)
     except Exception:  # the simulator is optional: a bad stored row means no simulation, never no predictions
         log.exception("stored simulator parameters for season %s are unusable", season)
         return None
@@ -569,7 +590,7 @@ def refresh_predictions(
             if line_only and prev.pick == pick:
                 deferred_line_events.append((week_key, event))
             elif (
-                prev.pick != pick or line_only or moved >= settings.alert_move_threshold
+                prev.pick != pick or moved >= settings.alert_move_threshold
                 or old_label != new_label or qb_team
             ):
                 events.append(event)

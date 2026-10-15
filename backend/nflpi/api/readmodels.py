@@ -39,6 +39,7 @@ PICK_ORDER_NOTE = "Both pick modes use the same order: win chance, then game id"
 # Stored simulation chances are rounded to four decimal places.
 VALUE_PROB_SUM_TOLERANCE = 0.001
 log = logging.getLogger(__name__)
+_warned_ratings: set[tuple[str, str, str]] = set()
 
 
 def _clean_star_text(value: str | None) -> str | None:
@@ -187,8 +188,15 @@ def summaries(session: Session, games: list[Game], now: datetime) -> list[s.Game
     teams = {t.abbr: t for t in session.scalars(select(Team))}
     names = dict(session.execute(select(ModelVersion.id, ModelVersion.name)).all())
     picks = {p.game_id: p for p in session.scalars(select(UserPick).where(UserPick.game_id.in_(ids)))}
-    sheets = {week: sheet.compute_week(session, games[0].season, week, now) for week in {g.week for g in games}}
-    recommendations = sheet.recommendations(session, games)
+    sheet_games = session.scalars(select(Game).where(
+        Game.season == games[0].season, Game.week.in_({g.week for g in games}),
+    )).all()
+    recommendations = sheet.recommendations(session, sheet_games)
+    sheets = {week: sheet.compute_week(
+        session, games[0].season, week, now,
+        preds={g.game_id: recommendations[g.game_id] for g in sheet_games
+               if g.week == week and g.game_id in recommendations},
+    ) for week in {g.week for g in games}}
     wx = _latest_by_game(session, WeatherForecast, ids)
     season = games[0].season
     involved = {g.home_team for g in games} | {g.away_team for g in games}
@@ -378,7 +386,11 @@ def _value_ratings(session: Session, g: Game, last: Prediction | None, now: date
                     parts = tuple(part / total for part in parts)
                 rating = value.rate_price(snapshot, SettlementProbs(*parts), now=now)
             except (BettingError, ValueError, TypeError):
-                log.warning("value rating skipped for %s %s %s", g.game_id, market, snapshot.selection, exc_info=True)
+                key = (g.game_id, market, snapshot.selection)
+                (log.debug if key in _warned_ratings else log.warning)(
+                    "value rating skipped for %s %s %s", *key, exc_info=True,
+                )
+                _warned_ratings.add(key)
                 continue
             ratings.append(s.ValueRatingOut(
                 market_type=rating.market_type, selection=rating.selection, sportsbook=rating.sportsbook,

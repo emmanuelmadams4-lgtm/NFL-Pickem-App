@@ -63,12 +63,14 @@ def recommendations(session: Session, games: list[Game]) -> dict[str, Prediction
 
 
 def compute_week(
-    session: Session, season: int, week: int, now: datetime, writing: frozenset[str] = frozenset()
+    session: Session, season: int, week: int, now: datetime, writing: frozenset[str] = frozenset(),
+    preds: dict[str, Prediction] | None = None,
 ) -> dict[str, dict]:
     games = session.scalars(select(Game).where(Game.season == season, Game.week == week)
                             .order_by(Game.kickoff_utc, Game.game_id)).all()
     ids = [g.game_id for g in games]
-    preds = recommendations(session, games)
+    if preds is None:
+        preds = recommendations(session, games)
     entries = {e.game_id: e for e in session.scalars(select(SheetEntry).where(SheetEntry.game_id.in_(ids)))}
     picks = {p.game_id: p for p in session.scalars(select(UserPick).where(UserPick.game_id.in_(ids)))}
     points = {p.game_id: p for p in session.scalars(select(PickPoint).where(PickPoint.game_id.in_(ids)))}
