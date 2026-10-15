@@ -3,7 +3,7 @@
 import numpy as np
 
 KEY_MAX = 60
-KEY_ALPHA = 0.0  # Placeholder until the keys-tune run chooses an alpha.
+KEY_ALPHA = 1.0  # chosen on 2012-2021 only by the keys-tune rule: step-18m-evidence/keys-tune.json
 # ponytail: cap learning draws so a large training window stays fast.
 KEY_TOTAL_DRAWS = 2_000_000
 
