@@ -4,7 +4,7 @@ import numpy as np
 
 from nflpi.sim.params import SimParams
 
-DISTRIBUTIONS = ("poisson", "paired_residual", "bivariate_normal", "shared_gamma_poisson")
+DISTRIBUTIONS = ("poisson", "paired_residual", "bivariate_normal", "shared_gamma_poisson", "key_weighted")
 DEFAULT_DISTRIBUTION = "paired_residual"  # chosen on 2012-2021 only: step-18c-evidence/tune-result.json
 
 
@@ -37,6 +37,7 @@ def _shared_gamma_poisson(mu_a: float, mu_b: float, n: int, rng: np.random.Gener
 
 _SAMPLERS = {
     "paired_residual": _paired_residual,
+    "key_weighted": _paired_residual,
     "bivariate_normal": _bivariate_normal,
     "shared_gamma_poisson": _shared_gamma_poisson,
 }

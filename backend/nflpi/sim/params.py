@@ -1,9 +1,11 @@
 """Simulator inputs and the parameters learned from past games (walk-forward: the caller passes only past rows)."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import isfinite
 
 import numpy as np
+
+from nflpi.sim import keys
 
 MIN_TRAIN_GAMES = 200
 MIN_ERA_OT_GAMES = 30
@@ -33,6 +35,8 @@ class SimParams:
     ot_era: str
     ot_era_fallback: bool
     n_train: int
+    key_ratio: tuple[float, ...] = ()
+    key_alpha: float = 0.0
 
 
 def ot_era(season: int) -> str:
@@ -105,8 +109,10 @@ def learn_params(
     v_b = np.mean(r_b**2 - mu_b) / np.mean(mu_b**2)
     v = float(max((v_a + v_b) / 2, 1e-6))
     v_shared = float(np.clip(np.mean(r_a * r_b) / np.mean(mu_a * mu_b), 0.0, v))
-    return SimParams(
+    params = SimParams(
         residual_a=pool_a[order], residual_b=pool_b[order], phi_a=phi_a, phi_b=phi_b, rho=rho, v=v,
         v_shared=v_shared, ot_tie_frac=tie_frac, ot_increments=increments, ot_era=ot_era(target_season),
         ot_era_fallback=fallback, n_train=n,
     )
+    return replace(params, key_ratio=keys.learn_key_ratio(mu_a, mu_b, sa, sb, params, target_season),
+                   key_alpha=keys.KEY_ALPHA)
