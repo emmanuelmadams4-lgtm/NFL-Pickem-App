@@ -196,3 +196,10 @@ by churn; L2 sanity only on the newest quote; L3 sub-0.01 move near 50% keeps th
 error fails the run; L5 the lock row's quote can be ~49 min old at kickoff; L6 NaN nflverse prob; L7 unguarded
 `fromisoformat`; `market_kind` still names the snapshot; spread/total stay nflverse; same-source same-time ties by read
 order; the `latest_week_prediction` subquery groups every stored prediction.
+
+## LANDING (integrator, 2026-10-15)
+
+- Landing scan on `0ab8b15`: merge clean against `53e45ff`, lane-guard OK, no real names, `.env` values, host names or key patterns in the added lines.
+- PR #47 marked ready; CI on head `0ab8b15` all green (backend, web, e2e, docker on both runs).
+- Merged as `2a3d835` with `--match-head-commit`. Review call (Jev unavailable): PASS on critic 2 PASS plus Dwight PASS with no open CRITICAL, HIGH or MEDIUM.
+- Not deployed. Owner option still open: a minimum gap before a points-rank swap alerts.
