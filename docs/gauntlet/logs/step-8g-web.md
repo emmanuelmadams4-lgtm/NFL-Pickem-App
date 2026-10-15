@@ -69,3 +69,26 @@ N4 the real server checks before the page passed (`/api/news` 200, `items: []`).
 - Design Gauntlet: after-screenshots at 393 and 1280 (`~/.claude/plans/nfl-pickem-lanes-logs/step-8g-web/after-*`). A fresh
   design critic reviewed them; report and triage in `evidence/reviews/design-1.md`. 1 MUST (link colour) and 2 SHOULDs
   taken. Tests first: `s8g-red-2`, N1 fails on the link class. WO2.
+- WO2 (`evidence/wo-2.md`, try 1): Ryan reported at 04:02 UTC. The diff touched only `news.tsx` and matched the
+  order. Typecheck 0. `s8g-green-2` (fresh build of news8g and phone-layout): **18 passed**.
+
+## 4. CLEANUP
+
+A scope-locked `/refactor` read of `news.tsx`, the `useNews` hook, the client and key lines, and the two
+`game-view.tsx` lines. Result: **no change needed**, for these reasons:
+- The component is one small function using the shared `Section`, `Chip`, `ErrorState` and `Skeleton`, and
+  `ago` from `@nflpi/shared`.
+- `useNews` mirrors `useGame`.
+- The client method and key mirror `game`.
+- Nothing is dead or unused (typecheck 0).
+- `key={index}` is fine: the list is replaced whole on every answer.
+- The two `item.published_at &&` guards could share one fragment. That saves a line and costs clarity; not taken.
+
+No edit, so no proof rerun.
+
+## 5. VERIFICATION
+
+- Dwight (security) on `91da4a9`: **PASS**, no CRITICAL, HIGH or MEDIUM. The contract's screen notes L5, L6, L10 and
+  N1 are all met (`evidence/reviews/security-1.md`). WO2 after it changes only a class, an sr-only span and a
+  separator.
+- Gate on the WO2 code: typecheck 0; `s8g-green-2` 18/18 (news8g 5, phone-layout 13). The full suite runs on PR CI (D71).

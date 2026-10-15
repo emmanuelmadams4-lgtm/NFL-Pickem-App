@@ -24,15 +24,17 @@ export function NewsSection({ game }: { game: GameDetail }) {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block break-words text-sm font-medium text-text underline underline-offset-2"
+                  className="block break-words text-sm font-medium text-accent-text underline underline-offset-2"
                 >
                   {item.title}
+                  <span className="sr-only"> (opens in new tab)</span>
                 </a>
               ) : (
                 <p className="break-words text-sm font-medium text-text">{item.title}</p>
               )}
               <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-subtle">
                 <span>{item.source}</span>
+                {item.published_at && <span aria-hidden>·</span>}
                 {item.published_at && <span>{ago(item.published_at)}</span>}
               </div>
               {item.tags.length > 0 && (
