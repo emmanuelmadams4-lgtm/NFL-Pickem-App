@@ -56,6 +56,9 @@ def learn_key_ratio(
     order = np.lexsort((score_b, score_a, mu_b, mu_a))
     mu_a, mu_b = np.asarray(mu_a)[order], np.asarray(mu_b)[order]
     score_a, score_b = np.asarray(score_a)[order], np.asarray(score_b)[order]
+    if not (np.isfinite(score_a).all() and np.isfinite(score_b).all()):
+        raise ValueError("final scores must be finite")
+    real_margins = np.rint(np.abs(score_a - score_b)).astype(np.int64)
     n_rows = len(mu_a)
     draws_per_row = max(1, KEY_TOTAL_DRAWS // n_rows)
     n_draws = n_rows * draws_per_row
@@ -64,5 +67,5 @@ def learn_key_ratio(
     reg_a, reg_b = sample_regulation("paired_residual", a_mu, b_mu, n_draws, rng, params)
     final_a, final_b = resolve_overtime(reg_a, reg_b, rng, params, False)
     sim = np.bincount(np.minimum(np.abs(final_a - final_b), KEY_MAX), minlength=KEY_MAX + 1) / draws_per_row
-    real = np.bincount(np.minimum(np.abs(score_a - score_b), KEY_MAX), minlength=KEY_MAX + 1)
+    real = np.bincount(np.minimum(real_margins, KEY_MAX), minlength=KEY_MAX + 1)
     return tuple(float(x) for x in (real + 0.5) / (sim + 0.5))
