@@ -80,3 +80,29 @@ Gate: `uv run pytest tests/test_value_api.py tests/test_value.py`, `uvx ruff che
 **Red.** Backend: 9 failed (`'GameDetail' object has no attribute 'value_ratings'`, A7 `KeyError`). Browser
 (`v18l-red`): the build stops on `ValueRatingOut` missing from the wire types (expected until `gen:api`), and against
 the last build 7 of 7 fail on `#value` not found.
+
+## 3. IMPLEMENTATION
+
+- WO1 (Ryan, try 1) `3f6cde9`: schemas + readmodels fill, gen:api, `value.tsx`, Value tab. Coordinator rerun: pytest
+  145 passed, ruff 0, typecheck 0, browser `v18l-g1` 24/24 (value18l 7, sim18j, check18k).
+- Coordinator finding → red A8 `a8935e3` (corrected `c8af484`) → WO2 (Ryan, try 1 after re-issue) `c308fa5`: rescale within
+  0.001, else skip; per-rating guard with a warning. pytest 149 passed, ruff 0.
+- Design critic 1 (`reviews/design-1.md`): 3 MUST (rows not cards, status chip, disclaimer once) → WO3.
+- Dwight: 3f6cde9 PASS (V1 MEDIUM = A8, L1 empty text, L2 load_snapshots reads all rows, L3 Object.hasOwn); WO2 delta
+  PASS, V1 closed; D1 LOW (NaN expected value would pass the schema; not reachable with valid parts) and D2 LOW (warning on
+  every read) carried. L1 and L3 go in WO3; L2 carried to god.
+- WO3 (Ryan, try 1): `value.tsx` rows with hairlines, status chip, disclaimer once as the section note (shown when there
+  are ratings), reasons before expected value, aria-hidden dots, `Object.hasOwn`, honest empty text. Coordinator rerun:
+  typecheck 0, browser `v18l-g2` 24/24. Screens: `~/.claude/plans/nfl-pickem-lanes-logs/step-18l/after-*.png`
+  (before: `before/`). All three design MUSTs met; SHOULD "capitalise reasons" skipped (tests pin the words).
+
+## 4. CLEANUP
+
+Scope-locked `/refactor` read of the step's diff (`git diff 521e8ad -- backend/nflpi/api apps/web/components/game`):
+- `_value_ratings` (readmodels.py): one loop over three markets, ~45 lines; splitting it per market would add three
+  helpers for one caller. The `chance is None` check on the non-null `home_win_prob` column is dead but harmless
+  (a NOT NULL column); left, LOW. No change.
+- `value.tsx` (~75 lines): `signed` duplicates the 4-line helper in `simulation.tsx`; a shared export would touch a
+  second file for two callers (ponytail). `break-words` on both `li` and the title `p` is redundant but harmless. No change.
+- Design record: `design.md` gets no durable change (the section reuses Section, Chip, divide-y rows as News does).
+Result: no change needed; proof unchanged (`v18l-g2`).
