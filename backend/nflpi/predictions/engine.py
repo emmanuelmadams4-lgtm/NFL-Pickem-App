@@ -80,7 +80,8 @@ def load_frame(session: Session, now: datetime | None = None) -> pd.DataFrame:
     games = list(session.execute(q))
     upcoming = [g.game_id for g, _ in games if g.kickoff_utc > now]
     try:
-        quotes = fresh_line.pregame_quotes(session, upcoming, now)
+        with session.begin_nested():
+            quotes = fresh_line.pregame_quotes(session, upcoming, now)
     except Exception:
         log.warning("pregame quotes could not be read; using nflverse lines", exc_info=True)
         quotes = {}
