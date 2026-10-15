@@ -128,6 +128,27 @@ def _c1_season(frames: dict, season: int) -> pd.Series:
     return result
 
 
+def mix_c2(preds: pd.DataFrame) -> pd.Series:
+    """Fit a model/market mix using only earlier out-of-sample seasons."""
+    result = preds["p_blend"].copy()
+    columns = ("c2_market_logit", "c2_stats_logit")
+    market = preds["p_market"].to_numpy(float)
+    stats = preds["p_logistic"].to_numpy(float)
+    has_inputs = np.isfinite(market) & np.isfinite(stats)
+    frame = preds.copy()
+    for column, chances in zip(columns, (market, stats), strict=True):
+        clipped = np.clip(chances, 0.01, 0.99)
+        frame[column] = np.log(clipped / (1 - clipped))
+    for season in sorted(preds["season"].unique()):
+        train = frame[(frame["season"] >= 2012) & (frame["season"] < season)
+                      & has_inputs & np.isfinite(frame["home_win"].to_numpy(float))]
+        test = frame[(frame["season"] == season) & has_inputs]
+        if train["home_win"].nunique() < 2 or test.empty:
+            continue
+        result.loc[test.index] = LogitModel.fit(train, list(columns)).predict(test)
+    return result
+
+
 def _summary(frame: pd.DataFrame, column: str, seasons: range) -> dict:
     scored = frame[frame["season"].isin(seasons)].copy()
     scored = scored[np.isfinite(scored[column].to_numpy(float))]
@@ -146,7 +167,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("games_csv", type=Path)
     parser.add_argument("out_json", type=Path)
-    parser.add_argument("candidate", nargs="?", choices=["c1"])
+    parser.add_argument("candidate", nargs="?", choices=["c1", "c2"])
     args = parser.parse_args()
 
     with args.games_csv.open(newline="", encoding="utf-8") as handle:
@@ -163,6 +184,8 @@ def main() -> None:
     if args.candidate == "c1":
         c1 = pd.concat([_c1_season(frames, season) for season in ALL_SEASONS])
         predictions["p_c1"] = c1.to_numpy()
+    elif args.candidate == "c2":
+        predictions["p_c2"] = mix_c2(predictions)
 
     windows = {"test": TEST_SEASONS, "guard": GUARD_SEASONS}
     output = {"windows": {}}
@@ -176,14 +199,17 @@ def main() -> None:
                 "stats_vs_blend": compare(predictions, "p_logistic", "p_blend", seasons),
             },
         }
-        if args.candidate == "c1":
-            result["models"]["c1"] = _summary(predictions, "p_c1", seasons)
-            result["comparisons"]["c1_vs_blend"] = compare(predictions, "p_c1", "p_blend", seasons)
+        if args.candidate:
+            result["models"][args.candidate] = _summary(predictions, f"p_{args.candidate}", seasons)
+            result["comparisons"][f"{args.candidate}_vs_blend"] = compare(
+                predictions, f"p_{args.candidate}", "p_blend", seasons,
+            )
         output["windows"][name] = result
-    if args.candidate == "c1":
+    if args.candidate:
+        comparison = f"{args.candidate}_vs_blend"
         output["decision"] = decide(
-            output["windows"]["test"]["comparisons"]["c1_vs_blend"],
-            output["windows"]["guard"]["comparisons"]["c1_vs_blend"],
+            output["windows"]["test"]["comparisons"][comparison],
+            output["windows"]["guard"]["comparisons"][comparison],
         )
     args.out_json.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
 
