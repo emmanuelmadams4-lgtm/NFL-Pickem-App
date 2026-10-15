@@ -13,6 +13,7 @@ import { Recommendation } from "@/components/game/recommendation";
 import { Factors } from "@/components/game/factors";
 import { TeamCompare } from "@/components/game/team-compare";
 import { Injuries } from "@/components/game/injuries";
+import { NewsSection } from "@/components/game/news";
 import { Schedule } from "@/components/game/schedule";
 import { MarketSection } from "@/components/game/market";
 import { SimulationSection } from "@/components/game/simulation";
@@ -25,6 +26,7 @@ const SECTIONS = [
   { id: "factors", label: "Factors" },
   { id: "teams", label: "Teams" },
   { id: "injuries", label: "Injuries" },
+  { id: "news", label: "News" },
   { id: "conditions", label: "Conditions" },
   { id: "market", label: "Market" },
   { id: "simulator", label: "Simulator" },
@@ -183,6 +185,7 @@ export function GameView() {
           <Factors game={game} />
           <TeamCompare game={game} />
           <Injuries game={game} />
+          <NewsSection game={game} />
           <Schedule game={game} />
           <MarketSection game={game} />
           <SimulationSection game={game} />
