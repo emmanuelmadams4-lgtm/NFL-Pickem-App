@@ -129,3 +129,18 @@ No edits, so no proof rerun needed; CI on `0c39030` stands.
 - **M1 route:** test tightened first (`6d0c481`: the patched read runs a real bad SELECT). **Red (CI run 38780658185):**
   `1 failed, 2451 passed` — `InFailedSqlTransaction`, the intended reason. **WO3** (Ryan): `with
   session.begin_nested():` around the read, nothing else → `9097b1c`. Proof (coordinator): 14 pure passed, ruff clean.
+  **Green (CI, `8fd6179`, runs 38781978442 / 38781967328):** backend `2452 passed, 1 skipped` (the tightened L4 test
+  passes on Postgres), ruff "All checks passed!", docker, web, e2e green.
+- **Cleanup after WO3:** WO3 is one `with` line plus one indent; the CLEANUP note on the broad `except` already covers
+  this read. No change needed.
+- **Dwight** on `a400fc2..8fd6179`: **PASS**, M1 closed; L1-L7 agreed as known LOWs.
+- **Fresh critic 2** (ecc:code-reviewer, no transcript) on `8fd6179`: **PASS**. Gate rerun: 14 pure, 111, 21 passed.
+  Savepoint correct (failure rolls back only the savepoint; outer transaction stays usable); the test exercises the
+  real aborted-transaction path. LOWs: cite the green CI for WO3 and say whether WO3 needs cleanup (both done above).
+- **Jev Job 4:** `decide.sh` → advisor (Jev unavailable); god judges.
+
+## 6. LANDING
+
+lane-guard (`web`, origin/main): 1 problem, `backend/nflpi/predictions/market.py` owned by lane modelc (the
+L-19a-L6 one-line NaN guard god put in scope, f555db); seam for god. Not merged by the coordinator. Draft PR #49 (`lane/web-lows`, not for merge) carries the HEAD; god lands.
+Merged: pending god. Deployed: nothing.
