@@ -57,6 +57,9 @@ total), `selection`, `sportsbook`, `line`, `price`, `observed_at`, `status` (RAT
 - A5 no simulation: only the win market is rated.
 - A6 empty list with no prediction, after kickoff, or with no prices.
 - A7 `GET /api/games/{id}` serves the list.
+- A8 (added after WO1, coordinator finding: the engine stores simulator chances rounded to 4 places, so a set can sum
+  to 0.9999 and `SettlementProbs` raised, a 500 for the whole game page): a set within 0.001 of 1 is scaled to sum to 1
+  and rated; a set further off, or with a value outside [0, 1], leaves that price out. The game reply never fails.
 
 Web (`#value`, title "Value", a "Value" section tab after Simulator):
 - W1 the line "not yet shown to beat the market"; per price: market (Win, Spread, Total), side, price (+120), book,

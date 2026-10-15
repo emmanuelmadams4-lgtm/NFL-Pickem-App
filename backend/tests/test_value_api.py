@@ -125,3 +125,17 @@ def test_a7_game_route_serves_the_ratings(session, at_now, client):
     assert {(r["market_type"], r["selection"], r["status"]) for r in body["value_ratings"]} == {
         ("moneyline", "home", "UNRATED"), ("moneyline", "away", "NO_BET"),
     }
+
+
+@pytest.mark.parametrize(("cover", "rated"), [(0.5487, True), (0.5513, True), (0.45, False), (-0.1, False)])
+def test_a8_stored_chances_rounded_or_broken_never_fail_the_game_reply(session, at_now, cover, rated):
+    # the engine stores simulator chances rounded to 4 places, so a set may sum to 0.9999 or 1.0001
+    seed(session, sim=SIM | {"home_cover": cover})
+    prices(session, [("moneyline", "home", None, 120), ("moneyline", "away", None, -140),
+                     ("spread", "home", -3.5, 110), ("spread", "away", -3.5, -130)])
+    got = ratings(session)
+    assert ("moneyline", "home") in got
+    assert (("spread", "home") in got) is rated
+    if rated:
+        total = cover + 0.03 + 0.42
+        assert got[("spread", "home")].expected_value == pytest.approx(cover / total * 2.1 + 0.03 / total - 1)
