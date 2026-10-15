@@ -80,3 +80,10 @@ Choice: centred pool. It removes the double count exactly in `learn_params` alon
 Knock-on (for the integrator): `report --simulate` compares a fresh re-run with the stored 18c `confirm-result.json` at tolerance 1e-9, so after this lands it will report "does not reproduce" for the paired_residual variants until the confirm file is regenerated (step-18c evidence, not in this grant). The market_informed pool is centred too (its mean error was the closing line's own); live uses football_only only.
 
 Gate on 0666c36: 2338 passed, 1 skipped, ruff clean (throwaway Postgres on port 15812, removed). Fresh critic (ecc:python-reviewer) on 0666c36: PASS. Open MEDIUM items, not fixed: the "simulated mean equals the inputs" test tolerance is wider than the overtime half, so `half_ot` is guarded only by the pool-mean test; the overtime-tilt test guards the per-side regression, not centring itself.
+
+## LANDING (integrator, 2026-10-15)
+
+The owner answered yes on HAG-75 at 03:54 UTC: fix the simulator, and land 18k only if 2022 to 2025 show the fixed simulator no worse. Bench (section "Simulator double-count fix"): no measure is worse with an interval that excludes zero. Three coverage point estimates are lower by at most 0.5 points, and every one of their intervals includes zero; the owner was told this before answering. Security delta review PASS (`a773c41..32e80ad`). The 18c confirm file was regenerated (`ed39bff`), and the integrator corrected SIMULATOR.md (`fdce134`). landscan clean: the only out-of-lane files are the granted regenerated shared types. Pull request #41 at `fdce134`; CI green on every job. Merged as `8f9eeeb`.
+
+**Not deployed yet:** the standing deploy yes D73 ended at 04:00 UTC, so the PC deploy waits on the owner's next yes. After the deploy: re-learn the 2026 simulator parameters with the centred pool (one-off `learn_for_season` plus `save_sim_params`, not `jobs train`), then check the first `simulation_check` verdict on the PC. **Carried:** Dwight LOWs N1 to N5; the zero floor on low expected scores (`2025_16_LV_HOU`); the web display of `simulation_check` (lane web, after gen:api).
+
