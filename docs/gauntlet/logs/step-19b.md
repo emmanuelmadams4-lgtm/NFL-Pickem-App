@@ -172,3 +172,14 @@ accuracy lower).
 None ships; the live blend stays. All four point estimates are positive but small (0.1-0.3 points a week against a
 weekly total of ~88) and none clears the pre-registered bar. c2 is the closest (guards all hold; interval -0.10). Per
 D18 nothing changes after a single loss and nothing is re-scored with a tweak on 2022-2025.
+
+## 4. CLEANUP
+
+Scope-locked `/refactor` read of `points_bench.py` (310 lines) at `4b0d0f1`:
+- `main()` is 89 lines (ECC: functions under 50): it parses arguments, loads games, reads the injury and play-by-play
+  files inline, builds the candidate column and assembles the report. → WO5: split into small helpers (load games,
+  read injuries, read plays, add the candidate column, build the report); no behaviour change.
+- `_c1_features` is used only by c1 after the WO3 generalisation: keep (one caller, clear name).
+- Everything else (pure functions with tests) reads cleanly: no change.
+Proof for WO5: the five evidence JSONs (baseline, c1-c4) rebuilt after the split must be byte-identical to the
+committed ones (a reproduction, not a new scoring: the same frozen code paths on the same files).
