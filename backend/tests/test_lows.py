@@ -223,10 +223,12 @@ def test_l_r2_no_stored_simulator_parameters_is_logged(session, caplog):
 
 
 def test_l_19a_l4_a_quote_read_error_falls_back_to_the_nflverse_line(loaded, monkeypatch, caplog):
+    from sqlalchemy import text
+
     from nflpi.predictions import engine, fresh_line
 
-    def boom(*_a, **_k):
-        raise RuntimeError("quotes table unreadable")
+    def boom(session, *_a, **_k):  # a real SQL error: on Postgres it aborts the transaction unless isolated
+        session.execute(text("SELECT * FROM no_such_quotes_table"))
 
     monkeypatch.setattr(fresh_line, "pregame_quotes", boom)
     with caplog.at_level(logging.WARNING):
