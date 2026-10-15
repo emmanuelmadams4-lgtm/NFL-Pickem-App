@@ -209,3 +209,10 @@ Not landed by lane web. Done report to god with HEAD; god pushes `lane/web-19b`,
 god merges. Bench code only: nothing in the app changes and nothing is deployed. Verdict: none of c1-c4 ships; the live
 blend stays. Carried: the LOWs above; the 14c points script still calls `bt._elo_frames` (outside this grant); AUDIT A9
 market accuracy 67.80% vs this bench's 67.53% on 2022-2025.
+
+## LANDING (integrator, 2026-10-15)
+
+- Landing scan on `e13101b`: merge clean, lane-guard OK, no real names, `.env` values, host names or key patterns.
+- Pushed to `lane/web-19b`; PR #48 CI all green on head (backend, web, e2e, docker).
+- Merged with `--match-head-commit`. Review call (Jev unavailable): PASS on fresh critic PASS plus Dwight PASS, LOW only.
+- Nothing to deploy: bench code only, no live change.
