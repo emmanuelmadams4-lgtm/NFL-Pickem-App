@@ -1,0 +1,13 @@
+KILLED   M1 simulation count not enforced
+KILLED   M2 spread sign not checked
+KILLED   M3 lowercase verdict accepted
+KILLED   M4 every run passes
+KILLED   M5 failed run not marked
+KILLED   M6 failed run is used
+KILLED   M7 stored verdict ignored
+KILLED   M8 no-verdict retried every run
+KILLED   M9 probability sums unchecked
+KILLED   M10 PASS may argue with itself
+KILLED   M11 input seen after cutoff ignored
+KILLED   M12 overtime allowance unbounded
+12/12 killed

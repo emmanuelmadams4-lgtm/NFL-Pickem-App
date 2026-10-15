@@ -63,6 +63,16 @@ def _overtime_rates(
     return float((diff == 0).mean()), np.sort(diff[diff > 0]).astype(np.int64), fallback
 
 
+def _centre(pool: np.ndarray, offset: float) -> np.ndarray:
+    """Subtract a real offset from a sorted integer pool: floor(offset) from every row and 1 more from k evenly
+    spaced rows, k = round(frac * n), so the mean moves by `offset` to within 1/(2n) and the shape is kept."""
+    n, whole = len(pool), np.floor(offset)
+    k = int(round((offset - whole) * n))
+    extra = np.zeros(n, dtype=np.int64)
+    extra[(np.arange(k) * n) // max(k, 1)] = 1
+    return pool - int(whole) - extra
+
+
 def learn_params(
     mu_a: np.ndarray, mu_b: np.ndarray, score_a: np.ndarray, score_b: np.ndarray,
     overtime: np.ndarray, seasons: np.ndarray, target_season: int,
@@ -78,6 +88,14 @@ def learn_params(
     reg_a, reg_b = regulation_scores(sa, sb, overtime)
     pool_a = reg_a - np.rint(mu_a).astype(np.int64)
     pool_b = reg_b - np.rint(mu_b).astype(np.int64)
+    # The target season's mu is fit on these same seasons, so the older models' mean error (score - mu) is already
+    # in mu; left in the pool it would count twice (step-18k.md "Simulator double-count fix"). Each side's pool is
+    # centred on half the mean points overtime added over regulation (the same for both sides, so which side won
+    # overtime in the past does not tilt the margin); the overtime step adds those points back.
+    half_ot = float(np.mean(reg_a - sa) + np.mean(reg_b - sb)) / 2
+    order = np.lexsort((pool_b, pool_a))
+    pool_a = _centre(pool_a[order], float(np.mean(pool_a)) - half_ot)
+    pool_b = _centre(pool_b[order], float(np.mean(pool_b)) - half_ot)
     order = np.lexsort((pool_b, pool_a))
     r_a, r_b = reg_a - mu_a, reg_b - mu_b
     phi_a = float(np.mean(r_a**2) / np.mean(mu_a))

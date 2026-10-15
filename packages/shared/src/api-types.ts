@@ -1331,6 +1331,7 @@ export interface components {
                 [key: string]: string | null;
             };
             simulation?: components["schemas"]["SimulationOut"] | null;
+            simulation_check?: components["schemas"]["SimulationCheckOut"] | null;
         };
         /** PushKeys */
         PushKeys: {
@@ -1496,6 +1497,18 @@ export interface components {
             share: number | null;
             /** Avg Confidence */
             avg_confidence: number | null;
+        };
+        /** SimulationCheckOut */
+        SimulationCheckOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "failed" | "no_verdict" | "not_checked";
+            /** Note */
+            note: string;
+            /** Cause */
+            cause?: string | null;
         };
         /** SimulationOut */
         SimulationOut: {
