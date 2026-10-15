@@ -169,3 +169,30 @@ passed, ruff 0. Dwight delta `2dd1b53..77cfc9e`: **PASS**, H1 closed; no open CR
 - `710aaae` red (run 38768328175, backend job 116537282923): 1 failed, 2,413 passed: D3e `assert [] == ['2023_04_MIA_LV']`
   after its precondition held (the pick flipped, no alert): the intended reason.
 - `77cfc9e` (run 38768491544, backend job 116537844486): **2,414 passed, 1 skipped**; backend, web, e2e, docker green.
+
+CLEANUP (final): WO3 made the cleanup changes critic 1 asked for (`LINE_KEYS` module constant; `load_frame` row dict
+reindented); the rest of the earlier read stands (no further change).
+
+## 5. VERIFICATION
+
+- Fresh critic 2 (python-reviewer, no build transcript) on `5237cd5` (code `77cfc9e`): **PASS**, LOW only. Its gate:
+  21 pure passed, 10 deselected; its ruff was blocked by its sandbox (coordinator and CI: 0). LOW: `or line_only` in
+  the non-line `elif` is dead (covered by `prev.pick != pick`); L1 churn may keep a previous quote older than 30 min
+  (labelled); `load_frame` extra queries are skipped for historical frames. Not fixed: a code change would need a third
+  critic for a no-behaviour edit; carried.
+- Coordinator on `77cfc9e`: 21 pure passed, sim 90 passed, ruff 0. Full suite: PR #47 CI run 38768491544, backend
+  2,414 passed, 1 skipped; web, e2e, docker green (D71).
+- Security: Dwight PASS on `2b8100c` (M1, M2 → WO3), FAIL on the WO3 delta (H1 → WO4), PASS on the WO4 delta; no open
+  CRITICAL/HIGH/MEDIUM. LOW L1-L7 carried.
+- lane-guard `check ... web origin/main` (origin/main `53e45ff`, docs only since `62ecf35`): OK.
+- Review-passed check (Jev Job 4): `decide.sh` returned "advisor, jev unavailable"; the call goes to god.
+
+## 6. LANDING
+
+Not landed by lane web. Done report to god with HEAD; god turns draft PR #47 into the landing PR (or opens one from
+`lane/web-19a`), CI runs the full suite, god merges. Deploy is separate (owner yes). Carried to god: the owner option
+"minimum gap before a points-rank swap alerts" (not in guard 3); LOW: dead `or line_only`; L1 stale previous quote kept
+by churn; L2 sanity only on the newest quote; L3 sub-0.01 move near 50% keeps the old pick; L4 a `pregame_quotes` DB
+error fails the run; L5 the lock row's quote can be ~49 min old at kickoff; L6 NaN nflverse prob; L7 unguarded
+`fromisoformat`; `market_kind` still names the snapshot; spread/total stay nflverse; same-source same-time ties by read
+order; the `latest_week_prediction` subquery groups every stored prediction.
