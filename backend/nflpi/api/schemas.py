@@ -278,12 +278,27 @@ class AIReportOut(BaseModel):
     prediction_id: int | None
 
 
+class ValueRatingOut(BaseModel):
+    market_type: Literal["moneyline", "spread", "total"]
+    selection: str
+    sportsbook: str
+    line: float | None
+    price: float
+    observed_at: datetime
+    status: Literal["RATED", "UNRATED", "NO_BET"]
+    stars: int | None
+    expected_value: float
+    reasons: list[str]
+    note: str
+
+
 class GameDetail(GameSummary):
     home_form: TeamForm
     away_form: TeamForm
     injuries: list[InjuryOut]
     stars: list[TeamStars]
     market_history: list[MarketOut]
+    value_ratings: list[ValueRatingOut] = []
     prediction_history: list[PredictionOut]
     meetings: list[MeetingOut]
     ai_report: AIReportOut | None

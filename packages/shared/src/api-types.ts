@@ -803,6 +803,11 @@ export interface components {
             stars: components["schemas"]["TeamStars"][];
             /** Market History */
             market_history: components["schemas"]["MarketOut"][];
+            /**
+             * Value Ratings
+             * @default []
+             */
+            value_ratings: components["schemas"]["ValueRatingOut"][];
             /** Prediction History */
             prediction_history: components["schemas"]["PredictionOut"][];
             /** Meetings */
@@ -1720,6 +1725,40 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** ValueRatingOut */
+        ValueRatingOut: {
+            /**
+             * Market Type
+             * @enum {string}
+             */
+            market_type: "moneyline" | "spread" | "total";
+            /** Selection */
+            selection: string;
+            /** Sportsbook */
+            sportsbook: string;
+            /** Line */
+            line: number | null;
+            /** Price */
+            price: number;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "RATED" | "UNRATED" | "NO_BET";
+            /** Stars */
+            stars: number | null;
+            /** Expected Value */
+            expected_value: number;
+            /** Reasons */
+            reasons: string[];
+            /** Note */
+            note: string;
         };
         /** WeatherOut */
         WeatherOut: {

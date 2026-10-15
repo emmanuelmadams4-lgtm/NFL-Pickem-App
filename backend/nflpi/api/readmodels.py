@@ -1,5 +1,6 @@
 """Read models: turn database rows into API responses."""
 
+import logging
 from collections import defaultdict
 from datetime import UTC, datetime
 from unicodedata import category
@@ -8,9 +9,12 @@ import numpy as np
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from nflpi import value
 from nflpi.analytics import stars
 from nflpi.analytics.metrics import calibration, wilson_ci
 from nflpi.api import schemas as s
+from nflpi.betting.edge import SettlementProbs
+from nflpi.betting.odds import BettingError
 from nflpi.config import get_settings
 from nflpi.ingestion.service import freshness
 from nflpi.models import (
@@ -32,6 +36,9 @@ from nflpi.predictions import sheet
 from nflpi.predictions.sheet import is_locked
 
 PICK_ORDER_NOTE = "Both pick modes use the same order: win chance, then game id"
+# Stored simulation chances are rounded to four decimal places.
+VALUE_PROB_SUM_TOLERANCE = 0.001
+log = logging.getLogger(__name__)
 
 
 def _clean_star_text(value: str | None) -> str | None:
@@ -339,6 +346,49 @@ def _form(session: Session, g: Game, side: str, recs: list[Game], pred: Predicti
     )
 
 
+def _value_ratings(session: Session, g: Game, last: Prediction | None, now: datetime) -> list[s.ValueRatingOut]:
+    if last is None or now >= g.kickoff_utc:
+        return []
+    sim = last.features.get("simulation")
+    ratings = []
+    for market in ("moneyline", "spread", "total"):
+        for snapshot in value.load_snapshots(session, g.game_id, market, as_of=now):
+            if market == "moneyline":
+                chance = last.home_win_prob
+                if chance is None:
+                    continue
+                parts = (chance, 0, 1 - chance) if snapshot.selection == "home" else (1 - chance, 0, chance)
+            elif market == "spread":
+                if not sim or snapshot.line != sim.get("home_spread"):
+                    continue
+                home, push, away = sim.get("home_cover"), sim.get("spread_push"), sim.get("away_cover")
+                parts = (home, push, away) if snapshot.selection == "home" else (away, push, home)
+            else:
+                if not sim or snapshot.line != sim.get("total"):
+                    continue
+                over, push, under = sim.get("over"), sim.get("total_push"), sim.get("under")
+                parts = (over, push, under) if snapshot.selection == "over" else (under, push, over)
+            if any(part is None for part in parts):
+                continue
+            try:
+                if market != "moneyline":
+                    total = sum(parts)
+                    if abs(total - 1) > VALUE_PROB_SUM_TOLERANCE:
+                        continue
+                    parts = tuple(part / total for part in parts)
+                rating = value.rate_price(snapshot, SettlementProbs(*parts), now=now)
+            except (BettingError, ValueError, TypeError):
+                log.warning("value rating skipped for %s %s %s", g.game_id, market, snapshot.selection, exc_info=True)
+                continue
+            ratings.append(s.ValueRatingOut(
+                market_type=rating.market_type, selection=rating.selection, sportsbook=rating.sportsbook,
+                line=rating.line, price=rating.price, observed_at=rating.observed_at,
+                status=rating.advice.status, stars=rating.advice.stars,
+                expected_value=rating.advice.expected_value, reasons=list(rating.advice.reasons), note=rating.note,
+            ))
+    return ratings
+
+
 def game_detail(session: Session, game_id: str) -> s.GameDetail | None:
     g = session.get(Game, game_id)
     if g is None:
@@ -406,6 +456,7 @@ def game_detail(session: Session, game_id: str) -> s.GameDetail | None:
             )
             for m in markets
         ],
+        value_ratings=_value_ratings(session, g, last, now),
         prediction_history=[prediction_out(p, names) for p in history],
         meetings=[s.MeetingOut.model_validate(m, from_attributes=True) for m in meetings],
         ai_report=ai_report_out(report) if report else None,

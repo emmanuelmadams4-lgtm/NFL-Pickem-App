@@ -17,6 +17,7 @@ import { NewsSection } from "@/components/game/news";
 import { Schedule } from "@/components/game/schedule";
 import { MarketSection } from "@/components/game/market";
 import { SimulationSection } from "@/components/game/simulation";
+import { ValueSection } from "@/components/game/value";
 import { AiResearch } from "@/components/game/ai-research";
 import { Ask } from "@/components/game/ask";
 import { History } from "@/components/game/history";
@@ -30,6 +31,7 @@ const SECTIONS = [
   { id: "conditions", label: "Conditions" },
   { id: "market", label: "Market" },
   { id: "simulator", label: "Simulator" },
+  { id: "value", label: "Value" },
   { id: "ai", label: "AI" },
   { id: "ask", label: "Ask" },
   { id: "history", label: "History" },
@@ -189,6 +191,7 @@ export function GameView() {
           <Schedule game={game} />
           <MarketSection game={game} />
           <SimulationSection game={game} />
+          <ValueSection game={game} />
           <AiResearch game={game} ai={meta.ai_providers} />
           <Ask game={game} ai={meta.ai_providers} />
           <History game={game} />
