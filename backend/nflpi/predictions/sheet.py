@@ -20,6 +20,10 @@ class Ranked(NamedTuple):
     prob: float
 
 
+def is_locked(game: Game, now: datetime) -> bool:
+    return game.status == "final" or (game.status != "postponed" and not game.time_tbd and game.kickoff_utc <= now)
+
+
 def _chance(p: Prediction, g: Game, team: str) -> float:
     return p.home_win_prob if team == g.home_team else 1 - p.home_win_prob
 
@@ -61,8 +65,6 @@ def recommendations(session: Session, games: list[Game]) -> dict[str, Prediction
 def compute_week(
     session: Session, season: int, week: int, now: datetime, writing: frozenset[str] = frozenset()
 ) -> dict[str, dict]:
-    from nflpi.api.views import is_locked
-
     games = session.scalars(select(Game).where(Game.season == season, Game.week == week)
                             .order_by(Game.kickoff_utc, Game.game_id)).all()
     ids = [g.game_id for g in games]

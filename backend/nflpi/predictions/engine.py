@@ -9,7 +9,7 @@ import hashlib
 import json
 import logging
 import zlib
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from nflpi.ai import run_checker
 from nflpi.analytics import run_check
-from nflpi.analytics.backtest import _elo_frames, run_backtest, tune_elo
+from nflpi.analytics.backtest import elo_frames, run_backtest, tune_elo
 from nflpi.analytics.manifest import run_record
 from nflpi.analytics.metrics import EARLY_WEEK_END, UPSET_GAP, pick_label, uncertainty_grade, upset_watch
 from nflpi.analytics.sim_backtest import BASE_SEED, N_SIMULATIONS, WINDOW
@@ -31,6 +31,7 @@ from nflpi.ingestion.service import freshness
 from nflpi.models import AppSetting, BacktestRun, Game, MarketSnapshot, ModelVersion, Prediction
 from nflpi.picks import home_spread_from_nflverse
 from nflpi.predictions.elo import EloParams
+from nflpi.predictions.events import ChangeEvent
 from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features
 from nflpi.predictions.model import LogitModel
 from nflpi.predictions.scores import STATS_FEATURES, ScoreModel, add_score_features
@@ -52,20 +53,6 @@ CHANGE_WORDS = {
     "home_rest": "rest days",
     "away_rest": "rest days",
 }
-
-
-@dataclass
-class ChangeEvent:
-    game_id: str
-    old_prob: float
-    new_prob: float
-    old_pick: str
-    new_pick: str
-    note: str
-    old_label: str | None = None
-    new_label: str | None = None
-    qb_team: str | None = None
-    qb_name: str | None = None
 
 
 def load_frame(session: Session) -> pd.DataFrame:
@@ -122,7 +109,7 @@ def train(session: Session, through_season: int) -> ModelVersion:
     settings = get_settings()
     df = load_frame(session)
     seasons = list(range(through_season - settings.train_window_seasons + 1, through_season + 1))
-    frames = _elo_frames(df)
+    frames = elo_frames(df)
     elo = tune_elo(frames, seasons)
     f = frames[elo]
     train_rows = f[f["season"].isin(seasons) & f["home_win"].notna()]

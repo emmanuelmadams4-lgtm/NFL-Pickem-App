@@ -104,7 +104,7 @@ def _sample(frame: pd.DataFrame, seasons: list[int], preds: pd.DataFrame, record
 def bench_frames(frame: pd.DataFrame, seasons: list[int]) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """(win record, score predictions, sample) from the existing walk-forward bench code."""
     guard_scored(frame, seasons)
-    elo = backtest._elo_frames(frame)
+    elo = backtest.elo_frames(frame)
     preds = pd.concat([backtest.predict_season(elo, s, WINDOW) for s in seasons], ignore_index=True)
     record = preds.loc[preds["p_market"].notna(), RECORD_COLUMNS]
     record = record.sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)

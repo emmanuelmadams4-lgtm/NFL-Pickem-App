@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from nflpi import jobs
 from nflpi.analytics import backtest as bt
-from nflpi.analytics.backtest import _elo_frames, predict_season
+from nflpi.analytics.backtest import elo_frames, predict_season
 from nflpi.ingestion import nflverse
 from nflpi.models import Game, Prediction
 from nflpi.predictions import engine
@@ -75,8 +75,8 @@ def test_bench_features_and_probability_ignore_the_games_own_and_later_scores():
     in_season = df.index[df["season"] == season]
     target = in_season[len(in_season) // 2]
 
-    before = predict_season(_elo_frames(df), season, WINDOW)
-    after = predict_season(_elo_frames(_flip_scores(df, df.index >= target)), season, WINDOW)
+    before = predict_season(elo_frames(df), season, WINDOW)
+    after = predict_season(elo_frames(_flip_scores(df, df.index >= target)), season, WINDOW)
 
     assert before.index.equals(after.index)
     upto = before.index <= target
@@ -134,7 +134,7 @@ def test_live_features_and_probability_ignore_the_games_own_and_later_scores(loa
 def test_bench_and_live_path_agree_on_features_and_probability(loaded):
     engine.backfill_season(loaded, CURRENT)
     live = {p.game_id: p for p in loaded.scalars(select(Prediction).where(Prediction.kind == "backfill"))}
-    bench = predict_season(_elo_frames(frame()), CURRENT, WINDOW).set_index("game_id")
+    bench = predict_season(elo_frames(frame()), CURRENT, WINDOW).set_index("game_id")
 
     assert len(bench) > 0 and set(live) == set(bench.index)
     for game_id, p in live.items():
@@ -184,7 +184,7 @@ def test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later(mo
     for season in (CURRENT - 2, CURRENT - 1):
         seen.clear()
         tuned.clear()
-        predict_season(_elo_frames(df), season, WINDOW)
+        predict_season(elo_frames(df), season, WINDOW)
         allowed = set(range(season - WINDOW, season))
         assert seen and all(seasons and seasons <= allowed for seasons, _ in seen)
         assert tuned == [sorted(allowed)]
@@ -192,10 +192,10 @@ def test_walk_forward_fit_for_a_season_uses_no_game_from_that_season_or_later(mo
     # Black box: rewriting every result from the test season onward changes no fitted weight.
     season = CURRENT - 1
     seen.clear()
-    base = predict_season(_elo_frames(df), season, WINDOW)
+    base = predict_season(elo_frames(df), season, WINDOW)
     weights = [fitted for _, fitted in seen]
     seen.clear()
-    rewritten = predict_season(_elo_frames(_flip_scores(df, df["season"] >= season)), season, WINDOW)
+    rewritten = predict_season(elo_frames(_flip_scores(df, df["season"] >= season)), season, WINDOW)
     assert weights and [fitted for _, fitted in seen] == weights
     assert base[["elo_k", "elo_hfa"]].iloc[0].tolist() == rewritten[["elo_k", "elo_hfa"]].iloc[0].tolist()
     assert np.array_equal(base["p_home"].to_numpy(), rewritten["p_home"].to_numpy())

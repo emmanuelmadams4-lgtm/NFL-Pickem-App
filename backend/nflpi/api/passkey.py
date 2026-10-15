@@ -116,9 +116,9 @@ def _alert(session: Session, event: str, label: str | None, row_id: int) -> None
     title = f"Passkey {event}"
     body = f"{label or 'no name'}. Not you? Remove it in Settings and change the app token."
     try:
-        sent = push._send(session, title, body, "/settings/")
+        sent = push.send(session, title, body, "/settings/")
         key = f"passkey:{event}:{row_id}:{secrets.token_hex(8)}"
-        push._record(session, "passkey", None, key, {"title": title, "body": body})
+        push.record(session, "passkey", None, key, {"title": title, "body": body})
         session.commit()
         if not sent:
             log.warning("passkey %s, nobody was alerted, id=%s", event, row_id)

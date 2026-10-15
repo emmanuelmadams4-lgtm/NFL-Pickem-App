@@ -42,13 +42,13 @@ ABLATE = ["home_qb_change", "away_qb_change"]
 LABELS = {
     "home": "Always pick home team",
     "elo": "Elo ratings only",
-    "logistic": "Stats model (Elo + rest + QB + home)",
+    "logistic": "Stats model (Elo + QB + home)",
     "market": "Betting market (closing line)",
     "blend": "Stats model + market (uses closing line)",
 }
 
 
-def _elo_frames(df: pd.DataFrame) -> dict[EloParams, pd.DataFrame]:
+def elo_frames(df: pd.DataFrame) -> dict[EloParams, pd.DataFrame]:
     base = add_features(df, ELO_GRID[0])
     frames = {}
     for params in ELO_GRID:
@@ -131,7 +131,7 @@ def candidate_preds(
     df: pd.DataFrame, seasons: list[int], window: int = 10, epa: pd.DataFrame | None = None
 ) -> pd.DataFrame:
     """Score market games with the in-season blend and EPA rating candidates."""
-    frames = _elo_frames(df)
+    frames = elo_frames(df)
     if epa is not None:
         differences = {h: epa_diff(df, epa, h) for h in EPA_HALF_LIVES}
         frames = {params: frame.assign(**{f"epa_diff_{h}": diff for h, diff in differences.items()})
@@ -160,7 +160,7 @@ def split_preds(df: pd.DataFrame, seasons: list[int], split: pd.DataFrame, windo
         for column, scale in (("off_epa", SPLIT_EPA_SCALE), ("def_epa", SPLIT_EPA_SCALE),
                               ("off_sr", SPLIT_SR_SCALE), ("def_sr", SPLIT_SR_SCALE))
     }
-    frames = {params: frame.assign(**differences) for params, frame in _elo_frames(df).items()}
+    frames = {params: frame.assign(**differences) for params, frame in elo_frames(df).items()}
     by_season = []
     for season in seasons:
         test = predict_season(frames, season, window)
@@ -185,7 +185,7 @@ def idea_preds(df: pd.DataFrame, seasons: list[int], window: int = 10) -> pd.Dat
         "total_pts": (df["total_line"] - TOTAL_CENTER) / TOTAL_SCALE,
         "spread_per_total": (TOTAL_SCALE * df["spread_line"] / df["total_line"]).where(df["total_line"] > 0),
     })
-    frames = {params: frame.assign(**columns) for params, frame in _elo_frames(df).items()}
+    frames = {params: frame.assign(**columns) for params, frame in elo_frames(df).items()}
     by_season = []
     for season in seasons:
         test = predict_season(frames, season, window)
@@ -320,7 +320,7 @@ def label_report(preds: pd.DataFrame) -> list[dict]:
 
 
 def run_backtest(df: pd.DataFrame, seasons: list[int], window: int = 10) -> dict:
-    frames = _elo_frames(df)
+    frames = elo_frames(df)
     preds = pd.concat([predict_season(frames, s, window) for s in seasons], ignore_index=True)
     # Compare every model on the same games: those with a market line.
     preds = preds[preds["p_market"].notna()]

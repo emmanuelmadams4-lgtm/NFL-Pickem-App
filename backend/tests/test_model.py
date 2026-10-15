@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from nflpi.analytics import backtest as bt
-from nflpi.analytics.backtest import _elo_frames, candidate_preds, evaluate, inseason_blend, predict_season
+from nflpi.analytics.backtest import candidate_preds, elo_frames, evaluate, inseason_blend, predict_season
 from nflpi.analytics.metrics import (
     bootstrap_ci,
     brier,
@@ -76,7 +76,7 @@ def test_walk_forward_trains_only_on_past_seasons(monkeypatch):
         return real_fit(cls, df, features)
 
     monkeypatch.setattr(model_mod.LogitModel, "fit", classmethod(spy))
-    frames = _elo_frames(frame())
+    frames = elo_frames(frame())
     test = predict_season(frames, 2021, window=3)
     assert set(test["season"]) == {2021}
     assert all(seasons <= {2018, 2019, 2020} for seasons in seen)
@@ -197,7 +197,7 @@ def _flip_scores(df: pd.DataFrame, mask: pd.Series) -> pd.DataFrame:
 
 def test_inseason_refit_uses_earlier_weeks_and_never_the_same_or_a_later_week():
     df = frame()
-    frames = _elo_frames(df)
+    frames = elo_frames(df)
     base = predict_season(frames, 2022, window=3)
     got = inseason_blend(frames, 2022, window=3)
     assert list(got.index) == list(base.index) and got.between(0, 1).all()
@@ -209,12 +209,12 @@ def test_inseason_refit_uses_earlier_weeks_and_never_the_same_or_a_later_week():
     # (Earlier week 3 games are left alone: Elo rightly moves between games of one week.)
     last_of_week3 = df.loc[(df["season"] == 2022) & (df["week"] == 3), "kickoff_utc"].max()
     later = _flip_scores(df, (df["season"] == 2022) & (df["kickoff_utc"] >= last_of_week3))
-    after = inseason_blend(_elo_frames(later), 2022, window=3)
+    after = inseason_blend(elo_frames(later), 2022, window=3)
     assert np.allclose(got[week <= 3], after[week <= 3])
     assert not np.allclose(got[week > 3], after[week > 3])
     # A game's own result never moves its own pick, even for the first game of a week.
     first = df[(df["season"] == 2022) & (df["week"] == 3)].index[0]
-    own = inseason_blend(_elo_frames(_flip_scores(df, df.index == first)), 2022, window=3)
+    own = inseason_blend(elo_frames(_flip_scores(df, df.index == first)), 2022, window=3)
     assert np.isclose(got[first], own[first])
 
 
@@ -226,8 +226,8 @@ def test_inseason_refit_skips_a_postponed_game_that_was_not_played_yet():
     df = df.sort_values(["kickoff_utc", "game_id"]).reset_index(drop=True)
     is_late = (df["season"] == 2022) & (df["week"] == 1) & (df["kickoff_utc"] > week2_last)
     assert is_late.sum() == 1
-    got = inseason_blend(_elo_frames(df), 2022, window=3)
-    after = inseason_blend(_elo_frames(_flip_scores(df, is_late)), 2022, window=3)
+    got = inseason_blend(elo_frames(df), 2022, window=3)
+    after = inseason_blend(elo_frames(_flip_scores(df, is_late)), 2022, window=3)
     week = df.loc[got.index, "week"]
     assert np.allclose(got[week == 2], after[week == 2])
 
@@ -242,7 +242,7 @@ def test_inseason_refit_trains_on_the_window_and_the_test_season_only(monkeypatc
         seen.append(set(df["season"]))
         return real_fit(cls, df, features)
 
-    frames = _elo_frames(frame())
+    frames = elo_frames(frame())
     monkeypatch.setattr(model_mod.LogitModel, "fit", classmethod(spy))
     inseason_blend(frames, 2022, window=3)
     assert seen and all({2019, 2020, 2021} <= seasons <= {2019, 2020, 2021, 2022} for seasons in seen)
@@ -278,7 +278,7 @@ def test_candidate_preds_scores_market_games_of_the_asked_seasons():
     df.loc[no_line, ["home_ml", "away_ml"]] = np.nan
     preds = candidate_preds(df, [2021, 2022], window=3)
     assert set(preds["season"]) == {2021, 2022} and len(preds) == 29 and preds["p_market"].notna().all()
-    frames = _elo_frames(df)
+    frames = elo_frames(df)
     for season in (2021, 2022):
         want = inseason_blend(frames, season, window=3).dropna()
         assert np.allclose(preds.loc[preds["season"] == season, "p_inseason"], want)

@@ -82,7 +82,7 @@ class TreeModel:
 
 def tree_preds(df: pd.DataFrame, seasons: list[int], window: int = 10, grid=TREE_GRID) -> pd.DataFrame:
     """Score held-out seasons with boosted-tree variants beside the blend."""
-    frames = backtest._elo_frames(tree_inputs(df))
+    frames = backtest.elo_frames(tree_inputs(df))
     by_season = []
     for season in seasons:
         test = backtest.predict_season(frames, season, window)
@@ -164,7 +164,7 @@ def margin_preds(df: pd.DataFrame, seasons: list[int], window: int = 10) -> pd.D
     """Score held-out seasons with win chances taken from predicted score margins."""
     form = scores.add_score_features(df, EloParams())[SCORE_COLUMNS]
     frames = {params: frame.assign(**{c: form[c] for c in SCORE_COLUMNS})
-              for params, frame in backtest._elo_frames(df).items()}
+              for params, frame in backtest.elo_frames(df).items()}
     by_season = []
     for season in seasons:
         test = backtest.predict_season(frames, season, window)
@@ -219,7 +219,7 @@ def explosive_net(rows: list[dict]) -> pd.DataFrame:
 def explosive_preds(df: pd.DataFrame, seasons: list[int], explosive: pd.DataFrame, window: int = 10) -> pd.DataFrame:
     """Score held-out seasons with a pregame explosive-play rating added to the blend."""
     differences = {f"explosive_diff_{h}": EXPLOSIVE_SCALE * epa_diff(df, explosive, h) for h in EXPLOSIVE_HALF_LIVES}
-    frames = {params: frame.assign(**differences) for params, frame in backtest._elo_frames(df).items()}
+    frames = {params: frame.assign(**differences) for params, frame in backtest.elo_frames(df).items()}
     by_season = []
     for season in seasons:
         test = backtest.predict_season(frames, season, window)

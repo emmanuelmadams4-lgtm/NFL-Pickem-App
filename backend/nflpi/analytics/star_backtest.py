@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from nflpi.analytics.backtest import _elo_frames, _market_games, _predict_or_blend, _train_rows, predict_season
+from nflpi.analytics.backtest import _market_games, _predict_or_blend, _train_rows, elo_frames, predict_season
 from nflpi.ingestion.nflverse import STAR_STATS
 from nflpi.predictions.features import BLEND_FEATURES
 from nflpi.predictions.model import LogitModel
@@ -132,7 +132,7 @@ def star_out_features(
 def star_preds(df: pd.DataFrame, seasons: list[int], inputs: pd.DataFrame, window: int = 10) -> pd.DataFrame:
     """Score six star inputs against the walk-forward blend."""
     frames = {params: frame.assign(**inputs)
-              for params, frame in _elo_frames(df).items()}
+              for params, frame in elo_frames(df).items()}
     by_season = []
     for season in seasons:
         test = predict_season(frames, season, window)
