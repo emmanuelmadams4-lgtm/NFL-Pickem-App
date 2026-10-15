@@ -1,7 +1,7 @@
 "use client";
 
 import { pct, type GameDetail } from "@nflpi/shared";
-import { Section } from "@/components/ui";
+import { Notice, Section } from "@/components/ui";
 
 const CHECK_HEADINGS = {
   failed: "Run check failed",
@@ -41,11 +41,10 @@ export function SimulationSection({ game }: { game: GameDetail }) {
   return (
     <Section id="simulator" title="Score simulator" note={sim?.label}>
       {check && (
-        <div role="note" className={`min-w-0 break-words rounded-card border border-warn/40 bg-warn/10 p-3 ${sim ? "mb-4" : ""}`}>
-          <p className="text-sm font-medium text-text">{CHECK_HEADINGS[check.status]}</p>
-          <p className="mt-1 text-sm text-text-2">{check.note}</p>
-          {check.cause && <p className="mt-1 text-sm text-text-2">Cause: {CHECK_CAUSES[check.cause] ?? check.cause}</p>}
-        </div>
+        <Notice tone="warn" title={CHECK_HEADINGS[check.status]} className="mb-4 break-words">
+          {check.note}
+          {check.cause && <p className="mt-1">Cause: {CHECK_CAUSES[check.cause] ?? check.cause}</p>}
+        </Notice>
       )}
       {!sim ? (
         <p className="text-sm text-text-2">No simulation for this game yet.</p>
