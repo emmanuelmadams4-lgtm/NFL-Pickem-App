@@ -108,4 +108,28 @@ Scope-locked `/refactor` read of `git diff origin/main HEAD -- backend/nflpi` (j
 - `jobs.next_interval`: `<` became `<=` 6 hours, matching the kickoff query's `<= now + 6h`. No change.
 - Tie note: two quotes with the same source and the same time keep the first one read (stable sort). Real feeds do not
   repeat a timestamp within one source; LOW, carried.
-Result: no change needed; proof unchanged.
+Result: no change needed; proof unchanged. (Superseded below: critic 1 found the read thin; WO3 carries real cleanup.)
+
+### Critic 1 (fresh python-reviewer, no transcript) on `2b8100c`: FAIL
+Its gate: 19 pure passed, 7 DB errors (expected); its ruff run was blocked by its sandbox (coordinator ruff: 0).
+- HIGH: churn rule untested for "previous nflverse, first quote within 0.01" (mutating the condition to
+  `previous.source != "nflverse"` passed every test). → spec F4c (test-only).
+- Unpinned boundaries: a quote exactly 30 min old; a target at exactly `now`. → F2b, F8 extra assertion (test-only).
+- MEDIUM: the rank guard compares each game against the week's OLD chances, so when one quote refresh moves several
+  games in one run (the usual case) a game is judged against a half-updated week. → spec D3c, WO3.
+- MEDIUM: CLEANUP thin (the misindented `row = {` block is this diff's own). → WO3 cleanup: `LINE_KEYS` module
+  constant, reindent the row dict.
+- MEDIUM naive/aware datetimes: downgraded to LOW: every datetime column is `DateTime(timezone=True)` and
+  `market_seen_at` is written from an aware value, so `fromisoformat` returns aware. NaN nflverse prob behaves as None
+  (no sanity compare), same as F3's "nothing to compare". LOW, carried.
+- LOW carried: `market_kind` still names the snapshot (the `market_source` key labels the quote); spread/total stay
+  nflverse (19a is the win line only, by spec); same-source same-time ties by read order; `load_frame` two extra queries
+  for every caller.
+
+Spec additions (frozen before WO3):
+- F4c: previous nflverse 0.64, first quote 0.645: keep the previous line; quote 0.655: switch.
+- F2b: a quote exactly 30 min old is fresh; 30 min 1 s is not.
+- F8+: a kickoff target at exactly `now` is passed (next target counts).
+- D3c: in one run, every rank check compares the week before the run with the week after it: `old` holds each game's
+  chance before the run, `new` each game's chance written by the run.
+Local: 21 pure passed (F4c, F2b, F8+ hold on today's code: test gaps, not defects), ruff 0. D3c is red in CI.

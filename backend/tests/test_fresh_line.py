@@ -86,6 +86,19 @@ def test_f4b_nflverse_moves_alone_behave_as_today():
     assert line == nfl(prob=0.605)  # the churn rule is only for fresh quotes
 
 
+def test_f4c_a_first_quote_within_one_point_of_the_previous_nflverse_line_keeps_it():
+    previous = nfl(prob=0.6400)
+    line, _ = choose([q(0.6450)], nflverse=nfl(prob=0.6400), previous=previous)
+    assert line == previous  # no new row for a fresh quote that barely moved
+    line, _ = choose([q(0.6550)], nflverse=nfl(prob=0.6400), previous=previous)
+    assert line.source == "kalshi" and line.prob == 0.655
+
+
+def test_f2b_a_quote_exactly_thirty_minutes_old_is_still_fresh():
+    assert choose([q(0.63, 30)])[0].source == "kalshi"
+    assert choose([q(0.63, 30.02)])[0] == nfl()
+
+
 def test_f5_the_newest_fresh_quote_wins_across_sources_and_ties_go_by_source_name():
     line, _ = choose([q(0.62, 8, "kalshi"), q(0.63, 3, "oddsapi:bookone")])
     assert line.source == "oddsapi:bookone"
@@ -123,6 +136,7 @@ def test_f8_the_wait_lands_one_minute_after_the_next_kickoff_target():
     assert until([NOW + timedelta(minutes=10)], NOW) is None  # both targets passed
     assert until([NOW + timedelta(minutes=100), NOW + timedelta(minutes=24)], NOW) == timedelta(minutes=5)
     assert until([], NOW) is None
+    assert until([NOW + timedelta(minutes=90)], NOW) == timedelta(minutes=71)  # a target at exactly now is passed
 
 
 # --- D1-D4 with the database (run in PR CI; the Mac test database is off) ---------------------------
@@ -231,3 +245,34 @@ def test_d4_next_interval_lands_just_after_the_kickoff_targets(session):
     assert jobs.next_interval(session, NOW) == timedelta(minutes=11)
     assert jobs.next_interval(session, NOW + timedelta(minutes=12)) == timedelta(minutes=20)
     assert jobs.next_interval(session, NOW + timedelta(minutes=75)) == timedelta(minutes=6)
+
+
+def test_d3c_the_points_rank_check_sees_every_new_chance_of_the_run(loaded, monkeypatch):
+    from sqlalchemy import select
+
+    from nflpi.config import get_settings
+    from nflpi.models import Game, MarketQuote, MarketSnapshot
+    from nflpi.predictions import engine, fresh_line
+    from tests.conftest import CURRENT
+
+    monkeypatch.setattr(get_settings(), "alert_move_threshold", 0.0)
+    games = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 4)
+                           .order_by(Game.game_id)).all()[:2]
+    now = min(g.kickoff_utc for g in games) - timedelta(minutes=60)
+    before = {g.game_id: _newest(loaded, g.game_id).home_win_prob for g in games}
+    for g in games:  # one quote refresh moves both lines in the same run
+        snap = loaded.scalars(select(MarketSnapshot).where(MarketSnapshot.game_id == g.game_id)
+                              .order_by(MarketSnapshot.id.desc())).first()
+        snap.observed_at = now - timedelta(hours=10)
+        prob = min(0.98, max(0.02, snap.home_prob_novig + 0.02))
+        loaded.add(MarketQuote(game_id=g.game_id, source="kalshi", kind="pregame", home_prob=prob,
+                               away_prob=1 - prob, fetched_at=now - timedelta(minutes=5)))
+    loaded.commit()
+    calls = []
+    monkeypatch.setattr(fresh_line, "rank_changed", lambda old, new, gid: calls.append((dict(old), dict(new))) or False)
+    engine.refresh_predictions(loaded, now=now, game_ids=[g.game_id for g in games])
+    after = {g.game_id: _newest(loaded, g.game_id).home_win_prob for g in games}
+    assert after != before and len(calls) == 2
+    for old, new in calls:  # the week before the run against the week after it, not a half-updated week
+        assert {gid: old[gid] for gid in before} == before
+        assert {gid: new[gid] for gid in after} == after
