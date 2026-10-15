@@ -102,3 +102,28 @@ functions and record), 71 passed. K8 passes today (it guards speed once the rati
   worse in the point estimate and the football-only interval only just includes zero (the spike, on other seeds, put it
   just above zero); "not significantly worse", not "better". Smaller alphas trade 3/7 accuracy for a smaller cover cost
   (0.75: 12.7 / 8.1, cover +0.0004).
+- WO3 (Ryan) `211f19b`: `KEY_ALPHA = 1.0`, `DEFAULT_DISTRIBUTION = "key_weighted"`. Rerun: 87 passed, ruff 0.
+- **Keys-confirm run (ONCE, 2022-2025, 1,087 games; seasons already seen in 18c, so a check, not a fresh holdout):**
+  `keys-confirm.json`, `keys-confirm.log`. Real |margin| 3 / 7: 14.8 / 8.0 percent.
+
+  | source | variant | 3 / 7 | cover Brier | over Brier | CRPS | margin sd | 50/80/95 coverage, PIT | inclusive |
+  |---|---|---|---|---|---|---|---|---|
+  | football_only | paired_residual | 7.6 / 5.1 | 0.2613 | 0.2573 | 14.586 | 13.19 | 52.2 / 80.9 / 96.1 | 54.3 / 81.8 / 96.4 |
+  | football_only | key_weighted | 14.4 / 8.6 | 0.2613 | 0.2572 | 14.567 | 13.16 | 49.6 / 81.1 / 96.1 | 53.6 / 82.2 / 96.4 |
+  | market_informed | paired_residual | 7.7 / 5.3 | 0.2498 | 0.2503 | 14.178 | 12.89 | 52.8 / 80.6 / 96.0 | 55.0 / 81.7 / 96.5 |
+  | market_informed | key_weighted | 14.5 / 8.6 | 0.2498 | 0.2503 | 14.167 | 13.01 | 52.1 / 81.9 / 96.7 | 55.2 / 82.8 / 96.8 |
+
+  Intervals (key_weighted minus paired_residual): football cover 0.0000 (-0.0012..+0.0011), over -0.0001
+  (-0.0004..+0.0002), CRPS -0.018 (-0.028..-0.009); market cover 0.0000 (-0.0012..+0.0012), over 0.0000
+  (-0.0004..+0.0003), CRPS -0.011 (-0.022..-0.001). **Bar met:** key-number rates near history (3: 14.4 vs 14.8;
+  7: 8.6 vs 8.0), cover and over Brier not worse, CRPS better on both sources, coverage within a point.
+- `report --simulate` on the 18c evidence still prints `matches_stored_confirm: true`: that check uses the stored file's
+  own default (`paired_residual`), whose draws 18m does not change. The granted regeneration of the 18c
+  `confirm-result.json` is therefore not needed and was not done (no 18c file touched).
+
+## 4. CLEANUP
+
+Scope-locked `/refactor` read of `git diff 325f541 -- backend/nflpi`: one finding, `keys.learn_key_ratio` re-implements
+the paired_residual draw → WO4 (behaviour-neutral; proof: identical learned ratios on real data, reference
+`ratio_before.json` sha1 `64de969b`). `sim_backtest` key functions reuse `crps`, `learn_for_season`, the 18c seed rule and
+the one spread conversion: no change. `game.py`/`params.py` hooks are two lines each: no change.

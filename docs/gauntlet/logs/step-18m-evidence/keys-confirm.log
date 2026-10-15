@@ -1,0 +1,6 @@
+KEYS CONFIRM football_only: real 3/7 0.148/0.080
+  baseline     3/7 0.076/0.050 cover 0.2613 over 0.2573 CRPS 14.586
+  key_weighted 3/7 0.144/0.086 cover 0.2613 over 0.2572 CRPS 14.567
+KEYS CONFIRM market_informed: real 3/7 0.148/0.080
+  baseline     3/7 0.077/0.053 cover 0.2498 over 0.2503 CRPS 14.178
+  key_weighted 3/7 0.145/0.086 cover 0.2498 over 0.2503 CRPS 14.167
