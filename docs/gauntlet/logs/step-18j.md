@@ -147,3 +147,16 @@ cache) still shows the board's cards. Red: `s18j-red-3` (no game card in 15 s). 
 S5b now passes (it was red in `s18j-red-3`); L1 passes. The 2 failures: sim18j S3 timed out "while setting up page"
 (the browser fixture, before any app code ran; S3 passed in green-1, green-2, green-4 and critic-1), and phone-layout
 L2 waited for `game-card` (it passed in green-4). Same slow-load pattern; PR CI decides (D71).
+- **Fresh critic 2 on `75c20a7`: PASS** (`evidence/reviews/critic-2.md`): sim18j 7/7 on a fresh build (`s18j-critic-2`);
+  typecheck 0; no CRITICAL, HIGH or MEDIUM. Critic 1's MEDIUM is fixed; the only other new field read (`simulation`) is
+  safe when absent; every red test comes before its fix.
+- Jev Job 4 (`decide.sh nfl-pickem-lanes web review-18j`): "advisor, jev unavailable", so the call goes to god.
+- lane-guard vs origin/main: every production file is in lane web. Unowned new files need a `lanes.md` entry (god):
+  `apps/web/e2e/sim18j.spec.ts`, `docs/gauntlet/logs/step-18j.md`, `docs/gauntlet/logs/step-18j-evidence/**`.
+
+## 6. LANDING
+
+Not done here: no push, PR or merge without the owner's yes, and god lands. Handed to god: the lane/web head below.
+PR CI is the full browser gate (D71). Carried: 18i value ratings are served by no API (told god on 2026-10-14);
+18k's run-check state (`simulation_check`) is added after 18k lands (the owner's yes on HAG-75), then gen:api
+(Dwight A1).
