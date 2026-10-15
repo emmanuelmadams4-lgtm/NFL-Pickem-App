@@ -120,7 +120,7 @@ def main(stage: str) -> dict:
         preds = mc.explosive_preds(frame, TUNE + CONFIRM, explosive)
         out |= {"play_by_play_team_games": len(rows), "rated_games": int(explosive["game_id"].nunique())}
     else:  # points
-        frames = bt._elo_frames(frame)
+        frames = bt.elo_frames(frame)
         preds = bt._market_games([bt.predict_season(frames, s, 10) for s in TUNE + CONFIRM])
     scored = preds[preds["season"].isin(TUNE + CONFIRM)]
     confirm = scored[scored["season"].isin(CONFIRM)]

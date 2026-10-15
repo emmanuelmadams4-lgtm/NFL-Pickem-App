@@ -17,43 +17,57 @@ def _package(parts: tuple[str, ...]) -> str:
     return parts[0] if len(parts) > 1 else ""
 
 
-def test_no_cross_package_private_imports():
+def private_reaches(rel: tuple[str, ...], tree: ast.AST) -> list[str]:
+    """Find private names reached through another nflpi package."""
+    current = _package(rel)
+    imported: dict[str, str] = {}
     bad = []
-    for path, rel, tree in _modules():
-        for node in ast.walk(tree):
-            if not (isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("nflpi.")):
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if node.level:
+                parts = rel[:-node.level] + tuple((node.module or "").split(".")) if node.module else rel[:-node.level]
+                target = parts[0] if parts else ""
+            elif node.module == "nflpi":
+                target = ""
+            elif node.module and node.module.startswith("nflpi."):
+                target = node.module.split(".")[1]
+            else:
                 continue
-            target = node.module.split(".")[1]
-            if target != _package(rel) and any(a.name.startswith("_") for a in node.names):
-                bad.append(f"{path.name}: from {node.module} import {[a.name for a in node.names]}")
+            for alias in node.names:
+                package = alias.name if (node.module == "nflpi" and not node.level) or (
+                    node.level and not node.module and not parts
+                ) else target
+                imported[alias.asname or alias.name] = package
+                if package and package != current and alias.name.startswith("_") and not alias.name.startswith("__"):
+                    bad.append(f"import {alias.name} from {package}")
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith("nflpi."):
+                    imported[alias.asname or "nflpi"] = alias.name.split(".")[1]
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            name, attr = node.value.id, node.attr
+        elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "getattr"
+              and len(node.args) >= 2 and isinstance(node.args[0], ast.Name)
+              and isinstance(node.args[1], ast.Constant) and isinstance(node.args[1].value, str)):
+            name, attr = node.args[0].id, node.args[1].value
+        else:
+            continue
+        if (name in imported and imported[name] != current and attr.startswith("_")
+                and not attr.startswith("__")):
+            bad.append(f"{name}.{attr}")
+    return bad
+
+
+def test_no_cross_package_private_imports():
+    bad = [f"{path.name}: {reach}" for path, rel, tree in _modules()
+           for reach in private_reaches(rel, tree) if reach.startswith("import ")]
     assert not bad, bad
 
 
 def test_no_cross_package_private_attribute_use():
-    bad = []
-    for path, rel, tree in _modules():
-        imported = {}
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("nflpi."):
-                for a in node.names:
-                    imported[a.asname or a.name] = node.module.split(".")[1]
-            elif isinstance(node, ast.ImportFrom) and node.module == "nflpi":
-                for a in node.names:
-                    imported[a.asname or a.name] = a.name
-            elif isinstance(node, ast.Import):
-                for a in node.names:
-                    if a.asname and a.name.startswith("nflpi."):
-                        imported[a.asname] = a.name.split(".")[1]
-        for node in ast.walk(tree):
-            if (
-                isinstance(node, ast.Attribute)
-                and node.attr.startswith("_")
-                and not node.attr.startswith("__")
-                and isinstance(node.value, ast.Name)
-                and imported.get(node.value.id, _package(rel)) != _package(rel)
-                and node.value.id in imported
-            ):
-                bad.append(f"{path.name}: {node.value.id}.{node.attr}")
+    bad = [f"{path.name}: {reach}" for path, rel, tree in _modules()
+           for reach in private_reaches(rel, tree) if not reach.startswith("import ")]
     assert not bad, bad
 
 

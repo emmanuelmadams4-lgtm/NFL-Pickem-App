@@ -12,7 +12,7 @@ def implied_prob(moneyline: float) -> float:
 
 
 def novig_home_prob(home_ml: float | None, away_ml: float | None) -> float | None:
-    if home_ml is None or away_ml is None:
+    if home_ml is None or away_ml is None or math.isnan(home_ml) or math.isnan(away_ml):
         return None
     h, a = implied_prob(home_ml), implied_prob(away_ml)
     return h / (h + a)

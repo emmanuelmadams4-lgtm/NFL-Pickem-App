@@ -10,13 +10,20 @@ KEY_ALPHA = 1.0  # chosen on 2012-2021 only by the keys-tune rule: step-18m-evid
 # ponytail: cap learning draws so a large training window stays fast.
 KEY_TOTAL_DRAWS = 2_000_000
 TILT_STEPS = 50
+_warned = False
+
+
+def _warn_unweighted(message: str, *args: object) -> None:
+    global _warned
+    (log.debug if _warned else log.warning)(message, *args)
+    _warned = True
 
 
 def key_weight(
     a: np.ndarray, b: np.ndarray, rng: np.random.Generator, ratio: tuple[float, ...], alpha: float
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, bool]:
     if alpha == 0 or len(ratio) == 0:
-        return a, b
+        return a, b, False
     margin = (a - b).astype(float)
     total = (a + b).astype(float)
     target = np.array([margin.mean(), total.mean()])
@@ -38,11 +45,14 @@ def key_weight(
         ])
         tilt -= np.linalg.solve(covariance + 1e-9 * np.eye(2), delta)
     else:
-        log.warning("key weighting did not converge after %d steps (mean error %s); draws left unweighted",
-                    TILT_STEPS, delta)
-        return a, b
+        _warn_unweighted("key weighting did not converge after %d steps (mean error %s); draws left unweighted",
+                         TILT_STEPS, delta)
+        return a, b, False
+    if 1 / np.sum(weights**2) < 0.1 * len(a):
+        _warn_unweighted("key weighting effective sample size is too small; draws left unweighted")
+        return a, b, False
     idx = rng.choice(len(a), len(a), p=weights)
-    return a[idx], b[idx]
+    return a[idx], b[idx], True
 
 
 def learn_key_ratio(
@@ -58,7 +68,9 @@ def learn_key_ratio(
     score_a, score_b = np.asarray(score_a)[order], np.asarray(score_b)[order]
     if not (np.isfinite(score_a).all() and np.isfinite(score_b).all()):
         raise ValueError("final scores must be finite")
-    real_margins = np.rint(np.abs(score_a - score_b)).astype(np.int64)
+    if not (np.equal(score_a, np.floor(score_a)).all() and np.equal(score_b, np.floor(score_b)).all()):
+        raise ValueError("final scores must be whole")
+    real_margins = np.abs(score_a.astype(np.int64) - score_b.astype(np.int64))
     n_rows = len(mu_a)
     draws_per_row = max(1, KEY_TOTAL_DRAWS // n_rows)
     n_draws = n_rows * draws_per_row

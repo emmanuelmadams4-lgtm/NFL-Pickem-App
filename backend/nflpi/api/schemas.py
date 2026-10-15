@@ -287,7 +287,7 @@ class ValueRatingOut(BaseModel):
     observed_at: datetime
     status: Literal["RATED", "UNRATED", "NO_BET"]
     stars: int | None
-    expected_value: float
+    expected_value: float = Field(allow_inf_nan=False)
     reasons: list[str]
     note: str
 

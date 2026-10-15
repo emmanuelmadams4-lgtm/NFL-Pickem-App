@@ -178,7 +178,7 @@ def tune(table: pd.DataFrame, *, seasons=TUNE_SEASONS, n_simulations: int = N_SI
 
 
 def write_tune(path, result: dict) -> None:
-    with open(path, "w") as f:
+    with open(path, "x") as f:
         json.dump(result, f, indent=2)
 
 
@@ -354,7 +354,7 @@ def _key_rows(
                 pit_u = float(np.random.default_rng([seed, 999]).random())
                 rows.append(_key_game_row(game, source, "baseline", res.a_score, res.b_score, pit_u))
                 for alpha in alphas:
-                    a, b = keys.key_weight(
+                    a, b, _ = keys.key_weight(
                         res.a_score, res.b_score, np.random.default_rng([seed, round(alpha * 100)]),
                         params.key_ratio, alpha,
                     )

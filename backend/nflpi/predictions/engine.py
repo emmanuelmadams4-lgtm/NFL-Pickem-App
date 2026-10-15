@@ -569,7 +569,7 @@ def refresh_predictions(
             if line_only and prev.pick == pick:
                 deferred_line_events.append((week_key, event))
             elif (
-                prev.pick != pick or line_only or moved >= settings.alert_move_threshold
+                prev.pick != pick or moved >= settings.alert_move_threshold
                 or old_label != new_label or qb_team
             ):
                 events.append(event)

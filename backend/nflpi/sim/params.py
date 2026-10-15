@@ -86,6 +86,11 @@ def learn_params(
         raise ValueError(f"need at least {MIN_TRAIN_GAMES} training games, got {n}")
     mu_a, mu_b = np.asarray(mu_a, dtype=float), np.asarray(mu_b, dtype=float)
     sa, sb = np.asarray(score_a), np.asarray(score_b)
+    if not (np.isfinite(sa).all() and np.isfinite(sb).all()):
+        raise ValueError("final scores must be finite")
+    if not (np.equal(sa, np.floor(sa)).all() and np.equal(sb, np.floor(sb)).all()):
+        raise ValueError("final scores must be whole")
+    sa, sb = sa.astype(np.int64), sb.astype(np.int64)
     overtime, seasons = np.asarray(overtime), np.asarray(seasons)
     tie_frac, increments, fallback = _overtime_rates(sa, sb, overtime, seasons, ot_era(target_season))
 

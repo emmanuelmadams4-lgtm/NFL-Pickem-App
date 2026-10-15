@@ -11,7 +11,7 @@ const CHECK_HEADINGS = {
 
 const CHECK_CAUSES: Record<string, string> = {
   cap: "the daily check limit was reached",
-  provider: "Claude could not be reached",
+  provider: "Claude's call failed",
   unparsed: "the check's answer could not be read",
   error: "the check hit an error",
 };
