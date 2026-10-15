@@ -160,3 +160,14 @@ needs the owner's yes; after deploy, `jobs train` stores the new key ratio, and 
 as `paired_residual` and are labelled so. Carried: critic 1 MEDIUM (the alpha rule is lenient: it picked 1.0 with a
 borderline tune cover interval; confirm cover difference 0.0000), Dwight L1 (no load-time check of a stored ratio),
 L3 (keys-tune overwrites its record), L4 (`key_ratio` loads as a list), N1/N2, ESS check, critic 2 LOW (K10 trigger).
+
+## 7. PR #46 CI FAILURE (after hand-off)
+
+PR #46 backend CI (run 38762725767, god f24b7d): 2 of 2,382 failed. (1) `test_wiring.py::test_train_learns_and_saves_
+simulator_parameters_for_the_season_it_predicts`: `learn_key_ratio` got float64 scores from the pandas table and
+`np.bincount` refused them, so `jobs train` would save no simulator parameters (a real bug; the local gate used int
+fixtures and the database tests do not run on the Mac). (2) `test_wiring.py::test_simulation_is_stored_beside_the_
+unchanged_win_probability` expected `paired_residual`; with a learned ratio the stored label is now `key_weighted`
+(expectation updated; grant: test_wiring.py, 18m only). `jobs.train` logs the failure with `log.exception` and keeps
+the win model: loud, not swallowed, but the season then has no simulator. Red: K11 (float scores give the same ratio as
+ints) fails with the CI TypeError. Fix: WO6.

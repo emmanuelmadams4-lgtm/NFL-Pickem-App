@@ -557,3 +557,13 @@ def test_k10_a_tilt_that_does_not_converge_warns_and_returns_the_draws_unchanged
     np.testing.assert_array_equal(wa, a)
     np.testing.assert_array_equal(wb, b)
     assert "did not converge" in caplog.text
+
+
+def test_k11_learn_params_takes_float_scores_as_the_database_and_pandas_give_them():
+    # PR #46 CI: the bench table carries scores as float64; np.bincount refused them, so jobs train saved no params
+    cols = _lumpy_training(n=3000)
+    as_ints = learn_params(*cols, target_season=2009)
+    floats = list(cols)
+    floats[2], floats[3] = cols[2].astype(float), cols[3].astype(float)
+    as_floats = learn_params(*floats, target_season=2009)
+    assert as_floats.key_ratio == as_ints.key_ratio

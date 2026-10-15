@@ -64,7 +64,7 @@ def test_simulation_is_stored_beside_the_unchanged_win_probability(loaded):
         p = latest(loaded, gid)
         sim = p.features["simulation"]
         assert p.home_win_prob == prob  # the win model still decides the pick
-        assert (sim["source"], sim["distribution"], sim["n_simulations"]) == ("football_only", "paired_residual", N)
+        assert (sim["source"], sim["distribution"], sim["n_simulations"]) == ("football_only", "key_weighted", N)
         assert sim["home_win"] + sim["away_win"] + sim["tie"] == pytest.approx(1, abs=1e-3)
         assert (sim["home_spread"], sim["total"]) == (-3.0, 45.5)  # nflverse spread_line 3: home favoured by 3
         assert sim["home_cover"] + sim["away_cover"] + sim["spread_push"] == pytest.approx(1, abs=1e-3)
