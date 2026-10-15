@@ -160,3 +160,10 @@ Not done here: no push, PR or merge without the owner's yes, and god lands. Hand
 PR CI is the full browser gate (D71). Carried: 18i value ratings are served by no API (told god on 2026-10-14);
 18k's run-check state (`simulation_check`) is added after 18k lands (the owner's yes on HAG-75), then gen:api
 (Dwight A1).
+
+## LANDING (integrator, 2026-10-15)
+
+Pull request #40 from `lane/web` at `e41a965`. CI: the push run was green on every job. The pull-request run's e2e had 252 passed and 1 failed: `pwa.spec.ts` P6 (B11 build ID), the known flaky test. A rerun of that job was green (attempt 2). lane-guard was clean after the integrator added `e2e/sim18j.spec.ts`, this log and its evidence to lane web. Merged as `bd9a9ff` at 00:57 UTC.
+
+**Deployed:** deploy 13 to the owner's PC at `bd9a9ff`, 01:46 UTC (D73). The PC dropped off SSH from about 01:00 to 01:45 UTC (Tailscale ping still answered), so the deploy ran only after three SSH checks in a row passed, and it ran detached on the PC. Backup first, no migration (alembic `0010`), row counts kept (two new predictions from the worker), `/api/health` 200, and no errors in the app or worker logs. **PENDING:** the `simulation_check` display, after 18k lands (HAG-75).
+
