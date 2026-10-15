@@ -41,6 +41,7 @@ def learn_key_ratio(
     params: object, target_season: int,
 ) -> tuple[float, ...]:
     """Compare real final-margin counts with equal-draw paired-residual simulations per training row."""
+    from nflpi.sim.distributions import sample_regulation
     from nflpi.sim.overtime import resolve_overtime
 
     order = np.lexsort((score_b, score_a, mu_b, mu_a))
@@ -50,12 +51,8 @@ def learn_key_ratio(
     draws_per_row = max(1, KEY_TOTAL_DRAWS // n_rows)
     n_draws = n_rows * draws_per_row
     rng = np.random.default_rng(target_season)
-    idx = rng.integers(0, len(params.residual_a), n_draws)
     a_mu, b_mu = np.repeat(mu_a, draws_per_row), np.repeat(mu_b, draws_per_row)
-    a_base = np.floor(a_mu) + (rng.random(n_draws) < a_mu - np.floor(a_mu))
-    b_base = np.floor(b_mu) + (rng.random(n_draws) < b_mu - np.floor(b_mu))
-    reg_a = np.maximum(a_base.astype(np.int64) + params.residual_a[idx], 0)
-    reg_b = np.maximum(b_base.astype(np.int64) + params.residual_b[idx], 0)
+    reg_a, reg_b = sample_regulation("paired_residual", a_mu, b_mu, n_draws, rng, params)
     final_a, final_b = resolve_overtime(reg_a, reg_b, rng, params, False)
     sim = np.bincount(np.minimum(np.abs(final_a - final_b), KEY_MAX), minlength=KEY_MAX + 1) / draws_per_row
     real = np.bincount(np.minimum(np.abs(score_a - score_b), KEY_MAX), minlength=KEY_MAX + 1)

@@ -127,3 +127,6 @@ Scope-locked `/refactor` read of `git diff 325f541 -- backend/nflpi`: one findin
 the paired_residual draw → WO4 (behaviour-neutral; proof: identical learned ratios on real data, reference
 `ratio_before.json` sha1 `64de969b`). `sim_backtest` key functions reuse `crps`, `learn_for_season`, the 18c seed rule and
 the one spread conversion: no change. `game.py`/`params.py` hooks are two lines each: no change.
+- WO4 (Ryan): `learn_key_ratio` now calls `sample_regulation("paired_residual", ...)`; 5 inline lines removed. Proof:
+  learned ratios for 2012 and 2022, both sources, on real data are byte-identical before and after (sha1 `64de969b` both);
+  87 passed, ruff 0. Cleanup done; no other change.
