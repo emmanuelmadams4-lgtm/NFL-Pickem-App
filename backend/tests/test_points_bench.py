@@ -174,3 +174,27 @@ def test_b9_counts_only_out_non_qb_players_of_that_team_and_week():
     assert list(out["home_out_nonqb"]) == [2, 0]
     assert list(out["away_out_nonqb"]) == [1, 1]
     assert list(out["inj_diff"]) == pytest.approx([0.2, -0.2])  # (home - away) / 5
+
+
+# --- B10 c4 opponent-adjusted play-by-play efficiency -------------------------------------------------
+
+def _plays():
+    p = [  # season, week, offense, defense, epa, play_type
+        (2023, 1, "A", "B", 0.2, "pass"), (2023, 1, "A", "B", 0.4, "run"), (2023, 1, "A", "B", 5.0, "punt"),
+        (2023, 1, "B", "A", -0.1, "pass"), (2023, 1, "B", "A", np.nan, "run"),
+        (2023, 2, "A", "C", 0.1, "run"), (2023, 2, "C", "A", 0.0, "pass"),
+        (2022, 9, "C", "D", 9.0, "pass"), (2022, 9, "D", "C", -9.0, "pass"),  # another season never carries over
+    ]
+    return pd.DataFrame(p, columns=["season", "week", "posteam", "defteam", "epa", "play_type"])
+
+
+def test_b10_team_ratings_use_only_earlier_games_and_adjust_for_the_opponent():
+    games = pd.DataFrame([
+        {"season": 2023, "week": 1, "home_team": "A", "away_team": "B"},
+        {"season": 2023, "week": 2, "home_team": "A", "away_team": "C"},
+        {"season": 2023, "week": 3, "home_team": "A", "away_team": "C"},
+    ])
+    out = _pb().efficiency_diff(games, _plays())
+    # wk1: no earlier games -> 0. wk2: A's week-1 adjusted net 0.4 (0.3 - -0.1, opponent B had no earlier games);
+    # C has none -> 0.4. wk3: A = mean(0.4, 0.1) = 0.25; C's week-2 net -0.1 + A's earlier mean net 0.4 = 0.3 -> -0.05
+    assert list(out) == pytest.approx([0.0, 0.4, -0.05])

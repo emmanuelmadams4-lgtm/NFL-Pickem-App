@@ -131,3 +131,22 @@ case) and `position` not "QB" (QBs are c1's subject; Questionable and Doubtful a
 included). Model c3 = the walk-forward blend with `inj_diff` added to the stats and the blend features (refit like c1,
 window 10). Column `p_c3`, scored once against `p_blend` with `decide`. Spec B9 `injury_counts(games, injuries)`.
 Red: 1 failed (`AttributeError: no injury_counts`), 15 passed.
+
+- WO3 (Ryan, try 1) `3cf0f9f`: `injury_counts`, `--injuries DIR`, shared `_feature_season` (c1 now uses it too).
+  Coordinator rerun: 16 passed, ruff 0. Match check (not a scoring run): every injury team code is a games team;
+  3,484 of 3,742 REG games since 2012 have a non-QB player out; mean 1.75 per team.
+
+**c3 non-QB injuries: scored once** (`step-19b-evidence/c3.json`). 2022-2025: c3 87.88 pts/week, accuracy 67.90%;
+gain vs blend **+0.17 [-0.17, +0.47]**, accuracy +0.0037, log-loss gain +0.00060. 2012-2021: +0.04 [-0.11, +0.18],
+accuracy 0.0000, log-loss gain -0.00018. **Decision: does not ship** (CI lower bound not above 0).
+
+**Pre-registered c4 (opponent-adjusted play-by-play efficiency), defined before it is built or scored.** Data: public
+nflverse `play_by_play_{season}.csv.gz`, 2002-2025. Plays: `play_type` "pass" or "run" with a finite `epa`; teams
+through `nflverse.franchise`. Per team-game (season, week, team): `off` = mean EPA per play on offense, `def` = mean
+EPA per play allowed, `net = off − def`. Opponent strength at a game = the opponent's mean raw `net` over its games
+earlier that season (0 when none). Adjusted net = `net + opponent strength`. A team's rating before a game = the mean
+adjusted net over its games earlier that season (0 when none; nothing carries across seasons). `eff_diff = home
+rating − away rating`. Model c4 = the walk-forward blend with `eff_diff` added to the stats and blend features (refit
+like c1/c3, window 10). Column `p_c4`, scored once against `p_blend` with `decide`. Spec B10 `efficiency_diff(games,
+plays) -> Series` aligned to games (worked example in the test). Red: 1 failed (`AttributeError`), 16 passed.
+This is the fourth look: a single win among c1-c4 is weaker evidence than one pre-planned test.
