@@ -83,6 +83,16 @@ for (const [cause, words] of Object.entries(CAUSES)) {
   });
 }
 
+test("C6 design critic 1: the notice is the app's Notice and never touches the line below it", async ({ page, request }) => {
+  const g = await openGame(request);
+  await gamePage(page, g, null, { status: "no_verdict", note: NO_VERDICT_NOTE, cause: "cap" });
+  const note = section(page).getByRole("note");
+  await expect(note).toHaveClass(/\brounded-ctl\b/); // the shared Notice (ui.tsx), like every other notice
+  const box = (await note.boundingBox())!;
+  const next = (await section(page).getByText("No simulation for this game yet.").boundingBox())!;
+  expect(next.y - (box.y + box.height), "a gap of at least 8 px under the notice").toBeGreaterThanOrEqual(8);
+});
+
 test("C3 not checked (a backfill run): plain words and the note", async ({ page, request }) => {
   const g = await openGame(request);
   await gamePage(page, g, null, { status: "not_checked", note: BACKFILL_NOTE });

@@ -62,3 +62,8 @@ fail on their heading ("Run check failed", "Run check gave no verdict", "Not che
 today: they guard what must not change.
 
 ## 3. IMPLEMENTATION
+- WO1 (`evidence/wo-1.md`, try 1): Ryan reported at 04:12 UTC. The diff touched only `simulation.tsx` and matched
+  the order. Typecheck 0. `s18kw-green-1` (fresh build of check18k and sim18j): **16 passed**. Committed `7340ec2`.
+- Design Gauntlet: notice screenshots `after-{failed,noverdict}-{393,1280}.png`. A fresh design critic reviewed them
+  (`evidence/reviews/design-1.md`): 1 MUST, the notice touches the next line when there is no simulation; 1 SHOULD,
+  use the shared `Notice`. Both taken. Test first: C6 (`s18kw-red-2` fails on the class). WO2.
