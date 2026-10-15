@@ -109,3 +109,23 @@ Scope-locked refactor pass over the WO1 + WO2 diff (`984de84..0c39030`, producti
 - `except Exception` around `pregame_quotes` matches the existing "the simulator is optional" guard style in
   `engine.py`; kept broad on purpose (any quote failure must fall back to nflverse, never stop predictions).
 No edits, so no proof rerun needed; CI on `0c39030` stands.
+
+## 5. VERIFICATION
+
+- **Fresh critic 1** (ecc:code-reviewer, no transcript) on `a400fc2`: **PASS**. Gate rerun: 14 pure passed; adjacent 111
+  + 21 passed; `a400fc2` is docs-only over `0c39030`. Every section-2 clause implemented and tested; limits held (K3
+  declared). Could not run ruff or `gh` in its sandbox; coordinator evidence: ruff clean locally and in CI backend job
+  116573957340 ("All checks passed!"), CI runs above. LOWs: (a) `engine.py:82-86` a real SQL error in
+  `pregame_quotes` would abort the Postgres transaction, so the fallback helps only non-SQL errors (no worse than
+  before); (b) `keys._warned` is shared by non-convergence and ESS warnings; (c) CLEANUP named `0c39030` (fine,
+  `a400fc2` is docs).
+- **Dwight** (security, read-only, `a400fc2`): **PASS**, no CRITICAL/HIGH. **M1 MEDIUM** `engine.py:82-86`: no savepoint
+  around `pregame_quotes`, so a real SQL error aborts the transaction and the fallback never happens (19a L4 not
+  really closed; same as critic LOW a). L1-L7 LOW, recorded, not built: L1 `ValueRatingOut` built outside the try
+  (unreachable: inputs reject non-finite); L2 shared `keys._warned`; L3 `_warned_ratings` unpruned, keyed without
+  error type; L4 no-params warning repeats each refresh; L5 `count == len(sides)` relies on save-time selection
+  checks (validated, unreachable); L6 `pregame_quotes` admits NaN (rejected later); L7 exclusive create checked after
+  the expensive run, `write_tune` lacks `allow_nan=False`.
+- **M1 route:** test tightened first (`6d0c481`: the patched read runs a real bad SELECT). **Red (CI run 38780658185):**
+  `1 failed, 2451 passed` — `InFailedSqlTransaction`, the intended reason. **WO3** (Ryan): `with
+  session.begin_nested():` around the read, nothing else → `9097b1c`. Proof (coordinator): 14 pure passed, ruff clean.
