@@ -28,11 +28,13 @@ from nflpi.analytics.sim_backtest import BASE_SEED, N_SIMULATIONS, WINDOW
 from nflpi.api.schemas import SimulationOut
 from nflpi.config import get_settings
 from nflpi.ingestion.service import freshness
-from nflpi.models import AppSetting, BacktestRun, Game, MarketSnapshot, ModelVersion, Prediction
+from nflpi.models import AppSetting, BacktestRun, Game, MarketSnapshot, ModelVersion, Prediction, utcnow
 from nflpi.picks import home_spread_from_nflverse
+from nflpi.predictions import fresh_line
 from nflpi.predictions.elo import EloParams
 from nflpi.predictions.events import ChangeEvent
 from nflpi.predictions.features import BASE_FEATURES, BLEND_FEATURES, add_features
+from nflpi.predictions.market import novig_home_prob
 from nflpi.predictions.model import LogitModel
 from nflpi.predictions.scores import STATS_FEATURES, ScoreModel, add_score_features
 from nflpi.sim import DEFAULT_DISTRIBUTION, SimParams, TeamFeatures, simulate_game
@@ -46,6 +48,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 CHANGE_WORDS = {
     "elo_diff": "team ratings after new results",
     "market_logit": "betting line",
+    "market_source": "betting line",
+    "market_seen_at": "betting line",
     "home_qb": "starting QB",
     "away_qb": "starting QB",
     "simulation": "score simulation",
@@ -53,9 +57,14 @@ CHANGE_WORDS = {
     "home_rest": "rest days",
     "away_rest": "rest days",
 }
+LINE_KEYS = {
+    "market_prob", "market_logit", "market_source", "market_seen_at",
+    "used_market", "market_kind", "upset_flags",
+}
 
 
-def load_frame(session: Session) -> pd.DataFrame:
+def load_frame(session: Session, now: datetime | None = None) -> pd.DataFrame:
+    now = now or utcnow()
     latest = (
         select(MarketSnapshot.game_id, func.max(MarketSnapshot.id).label("mid"))
         .group_by(MarketSnapshot.game_id)
@@ -67,33 +76,73 @@ def load_frame(session: Session) -> pd.DataFrame:
         .outerjoin(MarketSnapshot, MarketSnapshot.id == latest.c.mid)
         .where(Game.season >= get_settings().first_season)
     )
-    rows = []
-    for g, m in session.execute(q):
-        rows.append(
-            {
-                "game_id": g.game_id,
-                "season": g.season,
-                "week": g.week,
-                "game_type": g.game_type,
-                "kickoff_utc": g.kickoff_utc,
-                "home_team": g.home_team,
-                "away_team": g.away_team,
-                "home_score": g.home_score,
-                "away_score": g.away_score,
-                "status": g.status,
-                "neutral_site": g.neutral_site,
-                "home_rest": g.home_rest,
-                "away_rest": g.away_rest,
-                "home_qb": g.home_qb,
-                "away_qb": g.away_qb,
-                "home_ml": m.home_moneyline if m else np.nan,
-                "away_ml": m.away_moneyline if m else np.nan,
-                "spread_line": m.spread_line if m and m.spread_line is not None else np.nan,
-                "total_line": m.total_line if m and m.total_line is not None else np.nan,
-                "market_kind": m.kind if m else None,
-                "market_observed_at": m.observed_at if m else None,
-            }
+    games = list(session.execute(q))
+    upcoming = [g.game_id for g, _ in games if g.kickoff_utc > now]
+    quotes = fresh_line.pregame_quotes(session, upcoming, now)
+    previous: dict[str, Prediction] = {}
+    if upcoming:
+        latest_prediction = (
+            select(Prediction.game_id, func.max(Prediction.id).label("pid"))
+            .where(Prediction.game_id.in_(upcoming))
+            .group_by(Prediction.game_id)
+            .subquery()
         )
+        previous = {
+            prediction.game_id: prediction
+            for prediction in session.scalars(
+                select(Prediction).join(latest_prediction, Prediction.id == latest_prediction.c.pid)
+            )
+        }
+    rows = []
+    for g, m in games:
+        row = {
+            "game_id": g.game_id,
+            "season": g.season,
+            "week": g.week,
+            "game_type": g.game_type,
+            "kickoff_utc": g.kickoff_utc,
+            "home_team": g.home_team,
+            "away_team": g.away_team,
+            "home_score": g.home_score,
+            "away_score": g.away_score,
+            "status": g.status,
+            "neutral_site": g.neutral_site,
+            "home_rest": g.home_rest,
+            "away_rest": g.away_rest,
+            "home_qb": g.home_qb,
+            "away_qb": g.away_qb,
+            "home_ml": m.home_moneyline if m else np.nan,
+            "away_ml": m.away_moneyline if m else np.nan,
+            "spread_line": m.spread_line if m and m.spread_line is not None else np.nan,
+            "total_line": m.total_line if m and m.total_line is not None else np.nan,
+            "market_kind": m.kind if m else None,
+            "market_observed_at": m.observed_at if m else None,
+        }
+        if g.game_id in upcoming:
+            nflverse = fresh_line.Line(
+                novig_home_prob(m.home_moneyline, m.away_moneyline) if m else None,
+                "nflverse", m.observed_at if m else None,
+            )
+            old = previous.get(g.game_id)
+            old_features = old.features if old else {}
+            old_seen = old_features.get("market_seen_at")
+            prior = fresh_line.Line(
+                old_features.get("market_prob"), old_features.get("market_source", "nflverse"),
+                datetime.fromisoformat(old_seen) if old_seen else None,
+            ) if old else None
+            chosen, refused = fresh_line.choose_line(
+                nflverse, quotes.get(g.game_id, []), prior, now=now, kickoff=g.kickoff_utc,
+            )
+            if refused is not None:
+                log.warning(
+                    "fresh line sanity refusal for %s: nflverse=%s quote=%s source=%s",
+                    g.game_id, nflverse.prob, refused.home_prob, refused.source,
+                )
+            if chosen.source != "nflverse" and chosen.prob is not None:
+                row["home_ml"], row["away_ml"] = fresh_line.fair_moneylines(chosen.prob)
+                row["market_source"] = chosen.source
+                row["market_seen_at"] = chosen.seen_at.isoformat() if chosen.seen_at else None
+        rows.append(row)
     df = pd.DataFrame(rows)
     df["home_score"] = df["home_score"].astype("float")
     df["away_score"] = df["away_score"].astype("float")
@@ -391,7 +440,7 @@ def refresh_predictions(
         raise RuntimeError("no active model; run `python -m nflpi.jobs train` first")
     p = mv.params
     base, blend = LogitModel.from_dict(p["base"]), LogitModel.from_dict(p["blend"])
-    f = add_features(load_frame(session), EloParams(**p["elo"]))
+    f = add_features(load_frame(session, now), EloParams(**p["elo"]))
 
     season, week = current_week(session)
     if game_ids is not None:
@@ -412,6 +461,26 @@ def refresh_predictions(
         log.exception("run check failed; predictions are written without the new simulations")
         session.rollback()
         simulations, sim_marks = _blocked(session, simulations, None, cause="error")
+    target_weeks = {(int(row["season"]), int(row["week"])) for _, row in targets.iterrows()}
+    weekly_old: dict[tuple[int, int], dict[str, float]] = {key: {} for key in target_weeks}
+    if target_weeks:
+        latest_week_prediction = (
+            select(Prediction.game_id, func.max(Prediction.id).label("pid"))
+            .group_by(Prediction.game_id)
+            .subquery()
+        )
+        for game, prediction in session.execute(
+            select(Game, Prediction)
+            .join(latest_week_prediction, latest_week_prediction.c.game_id == Game.game_id)
+            .join(Prediction, Prediction.id == latest_week_prediction.c.pid)
+            .where(Game.season.in_({season for season, _ in target_weeks}))
+            .where(Game.week.in_({week for _, week in target_weeks}))
+        ):
+            key = (game.season, game.week)
+            if key in weekly_old:
+                weekly_old[key][game.game_id] = prediction.home_win_prob
+    weekly_new = {key: probs.copy() for key, probs in weekly_old.items()}
+    deferred_line_events: list[tuple[tuple[int, int], ChangeEvent]] = []
     for _, row in targets.iterrows():
         base_p = base.predict_one(row)
         has_market = not pd.isna(row["market_logit"])
@@ -448,6 +517,9 @@ def refresh_predictions(
         features["stats_only_prob"] = round(base_p, 4)
         features["used_market"] = has_market
         features["market_kind"] = row["market_kind"]
+        if isinstance(row.get("market_source"), str):
+            features["market_source"] = row["market_source"]
+            features["market_seen_at"] = row["market_seen_at"]
         features["upset_flags"] = upset
         for col in ("home_qb", "away_qb", "home_prev_qb", "away_prev_qb"):
             features[col] = row[col]
@@ -464,9 +536,15 @@ def refresh_predictions(
         ).first()
         if prev and prev.inputs_hash == h:
             continue
+        week_key = (int(row["season"]), int(row["week"]))
+        weekly_new[week_key][row["game_id"]] = round(prob, 4)
         note = None
         if prev:
-            changed = {CHANGE_WORDS.get(k, "") for k in features if prev.features.get(k) != features[k]} - {""}
+            changed_keys = {
+                key for key in features.keys() | prev.features.keys()
+                if prev.features.get(key) != features.get(key)
+            }
+            changed = {CHANGE_WORDS.get(k, "") for k in changed_keys} - {""}
             what = ", ".join(sorted(changed)) or ("model version" if prev.model_version_id != mv.id else "risk flags")
             note = f"Changed: {what}. {home} win chance {prev.home_win_prob:.0%} → {prob:.0%}."
             moved = round(abs(prob - prev.home_win_prob), 4)
@@ -480,11 +558,21 @@ def refresh_predictions(
                     qb_team = team
                     qb_name = new_starter if isinstance(new_starter, str) else None
                     break
-            if prev.pick != pick or moved >= settings.alert_move_threshold or old_label != new_label or qb_team:
-                events.append(ChangeEvent(
-                    row["game_id"], prev.home_win_prob, prob, prev.pick, pick, note,
-                    old_label, new_label, qb_team, qb_name,
-                ))
+            line_only = (
+                bool(changed_keys) and changed_keys <= LINE_KEYS and prev.model_version_id == mv.id
+                and ("market_source" in features or "market_source" in prev.features)
+            )
+            event = ChangeEvent(
+                row["game_id"], prev.home_win_prob, prob, prev.pick, pick, note,
+                old_label, new_label, qb_team, qb_name,
+            )
+            if line_only and prev.pick == pick:
+                deferred_line_events.append((week_key, event))
+            elif (
+                prev.pick != pick or line_only or moved >= settings.alert_move_threshold
+                or old_label != new_label or qb_team
+            ):
+                events.append(event)
         session.add(
             Prediction(
                 game_id=row["game_id"],
@@ -505,6 +593,11 @@ def refresh_predictions(
                 change_note=note,
             )
         )
+    for week_key, event in deferred_line_events:
+        old_probs = weekly_old[week_key]
+        old_probs.setdefault(event.game_id, event.old_prob)
+        if fresh_line.rank_changed(old_probs, weekly_new[week_key], event.game_id):
+            events.append(event)
     session.commit()
     return events
 
