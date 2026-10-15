@@ -59,7 +59,10 @@ total), `selection`, `sportsbook`, `line`, `price`, `observed_at`, `status` (RAT
 - A7 `GET /api/games/{id}` serves the list.
 - A8 (added after WO1, coordinator finding: the engine stores simulator chances rounded to 4 places, so a set can sum
   to 0.9999 and `SettlementProbs` raised, a 500 for the whole game page): a set within 0.001 of 1 is scaled to sum to 1
-  and rated; a set further off, or with a value outside [0, 1], leaves that price out. The game reply never fails.
+  and rated; a set further off, or with a value outside [0, 1], leaves that price out. The game reply never fails. Severity corrected by Dwight: the real engine path stores k/10000 chances that sum
+  exactly, so this is reachable only with another simulation count or an older stored run (his V1, MEDIUM).
+  A8 correction (Ryan via god 80152c): the first A8 used sums 0.9987/1.0013, outside the 0.001 band its own spec
+  names; three 4-place values are off by at most 0.00015, so A8 now uses 0.5499/0.5501 (sums 0.9999/1.0001). Test-only.
 
 Web (`#value`, title "Value", a "Value" section tab after Simulator):
 - W1 the line "not yet shown to beat the market"; per price: market (Win, Spread, Total), side, price (+120), book,

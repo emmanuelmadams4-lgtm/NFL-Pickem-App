@@ -127,7 +127,7 @@ def test_a7_game_route_serves_the_ratings(session, at_now, client):
     }
 
 
-@pytest.mark.parametrize(("cover", "rated"), [(0.5487, True), (0.5513, True), (0.45, False), (-0.1, False)])
+@pytest.mark.parametrize(("cover", "rated"), [(0.5499, True), (0.5501, True), (0.45, False), (-0.1, False)])
 def test_a8_stored_chances_rounded_or_broken_never_fail_the_game_reply(session, at_now, cover, rated):
     # the engine stores simulator chances rounded to 4 places, so a set may sum to 0.9999 or 1.0001
     seed(session, sim=SIM | {"home_cover": cover})
