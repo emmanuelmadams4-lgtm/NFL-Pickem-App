@@ -92,3 +92,12 @@ No edit, so no proof rerun.
   N1 are all met (`evidence/reviews/security-1.md`). WO2 after it changes only a class, an sr-only span and a
   separator.
 - Gate on the WO2 code: typecheck 0; `s8g-green-2` 18/18 (news8g 5, phone-layout 13). The full suite runs on PR CI (D71).
+- **Fresh critic 1 on `2f23ba6`: PASS** (`evidence/reviews/critic-1.md`): news8g 5/5 on a fresh build (`s8g-critic-1`),
+  typecheck 0. Its MEDIUM was a test wait shorter than the app's retry. I fixed it in the test only (N5 `timeout: 15_000`);
+  `s8g-green-3` 5/5. Final screenshots `final-*.png`. No production code changed after the critic.
+- Jev Job 4: unavailable at 18j (00:03 UTC); the call goes to god.
+
+## 6. LANDING
+
+god lands. No push, PR or merge here. The full browser gate is PR CI (D71). Carried: the stale news badge needs
+`ingestion_runs` freshness in schemas and views. The deploy waits on the owner's yes (the D73 window ended 04:00 UTC).

@@ -100,7 +100,7 @@ test("N4 no news for the game (the real server reply): one plain sentence", asyn
 test("N5 the news request fails: the section says so and the page still works", async ({ page, request }) => {
   const g = await openGame(request);
   await gamePage(page, g, 500);
-  await expect(news(page)).toContainText("Could not load news");
+  await expect(news(page)).toContainText("Could not load news", { timeout: 15_000 }); // the app retries a 500 twice first
   await expect(page.locator("#market")).toBeVisible();
 });
 
