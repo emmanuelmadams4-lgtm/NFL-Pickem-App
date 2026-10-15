@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     openrouter_url: str = "https://openrouter.ai/api/v1/chat/completions"
     openrouter_decisions_url: str = "https://openrouter.ai/api/alpha/decisions"
     ai_daily_call_limit: int = 60
+    ai_run_check_daily_limit: int = 6  # the simulation run check's own budget, apart from the reports'
     ai_max_retries: int = 2
 
     # Web Push (PWA). Make keys with: python -m nflpi.jobs vapid

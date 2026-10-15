@@ -11,6 +11,7 @@ import logging
 import zlib
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -18,7 +19,10 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from nflpi.ai import run_checker
+from nflpi.analytics import run_check
 from nflpi.analytics.backtest import _elo_frames, run_backtest, tune_elo
+from nflpi.analytics.manifest import run_record
 from nflpi.analytics.metrics import EARLY_WEEK_END, UPSET_GAP, pick_label, uncertainty_grade, upset_watch
 from nflpi.analytics.sim_backtest import BASE_SEED, N_SIMULATIONS, WINDOW
 from nflpi.api.schemas import SimulationOut
@@ -37,12 +41,14 @@ log = logging.getLogger(__name__)
 SIM_LABEL = "Score simulator, football-only inputs: not shown to beat the betting market or the win model"
 MAX_EXPECTED_POINTS = 100
 _SIM_ARRAYS = ("residual_a", "residual_b", "ot_increments")
+REPO_ROOT = Path(__file__).resolve().parents[3]
 CHANGE_WORDS = {
     "elo_diff": "team ratings after new results",
     "market_logit": "betting line",
     "home_qb": "starting QB",
     "away_qb": "starting QB",
     "simulation": "score simulation",
+    "simulation_check": "score simulation check",
     "home_rest": "rest days",
     "away_rest": "rest days",
 }
@@ -320,6 +326,73 @@ def _simulations(session: Session, targets: pd.DataFrame) -> dict[str, dict | No
     }
 
 
+def _last_simulation(session: Session, game_id: str) -> dict | None:
+    """The simulation on the game's newest stored prediction, only if it carries the checked stamp (a PASS)."""
+    prev = session.scalars(
+        select(Prediction).where(Prediction.game_id == game_id).order_by(Prediction.id.desc()).limit(1)
+    ).first()
+    return prev.features.get("simulation") if prev and prev.features.get("simulation_checked") else None
+
+
+def _check_run(
+    session: Session, targets: pd.DataFrame, frame: pd.DataFrame, simulations: dict[str, dict | None],
+    now: datetime, kind: str,
+) -> tuple[dict[str, dict | None], dict[str, dict]]:
+    """Gate the run's simulations behind the Claude check (step 18k, D74).
+
+    PASS: the run is used as is. FAIL or no verdict: the run is not used; every game keeps its last checked
+    simulation and gets a note saying so. The win model, the pick and the confidence points are not read here.
+    """
+    if not any(simulations.values()):
+        return simulations, {}
+    if kind == "backfill":  # one request for a whole season is too large; its simulations are stored as missing
+        note = "A backfill run is not sent to the run check, so it has no simulation."
+        return ({gid: None for gid in simulations},
+                {gid: {"status": "not_checked", "note": note} for gid, sim in simulations.items() if sim})
+    final_later = (frame["status"] == "final") & (pd.to_datetime(frame["kickoff_utc"], utc=True) > now)
+    results_ok = None if kind != "live" else not bool(final_later.any())  # a backfill is labeled after-the-fact
+    entries, per_game = {}, {}
+    for _, row in targets.iterrows():
+        gid, sim = row["game_id"], simulations[row["game_id"]]
+        inputs = run_check.game_inputs(row, now, results_ok)
+        spread_line = float(row["spread_line"]) if _finite(row["spread_line"]) else None
+        entries[gid] = run_check.check_game(gid, sim, inputs, spread_line)
+        per_game[gid] = {"n_simulations": sim["n_simulations"] if sim else None,
+                         "inputs_used": [name for name, m in inputs.items() if m["present"]] if sim else []}
+    record = run_record(
+        MODEL_KIND, label=SIM_LABEL, seed=BASE_SEED, seed_note="each game: crc32(game_id) xor seed",
+        cutoff_rule=run_check.CUTOFF_RULE,
+        latest_kickoff=pd.to_datetime(targets["kickoff_utc"], utc=True).max().isoformat(),
+        n_games=len(targets), seasons=sorted({int(s) for s in targets["season"]}),
+        uses_closing_line=bool((targets["market_kind"] == "closing").any()), data_files={}, repo_root=REPO_ROOT,
+        games=per_game,
+    )
+    verdict = run_checker.verdict_for(session, record, run_check.build_report(entries), simulations, now)
+    if verdict.status == "PASS":
+        return simulations, {}
+    return _blocked(session, simulations, verdict.status, verdict.games, verdict.cause)
+
+
+def _blocked(
+    session: Session, simulations: dict[str, dict | None], status: str | None, games: tuple[str, ...] = (),
+    cause: str | None = None,
+) -> tuple[dict[str, dict | None], dict[str, dict]]:
+    """A FAIL or no verdict: every game keeps its last checked simulation and gets a fixed-text note."""
+    kept = {gid: _last_simulation(session, gid) for gid in simulations}
+    failed = status == "FAIL"
+    head = "The run check failed" if failed else f"The run check gave no verdict ({cause or 'error'})"
+    if failed and games:
+        head += f" for {', '.join(games)}"
+    marks = {}
+    for gid in simulations:
+        if simulations[gid] is None and kept[gid] is None:
+            continue
+        tail = "showing the last checked simulation" if kept[gid] else "no checked simulation yet"
+        marks[gid] = {"status": "failed" if failed else "no_verdict", "note": f"{head}. This run is not used; {tail}.",
+                      **({} if failed else {"cause": cause or "error"})}
+    return kept, marks
+
+
 def refresh_predictions(
     session: Session, now: datetime | None = None, game_ids: list[str] | None = None, kind: str = "live"
 ) -> list[ChangeEvent]:
@@ -346,6 +419,12 @@ def refresh_predictions(
         stale = []
     events: list[ChangeEvent] = []
     simulations = _simulations(session, targets)
+    try:
+        simulations, sim_marks = _check_run(session, targets, f, simulations, now, kind)
+    except Exception:  # noqa: BLE001 - the check must never stop the win model, picks and points from being written
+        log.exception("run check failed; predictions are written without the new simulations")
+        session.rollback()
+        simulations, sim_marks = _blocked(session, simulations, None, cause="error")
     for _, row in targets.iterrows():
         base_p = base.predict_one(row)
         has_market = not pd.isna(row["market_logit"])
@@ -387,7 +466,11 @@ def refresh_predictions(
             features[col] = row[col]
         features = {k: _clean(v) for k, v in features.items()}
         features["simulation"] = simulations[row["game_id"]]
+        if row["game_id"] in sim_marks:  # absent means the run passed its check
+            features["simulation_check"] = sim_marks[row["game_id"]]
         h = _hash({"mv": mv.id, "f": features, "u": reasons})
+        if features["simulation"] is not None:
+            features["simulation_checked"] = True  # after the hash: a stamp alone never writes a new row
 
         prev = session.scalars(
             select(Prediction).where(Prediction.game_id == row["game_id"]).order_by(Prediction.id.desc()).limit(1)

@@ -102,6 +102,7 @@ def prediction_out(p: Prediction, names: dict[int, str]) -> s.PredictionOut:
         change_note=p.change_note,
         data_freshness=p.data_freshness,
         simulation=p.features.get("simulation"),
+        simulation_check=p.features.get("simulation_check"),
     )
 
 

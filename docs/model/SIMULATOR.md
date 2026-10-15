@@ -39,7 +39,7 @@ Existing code, two variants, always reported separately:
 | name | idea | learned |
 |---|---|---|
 | `poisson` | two independent Poisson counts. Baseline. | nothing |
-| `paired_residual` | stochastically rounded expected points plus a past (A residual, B residual) pair, residual = regulation score minus rounded expected points | the residual pairs |
+| `paired_residual` | stochastically rounded expected points plus a past (A residual, B residual) pair, residual = regulation score minus rounded expected points, centred per side (below) | the residual pairs |
 | `bivariate_normal` | rounded two-variable normal, sd = sqrt(phi x expected points) | phi per side, correlation |
 | `shared_gamma_poisson` | Poisson counts whose rate is multiplied by gamma factors that share a common part: overdispersed, and the two scores can move together | total and shared relative variance |
 
@@ -47,13 +47,15 @@ Existing code, two variants, always reported separately:
 
 `learn_params` is a pure function of the rows it is given. The bench gives it only the seasons `max(2004, S-10)` to `S-1` when testing season S, with expected points that were themselves produced walk-forward. Tests change every result from season S on and check the parameters do not move.
 
+**Centred pool (step 18k double-count fix, 2026-10-14).** The training rows' expected points come from older walk-forward models, but the target season's model is fit on those same seasons, so their mean error is already inside the target's expected points. Left in the pool it counted twice (2019 and 2020 home margins, about -0.5 points of margin). `learn_params` now shifts each side's pool so its mean is half the mean points overtime added over regulation in the training rows, the same for both sides (so past overtime winners do not tilt the margin). The pool stays integer: floor(offset) comes off every row and 1 more off k = round(fraction x n) evenly spaced rows of the sorted pool, so the pool mean is exact to 1/(2n) and its shape is a shift, not a reshape. The pool's margin mean is 0 to within 1/n and its total mean is minus the overtime points, which the overtime step adds back, so the simulated mean equals the inputs (to within what the simulated overtime rate differs from the training rows'). Bench and mean-check numbers: `docs/gauntlet/logs/step-18k.md` "Simulator double-count fix". The 18c confirm numbers below were made before this fix.
+
 ## Overtime, ties, season rules
 
 Distributions give the score after regulation. A regulation tie goes to overtime: it stays a tie with the learned probability `ot_tie_frac` (regular season only) or one side (50/50, an assumption) gains a learned increment (the winning margins of past overtime games). The regulation score of a past overtime game is taken as the loser's final score for both sides (an approximation: wrong when both teams scored in a modified-sudden-death overtime). Rules by era: `sudden_death_15` before 2012, `modified_15` 2012 to 2016, `modified_10` from 2017; the learner uses only same-era overtime games when it has at least 30, else all training overtime games and flags `ot_era_fallback`. `playoff=True` sets the tie probability to zero.
 
 ## Results
 
-All numbers from ONE confirm run on seasons 2022 to 2025, 1,087 regular-season games with a closing line, 10,000 simulations each, every variant (file `docs/gauntlet/logs/step-18c-evidence/confirm-result.json`, written once by `python -m nflpi.analytics.sim_backtest confirm`). The default distribution was picked before that look, on 2012 to 2021 only (`tune-result.json`, 2,576 games): pooled CRPS (margin plus total, lower is better) poisson 16.136, **paired_residual 15.047**, bivariate_normal 15.059, shared_gamma_poisson 15.061. The three learned distributions differ by 0.014 points; the choice among them is a near tie. Poisson is clearly worse.
+All numbers from ONE confirm run on seasons 2022 to 2025, 1,087 regular-season games with a closing line, 10,000 simulations each, every variant (file `docs/gauntlet/logs/step-18c-evidence/confirm-result-pre18k.json`, renamed from `confirm-result.json` when the 18k fix regenerated that file; written once by `python -m nflpi.analytics.sim_backtest confirm`). The default distribution was picked before that look, on 2012 to 2021 only (`tune-result.json`, 2,576 games): pooled CRPS (margin plus total, lower is better) poisson 16.136, **paired_residual 15.047**, bivariate_normal 15.059, shared_gamma_poisson 15.061. The three learned distributions differ by 0.014 points; the choice among them is a near tie. Poisson is clearly worse.
 
 **Short answer: no edge is shown.** The simulator reproduces the spread of real scores well enough to be useful for ranges and tie rates; it does not beat the betting market or the live blend at picking winners, covers or overs.
 
