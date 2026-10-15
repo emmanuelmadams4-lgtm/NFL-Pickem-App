@@ -67,3 +67,13 @@ Wiring (database; PR CI):
 Gate: local `uv run pytest tests/test_fresh_line.py -k "test_f1 or ... test_f8" --noconftest` (pure); the whole file and
 the full suite on a draft PR's CI from `lane/web-19a` (Mac test database off; Docker stays off: god 57e1b4).
 **Red (local, pure):** 18 failed (ImportError: no `fresh_line`), 7 database tests left for CI.
+**Red in CI** (draft PR #47, run 38763658932, backend job 116521164110, on `dbdb27b`): 22 failed, 2,366 passed, 1 skipped.
+The 18 F tests fail on `ImportError` (no `fresh_line`); D1 (market prob stays nflverse 0.420 vs quote 0.470), D3
+(import), D3b (pick unchanged 'LV') and D4 (20 min instead of 11) fail for the intended reasons; the three D2 cases pass
+before the build because they assert today's behaviour (nflverse kept).
+
+## 3. IMPLEMENTATION
+
+- WO1 (Ryan, try 1): `fresh_line.py` (new), `engine.load_frame(session, now)` fresh-quote choice, the two feature keys,
+  the line-only ChangeEvent rule, `jobs.next_interval` targets. Coordinator rerun locally: 18 pure tests passed, ruff 0.
+  Database clauses: PR CI on the pushed commit (below).

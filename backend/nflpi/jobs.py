@@ -109,12 +109,18 @@ def backtest() -> None:
 
 def next_interval(session, now: datetime) -> timedelta:
     """Refresh faster as kickoff gets closer."""
+    from nflpi.predictions import fresh_line
+
     nxt = session.scalar(select(Game.kickoff_utc).where(Game.kickoff_utc > now).order_by(Game.kickoff_utc).limit(1))
     if nxt is None:
         return timedelta(hours=12)
     until = nxt - now
-    if until < timedelta(hours=6):
-        return timedelta(minutes=20)
+    if until <= timedelta(hours=6):
+        kickoffs = session.scalars(
+            select(Game.kickoff_utc).where(Game.kickoff_utc > now, Game.kickoff_utc <= now + timedelta(hours=6))
+        ).all()
+        target = fresh_line.until_next_target(kickoffs, now)
+        return min(timedelta(minutes=20), target) if target is not None else timedelta(minutes=20)
     if until < timedelta(days=2):
         return timedelta(hours=1)
     return timedelta(hours=4)
