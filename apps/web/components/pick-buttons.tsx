@@ -1,7 +1,7 @@
 "use client";
 
 import type { GameSummary } from "@nflpi/shared";
-import { useLocked } from "@/lib/clock";
+import { useLocked, useLockMinutes } from "@/lib/clock";
 import { useSetPick } from "@/lib/queries";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { TeamLogo } from "@/components/team";
@@ -12,11 +12,12 @@ type PickGame = Pick<GameSummary, "game_id" | "season" | "week" | "away" | "home
 
 /**
  * One-tap pick. Away on the left, home on the right (matches "away @ home").
- * Tapping the selected team clears the pick. Disabled once the game has kicked off.
+ * Tapping the selected team clears the pick. Disabled at the configured pregame lock.
  */
 export function PickButtons({ game, size = "sm", className }: { game: PickGame; size?: "sm" | "lg"; className?: string }) {
   const mutation = useSetPick(game.game_id);
   const locked = useLocked(game);
+  const lockWording = `Locked ${useLockMinutes()} min before kickoff`;
   const pending = usePendingPicks();
   const { pick, waiting } = effectivePick(pending, game.game_id, game.my_pick);
   const teams = [game.away, game.home];
@@ -26,14 +27,14 @@ export function PickButtons({ game, size = "sm", className }: { game: PickGame; 
     <div role="group" aria-label={`Your pick: ${game.away.abbr} at ${game.home.abbr}`} className="flex gap-2 lg:gap-1.5">
       {teams.map((t) => {
         const selected = pick === t.abbr;
-        const label = selected ? `${t.name} picked. ${locked ? "Locked at kickoff." : "Tap to clear."}` : locked ? `Pick ${t.name} (locked at kickoff)` : `Pick ${t.name}`;
+        const label = selected ? `${t.name} picked. ${locked ? `${lockWording}.` : "Tap to clear."}` : locked ? `Pick ${t.name} (${lockWording.toLowerCase()})` : `Pick ${t.name}`;
         return (
           <button
             key={t.abbr}
             type="button"
             aria-pressed={selected}
             aria-label={label}
-            title={locked ? "Locked at kickoff" : selected ? "Tap again to clear" : `Pick ${t.name}`}
+            title={locked ? lockWording : selected ? "Tap again to clear" : `Pick ${t.name}`}
             disabled={locked}
             onClick={() => mutation.mutate({ gameId: game.game_id, season: game.season, week: game.week, team: selected ? null : t.abbr })}
             className={cx(

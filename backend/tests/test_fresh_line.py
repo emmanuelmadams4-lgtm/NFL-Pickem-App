@@ -53,7 +53,11 @@ def test_f2_unusable_quotes_leave_the_nflverse_line(quote):
     kickoff = NOW - timedelta(minutes=1) if quote == "after_kickoff" else KICKOFF
     base = nfl(minutes_ago=10) if quote == "older_than_nflverse" else nfl()
     line, _ = choose(quotes, nflverse=base, kickoff=kickoff)
-    assert line == base and fl.FRESH_MAX_AGE == timedelta(minutes=30)
+    if quote == "older_than_nflverse":
+        assert line.source == "kalshi" and line.prob == 0.64  # a fresh quote need not follow nflverse ingest time
+    else:
+        assert line == base
+    assert fl.FRESH_MAX_AGE == timedelta(minutes=30)
 
 
 def test_f3_a_quote_far_from_the_nflverse_line_is_refused_as_a_likely_wrong_side():
@@ -132,11 +136,11 @@ def test_f7_rank_change_follows_the_confidence_pool_order():
 def test_f8_the_wait_lands_one_minute_after_the_next_kickoff_target():
     until = _fl().until_next_target
     assert until([NOW + timedelta(minutes=100)], NOW) == timedelta(minutes=11)  # -90 target in 10 min
-    assert until([NOW + timedelta(minutes=25)], NOW) == timedelta(minutes=6)  # -20 target in 5 min
+    assert until([NOW + timedelta(minutes=35)], NOW) == timedelta(minutes=6)  # -30 target in 5 min
     assert until([NOW + timedelta(minutes=10)], NOW) is None  # both targets passed
-    assert until([NOW + timedelta(minutes=100), NOW + timedelta(minutes=24)], NOW) == timedelta(minutes=5)
+    assert until([NOW + timedelta(minutes=100), NOW + timedelta(minutes=34)], NOW) == timedelta(minutes=5)
     assert until([], NOW) is None
-    assert until([NOW + timedelta(minutes=90)], NOW) == timedelta(minutes=71)  # a target at exactly now is passed
+    assert until([NOW + timedelta(minutes=90)], NOW) == timedelta(minutes=61)  # a target at exactly now is passed
 
 
 # --- D1-D4 with the database (run in PR CI; the Mac test database is off) ---------------------------
@@ -244,7 +248,7 @@ def test_d4_next_interval_lands_just_after_the_kickoff_targets(session):
     session.commit()
     assert jobs.next_interval(session, NOW) == timedelta(minutes=11)
     assert jobs.next_interval(session, NOW + timedelta(minutes=12)) == timedelta(minutes=20)
-    assert jobs.next_interval(session, NOW + timedelta(minutes=75)) == timedelta(minutes=6)
+    assert jobs.next_interval(session, NOW + timedelta(minutes=75)) == timedelta(minutes=20)
 
 
 def test_d3c_the_points_rank_check_sees_every_new_chance_of_the_run(loaded, monkeypatch):

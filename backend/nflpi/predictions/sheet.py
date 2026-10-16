@@ -1,7 +1,7 @@
-"""Compute open pick sheets and freeze each game at kickoff."""
+"""Compute open pick sheets and freeze each game at its pregame lock."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import NamedTuple
 
 from sqlalchemy import and_, or_, select
@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from nflpi.analytics.metrics import LABEL_HIT_RATE, pick_label
+from nflpi.config import get_settings
 from nflpi.models import AppSetting, Game, PickPoint, Prediction, SheetEntry, UserPick
 
 log = logging.getLogger(__name__)
@@ -20,8 +21,13 @@ class Ranked(NamedTuple):
     prob: float
 
 
+def lock_time(game: Game) -> datetime:
+    return game.kickoff_utc - timedelta(minutes=get_settings().pick_lock_minutes)
+
+
 def is_locked(game: Game, now: datetime) -> bool:
-    return game.status == "final" or (game.status != "postponed" and not game.time_tbd and game.kickoff_utc <= now)
+    return game.status == "final" or (game.status != "postponed" and not game.time_tbd
+                                      and lock_time(game) <= now)
 
 
 def _chance(p: Prediction, g: Game, team: str) -> float:
@@ -53,24 +59,27 @@ def order(games: list[Ranked]) -> list[str]:
     return [g.game_id for g in sorted(games, key=lambda g: (-g.prob, g.game_id))]
 
 
-def recommendations(session: Session, games: list[Game]) -> dict[str, Prediction]:
+def recommendations(session: Session, games: list[Game], *, before_lock: bool = False) -> dict[str, Prediction]:
     ids = [g.game_id for g in games]
     if not ids:
         return {}
     by_id = {g.game_id: g for g in games}
     rows = session.scalars(select(Prediction).where(Prediction.game_id.in_(ids)).order_by(Prediction.id)).all()
+    if before_lock:
+        rows = sorted(rows, key=lambda p: (p.created_at, p.id))
+        return {p.game_id: p for p in rows if p.kind != "backfill" and p.created_at < lock_time(by_id[p.game_id])}
     return {p.game_id: p for p in rows if p.created_at < by_id[p.game_id].kickoff_utc or p.kind == "backfill"}
 
 
 def compute_week(
     session: Session, season: int, week: int, now: datetime, writing: frozenset[str] = frozenset(),
-    preds: dict[str, Prediction] | None = None,
+    preds: dict[str, Prediction] | None = None, *, before_lock: bool = False,
 ) -> dict[str, dict]:
     games = session.scalars(select(Game).where(Game.season == season, Game.week == week)
                             .order_by(Game.kickoff_utc, Game.game_id)).all()
     ids = [g.game_id for g in games]
     if preds is None:
-        preds = recommendations(session, games)
+        preds = recommendations(session, games, before_lock=before_lock)
     entries = {e.game_id: e for e in session.scalars(select(SheetEntry).where(SheetEntry.game_id.in_(ids)))}
     picks = {p.game_id: p for p in session.scalars(select(UserPick).where(UserPick.game_id.in_(ids)))}
     points = {p.game_id: p for p in session.scalars(select(PickPoint).where(PickPoint.game_id.in_(ids)))}
@@ -115,18 +124,19 @@ def finalize(session: Session, now: datetime) -> int:
     games = session.scalars(
         select(Game).outerjoin(SheetEntry, SheetEntry.game_id == Game.game_id)
         .where(Game.status != "postponed", SheetEntry.game_id.is_(None), has_prediction,
-               or_(Game.status == "final", and_(Game.time_tbd.is_(False), Game.kickoff_utc <= now)),
+               or_(Game.status == "final", and_(Game.time_tbd.is_(False), Game.kickoff_utc <= now + timedelta(
+                   minutes=get_settings().pick_lock_minutes))),
                or_(Game.status != "final", Game.kickoff_utc >= start))
         .order_by(Game.kickoff_utc, Game.game_id)
     ).all()
-    preds = recommendations(session, games)
+    preds = recommendations(session, games, before_lock=True)
     written = 0
     for i, g in enumerate(games):
         prediction = preds.get(g.game_id)
         if prediction is None or prediction.kind == "backfill":
             continue
         writing = frozenset(game.game_id for game in games[i:])
-        row = compute_week(session, g.season, g.week, now, writing=writing)[g.game_id]
+        row = compute_week(session, g.season, g.week, now, writing=writing, before_lock=True)[g.game_id]
         if row["app_pick"] is None:
             continue
         existing_pick = session.get(UserPick, g.game_id)

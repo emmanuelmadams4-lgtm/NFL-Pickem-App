@@ -3575,6 +3575,10 @@
    },
    "MetaOut": {
     "properties": {
+     "pick_lock_minutes": {
+      "type": "integer",
+      "title": "Pick Lock Minutes"
+     },
      "current_season": {
       "type": "integer",
       "title": "Current Season"
@@ -3672,6 +3676,7 @@
     },
     "type": "object",
     "required": [
+     "pick_lock_minutes",
      "current_season",
      "current_week",
      "seasons",

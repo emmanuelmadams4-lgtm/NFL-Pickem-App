@@ -5,7 +5,7 @@ import Link from "next/link";
 import { SORTS, ago, kickoffDay, needsAttention, sortGames, type SortKey, type GameSummary } from "@nflpi/shared";
 import { useLive, useWeek } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
-import { isLocked, useNow } from "@/lib/clock";
+import { isLocked, useLockMinutes, useNow } from "@/lib/clock";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { EmptyState, ErrorState, PageHead, SelectField, Skeleton, cx } from "@/components/ui";
 import { describeStale, feedsModel, staleList } from "@/components/freshness";
@@ -68,12 +68,13 @@ export function WeekBoard() {
   const live = useLive(data?.games ?? []);
   const pointsCount = data?.games.filter((g) => g.status !== "postponed").length ?? 0; // the server numbers 1..N over every game that is not postponed
   const now = useNow();
+  const leadMinutes = useLockMinutes();
   const games = useMemo(() => {
     if (!data) return [];
-    let base = scope === "open" ? data.games.filter((g) => g.status === "scheduled" && !isLocked(g, now)) : data.games;
+    let base = scope === "open" ? data.games.filter((g) => g.status === "scheduled" && !isLocked(g, now, leadMinutes)) : data.games;
     if (onlyAttention) base = base.filter(needsAttention);
     return sortGames(base, sort);
-  }, [data, sort, onlyAttention, scope, now]);
+  }, [data, sort, onlyAttention, scope, now, leadMinutes]);
 
   const groups = useMemo(() => {
     if (sort !== "kickoff") return [{ day: "", games }];
@@ -89,9 +90,9 @@ export function WeekBoard() {
 
   // The one lime card: the next game still open to pick (design.md § 0: at most one highlight per board).
   const nextId = useMemo(() => {
-    const open = (data?.games ?? []).filter((g) => g.status === "scheduled" && !g.time_tbd && !isLocked(g, now));
+    const open = (data?.games ?? []).filter((g) => g.status === "scheduled" && !g.time_tbd && !isLocked(g, now, leadMinutes));
     return open.sort((a, b) => a.kickoff_utc.localeCompare(b.kickoff_utc))[0]?.game_id ?? null;
-  }, [data, now]);
+  }, [data, now, leadMinutes]);
 
   // Loud only for what can change a pick: stale model inputs. Weather is context; Settings notes it.
   const stale = staleList(data?.freshness).filter(feedsModel);
@@ -197,7 +198,7 @@ export function WeekBoard() {
                   ))}
                 </ul>
               )}
-              <p className="mt-2 text-xs text-subtle">Select a game for the full matchup. Picks lock at kickoff.</p>
+              <p className="mt-2 text-xs text-subtle">Select a game for the full matchup. Picks lock {leadMinutes} min before kickoff.</p>
               {data.pick_mode && <p className="text-xs text-subtle">{data.pick_mode.label}</p>}
             </section>
           )}
