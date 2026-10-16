@@ -67,3 +67,18 @@ tests`; `npm run typecheck`; full suite, web and e2e in draft-PR CI (D71).
 **Red (local, pure):** `6 failed, 1 passed` — P1 `KeyError: 'pick_lock_minutes'`; P2 locked at −15 is False; P2b no
 setting; P3 the −20 target (16 min); P4 `(0.417, 'nflverse')` (C2); P4c `(0.61, 'nflverse')` (C3). P4b passes (the
 guard it pins holds today). DB tests run in CI.
+**Red (CI, draft PR #50, run 38834921703 on `3f84d34`, backend job 116761779518):** `12 failed, 2453 passed,
+1 skipped`; the 12 are exactly `test_lock_lead.py` (P4b passes by design), each for its intended reason: D1 `200 ==
+409`; D2 `locked` False; D3 no sheet entry at −15; D4 reminder `0 == 1` at lock − 74; D5 alert sent at −10; D6
+`KeyError` (the stable price is dropped). docker, web, e2e green.
+
+## 3. IMPLEMENTATION
+
+Provider: Codex (Ryan), Build Ladder rung 1; coordinator commits his diffs.
+- **WO1** (all items) → `e5571b6`. Review: only granted files (+ `lib/sync.ts:239` wording, god 24b286); test edits
+  are expectation-only: `test_fresh_line.py` (F2 `older_than_nflverse` now uses the quote per D80; F8 and D4 −30
+  target), `test_alerts.py` (N2 window and titles, pre-lock alert time), `test_api.py` (test name), e2e
+  `sheet.spec.ts` U1c and `pwa.spec.ts` P5/P21 (lock time and wording). `openapi.json` + `api-types.ts` regenerated
+  with the cached openapi-typescript CLI (`npm run gen:api` stalled offline); not hand-edited. Proof (coordinator):
+  7 pure passed; `test_fresh_line -k "not test_d"` 21 passed; ruff clean; `npm run typecheck` clean; `git diff
+  --check` clean. DB, web and e2e: CI below.
