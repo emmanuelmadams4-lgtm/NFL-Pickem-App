@@ -108,17 +108,18 @@ def pregame_quotes(session: Session, game_ids: list[str], now: datetime) -> dict
     ).all()
     if not rows:
         return {}
+    poll_sources = {row.source: ("oddsapi" if row.source.startswith("oddsapi:") else row.source) for row in rows}
     last_polls = dict(session.execute(
         select(IngestionRun.source, func.max(IngestionRun.finished_at)).where(
             IngestionRun.dataset == "market_quotes", IngestionRun.status == "ok",
-            IngestionRun.source.in_({row.source for row in rows}),
+            IngestionRun.source.in_(set(poll_sources.values())),
             IngestionRun.finished_at <= now,
             IngestionRun.finished_at >= min(row.fetched_at for row in rows),
         ).group_by(IngestionRun.source)
     ).all())
     quotes: dict[str, list[Quote]] = {}
     for row in rows:
-        poll = last_polls.get(row.source)
+        poll = last_polls.get(poll_sources[row.source])
         seen_at = poll if poll is not None and poll >= row.fetched_at else row.fetched_at
         # ponytail: a vanished market can look current while polls succeed; upgrade with per-game confirmation.
         if row.home_prob is not None and now - seen_at <= FRESH_MAX_AGE:

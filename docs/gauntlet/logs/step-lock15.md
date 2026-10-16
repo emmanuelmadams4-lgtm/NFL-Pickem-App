@@ -101,3 +101,11 @@ Kept: `finalize`'s inline SQL `now + lead` (SQL); `until_next_target`'s inline t
 Local WO3 proof: lock-lead pure 7 passed (6 DB deselected), fresh-line pure 21 passed (10 DB deselected), Ruff,
 `npm run typecheck`, and `git diff --check` clean. Full backend and browser CI was green at WO2 (`ea6e522`);
 WO3 still needs independent review and its own CI gate.
+
+## 5. SECURITY FOLLOW-UP (HAG-87)
+
+Dwight's review of `0aa5471` found H1 (a late freeze could use a prediction made after the lock) and M1 (Odds API
+book quotes did not match provider poll rows). Added late-freeze and stable Odds API cases in `test_lock_lead.py`.
+Before the fix, the two pure cases failed; after the fix, 9 lock-lead pure and 21 fresh-line pure cases passed locally.
+Database cases D3b and D6b still require CI. The source-wide successful-poll rule can mark a vanished game's stored
+quote as current (A1); this is carried risk pending a separate per-game confirmation design and scope decision.

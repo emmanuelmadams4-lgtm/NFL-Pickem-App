@@ -2,6 +2,7 @@
 fresh-line fixes (C1-C3, D80). Clauses in docs/gauntlet/logs/step-lock15.md section 2. P tests need no database."""
 
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 
@@ -50,6 +51,15 @@ def test_p2b_the_lead_follows_the_setting(monkeypatch):
     monkeypatch.setattr(get_settings(), "pick_lock_minutes", 0)
     assert is_locked(_game(), K - timedelta(minutes=1)) is False
     assert is_locked(_game(), K) is True
+
+
+def test_p2c_a_late_freeze_selects_the_last_prediction_before_lock():
+    from nflpi.predictions.sheet import recommendations
+
+    before = SimpleNamespace(id=1, game_id="g", created_at=K - timedelta(minutes=16), kind="live")
+    after = SimpleNamespace(id=2, game_id="g", created_at=K - timedelta(minutes=10), kind="live")
+    session = SimpleNamespace(scalars=lambda _: SimpleNamespace(all=lambda: [before, after]))
+    assert recommendations(session, [_game()], before_lock=True) == {"g": before}
 
 
 # --- P3 refresh targets: the last refresh lands 15 minutes before the lock --------------------------
@@ -111,6 +121,29 @@ def test_p4c_c3_the_churn_guard_compares_with_the_nflverse_line_in_use_not_an_ol
     assert (line.prob, line.source) == (0.615, "kalshi")  # 1.5 points from nflverse 0.600, though 0.5 from 0.610
 
 
+def test_p4d_stable_oddsapi_book_uses_the_provider_poll_time():
+    from nflpi.predictions.fresh_line import pregame_quotes
+
+    now = K - timedelta(hours=1)
+    stored = now - timedelta(minutes=90)
+    polled = now - timedelta(minutes=2)
+    quote = SimpleNamespace(game_id="g", source="oddsapi:draftkings", home_prob=0.55, fetched_at=stored)
+
+    class PollSession:
+        def scalars(self, _):
+            return SimpleNamespace(all=lambda: [quote])
+
+        def execute(self, statement):
+            sources = next(value for value in statement.compile().params.values()
+                           if isinstance(value, (set, list, tuple)))
+            rows = [("oddsapi", polled)] if "oddsapi" in sources else []
+            return SimpleNamespace(all=lambda: rows)
+
+    assert [(q.source, q.seen_at) for q in pregame_quotes(PollSession(), ["g"], now)["g"]] == [
+        ("oddsapi:draftkings", polled),
+    ]
+
+
 # --- D tests with the database (run in PR CI; the Mac test database is off) --------------------------
 
 def _kickoff_in(loaded, minutes):
@@ -155,6 +188,32 @@ def test_d3_the_sheet_freezes_a_game_at_its_lock(loaded):
     sheet.finalize(loaded, game.kickoff_utc - timedelta(minutes=15))
     loaded.commit()
     assert loaded.get(SheetEntry, game.game_id) is not None
+
+
+def test_d3b_late_freeze_preserves_the_prelock_pick_and_probability(loaded):
+    from sqlalchemy import select
+
+    from nflpi.models import Prediction, SheetEntry, UserPick
+    from nflpi.predictions import sheet
+
+    game = _kickoff_in(loaded, 60)
+    prior = loaded.scalars(select(Prediction).where(Prediction.game_id == game.game_id)
+                           .order_by(Prediction.id.desc())).first()
+    prior.created_at = game.kickoff_utc - timedelta(minutes=16)
+    prior.pick = game.home_team
+    prior.home_win_prob = 0.75
+    after = Prediction(**{column.name: getattr(prior, column.name) for column in Prediction.__table__.columns
+                          if column.name != "id"})
+    after.created_at = game.kickoff_utc - timedelta(minutes=10)
+    after.pick = game.away_team
+    after.home_win_prob = 0.25
+    loaded.add(after)
+    loaded.commit()
+
+    sheet.finalize(loaded, game.kickoff_utc - timedelta(minutes=10))  # lock + 5, before kickoff
+    entry = loaded.get(SheetEntry, game.game_id)
+    assert (entry.app_pick, entry.app_prob, entry.my_pick) == (game.home_team, 0.75, game.home_team)
+    assert loaded.get(UserPick, game.game_id).picked_team == game.home_team
 
 
 def test_d4_the_game_day_reminder_counts_down_to_the_lock(session, pushes):  # noqa: F811
@@ -202,3 +261,21 @@ def test_d6_c1_a_stable_kalshi_price_stays_current_while_polls_confirm_it(loaded
     assert [(q.home_prob, q.seen_at) for q in quotes] == [(0.4350, datetime(2026, 10, 15, 23, 55, tzinfo=UTC))]
     # with no poll after it was stored, the 102-minute-old price is not fresh
     assert pregame_quotes(loaded, [game.game_id], datetime(2026, 10, 15, 23, 52, tzinfo=UTC)) == {}
+
+
+def test_d6b_a_stable_oddsapi_book_price_stays_current_while_provider_polls_confirm_it(loaded):
+    from nflpi.models import IngestionRun, MarketQuote
+    from nflpi.predictions.fresh_line import pregame_quotes
+
+    game = _kickoff_in(loaded, 600)
+    now = datetime(2026, 10, 15, 23, 57, tzinfo=UTC)
+    stored = now - timedelta(minutes=90)
+    polled = now - timedelta(minutes=2)
+    loaded.add(MarketQuote(game_id=game.game_id, source="oddsapi:draftkings", kind="pregame",
+                           home_prob=0.55, away_prob=0.45, fetched_at=stored))
+    loaded.add(IngestionRun(source="oddsapi", dataset="market_quotes", started_at=polled, finished_at=polled,
+                            status="ok", rows=0))
+    loaded.commit()
+    assert [(q.source, q.seen_at) for q in pregame_quotes(loaded, [game.game_id], now)[game.game_id]] == [
+        ("oddsapi:draftkings", polled),
+    ]
