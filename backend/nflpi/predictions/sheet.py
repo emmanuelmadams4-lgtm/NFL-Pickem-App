@@ -21,10 +21,13 @@ class Ranked(NamedTuple):
     prob: float
 
 
+def lock_time(game: Game) -> datetime:
+    return game.kickoff_utc - timedelta(minutes=get_settings().pick_lock_minutes)
+
+
 def is_locked(game: Game, now: datetime) -> bool:
-    lead = timedelta(minutes=get_settings().pick_lock_minutes)
     return game.status == "final" or (game.status != "postponed" and not game.time_tbd
-                                      and game.kickoff_utc - lead <= now)
+                                      and lock_time(game) <= now)
 
 
 def _chance(p: Prediction, g: Game, team: str) -> float:

@@ -8,8 +8,8 @@ import { BackfillChip, ProbBar, UncertaintyChip } from "@/components/prediction-
 import { PickButtons } from "@/components/pick-buttons";
 import { PointsControl } from "@/components/week/points-control";
 import { Refresh } from "@/components/icons";
-import { isLocked, useNow } from "@/lib/clock";
-import { startedGame, useMeta, type useLive } from "@/lib/queries";
+import { isLocked, useLockMinutes, useNow } from "@/lib/clock";
+import { startedGame, type useLive } from "@/lib/queries";
 import { cardLiveState } from "@/components/live/state";
 import { LiveLabel } from "@/components/live/live-label";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
@@ -56,7 +56,7 @@ export function GameCard({ game, live, highlight, pointsCount }: { game: GameSum
   const p = game.prediction;
   const fav = marketFavorite(game);
   const now = useNow();
-  const locked = isLocked(game, now, useMeta().data?.pick_lock_minutes ?? 15);
+  const locked = isLocked(game, now, useLockMinutes());
   const pending = usePendingPicks();
   const mine = effectivePick(pending, game.game_id, game.my_pick).pick;
   const started = startedGame(game, now);

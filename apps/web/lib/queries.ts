@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, keys, type GameDetail, type GameSummary, type LiveGameOut, type LiveOut, type Provider, type Week } from "@nflpi/shared";
 import { useApi } from "@/lib/api";
-import { useNow } from "@/lib/clock";
+import { useLockMinutes, useNow } from "@/lib/clock";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { isNetworkError, isServerReachable, lastQueueWriteDroppedStored, orderedPickSend, queuePick, queuedPick, unqueueIfCurrent } from "@/lib/sync";
@@ -116,7 +116,7 @@ function withPick(week: Week, gameId: string, team: string | null): Week {
 /** One-tap pick with an optimistic update. 409 means the pick is locked. */
 export function useSetPick(gameId: string) {
   const api = useApi();
-  const leadMinutes = useMeta().data?.pick_lock_minutes ?? 15;
+  const leadMinutes = useLockMinutes();
   const qc = useQueryClient();
   const { toast } = useToast();
 

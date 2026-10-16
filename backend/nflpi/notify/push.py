@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 from nflpi.config import get_settings
 from nflpi.models import AppSetting, Game, InjuryReport, Notification, PushSubscription
 from nflpi.predictions.events import ChangeEvent
-from nflpi.predictions.sheet import is_locked
+from nflpi.predictions.sheet import is_locked, lock_time
 
 log = logging.getLogger(__name__)
 ALERT_STATUSES = {"Out", "Doubtful", "Questionable"}
@@ -217,14 +217,14 @@ def send_kickoff_reminders(session: Session, now: datetime) -> int:
     for day, day_games in days.items():
         first = day_games[0]
         kickoff = first.kickoff_utc
-        lock = kickoff - timedelta(minutes=get_settings().pick_lock_minutes)
+        lock = lock_time(first)
         if not lock - timedelta(minutes=minutes) <= now < lock:
             continue
-        lock_time = lock.astimezone(EASTERN).strftime("%-I:%M %p")
+        lock_clock = lock.astimezone(EASTERN).strftime("%-I:%M %p")
         count = len(day_games)
         title = (
-            f"Games today: picks lock {lock_time} ET"
-            if count > 1 else f"Game today: picks lock {lock_time} ET"
+            f"Games today: picks lock {lock_clock} ET"
+            if count > 1 else f"Game today: picks lock {lock_clock} ET"
         )
         matchup = f"{first.away_team} @ {first.home_team}"
         body = f"{count} games today. First: {matchup}." if count > 1 else f"1 game today: {matchup}."

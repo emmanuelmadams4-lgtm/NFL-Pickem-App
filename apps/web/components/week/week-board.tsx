@@ -3,9 +3,9 @@
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { SORTS, ago, kickoffDay, needsAttention, sortGames, type SortKey, type GameSummary } from "@nflpi/shared";
-import { useLive, useMeta, useWeek } from "@/lib/queries";
+import { useLive, useWeek } from "@/lib/queries";
 import { useSelection } from "@/lib/selection";
-import { isLocked, useNow } from "@/lib/clock";
+import { isLocked, useLockMinutes, useNow } from "@/lib/clock";
 import { safeGet, safeSet } from "@/lib/fmt";
 import { EmptyState, ErrorState, PageHead, SelectField, Skeleton, cx } from "@/components/ui";
 import { describeStale, feedsModel, staleList } from "@/components/freshness";
@@ -68,7 +68,7 @@ export function WeekBoard() {
   const live = useLive(data?.games ?? []);
   const pointsCount = data?.games.filter((g) => g.status !== "postponed").length ?? 0; // the server numbers 1..N over every game that is not postponed
   const now = useNow();
-  const leadMinutes = useMeta().data?.pick_lock_minutes ?? 15;
+  const leadMinutes = useLockMinutes();
   const games = useMemo(() => {
     if (!data) return [];
     let base = scope === "open" ? data.games.filter((g) => g.status === "scheduled" && !isLocked(g, now, leadMinutes)) : data.games;

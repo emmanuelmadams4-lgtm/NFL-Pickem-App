@@ -1,8 +1,8 @@
 "use client";
 
 import type { GameSummary } from "@nflpi/shared";
-import { useLocked } from "@/lib/clock";
-import { useMeta, useSetPick } from "@/lib/queries";
+import { useLocked, useLockMinutes } from "@/lib/clock";
+import { useSetPick } from "@/lib/queries";
 import { effectivePick, usePendingPicks } from "@/lib/sync";
 import { TeamLogo } from "@/components/team";
 import { Check, Lock } from "@/components/icons";
@@ -17,7 +17,7 @@ type PickGame = Pick<GameSummary, "game_id" | "season" | "week" | "away" | "home
 export function PickButtons({ game, size = "sm", className }: { game: PickGame; size?: "sm" | "lg"; className?: string }) {
   const mutation = useSetPick(game.game_id);
   const locked = useLocked(game);
-  const lockWording = `Locked ${useMeta().data?.pick_lock_minutes ?? 15} min before kickoff`;
+  const lockWording = `Locked ${useLockMinutes()} min before kickoff`;
   const pending = usePendingPicks();
   const { pick, waiting } = effectivePick(pending, game.game_id, game.my_pick);
   const teams = [game.away, game.home];

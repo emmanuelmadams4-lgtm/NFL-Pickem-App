@@ -5,6 +5,12 @@ import type { GameSummary } from "@nflpi/shared";
 import { useMeta } from "@/lib/queries";
 
 const TICK_MS = 2_000;
+// The server default, used only until /api/meta arrives.
+export const DEFAULT_LOCK_MINUTES = 15;
+
+export function useLockMinutes(): number {
+  return useMeta().data?.pick_lock_minutes ?? DEFAULT_LOCK_MINUTES;
+}
 
 /* One shared ticker for every component that reads the clock. */
 let clientNow = Date.now();
@@ -44,6 +50,6 @@ export function isLocked(game: LockGame, now: number, leadMinutes: number): bool
 }
 
 export function useLocked(game: LockGame): boolean {
-  const leadMinutes = useMeta().data?.pick_lock_minutes ?? 15;
+  const leadMinutes = useLockMinutes();
   return isLocked(game, useNow(), leadMinutes);
 }

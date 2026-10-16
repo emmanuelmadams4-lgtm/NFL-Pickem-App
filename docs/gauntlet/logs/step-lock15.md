@@ -82,3 +82,22 @@ Provider: Codex (Ryan), Build Ladder rung 1; coordinator commits his diffs.
   with the cached openapi-typescript CLI (`npm run gen:api` stalled offline); not hand-edited. Proof (coordinator):
   7 pure passed; `test_fresh_line -k "not test_d"` 21 passed; ruff clean; `npm run typecheck` clean; `git diff
   --check` clean. DB, web and e2e: CI below.
+- **CI on `c7fc87a` (run 38835759587):** backend 9 failed, e2e 2 failed. One real defect: `pregame_quotes` built
+  `dict(session.execute(...))`; a SQLAlchemy Result has `.keys()`, so `dict()` treated it as a mapping and raised
+  `TypeError` on Postgres; the engine's fallback then used nflverse (this failed D6 and fresh-line D3b/D3c). The rest
+  were old expectations of the lock at kickoff: `test_hardening.py` (4 reminder tests: ttl to the lock, "picks lock"
+  titles), e2e `step2.spec.ts` E4 (lock at kickoff − lead), `live.spec.ts` L8 (its "before" card is now inside the
+  lock; moved to kickoff T0 + 20 min so it is the open card again; height assertion untouched).
+- **WO2** (Ryan) → `ea6e522`: `.all()` plus those expectation-only edits. Proof (coordinator): 7 pure passed, ruff
+  clean. **Green (CI, run 38836818084):** backend `2465 passed, 1 skipped`, ruff clean; e2e `275 passed`; docker,
+  web green.
+
+## 4. CLEANUP
+
+Scope-locked refactor of this step's lines (WO3, behaviour unchanged): the web fallback `?? 15` repeated in six places
+becomes one constant `DEFAULT_LOCK_MINUTES` and one hook `useLockMinutes()` in `lib/clock.ts`; the backend
+"kickoff − lead" computed in `sheet.is_locked` and `push.send_kickoff_reminders` becomes one `sheet.lock_time(game)`.
+Kept: `finalize`'s inline SQL `now + lead` (SQL); `until_next_target`'s inline targets tuple (one caller).
+Local WO3 proof: lock-lead pure 7 passed (6 DB deselected), fresh-line pure 21 passed (10 DB deselected), Ruff,
+`npm run typecheck`, and `git diff --check` clean. Full backend and browser CI was green at WO2 (`ea6e522`);
+WO3 still needs independent review and its own CI gate.

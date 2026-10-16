@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { ApiError, keys, type Api, type Meta } from "@nflpi/shared";
 import type { QueryClient } from "@tanstack/react-query";
+import { DEFAULT_LOCK_MINUTES } from "@/lib/clock";
 import { safeGet, safeRemove, safeSet } from "@/lib/fmt";
 
 /* ---------- connectivity ---------- */
@@ -236,7 +237,7 @@ export async function flushPicks(api: Api, qc: QueryClient, notify: (message: st
       qc.invalidateQueries({ queryKey: ["game"] });
       qc.invalidateQueries({ queryKey: ["performance"] });
     }
-    if (locked > 0) notify(`${locked} waiting ${locked === 1 ? "pick was" : "picks were"} not saved: locked ${qc.getQueryData<Meta>(keys.meta)?.pick_lock_minutes ?? 15} min before kickoff.`, "warn");
+    if (locked > 0) notify(`${locked} waiting ${locked === 1 ? "pick was" : "picks were"} not saved: locked ${qc.getQueryData<Meta>(keys.meta)?.pick_lock_minutes ?? DEFAULT_LOCK_MINUTES} min before kickoff.`, "warn");
     else if (synced > 0) notify(`${synced} waiting ${synced === 1 ? "pick" : "picks"} saved.`, "good");
   }
 }
