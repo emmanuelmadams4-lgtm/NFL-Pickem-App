@@ -115,7 +115,7 @@ def pregame_quotes(session: Session, game_ids: list[str], now: datetime) -> dict
             IngestionRun.finished_at <= now,
             IngestionRun.finished_at >= min(row.fetched_at for row in rows),
         ).group_by(IngestionRun.source)
-    ))
+    ).all())
     quotes: dict[str, list[Quote]] = {}
     for row in rows:
         poll = last_polls.get(row.source)

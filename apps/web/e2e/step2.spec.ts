@@ -22,7 +22,7 @@ type Game = {
   home: Team;
   prediction: { home_win_prob: number } | null;
 };
-type Meta = { current_season: number; current_week: number; server_time: string };
+type Meta = { current_season: number; current_week: number; server_time: string; pick_lock_minutes: number };
 type Tally = { correct: number; total: number };
 
 async function api<T>(request: APIRequestContext, path: string): Promise<T> {
@@ -102,7 +102,7 @@ test("E3 pick and clear: one tap saves to the server, a second tap clears it", a
   await expect(pickGroup(page, g).getByRole("button", { name: new RegExp(`^Pick ${g.home.name}`) })).toHaveAttribute("aria-pressed", "false");
 });
 
-test("E4 lock: a game locks on screen within 5 s of kickoff, without a reload, and looks locked", async ({ page, request }) => {
+test("E4 lock: a game locks on screen within 5 s of the pick lock, without a reload, and looks locked", async ({ page, request }) => {
   const { meta, open } = await board(request);
   const g = open[0];
   await page.clock.install({ time: new Date(meta.server_time) });
@@ -111,9 +111,9 @@ test("E4 lock: a game locks on screen within 5 s of kickoff, without a reload, a
   await boardLoaded(page);
   const buttons = pickGroup(page, g).getByRole("button");
   await expect(buttons.first()).toBeEnabled();
-  // Stop the page's clock exactly one second before kickoff. Fast-forwarding by a fixed amount left the time the
-  // page took to load on top, so a slow machine could pass kickoff here and fail the next line.
-  await page.clock.pauseAt(Date.parse(g.kickoff_utc) - 1_000);
+  // Stop the page's clock exactly one second before the lock. Fast-forwarding by a fixed amount left the time the
+  // page took to load on top, so a slow machine could pass the lock here and fail the next line.
+  await page.clock.pauseAt(Date.parse(g.kickoff_utc) - meta.pick_lock_minutes * 60_000 - 1_000);
   await expect(buttons.first()).toBeEnabled();
   await page.clock.runFor(4_000);
   await expect(buttons.first()).toBeDisabled({ timeout: 2_000 });

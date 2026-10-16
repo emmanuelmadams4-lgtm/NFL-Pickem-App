@@ -203,12 +203,12 @@ def test_recommendation_is_the_last_snapshot_before_kickoff(loaded, client):
 # A5 ---------------------------------------------------------------------------------------------------------------
 
 
-def test_reminder_push_has_a_timeout_ttl_to_kickoff_and_high_urgency(reminder_game, pushes):
+def test_reminder_push_has_a_timeout_ttl_to_the_lock_and_high_urgency(reminder_game, pushes):
     subscribe(reminder_game)
     assert push.send_kickoff_reminders(reminder_game, HALF_HOUR_BEFORE) == 1
     call = pushes.calls[0]
     headers = {k.lower(): v for k, v in (call.get("headers") or {}).items()}
-    assert (call.get("timeout"), call.get("ttl"), headers.get("urgency")) == (10, 30 * 60, "high")
+    assert (call.get("timeout"), call.get("ttl"), headers.get("urgency")) == (10, 15 * 60, "high")
 
 
 @pytest.mark.parametrize(
@@ -252,7 +252,7 @@ def test_reminder_tick_sends_reminders_without_network_ingest(reminder_game, pus
     subscribe(reminder_game)
 
     jobs.tick(reminder_game, HALF_HOUR_BEFORE)
-    assert pushes.titles() == ["Game today: kickoff 1:00 PM ET"]
+    assert pushes.titles() == ["Game today: picks lock 12:45 PM ET"]
     assert fetched == []
     assert jobs.TICK_SECONDS <= 5 * 60
 
@@ -268,7 +268,7 @@ def test_one_broken_subscription_does_not_stop_reminders_or_the_heartbeat(remind
 
     monkeypatch.setattr(push, "webpush", flaky)
     jobs.tick(reminder_game, HALF_HOUR_BEFORE)
-    assert pushes.titles() == ["Game today: kickoff 1:00 PM ET"]
+    assert pushes.titles() == ["Game today: picks lock 12:45 PM ET"]
     assert reminder_game.get(AppSetting, jobs.HEARTBEAT_KEY) is not None
 
 
@@ -284,7 +284,7 @@ def test_ingest_failure_in_the_cycle_does_not_skip_reminders(session, client, pu
     monkeypatch.setattr(jobs, "ingest", nflverse_down)
     with contextlib.suppress(Exception):  # whether the cycle re-raises the ingest error is not part of the criterion
         jobs.cycle(session)
-    assert pushes.titles() == [f"Game today: kickoff {soon.strftime('%-I:%M %p')} ET"]
+    assert pushes.titles() == [f"Game today: picks lock {(soon - timedelta(minutes=15)).strftime('%-I:%M %p')} ET"]
 
 
 # A7 ---------------------------------------------------------------------------------------------------------------

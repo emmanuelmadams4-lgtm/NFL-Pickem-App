@@ -387,7 +387,7 @@ for (const width of [393, 320]) {
     await page.setViewportSize({ width, height: 852 });
     const live = reply([row({ game_id: WORST, home_team: "MIA", away_team: "BUF", home_score: 31, away_score: 34, period: 4, clock: "12:34", home_win_prob: 0.997, kalshi_home_prob: null })]);
     const alerts = { qb_alerts: ["BUF QB Jo Thrower: Out", "MIA QB Second Passer: Doubtful"] };
-    const f = await fake(page, live, { status: "scheduled", kickoff_utc: new Date(T0 + 60_000).toISOString(), time_tbd: false, locked: false, ...alerts }, WORST);
+    const f = await fake(page, live, { status: "scheduled", kickoff_utc: new Date(T0 + 20 * 60_000).toISOString(), time_tbd: false, locked: false, ...alerts }, WORST); // before the pick lock
     await page.unroute("**/api/{weeks,games}/**");
     await page.route("**/api/{weeks,games}/**", async (route) => {
       try {
