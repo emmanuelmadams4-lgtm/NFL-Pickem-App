@@ -1,7 +1,7 @@
-"""Compute open pick sheets and freeze each game at kickoff."""
+"""Compute open pick sheets and freeze each game at its pregame lock."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import NamedTuple
 
 from sqlalchemy import and_, or_, select
@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from nflpi.analytics.metrics import LABEL_HIT_RATE, pick_label
+from nflpi.config import get_settings
 from nflpi.models import AppSetting, Game, PickPoint, Prediction, SheetEntry, UserPick
 
 log = logging.getLogger(__name__)
@@ -21,7 +22,9 @@ class Ranked(NamedTuple):
 
 
 def is_locked(game: Game, now: datetime) -> bool:
-    return game.status == "final" or (game.status != "postponed" and not game.time_tbd and game.kickoff_utc <= now)
+    lead = timedelta(minutes=get_settings().pick_lock_minutes)
+    return game.status == "final" or (game.status != "postponed" and not game.time_tbd
+                                      and game.kickoff_utc - lead <= now)
 
 
 def _chance(p: Prediction, g: Game, team: str) -> float:
@@ -115,7 +118,8 @@ def finalize(session: Session, now: datetime) -> int:
     games = session.scalars(
         select(Game).outerjoin(SheetEntry, SheetEntry.game_id == Game.game_id)
         .where(Game.status != "postponed", SheetEntry.game_id.is_(None), has_prediction,
-               or_(Game.status == "final", and_(Game.time_tbd.is_(False), Game.kickoff_utc <= now)),
+               or_(Game.status == "final", and_(Game.time_tbd.is_(False), Game.kickoff_utc <= now + timedelta(
+                   minutes=get_settings().pick_lock_minutes))),
                or_(Game.status != "final", Game.kickoff_utc >= start))
         .order_by(Game.kickoff_utc, Game.game_id)
     ).all()

@@ -57,7 +57,8 @@ rule, database reads).
 - L-D6 (DB, C1) a stored Kalshi pregame quote's `seen_at` is the latest ok `market_quotes` poll of that source after
   it was stored and not after now; a failed poll does not count; with no such poll a 97-minute-old price is not fresh.
 - L-web `clock.isLocked` uses the same lead (from meta); week board, game card and pick buttons follow it; wording
-  "Locked at kickoff" becomes the lead wording (pick buttons, 409 toast). Proven by typecheck + e2e in CI.
+  "Locked at kickoff" becomes the lead wording (pick buttons, 409 toast, and the offline-queue 409 toast in
+  `lib/sync.ts:239` with pwa P21, granted by god 24b286). Proven by typecheck + e2e in CI.
 - Expected test expectation edits (approved 1ff282, listed at landing): `test_fresh_line.py` F8 (−20 → −30),
   `test_alerts.py` N2 window, `test_api.py` lock test, e2e `sheet.spec.ts` / `pwa.spec.ts` wording.
 

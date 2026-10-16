@@ -31,7 +31,7 @@ def test_week_and_game_contracts(loaded, client):
     assert client.get("/api/games/nope").status_code == 404
 
 
-def test_picks_lock_at_kickoff_and_csv_round_trip(loaded, client):
+def test_picks_lock_before_kickoff_and_csv_round_trip(loaded, client):
     future = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 4)).first()
     past = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 1)).first()
     assert client.put(f"/api/picks/{future.game_id}", json={"team": future.home_team}).status_code == 200

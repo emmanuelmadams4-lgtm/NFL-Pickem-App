@@ -4,15 +4,15 @@ import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from nflpi.models import MarketQuote
+from nflpi.config import get_settings
+from nflpi.models import IngestionRun, MarketQuote
 
 FRESH_MAX_AGE = timedelta(minutes=30)
 SANITY_GAP = 0.20
 CHURN_GAP = 0.01
-TARGETS = (timedelta(minutes=90), timedelta(minutes=20))
 TARGET_SLACK = timedelta(minutes=1)
 
 
@@ -44,7 +44,6 @@ def choose_line(
             and math.isfinite(quote.home_prob)
             and 0 < quote.home_prob < 1
             and 0 < round(quote.home_prob, 4) < 1
-            and (nflverse.seen_at is None or quote.seen_at > nflverse.seen_at)
         ]
         if eligible:
             quote = sorted(eligible, key=lambda item: (-item.seen_at.timestamp(), item.source))[0]
@@ -55,17 +54,18 @@ def choose_line(
             ):
                 return nflverse, quote
             chosen = Line(quote_prob, quote.source, quote.seen_at)
+    reference = nflverse if previous is not None and previous.source == "nflverse" else previous
     if (
         previous is not None
-        and previous.prob is not None
+        and reference is not None and reference.prob is not None
         and chosen.prob is not None
         and (chosen.source != "nflverse" or previous.source != "nflverse")
         and (previous.source == "nflverse" or (
             previous.seen_at is not None and now - previous.seen_at <= FRESH_MAX_AGE
         ))
-        and abs(chosen.prob - previous.prob) < CHURN_GAP
+        and abs(chosen.prob - reference.prob) < CHURN_GAP
     ):
-        return previous, None
+        return reference, None
     return chosen, None
 
 
@@ -85,24 +85,42 @@ def rank_changed(old: dict[str, float], new: dict[str, float], game_id: str) -> 
 
 
 def until_next_target(kickoffs: list[datetime], now: datetime) -> timedelta | None:
-    remaining = [kickoff - target - now for kickoff in kickoffs for target in TARGETS if kickoff - target > now]
+    targets = (timedelta(minutes=90), timedelta(minutes=get_settings().pick_lock_minutes + 15))
+    remaining = [kickoff - target - now for kickoff in kickoffs for target in targets if kickoff - target > now]
     return min(remaining) + TARGET_SLACK if remaining else None
 
 
 def pregame_quotes(session: Session, game_ids: list[str], now: datetime) -> dict[str, list[Quote]]:
-    """Read all recent pregame quotes for the candidate games in one query."""
+    """Read the latest pregame price per game and source, using successful polls to date a stable price."""
     if not game_ids:
         return {}
+    latest = select(
+        MarketQuote.id,
+        func.row_number().over(
+            partition_by=(MarketQuote.game_id, MarketQuote.source),
+            order_by=(MarketQuote.fetched_at.desc(), MarketQuote.id.desc()),
+        ).label("rank"),
+    ).where(
+        MarketQuote.game_id.in_(game_ids), MarketQuote.kind == "pregame", MarketQuote.fetched_at <= now,
+    ).subquery()
     rows = session.scalars(
-        select(MarketQuote).where(
-            MarketQuote.game_id.in_(game_ids),
-            MarketQuote.kind == "pregame",
-            MarketQuote.fetched_at >= now - FRESH_MAX_AGE,
-            MarketQuote.fetched_at <= now,
-        )
-    )
+        select(MarketQuote).join(latest, MarketQuote.id == latest.c.id).where(latest.c.rank == 1)
+    ).all()
+    if not rows:
+        return {}
+    last_polls = dict(session.execute(
+        select(IngestionRun.source, func.max(IngestionRun.finished_at)).where(
+            IngestionRun.dataset == "market_quotes", IngestionRun.status == "ok",
+            IngestionRun.source.in_({row.source for row in rows}),
+            IngestionRun.finished_at <= now,
+            IngestionRun.finished_at >= min(row.fetched_at for row in rows),
+        ).group_by(IngestionRun.source)
+    ))
     quotes: dict[str, list[Quote]] = {}
     for row in rows:
-        if row.home_prob is not None:
-            quotes.setdefault(row.game_id, []).append(Quote(row.source, row.home_prob, row.fetched_at))
+        poll = last_polls.get(row.source)
+        seen_at = poll if poll is not None and poll >= row.fetched_at else row.fetched_at
+        # ponytail: a vanished market can look current while polls succeed; upgrade with per-game confirmation.
+        if row.home_prob is not None and now - seen_at <= FRESH_MAX_AGE:
+            quotes.setdefault(row.game_id, []).append(Quote(row.source, row.home_prob, seen_at))
     return quotes

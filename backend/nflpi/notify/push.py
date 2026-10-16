@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from nflpi.config import get_settings
 from nflpi.models import AppSetting, Game, InjuryReport, Notification, PushSubscription
 from nflpi.predictions.events import ChangeEvent
+from nflpi.predictions.sheet import is_locked
 
 log = logging.getLogger(__name__)
 ALERT_STATUSES = {"Out", "Doubtful", "Questionable"}
@@ -132,7 +133,7 @@ def alert_prediction_changes(session: Session, events: list[ChangeEvent], now: d
     sent = 0
     for e in events:
         game = session.get(Game, e.game_id)
-        if game is None or game.status != "scheduled" or game.kickoff_utc <= now:
+        if game is None or game.status != "scheduled" or is_locked(game, now):
             continue
         flipped = e.old_pick != e.new_pick
         matchup = f"{game.away_team} @ {game.home_team}"
@@ -196,7 +197,7 @@ def alert_injuries(session: Session, changed: list[InjuryReport], season: int, w
 
 
 def send_kickoff_reminders(session: Session, now: datetime) -> int:
-    """Send one reminder per Eastern game day before its first kickoff."""
+    """Send one reminder per Eastern game day before its first pick lock."""
     row = session.get(AppSetting, "reminder_minutes")
     minutes = row.value.get("v") if row else None
     minutes = 60 if minutes is None else minutes
@@ -216,13 +217,14 @@ def send_kickoff_reminders(session: Session, now: datetime) -> int:
     for day, day_games in days.items():
         first = day_games[0]
         kickoff = first.kickoff_utc
-        if not kickoff - timedelta(minutes=minutes) <= now < kickoff:
+        lock = kickoff - timedelta(minutes=get_settings().pick_lock_minutes)
+        if not lock - timedelta(minutes=minutes) <= now < lock:
             continue
-        kickoff_time = kickoff.astimezone(EASTERN).strftime("%-I:%M %p")
+        lock_time = lock.astimezone(EASTERN).strftime("%-I:%M %p")
         count = len(day_games)
         title = (
-            f"Games today: first kickoff {kickoff_time} ET"
-            if count > 1 else f"Game today: kickoff {kickoff_time} ET"
+            f"Games today: picks lock {lock_time} ET"
+            if count > 1 else f"Game today: picks lock {lock_time} ET"
         )
         matchup = f"{first.away_team} @ {first.home_team}"
         body = f"{count} games today. First: {matchup}." if count > 1 else f"1 game today: {matchup}."
@@ -234,7 +236,7 @@ def send_kickoff_reminders(session: Session, now: datetime) -> int:
             title,
             body,
             "/sheet/",
-            ttl=int((kickoff - now).total_seconds()),
+            ttl=int((lock - now).total_seconds()),
             headers={"Urgency": "high"},
         )
         if delivered and record(session, "reminder", first.game_id, key, {"title": title, "body": body}):

@@ -113,9 +113,10 @@ function withPick(week: Week, gameId: string, team: string | null): Week {
   return { ...week, games, summary: { ...week.summary, picks_made: games.filter((g) => g.my_pick).length } };
 }
 
-/** One-tap pick with an optimistic update. 409 means the game has kicked off. */
+/** One-tap pick with an optimistic update. 409 means the pick is locked. */
 export function useSetPick(gameId: string) {
   const api = useApi();
+  const leadMinutes = useMeta().data?.pick_lock_minutes ?? 15;
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -155,7 +156,7 @@ export function useSetPick(gameId: string) {
     onError: (err, v, ctx) => {
       if (ctx?.prevWeek) qc.setQueryData(keys.week(v.season, v.week), ctx.prevWeek);
       if (ctx?.prevGame) qc.setQueryData(keys.game(v.gameId), ctx.prevGame);
-      if (err instanceof ApiError && err.status === 409) toast("Locked at kickoff.", "warn");
+      if (err instanceof ApiError && err.status === 409) toast(`Locked ${leadMinutes} min before kickoff.`, "warn");
       else toast(`Pick not saved. ${errorMessage(err)}`, "bad");
     },
     onSettled: (data, _err, v, ctx) => {

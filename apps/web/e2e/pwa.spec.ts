@@ -15,7 +15,7 @@ const SW_FILE = path.resolve(__dirname, "../out/sw.js");
 
 type Team = { abbr: string; name: string };
 type Game = { game_id: string; kickoff_utc: string; status: string; locked: boolean; time_tbd?: boolean; my_pick: string | null; away: Team; home: Team };
-type Meta = { current_season: number; current_week: number; server_time: string };
+type Meta = { current_season: number; current_week: number; server_time: string; pick_lock_minutes: number };
 
 async function api<T>(request: APIRequestContext, p: string): Promise<T> {
   const res = await request.get(`/api${p}`, { headers: AUTH });
@@ -442,7 +442,7 @@ test("P21 a waiting pick the server refuses as locked (409): it is dropped, he i
   await page.goto("/");
   await boardLoaded(page);
   try {
-    await expect(page.getByText(/not saved: locked at kickoff/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/not saved: locked \d+ min before kickoff/i)).toBeVisible({ timeout: 8_000 });
     await expect.poll(() => page.evaluate(() => localStorage.getItem("nflpi_pick_queue"))).toBe("{}");
     await expect(page.getByText("Waiting to sync")).toHaveCount(0);
     await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange"))); // a later flush has nothing to send
@@ -620,7 +620,7 @@ test("P15 one queued pick the server keeps refusing does not hold back the other
   for (const g of [bad, good]) expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
 });
 
-test("P5 kickoff passes while offline: the pick buttons lock from the saved kickoff time", async ({ page, request }) => {
+test("P5 lock time passes while offline: the pick buttons lock from the saved kickoff time", async ({ page, request }) => {
   const { meta, open } = await board(request);
   const g = open[0];
   await page.clock.install({ time: new Date(meta.server_time) });
@@ -635,7 +635,7 @@ test("P5 kickoff passes while offline: the pick buttons lock from the saved kick
   await boardLoaded(page);
   const buttons = pickGroup(page, g).getByRole("button");
   await expect(buttons.first()).toBeEnabled();
-  await page.clock.fastForward(Date.parse(g.kickoff_utc) - Date.parse(meta.server_time) + 1_000);
+  await page.clock.fastForward(Date.parse(g.kickoff_utc) - meta.pick_lock_minutes * 60_000 - Date.parse(meta.server_time) + 1_000);
   await page.clock.runFor(4_000);
   await expect(buttons.first()).toBeDisabled({ timeout: 2_000 });
   await expect(buttons.nth(1)).toBeDisabled();

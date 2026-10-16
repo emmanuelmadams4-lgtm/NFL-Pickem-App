@@ -1135,6 +1135,8 @@ export interface components {
         };
         /** MetaOut */
         MetaOut: {
+            /** Pick Lock Minutes */
+            pick_lock_minutes: number;
             /** Current Season */
             current_season: number;
             /** Current Week */
