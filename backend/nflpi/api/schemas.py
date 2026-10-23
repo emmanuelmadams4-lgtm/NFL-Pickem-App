@@ -309,23 +309,31 @@ class GameDetail(GameSummary):
 
 
 class PickIn(BaseModel):
+    game_id: str
     team: str
+    source: Literal["manual", "auto"] = Field(default="auto", description="Who set this pick: manual or auto (app)")
+    week: int = Field(ge=1, description="Week number for this pick (must match game's week)")
+    rank: int | None = Field(default=None, ge=1, description="Confidence rank 1..N for the week (FR-007). When provided, must be unique among all picks for the same week. Omit to use the app's suggested confidence.")
 
 
 class PointsIn(BaseModel):
-    points: int
+    week: int = Field(ge=1, description="Week number for these points (must match an existing week)")
+    points: int = Field(ge=0, description="Total planned points for the week")
 
 
 class RankIn(BaseModel):
-    rank: int = Field(ge=1)
-    leader_points: int | None = Field(default=None, ge=0)
+    rank: int = Field(ge=1, description="Rank of this game within the week's slack/favorite ranking")
+    leader_points: int | None = Field(default=None, ge=0, description="Points needed to lead the league (must be <= max league points)")
+    week: int = Field(ge=1, description="Week number for this ranking")
 
 
 class PickOut(BaseModel):
     game_id: str
     picked_team: str
+    confidence: int | None = Field(default=None, description="Confidence rank 1..N for the week (FR-007). Null when the user has not set a rank, and the app's suggestion is shown separately.")
     picked_at: datetime
-    source: str
+    source: str = "app"
+    rank: int | None = Field(default=None, description="Confidence rank 1..N for the week")
 
 
 class ImportResult(BaseModel):
