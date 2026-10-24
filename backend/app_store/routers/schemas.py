@@ -64,6 +64,8 @@ class AppCreate(BaseModel):
     source_image: str | None = None
     source_repo: str | None = None
     source_tag: str | None = None
+    source_manifest: dict | None = None
+    source_hash: str | None = None
     category: str = "utility"
     risk_level: Literal["low", "medium", "high"] = "low"
     requires_vm: bool = False

@@ -5,7 +5,7 @@ import { createClient, type Api } from "@nflpi/shared";
 import { trackedFetch } from "@/lib/sync";
 
 export const TOKEN_KEY = "nflpi_token";
-export const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+export const BASE_URL = "http://100.112.226.9:8000";
 export const PASSKEY_SIGNOUT_FAILED_NOTICE = "Signed out on this device, but the server could not end the passkey sign-in. Remove that passkey in Settings to end it now.";
 
 interface Session {
