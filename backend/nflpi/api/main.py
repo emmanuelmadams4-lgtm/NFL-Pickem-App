@@ -95,6 +95,7 @@ def meta(session: DB) -> s.MetaOut:
     seasons = session.scalars(select(Game.season).distinct().order_by(Game.season.desc())).all()
     reminder_minutes = views.get_setting(session, "reminder_minutes")
     return s.MetaOut(
+        pick_lock_minutes=get_settings().pick_lock_minutes,
         current_season=season,
         current_week=week,
         seasons=list(seasons),
@@ -131,7 +132,7 @@ def set_pick(game_id: str, body: s.PickIn, session: DB) -> s.PickOut:
     if body.team not in (g.home_team, g.away_team):
         raise HTTPException(422, f"Pick must be {g.away_team} or {g.home_team}")
     if views.is_locked(g, datetime.now(UTC)):
-        raise HTTPException(409, "Game has kicked off; pick is locked")
+        raise HTTPException(409, f"Picks lock {get_settings().pick_lock_minutes} minutes before kickoff")
     pick = session.get(UserPick, game_id) or UserPick(game_id=game_id)
     pick.picked_team, pick.picked_at, pick.source = body.team, datetime.now(UTC), "app"
     session.add(pick)
@@ -143,7 +144,7 @@ def set_pick(game_id: str, body: s.PickIn, session: DB) -> s.PickOut:
 def clear_pick(game_id: str, session: DB) -> Response:
     g = session.get(Game, game_id)
     if g is not None and views.is_locked(g, datetime.now(UTC)):
-        raise HTTPException(409, "Game has kicked off; pick is locked")
+        raise HTTPException(409, f"Picks lock {get_settings().pick_lock_minutes} minutes before kickoff")
     pick = session.get(UserPick, game_id)
     if pick:
         session.delete(pick)
@@ -158,7 +159,7 @@ def set_points(game_id: str, body: s.PointsIn, session: DB) -> s.WeekOut:
     if g is None:
         raise HTTPException(404, "Game not found")
     if views.is_locked(g, datetime.now(UTC)):
-        raise HTTPException(409, "Game has kicked off; points are locked")
+        raise HTTPException(409, f"Points lock {get_settings().pick_lock_minutes} minutes before kickoff")
     rows = sheet.compute_week(session, g.season, g.week, datetime.now(UTC))
     if rows[game_id]["my_points"] is None:
         raise HTTPException(422, "Game has no points to set")
@@ -166,7 +167,7 @@ def set_points(game_id: str, body: s.PointsIn, session: DB) -> s.WeekOut:
         raise HTTPException(422, "Points outside the week range")
     other_id = next((gid for gid, row in rows.items() if gid != game_id and row["my_points"] == body.points), None)
     if other_id and views.is_locked(session.get(Game, other_id), datetime.now(UTC)):
-        raise HTTPException(409, "Points belong to a locked game")
+        raise HTTPException(409, f"Points lock {get_settings().pick_lock_minutes} minutes before kickoff")
     if other_id:
         other = session.get(PickPoint, other_id) or PickPoint(game_id=other_id)
         other.points = rows[game_id]["my_points"]
@@ -185,7 +186,7 @@ def clear_points(game_id: str, session: DB) -> s.WeekOut:
     if g is None:
         raise HTTPException(404, "Game not found")
     if views.is_locked(g, datetime.now(UTC)):
-        raise HTTPException(409, "Game has kicked off; points are locked")
+        raise HTTPException(409, f"Points lock {get_settings().pick_lock_minutes} minutes before kickoff")
     point = session.get(PickPoint, game_id)
     if point:
         session.delete(point)

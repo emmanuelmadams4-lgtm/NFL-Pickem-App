@@ -74,17 +74,17 @@ def test_n2_one_reminder_per_game_day_an_hour_before_its_first_kickoff(game_days
     # He has already picked the first game: the reminder is sent anyway (D19).
     assert client.put("/api/picks/2026_07_MIA_BUF", json={"team": "BUF"}).status_code == 200
 
-    assert push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=61)) == 0  # too early
-    assert push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=50)) == 1
-    assert push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=45)) == 0  # once per day
+    assert push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=76)) == 0  # too early
+    assert push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=65)) == 1
+    assert push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=60)) == 0  # once per day
     assert push.send_kickoff_reminders(game_days, SUNDAY_LATE - timedelta(minutes=30)) == 0  # not the day's first game
     assert push.send_kickoff_reminders(game_days, MONDAY_NIGHT - timedelta(minutes=30)) == 1  # its own Eastern day
 
     sunday, monday = sent(pushes)
-    assert sunday["title"] == "Games today: first kickoff 1:00 PM ET"
+    assert sunday["title"] == "Games today: picks lock 12:45 PM ET"
     assert sunday["body"] == "2 games today. First: MIA @ BUF."
     assert sunday["url"] == "/sheet/"
-    assert monday["title"] == "Game today: kickoff 8:15 PM ET"
+    assert monday["title"] == "Game today: picks lock 8:00 PM ET"
     assert monday["body"] == "1 game today: NYJ @ LV."
     call = pushes.calls[0]
     headers = {k.lower(): v for k, v in (call.get("headers") or {}).items()}
@@ -175,7 +175,7 @@ def test_n5_no_change_alert_once_the_game_has_kicked_off(loaded, pushes):  # noq
     assert push.alert_prediction_changes(loaded, [flip], now=game.kickoff_utc + timedelta(minutes=1)) == 0
     assert pushes.calls == []
     assert loaded.scalar(select(Notification.id).where(Notification.game_id == game.game_id)) is None
-    assert push.alert_prediction_changes(loaded, [flip], now=game.kickoff_utc - timedelta(minutes=1)) == 1
+    assert push.alert_prediction_changes(loaded, [flip], now=game.kickoff_utc - timedelta(minutes=16)) == 1
 
 
 # N6 ---------------------------------------------------------------------------------------------------------------
@@ -285,7 +285,7 @@ def test_n2_no_second_reminder_once_the_days_first_game_is_over(session, client,
     session.get(Game, early["game_id"]).status = "final"
     session.commit()
     assert push.send_kickoff_reminders(session, datetime(2026, 10, 18, 23, 50, tzinfo=UTC)) == 0  # 7:50 PM ET
-    assert [a["title"] for a in sent(pushes)] == ["Games today: first kickoff 1:00 PM ET"]
+    assert [a["title"] for a in sent(pushes)] == ["Games today: picks lock 12:45 PM ET"]
 
 
 def _earlier_snapshot(loaded, game, shift: float) -> float | None:

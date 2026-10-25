@@ -5,6 +5,12 @@ import type { GameSummary } from "@nflpi/shared";
 import { useMeta } from "@/lib/queries";
 
 const TICK_MS = 2_000;
+// The server default, used only until /api/meta arrives.
+export const DEFAULT_LOCK_MINUTES = 15;
+
+export function useLockMinutes(): number {
+  return useMeta().data?.pick_lock_minutes ?? DEFAULT_LOCK_MINUTES;
+}
 
 /* One shared ticker for every component that reads the clock. */
 let clientNow = Date.now();
@@ -27,7 +33,7 @@ function subscribe(cb: () => void) {
 }
 
 /**
- * Server time now, in ms. Ticks every 2 s so a game locks on screen within 5 s of kickoff, without a reload.
+ * Server time now, in ms. Ticks every 2 s so a game locks on screen at the configured lead, without a reload.
  * The device clock is corrected by how far it was from the server when /api/meta arrived.
  */
 export function useNow(): number {
@@ -38,11 +44,12 @@ export function useNow(): number {
 
 type LockGame = Pick<GameSummary, "locked" | "kickoff_utc" | "time_tbd" | "status">;
 
-/** The API's `locked`, or a known kickoff that has passed. Same rule as the server's is_locked(). */
-export function isLocked(game: LockGame, now: number): boolean {
-  return game.locked || (now >= Date.parse(game.kickoff_utc) && !game.time_tbd && game.status !== "postponed");
+/** The API's `locked`, or a known kickoff within the lock lead. Same rule as the server's is_locked(). */
+export function isLocked(game: LockGame, now: number, leadMinutes: number): boolean {
+  return game.locked || (now >= Date.parse(game.kickoff_utc) - leadMinutes * 60_000 && !game.time_tbd && game.status !== "postponed");
 }
 
 export function useLocked(game: LockGame): boolean {
-  return isLocked(game, useNow());
+  const leadMinutes = useLockMinutes();
+  return isLocked(game, useNow(), leadMinutes);
 }

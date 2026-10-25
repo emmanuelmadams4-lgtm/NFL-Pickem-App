@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     stale_hours_head_coaches: float = 24 * 30
     # Value ratings: a book price older than this is stale (NO_BET).
     value_max_price_age_minutes: int = Field(default=30, gt=0)
+    pick_lock_minutes: int = Field(default=15, ge=0, le=120)
 
     # Model
     train_window_seasons: int = 10

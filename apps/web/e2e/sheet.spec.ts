@@ -21,7 +21,7 @@ type Sheet = {
   differs: boolean;
 };
 type Game = { game_id: string; kickoff_utc: string; status: string; locked: boolean; time_tbd?: boolean; away: Team; home: Team; sheet: Sheet };
-type Meta = { current_season: number; current_week: number; server_time: string };
+type Meta = { current_season: number; current_week: number; server_time: string; pick_lock_minutes: number };
 
 async function api<T>(request: APIRequestContext, path: string): Promise<T> {
   const res = await request.get(`/api${path}`, { headers: AUTH });
@@ -89,7 +89,7 @@ test("U1b changing a game's points swaps with the game that had them, says so, a
   await expect(card(page, low)).not.toContainText("Your number");
 });
 
-test("U1c the points lock on screen at kickoff, without a reload", async ({ page, request }) => {
+test("U1c the points lock on screen before kickoff, without a reload", async ({ page, request }) => {
   const { meta, open } = await board(request);
   const g = open.filter((x) => !x.time_tbd)[0]; // a game with no kickoff time never locks from its placeholder
   await page.clock.install({ time: new Date(meta.server_time) });
@@ -97,7 +97,7 @@ test("U1c the points lock on screen at kickoff, without a reload", async ({ page
   await page.goto("/");
   await boardLoaded(page);
   await expect(points(page, g)).toBeEnabled();
-  await page.clock.fastForward(Date.parse(g.kickoff_utc) - Date.parse(meta.server_time) - 1_000);
+  await page.clock.fastForward(Date.parse(g.kickoff_utc) - meta.pick_lock_minutes * 60_000 - Date.parse(meta.server_time) - 1_000);
   await page.clock.runFor(4_000);
   await expect(points(page, g)).toBeDisabled({ timeout: 2_000 });
 });

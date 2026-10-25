@@ -506,6 +506,7 @@ class SettingsIn(BaseModel):
 
 
 class MetaOut(BaseModel):
+    pick_lock_minutes: int
     current_season: int
     current_week: int
     seasons: list[int]
