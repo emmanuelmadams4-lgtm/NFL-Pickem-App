@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from nflpi.config import Settings, get_settings
 from nflpi.ingestion import service
-from nflpi.models import Game, Notification, Prediction, PushSubscription
+from nflpi.models import Game, Notification, Prediction, PushSubscription, UserPick
 from nflpi.notify import push
 from nflpi.predictions import engine
 from tests.conftest import CURRENT
@@ -72,7 +72,9 @@ def test_n1_a_win_chance_move_of_seven_points_counts_as_drastic():
 
 def test_n2_one_reminder_per_game_day_an_hour_before_its_first_kickoff(game_days, client, pushes):  # noqa: F811
     # He has already picked the first game: the reminder is sent anyway (D19).
-    assert client.put("/api/picks/2026_07_MIA_BUF", json={"team": "BUF"}).status_code == 200
+    # Seeded directly: the pick route checks the real clock, and this fixture's game date is fixed in the past.
+    game_days.add(UserPick(game_id="2026_07_MIA_BUF", picked_team="BUF"))
+    game_days.commit()
 
     assert push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=61)) == 0  # too early
     assert push.send_kickoff_reminders(game_days, SUNDAY_EARLY - timedelta(minutes=50)) == 1
