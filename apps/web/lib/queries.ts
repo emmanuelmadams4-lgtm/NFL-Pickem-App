@@ -6,7 +6,7 @@ import { useApi } from "@/lib/api";
 import { useNow } from "@/lib/clock";
 import { errorMessage } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { isNetworkError, isServerReachable, lastQueueWriteDroppedStored, orderedPickSend, queuePick, queuedPick, unqueueIfCurrent } from "@/lib/sync";
+import { isDefiniteRefusal, isServerReachable, lastQueueWriteDroppedStored, orderedPickSend, queuePick, queuedPick, unqueueIfCurrent } from "@/lib/sync";
 
 const LIVE_REFETCH_MS = 120_000;
 const LIVE_POLL_MS = 30_000;
@@ -134,7 +134,8 @@ export function useSetPick(gameId: string) {
         unqueueIfCurrent(v.gameId, v.team);
         return { queued: false };
       } catch (e) {
-        if (isNetworkError(e)) {
+        // Only a definite refusal drops the pick. Network, 401, 429 and 5xx keep it queued; PickSync sends it again and says so.
+        if (!isDefiniteRefusal(e)) {
           return { queued: true };
         }
         unqueueIfCurrent(v.gameId, v.team);

@@ -235,6 +235,31 @@ test("P12 a queued pick the server refuses with an error: he is told, the pick s
   expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
 });
 
+for (const status of [401, 429, 503]) {
+  test(`P12b a tapped pick the server answers with ${status} is kept and shown as waiting, then sent again`, async ({ page, context, request }) => {
+    const { open } = await board(request);
+    const g = open[0];
+    const serverPick = async () => (await board(request)).games.find((x) => x.game_id === g.game_id)!.my_pick;
+    await signIn(page);
+    await page.goto("/");
+    await boardLoaded(page);
+    await context.route("**/api/picks/**", (route) => route.request().method() === "PUT"
+      ? route.fulfill({ status, contentType: "application/json", body: '{"detail":"not now"}' })
+      : route.continue());
+    try {
+      await pickGroup(page, g).getByRole("button", { name: `Pick ${g.home.name}` }).click();
+      await expect(page.getByText("Waiting to sync")).toBeVisible({ timeout: 5_000 });
+      await expect(pickGroup(page, g).getByRole("button", { name: new RegExp(`^${g.home.name} picked`) })).toBeVisible();
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem("nflpi_pick_queue") ?? "{}")), "kept on the phone").toEqual({ [g.game_id]: g.home.abbr });
+    } finally {
+      await context.unrouteAll({ behavior: "ignoreErrors" });
+    }
+    await expect.poll(serverPick, { message: "sent again without him tapping", timeout: 25_000 }).toBe(g.home.abbr);
+    await expect(page.getByText("Waiting to sync")).toHaveCount(0);
+    expect((await request.delete(`/api/picks/${g.game_id}`, { headers: AUTH })).ok()).toBeTruthy();
+  });
+}
+
 /** Hold the first save of one game's pick for `ms`, then let it through. `seen` resolves when that save starts. */
 async function holdFirstSave(context: BrowserContext, gameId: string, ms: number) {
   let started: () => void = () => undefined;

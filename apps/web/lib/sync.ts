@@ -160,6 +160,11 @@ export function unqueueIfCurrent(gameId: string, team: string | null): boolean {
   return true;
 }
 
+/** A refusal that a retry will not change (game missing, kicked off, invalid team). 401, 429 and 5xx are not: keep the pick and send it again. */
+export function isDefiniteRefusal(e: unknown): boolean {
+  return e instanceof ApiError && (e.status === 409 || e.status === 422 || e.status === 404);
+}
+
 const pickSends = new Map<string, Promise<void>>();
 
 /** Keep direct saves and queued saves for one game in the order they start. */
@@ -218,7 +223,7 @@ export async function flushPicks(api: Api, qc: QueryClient, notify: (message: st
         });
         if (saved) synced++;
       } catch (e) {
-        if (e instanceof ApiError && (e.status === 409 || e.status === 422 || e.status === 404)) {
+        if (isDefiniteRefusal(e)) {
           if (unqueueIfCurrent(gameId, team)) locked++;
         } else if (isNetworkError(e)) {
           break;
