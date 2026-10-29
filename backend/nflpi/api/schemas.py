@@ -313,7 +313,14 @@ class PickIn(BaseModel):
     team: str
     source: Literal["manual", "auto"] = Field(default="auto", description="Who set this pick: manual or auto (app)")
     week: int | None = Field(default=None, ge=1, description="Optional. If sent, must match the game's week.")
-    rank: int | None = Field(default=None, ge=1, description="Confidence rank 1..N for the week (FR-007). When provided, must be unique among all picks for the same week. Omit to use the app's suggested confidence.")
+    rank: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Confidence rank 1..N for the week (FR-007). When provided, must be unique among all picks "
+            "for the same week. Omit to use the app's suggested confidence."
+        ),
+    )
 
 
 class PointsIn(BaseModel):
@@ -323,14 +330,22 @@ class PointsIn(BaseModel):
 
 class RankIn(BaseModel):
     rank: int = Field(ge=1, description="Rank of this game within the week's slack/favorite ranking")
-    leader_points: int | None = Field(default=None, ge=0, description="Points needed to lead the league (must be <= max league points)")
+    leader_points: int | None = Field(
+        default=None, ge=0, description="Points needed to lead the league (must be <= max league points)"
+    )
     week: int | None = Field(default=None, ge=1, description="Optional. The week in the URL is the one used.")
 
 
 class PickOut(BaseModel):
     game_id: str
     picked_team: str
-    confidence: int | None = Field(default=None, description="Confidence rank 1..N for the week (FR-007). Null when the user has not set a rank, and the app's suggestion is shown separately.")
+    confidence: int | None = Field(
+        default=None,
+        description=(
+            "Confidence rank 1..N for the week (FR-007). Null when the user has not set a rank, "
+            "and the app's suggestion is shown separately."
+        ),
+    )
     picked_at: datetime
     source: str = "app"
     rank: int | None = Field(default=None, description="Confidence rank 1..N for the week")
