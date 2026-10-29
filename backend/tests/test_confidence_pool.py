@@ -1,15 +1,17 @@
 """FR-007 invariant tests for the confidence optimizer.
 
-The confidence_pool assigns unique 1..N confidence ranks to each week's games.
-The acceptance criterion (FR-007) is that the ranks form a permutation of
+The confidence_pool assigns unique 1..N confidence weights to each week's games.
+The acceptance criterion (FR-007) is that the weights form a permutation of
 1..N: no duplicates, no gaps, and exactly one of each value.
 
 These are invariant tests, not change-detectors: they assert that the contract
 described in the PRD holds, independent of any specific probability inputs.
 """
 
-from nflpi.picks.pool import confidence_pool
-from nflpi.picks.types import GameInputs
+import pytest
+
+from nflpi.picks.pool import _validate_confidence_permutation, confidence_pool
+from nflpi.picks.types import GameInputs, PicksError
 
 
 def _game(pid: str, prob: float) -> GameInputs:
@@ -32,23 +34,32 @@ def test_confidence_pool_ranks_are_permutation_of_1_to_n():
     assert ranks == [1, 2, 3], f"expected [1,2,3], got {ranks}"
 
 
-def test_confidence_pool_rank_1_goes_to_surest_pick():
-    # The game with the highest calibrated win probability must get rank 1.
-    games = [
-        _game("SURE-01", 0.90),
-        _game("MEDIUM-01", 0.60),
-        _game("WEAK-01", 0.40),
-        _game("WEAKEST-01", 0.10),
-    ]
+def test_confidence_pool_surest_pick_gets_the_largest_weight_whatever_the_input_order():
+    # The pool convention (as on the Yahoo sheet): the largest number goes to the surest pick, 1 to the least sure.
+    games = [_game("WEAK-01", 0.60), _game("WEAKEST-01", 0.51), _game("SURE-01", 0.90), _game("MEDIUM-01", 0.70)]
     pickset = confidence_pool(games, fill_ranks=True)
-    by_id = {p.game_id: p for p in pickset.picks}
-    assert by_id["SURE-01"].weight == 1
-    assert by_id["WEAKEST-01"].weight == 4
+    by_id = {p.game_id: p.weight for p in pickset.picks}
+    assert by_id == {"SURE-01": 4, "MEDIUM-01": 3, "WEAK-01": 2, "WEAKEST-01": 1}
 
 
 def test_confidence_pool_empty_games_returns_empty_pickset():
     pickset = confidence_pool([], fill_ranks=True)
     assert len(pickset.picks) == 0
+
+
+def test_confidence_pool_user_ranks_are_used_in_input_order_and_must_be_a_permutation():
+    games = [_game("A", 0.9), _game("B", 0.6)]
+    assert [p.weight for p in confidence_pool(games, user_ranks=[1, 2]).picks] == [1, 2]
+    with pytest.raises(PicksError, match="permutation"):
+        confidence_pool(games, user_ranks=[2, 2])
+    with pytest.raises(PicksError, match="not both"):
+        confidence_pool(games, user_ranks=[1, 2], weights=[5, 9])
+
+
+def test_confidence_pool_fill_ranks_false_leaves_games_unweighted():
+    pickset = confidence_pool([_game("A", 0.9), _game("B", 0.6)], fill_ranks=False)
+    assert [p.weight for p in pickset.picks] == [None, None]
+    assert pickset.expected_points is None
 
 
 # ---- FR-007 violation detection ----
@@ -57,32 +68,15 @@ def test_confidence_pool_empty_games_returns_empty_pickset():
 def test_confidence_pool_rejects_duplicate_ranks():
     # This should never happen via the optimizer, but the contract must be
     # enforced at the validation boundary.
-    games = [
-        GameInputs(game_id="A", p_home_win=0.6, p_away_win=0.4, p_tie=0.0),
-        GameInputs(game_id="B", p_home_win=0.4, p_away_win=0.6, p_tie=0.0),
-    ]
-    from nflpi.picks.pool import _validate_confidence_permutation
-    try:
+    with pytest.raises(PicksError, match=r"permutation.*duplicates: \[1\]"):
         _validate_confidence_permutation([1, 1], 2, ids=["A", "B"])
-        assert False, "expected PicksError for duplicate ranks"
-    except Exception as e:
-        msg = str(e).lower()
-        assert ("duplicates" in msg) or ("duplicate" in msg) or ("permutation" in msg), f"unexpected error: {e}"
 
 
 def test_confidence_pool_rejects_rank_gaps():
-    from nflpi.picks.pool import _validate_confidence_permutation
-    try:
+    with pytest.raises(PicksError, match=r"Missing: \[2\]"):
         _validate_confidence_permutation([1, 3], 2, ids=["A", "B"])
-        assert False, "expected PicksError for rank gap"
-    except Exception as e:
-        assert "missing" in str(e).lower() or "gap" in str(e).lower() or "permutation" in str(e).lower()
 
 
 def test_confidence_pool_rejects_extra_rank():
-    from nflpi.picks.pool import _validate_confidence_permutation
-    try:
+    with pytest.raises(PicksError, match=r"extra: \[4\]"):
         _validate_confidence_permutation([1, 2, 4], 3, ids=["A", "B", "C"])
-        assert False, "expected PicksError for extra rank"
-    except Exception as e:
-        assert "extra" in str(e).lower() or "permutation" in str(e).lower()
