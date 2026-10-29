@@ -256,7 +256,7 @@ function CsvSection({ meta }: { meta: Meta }) {
               {result.skipped.length > 0 ? (
                 <>
                   Skipped {result.skipped.length}: {result.skipped.slice(0, 12).join(", ")}
-                  {result.skipped.length > 12 ? ", and more" : ""}. Those rows named a game or team that does not exist.
+                  {result.skipped.length > 12 ? ", and more" : ""}. Each named a game or team that is not in the schedule, or a game that has kicked off and already has a pick saved (that pick is kept).
                 </>
               ) : (
                 "No rows were skipped."

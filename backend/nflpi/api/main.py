@@ -130,6 +130,8 @@ def set_pick(game_id: str, body: s.PickIn, session: DB) -> s.PickOut:
         raise HTTPException(404, "Game not found")
     if body.team not in (g.home_team, g.away_team):
         raise HTTPException(422, f"Pick must be {g.away_team} or {g.home_team}")
+    if body.game_id not in (None, game_id) or body.week not in (None, g.week):
+        raise HTTPException(422, "game_id and week in the body must match the game in the URL")
     if views.is_locked(g, datetime.now(UTC)):
         raise HTTPException(409, "Game has kicked off; pick is locked")
     pick = session.get(UserPick, game_id) or UserPick(game_id=game_id)

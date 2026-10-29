@@ -1258,8 +1258,30 @@ export interface components {
         };
         /** PickIn */
         PickIn: {
+            /**
+             * Game Id
+             * @description Optional. If sent, must match the game in the URL.
+             */
+            game_id?: string | null;
             /** Team */
             team: string;
+            /**
+             * Source
+             * @description Who set this pick: manual or auto (app)
+             * @default auto
+             * @enum {string}
+             */
+            source: "manual" | "auto";
+            /**
+             * Week
+             * @description Optional. If sent, must match the game's week.
+             */
+            week?: number | null;
+            /**
+             * Rank
+             * @description Confidence rank 1..N for the week (FR-007). When provided, must be unique among all picks for the same week. Omit to use the app's suggested confidence.
+             */
+            rank?: number | null;
         };
         /** PickModeOut */
         PickModeOut: {
@@ -1280,16 +1302,37 @@ export interface components {
             /** Picked Team */
             picked_team: string;
             /**
+             * Confidence
+             * @description Confidence rank 1..N for the week (FR-007). Null when the user has not set a rank, and the app's suggestion is shown separately.
+             */
+            confidence?: number | null;
+            /**
              * Picked At
              * Format: date-time
              */
             picked_at: string;
-            /** Source */
+            /**
+             * Source
+             * @default app
+             */
             source: string;
+            /**
+             * Rank
+             * @description Confidence rank 1..N for the week
+             */
+            rank?: number | null;
         };
         /** PointsIn */
         PointsIn: {
-            /** Points */
+            /**
+             * Week
+             * @description Optional. The game in the URL decides the week.
+             */
+            week?: number | null;
+            /**
+             * Points
+             * @description Total planned points for the week
+             */
             points: number;
         };
         /** PredictionOut */
@@ -1378,10 +1421,21 @@ export interface components {
         };
         /** RankIn */
         RankIn: {
-            /** Rank */
+            /**
+             * Rank
+             * @description Rank of this game within the week's slack/favorite ranking
+             */
             rank: number;
-            /** Leader Points */
+            /**
+             * Leader Points
+             * @description Points needed to lead the league (must be <= max league points)
+             */
             leader_points?: number | null;
+            /**
+             * Week
+             * @description Optional. The week in the URL is the one used.
+             */
+            week?: number | null;
         };
         /** RegisteredOut */
         RegisteredOut: {
