@@ -49,6 +49,21 @@ def test_picks_lock_at_kickoff_and_csv_round_trip(loaded, client):
     assert perf.home.total == 9
 
 
+def test_pick_points_and_rank_bodies_need_only_what_the_web_app_sends(loaded, client):
+    """The app sends {team}, {points} and {rank, leader_points}. Extra body fields are optional, and match the URL."""
+    g = loaded.scalars(select(Game).where(Game.season == CURRENT, Game.week == 4)).first()
+    url = f"/api/picks/{g.game_id}"
+    assert client.put(url, json={"team": g.home_team}).status_code == 200
+    ok = {"team": g.away_team, "game_id": g.game_id, "week": g.week}
+    assert client.put(url, json=ok).json()["picked_team"] == g.away_team
+    assert client.put(url, json={**ok, "week": g.week + 1}).status_code == 422
+    assert client.put(url, json={**ok, "game_id": "2023_04_other"}).status_code == 422
+    assert client.put(f"{url}/points", json={"points": 1}).status_code == 200
+    assert client.put(f"/api/ranks/{CURRENT}/99", json={"rank": 3, "leader_points": 60}).status_code == 204
+    assert client.delete(f"{url}/points").status_code == 200
+    assert client.delete(url).status_code == 204
+
+
 class FakeProvider:
     name, model = "claude", "fake-model"
 

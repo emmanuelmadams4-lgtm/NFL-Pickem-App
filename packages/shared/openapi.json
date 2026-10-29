@@ -3914,9 +3914,57 @@
    },
    "PickIn": {
     "properties": {
+     "game_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Game Id",
+      "description": "Optional. If sent, must match the game in the URL."
+     },
      "team": {
       "type": "string",
       "title": "Team"
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "manual",
+       "auto"
+      ],
+      "title": "Source",
+      "description": "Who set this pick: manual or auto (app)",
+      "default": "auto"
+     },
+     "week": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Week",
+      "description": "Optional. If sent, must match the game's week."
+     },
+     "rank": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank",
+      "description": "Confidence rank 1..N for the week (FR-007). When provided, must be unique among all picks for the same week. Omit to use the app's suggested confidence."
      }
     },
     "type": "object",
@@ -3962,6 +4010,18 @@
       "type": "string",
       "title": "Picked Team"
      },
+     "confidence": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Confidence",
+      "description": "Confidence rank 1..N for the week (FR-007). Null when the user has not set a rank, and the app's suggestion is shown separately."
+     },
      "picked_at": {
       "type": "string",
       "format": "date-time",
@@ -3969,23 +4029,50 @@
      },
      "source": {
       "type": "string",
-      "title": "Source"
+      "title": "Source",
+      "default": "app"
+     },
+     "rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rank",
+      "description": "Confidence rank 1..N for the week"
      }
     },
     "type": "object",
     "required": [
      "game_id",
      "picked_team",
-     "picked_at",
-     "source"
+     "picked_at"
     ],
     "title": "PickOut"
    },
    "PointsIn": {
     "properties": {
+     "week": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Week",
+      "description": "Optional. The game in the URL decides the week."
+     },
      "points": {
       "type": "integer",
-      "title": "Points"
+      "minimum": 0.0,
+      "title": "Points",
+      "description": "Total planned points for the week"
      }
     },
     "type": "object",
@@ -4268,7 +4355,8 @@
      "rank": {
       "type": "integer",
       "minimum": 1.0,
-      "title": "Rank"
+      "title": "Rank",
+      "description": "Rank of this game within the week's slack/favorite ranking"
      },
      "leader_points": {
       "anyOf": [
@@ -4280,7 +4368,21 @@
         "type": "null"
        }
       ],
-      "title": "Leader Points"
+      "title": "Leader Points",
+      "description": "Points needed to lead the league (must be <= max league points)"
+     },
+     "week": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Week",
+      "description": "Optional. The week in the URL is the one used."
      }
     },
     "type": "object",
